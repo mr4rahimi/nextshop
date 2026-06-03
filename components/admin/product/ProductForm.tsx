@@ -87,6 +87,145 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 const inp = "w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all";
 const ta  = `${inp} resize-none`;
 
+// ── AttributesSection component ───────────────────────────────────────────────
+function AttributesSection({ categoryId, productId }: { categoryId: string; productId?: string }) {
+  const [attributeGroups, setAttributeGroups] = useState<any[]>([]);
+  const [selectedValues, setSelectedValues] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!categoryId) {
+      setAttributeGroups([]);
+      return;
+    }
+
+    setLoading(true);
+    fetch(`/api/admin/categories/${categoryId}/attribute-groups`)
+      .then(r => r.json())
+      .then(data => {
+        setAttributeGroups(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [categoryId]);
+
+  useEffect(() => {
+    if (!productId) return;
+
+    fetch(`/api/admin/products/${productId}/attributes`)
+      .then(r => r.json())
+      .then((attrs: any[]) => {
+        const values: Record<string, string> = {};
+        attrs.forEach(attr => {
+          values[attr.attributeId] = attr.attributeValueId;
+        });
+        setSelectedValues(values);
+      })
+      .catch(() => {});
+  }, [productId]);
+
+  async function saveAttributes() {
+    if (!productId) {
+      alert("ابتدا محصول را ذخیره کنید");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const attributes = Object.entries(selectedValues)
+        .filter(([_, valueId]) => valueId)
+        .map(([attributeId, attributeValueId]) => ({
+          attributeId,
+          attributeValueId,
+        }));
+
+      await fetch(`/api/admin/products/${productId}/attributes`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attributes }),
+      });
+
+      alert("ویژگی‌ها ذخیره شد");
+    } catch (err) {
+      alert("خطا در ذخیره ویژگی‌ها");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!categoryId) {
+    return (
+      <div className="text-center py-8 text-sm text-gray-400">
+        ابتدا دسته‌بندی را انتخاب کنید
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="text-center py-8 text-sm text-gray-400">
+        در حال بارگذاری ویژگی‌ها...
+      </div>
+    );
+  }
+
+  if (attributeGroups.length === 0) {
+    return (
+      <div className="text-center py-8 text-sm text-gray-400">
+        این دسته‌بندی هیچ گروه ویژگی ندارد
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {attributeGroups.map(group => (
+        <div key={group.id} className="space-y-3">
+          <h4 className="text-sm font-black text-gray-700 dark:text-gray-300">
+            {group.attributeGroup.title}
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {group.attributeGroup.attributes.map((attr: any) => (
+              <Field key={attr.id} label={attr.title}>
+                <select
+                  value={selectedValues[attr.id] || ""}
+                  onChange={e => setSelectedValues(prev => ({ ...prev, [attr.id]: e.target.value }))}
+                  className={inp}
+                >
+                  <option value="">انتخاب کنید...</option>
+                  {attr.values.map((val: any) => (
+                    <option key={val.id} value={val.id}>
+                      {val.value}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {productId && (
+        <button
+          type="button"
+          onClick={saveAttributes}
+          disabled={saving}
+          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-sm font-black transition-all"
+        >
+          {saving ? "در حال ذخیره..." : "ذخیره ویژگی‌ها"}
+        </button>
+      )}
+
+      {!productId && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-xl">
+          ⚠️ ابتدا محصول را ذخیره کنید تا بتوانید ویژگی‌ها را انتخاب کنید
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── RelatedSearch component ───────────────────────────────────────────────────
 function RelatedSearch({ productId, currentProductTitle }: { productId?: string; currentProductTitle: string }) {
   const [query, setQuery] = useState("");
@@ -600,6 +739,13 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
               </table>
             </div>
           )}
+        </Section>
+        {/* ── ۷.۵. ویژگی‌های قابل فیلتر (Attributes) ── */}
+        <Section title="ویژگی‌های قابل فیلتر" icon="🏷️" defaultOpen={false}>
+          <AttributesSection 
+            categoryId={form.categoryId} 
+            productId={productId}
+          />
         </Section>
 
         {/* ── ۸. سوالات متداول ── */}

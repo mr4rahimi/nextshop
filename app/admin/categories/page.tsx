@@ -116,6 +116,119 @@ function TreeNode({ node, level, expanded, onToggle, onEdit, onDelete }: any) {
   );
 }
 
+// ── CategoryAttributeGroups component ─────────────────────────────────────────
+function CategoryAttributeGroups({ categoryId }: { categoryId: string }) {
+  const [allGroups, setAllGroups] = useState<any[]>([]);
+  const [linkedGroups, setLinkedGroups] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, [categoryId]);
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      const [allRes, linkedRes] = await Promise.all([
+        fetch("/api/admin/attribute-groups"),
+        fetch(`/api/admin/categories/${categoryId}/attribute-groups`),
+      ]);
+
+      const all = await allRes.json();
+      const linked = await linkedRes.json();
+
+      setAllGroups(all);
+      setLinkedGroups(linked);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function toggleGroup(groupId: string) {
+    const isLinked = linkedGroups.some(lg => lg.attributeGroupId === groupId);
+
+    setSaving(true);
+    try {
+      if (isLinked) {
+        await fetch(`/api/admin/categories/${categoryId}/attribute-groups`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ attributeGroupId: groupId }),
+        });
+      } else {
+        await fetch(`/api/admin/categories/${categoryId}/attribute-groups`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ attributeGroupId: groupId }),
+        });
+      }
+      loadData();
+    } catch (err) {
+      alert("خطا در ذخیره");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="text-center py-6 text-sm text-gray-400">
+        در حال بارگذاری...
+      </div>
+    );
+  }
+
+  if (allGroups.length === 0) {
+    return (
+      <div className="text-center py-6 text-sm text-gray-400 bg-gray-50 dark:bg-white/[0.02] rounded-xl border border-gray-100 dark:border-white/[0.06]">
+        هنوز گروه ویژگی‌ای تعریف نشده.{" "}
+        <a href="/admin/attribute-groups" className="text-blue-600 hover:underline">
+          ایجاد گروه جدید
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 p-4 bg-gray-50 dark:bg-white/[0.02] rounded-xl border border-gray-100 dark:border-white/[0.06]">
+      {allGroups.map(group => {
+        const isLinked = linkedGroups.some(lg => lg.attributeGroupId === group.id);
+        return (
+          <label
+            key={group.id}
+            className="flex items-center gap-3 p-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl cursor-pointer hover:border-blue-300 dark:hover:border-blue-500/30 transition-all"
+          >
+            <input
+              type="checkbox"
+              checked={isLinked}
+              disabled={saving}
+              onChange={() => toggleGroup(group.id)}
+              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-gray-900 dark:text-white">
+                {group.title}
+              </p>
+              <p className="text-xs text-gray-400">
+                {group.attributes?.length || 0} ویژگی
+              </p>
+            </div>
+            {isLinked && (
+              <span className="text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-lg">
+                متصل
+              </span>
+            )}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
@@ -368,6 +481,18 @@ export default function CategoriesPage() {
                 </div>
               )}
             </div>
+
+            {/* گروه‌های ویژگی */}
+            {editing && (
+              <div className="mt-6">
+                <h3 className="text-sm font-black text-gray-700 dark:text-gray-300 mb-3">
+                  گروه‌های ویژگی مرتبط
+                </h3>
+                <CategoryAttributeGroups categoryId={editing.id} />
+              </div>
+            )}
+
+
 
             {/* دکمه‌ها */}
             <div className="flex gap-3 pt-2 border-t border-gray-100 dark:border-white/[0.06]">
