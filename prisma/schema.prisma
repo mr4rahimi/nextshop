@@ -1,0 +1,800 @@
+generator client {
+  provider   = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String              @id @default(cuid())
+  role         UserRole            @default(CUSTOMER)
+  firstName    String?
+  lastName     String?
+  phone        String              @unique
+  email        String?             @unique
+  avatarUrl    String?
+  nationalCode String?
+  passwordHash String
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  addresses    Address[]
+  cart         Cart?
+  orders       Order[]
+  reviews      Review[]
+  walletTx     WalletTransaction[]
+  wishlist     WishlistItem[]
+  blogComments BlogComment[]
+
+  @@index([role])
+  @@index([isActive])
+}
+
+model Address {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String?
+  receiver    String
+  phone       String
+  province    String
+  city        String
+  addressLine String
+  postalCode  String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders      Order[]
+
+  @@index([userId])
+}
+
+model Category {
+  id             String     @id @default(cuid())
+  title          String
+  slug           String     @unique
+  parentId       String?
+  isActive       Boolean    @default(true)
+  sortOrder      Int        @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  description    String?
+  imageUrl       String?
+  seoDescription String?
+  seoKeywords    String?
+  seoTitle       String?
+  parent         Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children       Category[] @relation("CategoryTree")
+  products       Product[]
+  megaMenu       MegaMenuCategory?
+
+  @@index([parentId])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model Brand {
+  id             String    @id @default(cuid())
+  title          String
+  slug           String    @unique
+  logoUrl        String?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  description    String?
+  seoDescription String?
+  seoKeywords    String?
+  seoTitle       String?
+  products       Product[]
+
+  @@index([isActive])
+}
+
+model Product {
+  id                 String             @id @default(cuid())
+  title              String
+  slug               String             @unique
+  categoryId         String
+  brandId            String?
+  features           Json               @default("[]")
+  colors             Json               @default("[]")
+  price              BigInt             @default(0)
+  salePrice          BigInt?
+  warranty           String?
+  stock              Int                @default(0)
+  trackStock         Boolean            @default(false)
+  lowStockThreshold  Int                @default(3)
+  ratingAvg          Float              @default(0)
+  ratingCount        Int                @default(0)
+  isActive           Boolean            @default(true)
+  assembledProductId String?            @unique
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  expertDescription  String?
+  expertImage        String?
+  expertTitle        String?
+  faq                Json               @default("[]")
+  mainImage          String?
+  seoDescription     String?
+  seoKeywords        String?
+  seoSchema          String?
+  seoTitle           String?
+  shortDescription   String?
+  summaryDescription String?
+  summaryFeatures    Json               @default("[]")
+  summaryImage       String?
+  summaryTitle       String?
+  videoUrl           String?
+  relatedSettings    Json               @default("{}")
+  blogPosts BlogPostProduct[]
+  cartItems          CartItem[]
+  orderItems         OrderItem[]
+  assembledProduct   AssembledProduct?  @relation(fields: [assembledProductId], references: [id])
+  brand              Brand?             @relation(fields: [brandId], references: [id])
+  category           Category           @relation(fields: [categoryId], references: [id])
+  images             ProductImage[]
+  specs              ProductSpecValue[]
+  reviews            Review[]
+  wishlist           WishlistItem[]
+  relatedProducts    ProductRelated[]   @relation("ProductRelations")
+  relatedTo          ProductRelated[]   @relation("RelatedToProducts")
+
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([isActive])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([sortOrder])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  productId  String
+  userId     String
+  rating     Int
+  title      String?
+  body       String?
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, userId])
+  @@index([productId])
+  @@index([userId])
+  @@index([isApproved])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  userId        String
+  addressId     String?
+  status        OrderStatus @default(PENDING_PAYMENT)
+  itemsTotal    BigInt      @default(0)
+  shippingFee   BigInt      @default(0)
+  discountTotal BigInt      @default(0)
+  grandTotal    BigInt      @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  orderNumber   String      @unique
+  note          String?     
+  trackingCode  String?     
+  address       Address?    @relation(fields: [addressId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+  payments      Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id            String  @id @default(cuid())
+  orderId       String
+  productId     String
+  qty           Int     @default(1)
+  unitPrice     BigInt  @default(0)
+  unitSalePrice BigInt?
+  titleSnapshot String
+  skuSnapshot   String?
+  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product       Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  orderId     String
+  status      PaymentStatus @default(PENDING)
+  provider    String?
+  providerRef String?
+  amount      BigInt        @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model WalletTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    BigInt
+  reason    String
+  meta      Json     @default("{}")
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Template {
+  id                String             @id @default(cuid())
+  title             String
+  slug              String             @unique
+  isActive          Boolean            @default(true)
+  defaultCategoryId String?
+  defaultBrandId    String?
+  basePrice         BigInt             @default(0)
+  rulesVersion      Int                @default(1)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  assembled         AssembledProduct[]
+  rules             Rule[]
+  steps             TemplateStep[]
+
+  @@index([isActive])
+}
+
+model ComponentType {
+  id          String            @id @default(cuid())
+  code        String            @unique
+  title       String
+  description String?
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  options     ComponentOption[]
+  steps       TemplateStep[]
+}
+
+model ComponentOption {
+  id              String               @id @default(cuid())
+  componentTypeId String
+  title           String
+  slug            String?
+  imageUrl        String?
+  isActive        Boolean              @default(true)
+  priceDelta      BigInt               @default(0)
+  meta            Json                 @default("{}")
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  assembledParts  AssembledComponent[]
+  componentType   ComponentType        @relation(fields: [componentTypeId], references: [id])
+  inventory       InventoryOption?
+  stepOptions     TemplateStepOption[]
+
+  @@unique([componentTypeId, slug])
+  @@index([componentTypeId])
+  @@index([isActive])
+}
+
+model TemplateStep {
+  id              String               @id @default(cuid())
+  templateId      String
+  componentTypeId String
+  title           String
+  key             String
+  sortOrder       Int
+  isRequired      Boolean              @default(true)
+  selectionMode   SelectionMode        @default(SINGLE)
+  isActive        Boolean              @default(true)
+  scope           Json                 @default("{}")
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  assembled       AssembledComponent[]
+  componentType   ComponentType        @relation(fields: [componentTypeId], references: [id])
+  template        Template             @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  options         TemplateStepOption[]
+
+  @@unique([templateId, key])
+  @@index([templateId, sortOrder])
+  @@index([componentTypeId])
+  @@index([isActive])
+}
+
+model TemplateStepOption {
+  id                String          @id @default(cuid())
+  templateStepId    String
+  componentOptionId String
+  isActive          Boolean         @default(true)
+  option            ComponentOption @relation(fields: [componentOptionId], references: [id], onDelete: Cascade)
+  step              TemplateStep    @relation(fields: [templateStepId], references: [id], onDelete: Cascade)
+
+  @@unique([templateStepId, componentOptionId])
+  @@index([templateStepId])
+  @@index([componentOptionId])
+  @@index([isActive])
+}
+
+model Rule {
+  id         String   @id @default(cuid())
+  templateId String
+  type       RuleType
+  priority   Int      @default(100)
+  isActive   Boolean  @default(true)
+  condition  Json
+  effect     Json
+  message    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId, type])
+  @@index([isActive])
+}
+
+model AssembledProduct {
+  id             String               @id @default(cuid())
+  templateId     String
+  hash           String               @unique
+  rulesVersion   Int
+  titleGenerated String?
+  sku            String?
+  priceFinal     BigInt
+  createdAt      DateTime             @default(now())
+  components     AssembledComponent[]
+  template       Template             @relation(fields: [templateId], references: [id])
+  cartItems      CartItem[]
+  product        Product?
+
+  @@index([templateId])
+  @@index([rulesVersion])
+}
+
+model AssembledComponent {
+  id                 String           @id @default(cuid())
+  assembledProductId String
+  templateStepId     String
+  componentOptionId  String
+  qty                Int              @default(1)
+  assembledProduct   AssembledProduct @relation(fields: [assembledProductId], references: [id], onDelete: Cascade)
+  componentOption    ComponentOption  @relation(fields: [componentOptionId], references: [id])
+  templateStep       TemplateStep     @relation(fields: [templateStepId], references: [id])
+
+  @@index([assembledProductId])
+  @@index([templateStepId])
+  @@index([componentOptionId])
+}
+
+model InventoryOption {
+  id                String          @id @default(cuid())
+  componentOptionId String          @unique
+  stockQty          Int             @default(0)
+  reservedQty       Int             @default(0)
+  updatedAt         DateTime        @updatedAt
+  componentOption   ComponentOption @relation(fields: [componentOptionId], references: [id], onDelete: Cascade)
+
+  @@index([stockQty])
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+}
+
+model CartItem {
+  id                 String            @id @default(cuid())
+  cartId             String
+  productId          String
+  qty                Int               @default(1)
+  assembledProductId String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  assembled          AssembledProduct? @relation(fields: [assembledProductId], references: [id])
+  cart               Cart              @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product            Product           @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
+  @@unique([cartId, assembledProductId])
+  @@index([cartId])
+  @@index([productId])
+}
+
+model SpecGroup {
+  id        String     @id @default(cuid())
+  title     String
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     SpecItem[]
+
+  @@index([isActive])
+}
+
+model SpecItem {
+  id            String             @id @default(cuid())
+  groupId       String
+  title         String
+  sortOrder     Int                @default(0)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  productValues ProductSpecValue[]
+  group         SpecGroup          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+}
+
+model ProductSpecValue {
+  id         String   @id @default(cuid())
+  productId  String
+  specItemId String
+  value      String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  specItem   SpecItem @relation(fields: [specItemId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, specItemId])
+  @@index([productId])
+  @@index([specItemId])
+}
+
+
+model Widget {
+  id        String     @id @default(cuid())
+  type      WidgetType
+  title     String
+  isActive  Boolean    @default(true)
+  sortOrder Int        @default(0)
+  config    Json       @default("{}")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model Story {
+  id        String   @id @default(cuid())
+  title     String
+  imageUrl  String
+  linkUrl   String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  duration  Int      @default(5000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model HeroSlide {
+  id          String   @id @default(cuid())
+  title       String?
+  imageUrl    String
+  linkUrl     String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+  @@index([expiresAt])
+}
+
+model ShippingMethod {
+  id          String   @id @default(cuid())
+  title       String
+  type        ShippingType
+  isActive    Boolean  @default(true)
+  cities      String[] // لیست شهرهای مجاز (خالی = همه جا)
+  fee         BigInt   @default(0)
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model StoreSettings {
+  id        String   @id @default("singleton")
+  // کارت به کارت
+  cardNumber    String?
+  cardHolder    String?
+  cardBank      String?
+  cardReceiptInfo String? 
+  paymentGatewayActive Boolean @default(false)
+  paymentGatewayMerchant String?
+  senderName       String?
+  senderPhone      String?
+  senderProvince   String?
+  senderCity       String?
+  senderAddress    String?
+  senderPostalCode String?
+  storeName        String?
+  storeLogo        String?
+  siteFavicon      String?
+  siteDescription  String?
+  siteKeywords     String?
+  siteEmail        String?
+  sitePhone        String?
+  siteAddress      String?
+  socialInstagram  String?
+  socialTelegram   String?
+  socialWhatsapp   String?
+  socialTwitter    String?
+  footerText       String?
+  enamadCode   String?   // کد نماد اعتماد
+  samanCode    String?   // کد ساماندهی  
+  trustBadge3  String?   // نماد سوم (URL تصویر)
+  trustBadge4  String?   // نماد چهارم (URL تصویر)
+  maintenanceMode  Boolean @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  title       String
+  url         String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  openInNewTab Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MegaMenuCategory {
+  id         String   @id @default(cuid())
+  categoryId String   @unique
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([sortOrder])
+}
+
+model FooterColumn {
+  id        String       @id @default(cuid())
+  title     String
+  type      FooterColType
+  isActive  Boolean      @default(true)
+  sortOrder Int          @default(0)
+  items     FooterItem[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([sortOrder])
+}
+
+model FooterItem {
+  id        String      @id @default(cuid())
+  columnId  String
+  label     String
+  url       String?
+  sortOrder Int         @default(0)
+  isActive  Boolean     @default(true)
+  column    FooterColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  @@index([columnId])
+}
+
+model BlogCategory {
+  id        String    @id @default(cuid())
+  title     String
+  slug      String    @unique
+  isActive  Boolean   @default(true)
+  sortOrder Int       @default(0)
+  posts     BlogPost[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model BlogTag {
+  id    String         @id @default(cuid())
+  title String         @unique
+  slug  String         @unique
+  posts BlogPostTag[]
+}
+
+model BlogPost {
+  id              String        @id @default(cuid())
+  title           String
+  slug            String        @unique
+  excerpt         String?
+  content         String
+  coverImage      String?
+  videoUrl        String?
+  categoryId      String?
+  status          BlogStatus    @default(DRAFT)
+  publishedAt     DateTime?
+  seoTitle        String?
+  seoDescription  String?
+  seoKeywords     String?
+  viewCount       Int           @default(0)
+  readingTime     Int           @default(0)
+  category        BlogCategory? @relation(fields: [categoryId], references: [id])
+  tags            BlogPostTag[]
+  comments        BlogComment[]
+  relatedProducts BlogPostProduct[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status])
+  @@index([publishedAt])
+  @@index([categoryId])
+}
+
+model BlogPostTag {
+  postId String
+  tagId  String
+  post   BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    BlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+model BlogPostProduct {
+  postId    String
+  productId String
+  sortOrder Int     @default(0)
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([postId, productId])
+}
+
+model BlogComment {
+  id        String        @id @default(cuid())
+  postId    String
+  userId    String?
+  name      String?
+  content   String
+  status    CommentStatus @default(PENDING)
+  parentId  String?
+  post      BlogPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User?         @relation(fields: [userId], references: [id])
+  parent    BlogComment?  @relation("replies", fields: [parentId], references: [id])
+  replies   BlogComment[] @relation("replies")
+  createdAt DateTime      @default(now())
+
+  @@index([postId])
+  @@index([status])
+}
+
+model ProductRelated {
+  id          String  @id @default(cuid())
+  productId   String
+  relatedId   String
+  sortOrder   Int     @default(0)
+  product     Product @relation("ProductRelations", fields: [productId], references: [id], onDelete: Cascade)
+  related     Product @relation("RelatedToProducts", fields: [relatedId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, relatedId])
+  @@index([productId])
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum FooterColType {
+  LINKS        // لینک‌های دلخواه
+  CATEGORIES   // دسته‌بندی‌های محصول (از DB)
+  CONTACT      // اطلاعات تماس + نمادها
+  BRAND        // لوگو + توضیحات + سوشال
+}
+
+enum ShippingType {
+  EXPRESS   // تحویل سریع با پیک
+  STANDARD  // ارسال عادی پست
+}
+
+
+enum WidgetType {
+  STORY
+  HERO_SLIDER
+  CATEGORIES
+  AMAZING_DEALS
+  BEST_SELLERS
+  PRODUCTS_BY_CATEGORY
+  PRODUCTS_BY_BRAND
+  NEWEST_PRODUCTS
+  SPECIAL_OFFERS
+  LAST_VISITED
+  FULL_BANNER
+  DOUBLE_BANNER
+  CALL_TO_ACTION
+  IMAGE_CONTENT
+  IMAGE_CONTENT_DOUBLE
+  LATEST_ARTICLES
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  CONFIRMED
+  PROCESSING
+  PACKAGING
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum SelectionMode {
+  SINGLE
+  MULTI
+}
+
+enum RuleType {
+  COMPATIBILITY
+  REQUIRES
+  EXCLUDES
+  PRICE_RULE
+}

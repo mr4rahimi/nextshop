@@ -1,0 +1,7 @@
+{
+  "name": "ui-dev",
+  "private": true,
+  "scripts": {
+    "dev": "vite"
+  }
+}

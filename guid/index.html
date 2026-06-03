@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>راهنمای دیپلوی Next.js</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2234;
+    --border: #1e2d45;
+    --accent: #3b82f6;
+    --accent2: #10b981;
+    --accent3: #f59e0b;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --danger: #ef4444;
+    --code-bg: #0d1117;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', Tahoma, 'Vazirmatn', sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 3rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.12) 0%, transparent 70%);
+  }
+  header h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #60a5fa, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    position: relative;
+  }
+  header p {
+    color: var(--text2);
+    margin-top: 0.75rem;
+    font-size: 1rem;
+    position: relative;
+  }
+  .badges {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 1.2rem;
+    flex-wrap: wrap;
+    position: relative;
+  }
+  .badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .badge-blue { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); color: #60a5fa; }
+  .badge-green { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #34d399; }
+  .badge-yellow { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); color: #fbbf24; }
+
+  /* ── Layout ── */
+  .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2.5rem;
+  }
+  .toc h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 1rem;
+  }
+  .toc ol {
+    list-style: none;
+    counter-reset: toc;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 2rem;
+  }
+  @media (max-width: 600px) { .toc ol { grid-template-columns: 1fr; } }
+  .toc li { counter-increment: toc; }
+  .toc a {
+    color: var(--text2);
+    text-decoration: none;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: color 0.2s;
+  }
+  .toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .toc a:hover { color: var(--accent); }
+
+  /* ── Section ── */
+  .section {
+    margin-bottom: 3rem;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .section-header {
+    background: var(--surface);
+    padding: 1.2rem 1.75rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+  .step-num.blue { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+  .step-num.green { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+  .step-num.yellow { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+  .step-num.purple { background: rgba(168,85,247,0.15); color: #c084fc; border: 1px solid rgba(168,85,247,0.25); }
+  .step-num.red { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+  .step-num.cyan { background: rgba(6,182,212,0.15); color: #22d3ee; border: 1px solid rgba(6,182,212,0.25); }
+
+  .section-header h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .section-header p {
+    font-size: 0.8rem;
+    color: var(--text3);
+    margin-top: 0.1rem;
+  }
+  .section-body { padding: 1.5rem 1.75rem; background: var(--surface2); }
+  .section-body > *:not(:last-child) { margin-bottom: 1.25rem; }
+
+  /* ── Note / Warning ── */
+  .note, .warning, .success, .info {
+    border-radius: 10px;
+    padding: 0.875rem 1.125rem;
+    font-size: 0.875rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  .note { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); color: #93c5fd; }
+  .warning { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); color: #fcd34d; }
+  .success { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); color: #6ee7b7; }
+  .info { background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); color: #d8b4fe; }
+  .note-icon { font-size: 1rem; flex-shrink: 0; margin-top: 0.1rem; }
+
+  /* ── Code Block ── */
+  .code-block {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+  .code-header {
+    background: #161b2e;
+    padding: 0.6rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .code-lang {
+    color: var(--text3);
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .copy-btn {
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.25);
+    color: #60a5fa;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .copy-btn:hover { background: rgba(59,130,246,0.2); }
+  .copy-btn.copied { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.3); color: #34d399; }
+  pre {
+    background: var(--code-bg);
+    padding: 1.125rem 1.25rem;
+    overflow-x: auto;
+    margin: 0;
+  }
+  pre code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: #e2e8f0;
+  }
+  .comment { color: #4b6080; }
+  .cmd { color: #93c5fd; }
+  .str { color: #86efac; }
+  .key { color: #fca5a5; }
+  .val { color: #fcd34d; }
+
+  p { color: var(--text2); font-size: 0.9rem; line-height: 1.75; }
+  strong { color: var(--text); }
+
+  /* ── Checklist ── */
+  .checklist { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--text2);
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+  }
+  .checklist li::before {
+    content: '○';
+    color: var(--text3);
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+  .checklist li.done::before { content: '✓'; color: var(--accent2); }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { background: #161b2e; color: var(--text3); font-weight: 600; text-align: right; padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 0.7rem 1rem; border-bottom: 1px solid rgba(30,45,69,0.5); color: var(--text2); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  code { font-family: 'JetBrains Mono', monospace; background: rgba(59,130,246,0.1); color: #93c5fd; padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.82em; }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    border-top: 1px solid var(--border);
+    color: var(--text3);
+    font-size: 0.8rem;
+    margin-top: 2rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🚀 راهنمای دیپلوی Next.js روی سرور</h1>
+  <p>از آماده‌سازی پروژه لوکال تا راه‌اندازی کامل روی VPS اوبونتو</p>
+  <div class="badges">
+    <span class="badge badge-blue">Next.js 16+</span>
+    <span class="badge badge-green">Node.js 20</span>
+    <span class="badge badge-yellow">PostgreSQL 16</span>
+    <span class="badge badge-blue">Nginx</span>
+    <span class="badge badge-green">PM2</span>
+    <span class="badge badge-yellow">Ubuntu 24</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h2>فهرست مراحل</h2>
+    <ol>
+      <li><a href="#s1">آماده‌سازی پروژه لوکال</a></li>
+      <li><a href="#s2">Build و بسته‌بندی</a></li>
+      <li><a href="#s3">پیش‌نیازهای سرور</a></li>
+      <li><a href="#s4">Node.js 20 روی سرور ایران</a></li>
+      <li><a href="#s5">PostgreSQL و دیتابیس</a></li>
+      <li><a href="#s6">آپلود فایل‌ها به سرور</a></li>
+      <li><a href="#s7">Prisma Generate و Migrate</a></li>
+      <li><a href="#s8">راه‌اندازی با PM2</a></li>
+      <li><a href="#s9">تنظیم Nginx</a></li>
+      <li><a href="#s10">SSL و HTTPS</a></li>
+      <li><a href="#s11">تست و عیب‌یابی</a></li>
+      <li><a href="#s12">بروزرسانی سایت</a></li>
+    </ol>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="section" id="s1">
+    <div class="section-header">
+      <div class="step-num blue">01</div>
+      <div>
+        <h2>آماده‌سازی پروژه لوکال</h2>
+        <p>فایل‌های env و تنظیمات لازم قبل از build</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="note"><span class="note-icon">💡</span><span>قبل از هر کار، فایل‌های env رو آماده کن. هرگز <code>.env.local</code> رو به سرور ارسال نکن.</span></div>
+
+      <p>فایل <code>.env.production</code> رو در root پروژه بساز:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">.env.production</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="comment"># آدرس سایت — بدون / آخر</span>
+<span class="key">NEXT_PUBLIC_SITE_URL</span>=<span class="str">https://yourdomain.com</span>
+<span class="key">NEXT_PUBLIC_STORE_NAME</span>=<span class="str">نام فروشگاه</span>
+
+<span class="comment"># دیتابیس — بعداً با اطلاعات سرور پر می‌کنی</span>
+<span class="key">DATABASE_URL</span>=<span class="str">postgresql://USER:PASS@localhost:5432/DB_NAME</span>
+
+<span class="comment"># JWT — یه رشته تصادفی قوی بذار</span>
+<span class="key">JWT_SECRET</span>=<span class="str">your_super_secret_jwt_key_min_32_chars</span>
+
+<span class="key">NODE_ENV</span>=<span class="str">production</span>
+
+<span class="comment"># سرویس‌های جانبی (اختیاری)</span>
+<span class="comment"># IRANPAYAMAK_API_KEY=...</span></code></pre>
+      </div>
+
+      <p>فایل <code>next.config.ts</code> رو تمیز کن:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">next.config.ts</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="cmd">import</span> type { NextConfig } from <span class="str">"next"</span>;
+
+const nextConfig: NextConfig = {};
+
+<span class="cmd">export default</span> nextConfig;</code></pre>
+      </div>
+
+      <p>فایل <code>app/auth/page.tsx</code> — مطمئن شو return درست باشه:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">app/auth/page.tsx</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="cmd">import</span> { Suspense } from <span class="str">"react"</span>;
+<span class="cmd">import</span> AuthClient from <span class="str">"@/components/auth/AuthClient"</span>;
+
+export const metadata = { title: <span class="str">"ورود | فروشگاه"</span> };
+
+<span class="cmd">export default function</span> AuthPage() {
+  <span class="cmd">return</span> (
+    <span class="str">&lt;Suspense fallback={null}&gt;</span>
+      <span class="str">&lt;AuthClient /&gt;</span>
+    <span class="str">&lt;/Suspense&gt;</span>
+  );
+}</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="section" id="s2">
+    <div class="section-header">
+      <div class="step-num green">02</div>
+      <div>
+        <h2>Build و بسته‌بندی</h2>
+        <p>ساخت فایل production و آرشیو برای آپلود</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — لوکال</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="comment"># تست build لوکال</span>
+pnpm build
+
+<span class="comment"># اگه build موفق بود، آرشیو کامل بساز</span>
+<span class="cmd">cd</span> /path/to/your/project
+
+tar --exclude=<span class="str">'node_modules/.cache'</span> \
+    --exclude=<span class="str">'.git'</span> \
+    --exclude=<span class="str">'.next/cache'</span> \
+    --exclude=<span class="str">'.env.local'</span> \
+    -czf /tmp/shop-full.tar.gz \
+    node_modules .next public prisma lib app \
+    components types package.json pnpm-lock.yaml \
+    next.config.ts tsconfig.json postcss.config.mjs \
+    tailwind.config.ts .env.production prisma.config.ts \
+    prisma.config.mjs
+
+<span class="comment"># چک حجم</span>
+du -sh /tmp/shop-full.tar.gz</code></pre>
+      </div>
+      <div class="warning"><span class="note-icon">⚠️</span><span>اگه node_modules بیش از ۳۰۰MB هست، می‌تونی بدون node_modules آرشیو کنی و روی سرور <code>pnpm install</code> بزنی — اما به اینترنت آزاد نیاز داری.</span></div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="section" id="s3">
+    <div class="section-header">
+      <div class="step-num yellow">03</div>
+      <div>
+        <h2>پیش‌نیازهای سرور</h2>
+        <p>نصب ابزارهای لازم روی Ubuntu 24</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <table>
+        <tr><th>ابزار</th><th>نسخه</th><th>کاربرد</th></tr>
+        <tr><td>Node.js</td><td>20+</td><td>اجرای Next.js</td></tr>
+        <tr><td>pnpm</td><td>9.x</td><td>مدیریت پکیج‌ها</td></tr>
+        <tr><td>PM2</td><td>آخرین</td><td>مدیریت پروسس</td></tr>
+        <tr><td>Nginx</td><td>1.24+</td><td>Reverse Proxy</td></tr>
+        <tr><td>PostgreSQL</td><td>16+</td><td>دیتابیس</td></tr>
+      </table>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="comment"># آپدیت</span>
+apt update && apt upgrade -y
+
+<span class="comment"># Nginx</span>
+apt install -y nginx
+
+<span class="comment"># PostgreSQL</span>
+apt install -y postgresql postgresql-contrib
+
+<span class="comment"># تأیید</span>
+nginx -v && psql --version</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="section" id="s4">
+    <div class="section-header">
+      <div class="step-num cyan">04</div>
+      <div>
+        <h2>Node.js 20 روی سرور ایران</h2>
+        <p>نصب Node از طریق binary — بدون نیاز به اینترنت آزاد</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="info"><span class="note-icon">🇮🇷</span><span>سرورهای ایران به npmjs.org و nodejs.org دسترسی ندارن. باید binary رو دانلود کنی و آپلود کنی.</span></div>
+
+      <p><strong>لوکال</strong> — دانلود binary:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — لوکال</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code>wget https://nodejs.org/dist/v20.19.0/node-v20.19.0-linux-x64.tar.xz</code></pre>
+      </div>
+
+      <p>فایل رو به یه هاست آپلود کن، بعد روی سرور:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="comment"># دانلود از هاست شخصی</span>
+wget https://yourhost.com/node-v20.19.0-linux-x64.tar.xz -O /tmp/node20.tar.xz
+
+<span class="comment"># نصب</span>
+cd /usr/local
+tar -xJf /tmp/node20.tar.xz --strip-components=1
+
+<span class="comment"># تأیید</span>
+node -v  <span class="comment"># باید v20.x.x باشه</span>
+npm -v</code></pre>
+      </div>
+
+      <p>نصب pnpm و PM2:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="comment"># تنظیم میرور لیارا برای npm</span>
+npm config set registry https://package-mirror.liara.ir/repository/npm/ --global
+
+<span class="comment"># نصب pnpm نسخه 9</span>
+npm install -g pnpm@9
+
+<span class="comment"># نصب PM2</span>
+npm install -g pm2
+
+<span class="comment"># تأیید</span>
+pnpm -v && pm2 -v</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="section" id="s5">
+    <div class="section-header">
+      <div class="step-num purple">05</div>
+      <div>
+        <h2>PostgreSQL و دیتابیس</h2>
+        <p>ساخت user و database اختصاصی</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="comment"># ساخت user و database</span>
+sudo -u postgres psql &lt;&lt; 'EOF'
+CREATE USER <span class="val">myuser</span> WITH PASSWORD '<span class="val">StrongPassword123!</span>';
+CREATE DATABASE <span class="val">mydb</span> OWNER <span class="val">myuser</span>;
+GRANT ALL PRIVILEGES ON DATABASE <span class="val">mydb</span> TO <span class="val">myuser</span>;
+EOF
+
+<span class="comment"># تست اتصال</span>
+sudo -u postgres psql -c "\l" | grep mydb</code></pre>
+      </div>
+      <div class="warning"><span class="note-icon">⚠️</span><span>رمز عبور قوی انتخاب کن. DATABASE_URL رو در <code>.env</code> سرور آپدیت کن: <code>postgresql://myuser:StrongPassword123!@localhost:5432/mydb</code></span></div>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="section" id="s6">
+    <div class="section-header">
+      <div class="step-num blue">06</div>
+      <div>
+        <h2>آپلود فایل‌ها به سرور</h2>
+        <p>انتقال پروژه از لوکال به سرور</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <p><strong>روش ۱ — مستقیم با scp:</strong></p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — لوکال</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code>scp /tmp/shop-full.tar.gz root@<span class="val">SERVER_IP</span>:/tmp/</code></pre>
+      </div>
+
+      <p><strong>روش ۲ — از طریق هاست واسط (برای سرورهای ایران):</strong></p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="comment"># دانلود از هاست شخصی</span>
+wget https://yourhost.com/shop-full.tar.gz -O /tmp/shop-full.tar.gz
+
+<span class="comment"># extract</span>
+mkdir -p /var/www/mymonta
+tar -xzf /tmp/shop-full.tar.gz -C /var/www/mymonta/
+
+<span class="comment"># تأیید</span>
+ls /var/www/mymonta/</code></pre>
+      </div>
+
+      <p>آپدیت <code>.env</code> روی سرور:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="comment"># ویرایش DATABASE_URL در فایل .env</span>
+sed -i 's|DATABASE_URL=.*|DATABASE_URL="postgresql://myuser:StrongPassword123!@localhost:5432/mydb"|' \
+  /var/www/mymonta/.env
+
+<span class="comment"># حذف .env.local که ممکنه override کنه</span>
+rm -f /var/www/mymonta/.env.local
+
+<span class="comment"># تأیید</span>
+grep DATABASE_URL /var/www/mymonta/.env</code></pre>
+      </div>
+
+      <p>نصب dotenv اگه موجود نبود:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code>npm install dotenv --registry="https://package-mirror.liara.ir/repository/npm/"
+cp -r /root/node_modules/dotenv /var/www/mymonta/node_modules/</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="section" id="s7">
+    <div class="section-header">
+      <div class="step-num green">07</div>
+      <div>
+        <h2>Prisma Generate و Migrate</h2>
+        <p>آماده‌سازی دیتابیس و Prisma Client</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="cmd">cd</span> /var/www/mymonta
+
+<span class="comment"># Generate Prisma Client</span>
+DATABASE_URL=<span class="str">"postgresql://myuser:StrongPassword123!@localhost:5432/mydb"</span> \
+./node_modules/.bin/prisma generate
+
+<span class="comment"># اجرای migrations</span>
+DATABASE_URL=<span class="str">"postgresql://myuser:StrongPassword123!@localhost:5432/mydb"</span> \
+./node_modules/.bin/prisma migrate deploy</code></pre>
+      </div>
+      <div class="success"><span class="note-icon">✅</span><span>باید پیام «All migrations have been successfully applied» ببینی.</span></div>
+    </div>
+  </div>
+
+  <!-- STEP 8 -->
+  <div class="section" id="s8">
+    <div class="section-header">
+      <div class="step-num yellow">08</div>
+      <div>
+        <h2>Build روی سرور و راه‌اندازی PM2</h2>
+        <p>build مجدد با env سرور و شروع سرویس</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="info"><span class="note-icon">💡</span><span>برای اطمینان، build رو روی خود سرور هم بگیر تا env variables درست بیلد بشن.</span></div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="cmd">cd</span> /var/www/mymonta
+
+<span class="comment"># Build روی سرور</span>
+NODE_ENV=production \
+DATABASE_URL=<span class="str">"postgresql://myuser:StrongPassword123!@localhost:5432/mydb"</span> \
+./node_modules/.bin/next build
+
+<span class="comment"># شروع با PM2</span>
+pm2 start node_modules/.bin/next \
+  --name <span class="str">"myshop"</span> \
+  --interpreter none \
+  -- start -p 3000
+
+<span class="comment"># ذخیره و auto-start</span>
+pm2 save
+pm2 startup
+
+<span class="comment"># وضعیت</span>
+pm2 status</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 9 -->
+  <div class="section" id="s9">
+    <div class="section-header">
+      <div class="step-num red">09</div>
+      <div>
+        <h2>تنظیم Nginx</h2>
+        <p>Reverse proxy و serve فایل‌های static</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="comment"># حذف default</span>
+rm -f /etc/nginx/sites-enabled/default
+
+<span class="comment"># ساخت config جدید</span>
+cat > /etc/nginx/sites-available/myshop &lt;&lt; 'NGINX'
+server {
+    listen 80;
+    server_name <span class="val">yourdomain.com</span> www.<span class="val">yourdomain.com</span>;
+
+    client_max_body_size 50M;
+
+    location /_next/static/ {
+        alias /var/www/mymonta/.next/static/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location /assets/ {
+        alias /var/www/mymonta/public/assets/;
+        expires 30d;
+    }
+
+    location /uploads/ {
+        alias /var/www/mymonta/public/uploads/;
+        expires 30d;
+    }
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+NGINX
+
+<span class="comment"># فعال‌سازی</span>
+ln -s /etc/nginx/sites-available/myshop /etc/nginx/sites-enabled/
+nginx -t && systemctl restart nginx</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 10 -->
+  <div class="section" id="s10">
+    <div class="section-header">
+      <div class="step-num cyan">10</div>
+      <div>
+        <h2>SSL و HTTPS</h2>
+        <p>نصب گواهینامه — دو روش</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <p><strong>روش ۱ — Let's Encrypt (اگه سرور به اینترنت آزاد دسترسی داره):</strong></p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code>apt install -y certbot python3-certbot-nginx
+certbot --nginx -d <span class="val">yourdomain.com</span> -d www.<span class="val">yourdomain.com</span></code></pre>
+      </div>
+
+      <p><strong>روش ۲ — Certificate دستی (از CDN یا cPanel):</strong></p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="comment"># ساخت پوشه</span>
+mkdir -p /etc/nginx/ssl/mysite
+
+<span class="comment"># ذخیره فایل‌ها (محتوا رو paste کن)</span>
+nano /etc/nginx/ssl/mysite/fullchain.pem
+nano /etc/nginx/ssl/mysite/privkey.pem</code></pre>
+      </div>
+
+      <p>آپدیت Nginx config برای HTTPS:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">nginx config با SSL</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code>server {
+    listen 80;
+    server_name <span class="val">yourdomain.com</span> www.<span class="val">yourdomain.com</span>;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name <span class="val">yourdomain.com</span> www.<span class="val">yourdomain.com</span>;
+
+    ssl_certificate     /etc/nginx/ssl/mysite/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/mysite/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    client_max_body_size 50M;
+
+    add_header Content-Security-Policy "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;" always;
+
+    location /_next/static/ {
+        alias /var/www/mymonta/.next/static/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location /assets/ {
+        alias /var/www/mymonta/public/assets/;
+        expires 30d;
+    }
+
+    location /uploads/ {
+        alias /var/www/mymonta/public/uploads/;
+        expires 30d;
+    }
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code>nginx -t && systemctl restart nginx</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 11 -->
+  <div class="section" id="s11">
+    <div class="section-header">
+      <div class="step-num purple">11</div>
+      <div>
+        <h2>تست و عیب‌یابی</h2>
+        <p>دستورات مفید برای بررسی وضعیت</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — تست‌های اساسی</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="comment"># وضعیت PM2</span>
+pm2 status
+
+<span class="comment"># لاگ‌های live</span>
+pm2 logs myshop --lines 50
+
+<span class="comment"># تست Next.js مستقیم</span>
+curl -I http://localhost:3000
+
+<span class="comment"># تست API</span>
+curl -s http://localhost:3000/api/ping
+
+<span class="comment"># تست دیتابیس</span>
+curl -s http://localhost:3000/api/store/site-settings
+
+<span class="comment"># پورت‌های در حال استفاده</span>
+ss -tlnp | grep -E "80|443|3000|5432"
+
+<span class="comment"># وضعیت Nginx</span>
+systemctl status nginx
+
+<span class="comment"># لاگ Nginx</span>
+tail -f /var/log/nginx/error.log</code></pre>
+      </div>
+
+      <p><strong>مشکلات رایج:</strong></p>
+      <table>
+        <tr><th>مشکل</th><th>راه‌حل</th></tr>
+        <tr><td>صفحه سفید (blank page)</td><td>بررسی Console مرورگر، رفع CSP header، rebuild روی سرور</td></tr>
+        <tr><td>خطای database 54321</td><td>حذف <code>.env.local</code> — باید DATABASE_URL با پورت 5432 باشه</td></tr>
+        <tr><td>502 Bad Gateway</td><td>PM2 در حال اجرا نیست — <code>pm2 restart myshop</code></td></tr>
+        <tr><td>ERR_REQUIRE_ESM</td><td>Node.js قدیمیه — باید Node 20+ نصب بشه</td></tr>
+        <tr><td>Prisma dotenv error</td><td><code>npm install dotenv</code> و کپی به node_modules پروژه</td></tr>
+        <tr><td>JS لود نمیشه</td><td>CDN cache — Purge Cache بزن یا مستقیم با IP تست کن</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- STEP 12 -->
+  <div class="section" id="s12">
+    <div class="section-header">
+      <div class="step-num green">12</div>
+      <div>
+        <h2>بروزرسانی سایت</h2>
+        <p>فرآیند دیپلوی نسخه‌های جدید</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — لوکال (هر بار)</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code><span class="comment"># build جدید</span>
+pnpm build
+
+<span class="comment"># آرشیو — شامل node_modules هم بشه (اول بار یا وقتی پکیج جدید داری)</span>
+tar --exclude=<span class="str">'node_modules/.cache'</span> \
+    --exclude=<span class="str">'.git'</span> \
+    --exclude=<span class="str">'.next/cache'</span> \
+    -czf /tmp/shop-update.tar.gz \
+    node_modules .next app components lib prisma \
+    public types package.json pnpm-lock.yaml \
+    next.config.ts tsconfig.json .env.production \
+    prisma.config.ts prisma.config.mjs
+
+<span class="comment"># یا فقط کدها (بدون node_modules — سریع‌تر، اگه پکیج جدید نداری)</span>
+tar -czf /tmp/shop-update.tar.gz \
+    .next app components lib prisma public types \
+    next.config.ts tsconfig.json package.json pnpm-lock.yaml
+
+<span class="comment"># آپلود به هاست و بعد روی سرور:</span></code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
+        <pre><code>wget https://yourhost.com/shop-update.tar.gz -O /tmp/shop-update.tar.gz
+tar -xzf /tmp/shop-update.tar.gz -C /var/www/mymonta/
+
+<span class="comment"># اگه migration جدید داری</span>
+cd /var/www/mymonta
+DATABASE_URL=<span class="str">"postgresql://myuser:pass@localhost:5432/mydb"</span> \
+./node_modules/.bin/prisma migrate deploy
+
+<span class="comment"># rebuild روی سرور</span>
+NODE_ENV=production \
+DATABASE_URL=<span class="str">"postgresql://myuser:pass@localhost:5432/mydb"</span> \
+./node_modules/.bin/next build
+
+<span class="comment"># اگه app/page.tsx وجود نداره یا تغییر کرده — چک کن</span>
+ls /var/www/mymonta/app/page.tsx || \
+  cp "/var/www/mymonta/app/(shop)/page.tsx" /var/www/mymonta/app/page.tsx
+
+<span class="comment"># پوشه‌های قدیمی که نباید باشن رو حذف کن</span>
+rm -rf /var/www/mymonta/app/store 2>/dev/null || true
+rm -rf /var/www/mymonta/app/checkout 2>/dev/null || true
+
+<span class="comment"># restart</span>
+pm2 restart mymonta-shop --update-env
+pm2 save</code></pre>
+      </div>
+
+      <div class="success"><span class="note-icon">✅</span><span>سایت بروز شد! با <code>pm2 logs myshop --lines 20</code> وضعیت رو چک کن.</span></div>
+      <div class="warning"><span class="note-icon">⚠️</span><span>بعد از آپدیت چک کن: <code>app/page.tsx</code> باید Header/Footer داشته باشه. اگه صفحه اصلی بدون هدر بود، فایل <code>app/page.tsx</code> رو با نسخه کامل جایگزین کن.</span></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  راهنمای دیپلوی Next.js + PostgreSQL + Nginx + PM2 روی Ubuntu 24
+</footer>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  const text = pre.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✅ کپی شد';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 کپی';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>

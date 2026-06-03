@@ -1,0 +1,268 @@
+import { prisma } from "../lib/prisma";
+
+async function main() {
+  const admin = await prisma.user.upsert({
+    where: { phone: "09120000000" },
+    update: {},
+    create: {
+      phone: "09120000000",
+      passwordHash: "TEMP_HASH_CHANGE_LATER",
+      role: "ADMIN",
+      firstName: "Admin",
+      lastName: "System",
+    },
+  });
+
+  // 2) Categories (نمونه)
+  const faucet = await prisma.category.upsert({
+    where: { slug: "faucet" },
+    update: {},
+    create: { title: "شیرآلات", slug: "faucet", sortOrder: 1 },
+  });
+
+  const sink = await prisma.category.upsert({
+    where: { slug: "sink-faucet" },
+    update: {},
+    create: { title: "شیر ظرفشویی", slug: "sink-faucet", parentId: faucet.id, sortOrder: 1 },
+  });
+
+  // 3) Brands (نمونه)
+  const kwc = await prisma.brand.upsert({
+    where: { slug: "kwc" },
+    update: { title: "KWC" },
+    create: { title: "KWC", slug: "kwc", logoUrl: "/brands/kwc.png" },
+  });
+
+  // 4) Product نمونه
+  const p1 = await prisma.product.upsert({
+    where: { slug: "kwc-sample-1" },
+    update: {},
+    create: {
+      title: "شیر ظرفشویی KWC مدل نمونه",
+      slug: "kwc-sample-1",
+      categoryId: sink.id,
+      brandId: kwc.id,
+      price: BigInt(4500000),
+      salePrice: BigInt(3990000),
+      warranty: "گارانتی 5 ساله",
+      description: "محصول نمونه برای تست MVP",
+      specs: { جنس: "آلیاژ برنج", نوع_نصب: "روکار" },
+      features: ["کاهش مصرف آب", "آبکاری مقاوم"],
+      colors: ["کروم", "طلایی"],
+      images: {
+        create: [
+          { url: "/products/p1.jpg", alt: "تصویر محصول", sortOrder: 1 },
+        ],
+      },
+    },
+  });
+
+  // 5) Template نمونه برای Configurator (شیر ظرفشویی)
+  const template = await prisma.template.upsert({
+    where: { slug: "sink-faucet-template" },
+    update: {},
+    create: {
+      title: "قالب مونتاژ شیر ظرفشویی",
+      slug: "sink-faucet-template",
+      basePrice: BigInt(3000000),
+      rulesVersion: 1,
+      defaultCategoryId: sink.id,
+      defaultBrandId: kwc.id,
+    },
+  });
+
+  // 6) Component Types
+  const bodyType = await prisma.componentType.upsert({
+    where: { code: "BODY" },
+    update: {},
+    create: { code: "BODY", title: "بدنه" },
+  });
+
+  const handleType = await prisma.componentType.upsert({
+    where: { code: "HANDLE" },
+    update: {},
+    create: { code: "HANDLE", title: "دسته" },
+  });
+
+  const colorType = await prisma.componentType.upsert({
+    where: { code: "COLOR" },
+    update: {},
+    create: { code: "COLOR", title: "رنگ/آبکاری" },
+  });
+
+  // 7) Options (نمونه)
+  const body1 = await prisma.componentOption.upsert({
+  where: { componentTypeId_slug: { componentTypeId: bodyType.id, slug: "body-a" } },
+  update: {
+    title: "بدنه مدل A",
+    imageUrl: "/parts/body-a.webp",
+    priceDelta: BigInt(0),
+    meta: { sku: "BODY-A" },
+    isActive: true,
+  },
+  create: {
+    componentTypeId: bodyType.id,
+    title: "بدنه مدل A",
+    slug: "body-a",
+    imageUrl: "/parts/body-a.webp",
+    priceDelta: BigInt(0),
+    meta: { sku: "BODY-A" },
+  },
+});
+  
+await prisma.inventoryOption.upsert({
+  where: { componentOptionId: body1.id },
+  update: { stockQty: 50, reservedQty: 0 },
+  create: { componentOptionId: body1.id, stockQty: 50, reservedQty: 0 },
+});
+
+  const handle1 = await prisma.componentOption.upsert({
+  where: { componentTypeId_slug: { componentTypeId: handleType.id, slug: "handle-a" } },
+  update: {
+    title: "دسته مدل A",
+    imageUrl: "/parts/handle-a.webp",
+    priceDelta: BigInt(0),
+    meta: { sku: "HANDLE-A" },
+    isActive: true,
+  },
+  create: {
+    componentTypeId: handleType.id,
+    title: "دسته مدل A",
+    slug: "handle-a",
+    imageUrl: "/parts/handle-a.webp",
+    priceDelta: BigInt(0),
+    meta: { sku: "HANDLE-A" },
+  },
+});
+
+await prisma.inventoryOption.upsert({
+  where: { componentOptionId: handle1.id },
+  update: { stockQty: 50, reservedQty: 0 },
+  create: { componentOptionId: handle1.id, stockQty: 50, reservedQty: 0 },
+});
+
+  const colorChrome = await prisma.componentOption.upsert({
+  where: { componentTypeId_slug: { componentTypeId: colorType.id, slug: "chrome" } },
+  update: {
+    title: "کروم",
+    imageUrl: "/parts/chrome.webp",
+    priceDelta: BigInt(0),
+    meta: { code: "CHROME" },
+    isActive: true,
+  },
+  create: {
+    componentTypeId: colorType.id,
+    title: "کروم",
+    slug: "chrome",
+    imageUrl: "/parts/chrome.webp",
+    priceDelta: BigInt(0),
+    meta: { code: "CHROME" },
+  },
+});
+
+await prisma.inventoryOption.upsert({
+  where: { componentOptionId: colorChrome.id },
+  update: { stockQty: 50, reservedQty: 0 },
+  create: { componentOptionId: colorChrome.id, stockQty: 50, reservedQty: 0 },
+});
+
+
+
+ const colorGold = await prisma.componentOption.upsert({
+  where: { componentTypeId_slug: { componentTypeId: colorType.id, slug: "gold" } },
+  update: {
+    title: "طلایی",
+    imageUrl: "/parts/gold.webp",
+    priceDelta: BigInt(450000),
+    meta: { code: "GOLD" },
+    isActive: true,
+  },
+  create: {
+    componentTypeId: colorType.id,
+    title: "طلایی",
+    slug: "gold",
+    imageUrl: "/parts/gold.webp",
+    priceDelta: BigInt(450000),
+    meta: { code: "GOLD" },
+  },
+});
+
+await prisma.inventoryOption.upsert({
+  where: { componentOptionId: colorGold.id },
+  update: { stockQty: 50, reservedQty: 0 },
+  create: { componentOptionId: colorGold.id, stockQty: 50, reservedQty: 0 },
+});
+
+
+
+  // 8) Steps
+  const stepBody = await prisma.templateStep.upsert({
+    where: { templateId_key: { templateId: template.id, key: "body" } },
+    update: {},
+    create: {
+      templateId: template.id,
+      componentTypeId: bodyType.id,
+      title: "انتخاب بدنه",
+      key: "body",
+      sortOrder: 1,
+      isRequired: true,
+      selectionMode: "SINGLE",
+    },
+  });
+
+  const stepHandle = await prisma.templateStep.upsert({
+    where: { templateId_key: { templateId: template.id, key: "handle" } },
+    update: {},
+    create: {
+      templateId: template.id,
+      componentTypeId: handleType.id,
+      title: "انتخاب دسته",
+      key: "handle",
+      sortOrder: 2,
+      isRequired: true,
+      selectionMode: "SINGLE",
+    },
+  });
+
+
+  const stepColorFinal = await prisma.templateStep.upsert({
+    where: { templateId_key: { templateId: template.id, key: "color" } },
+    update: {},
+    create: {
+      templateId: template.id,
+      componentTypeId: colorType.id,
+      title: "انتخاب رنگ/آبکاری",
+      key: "color",
+      sortOrder: 3,
+      isRequired: true,
+      selectionMode: "SINGLE",
+      scope: { affects: ["BODY", "HANDLE"] },
+    },
+  });
+
+  // 9) Link options to steps (StepOption)
+  await prisma.templateStepOption.createMany({
+    data: [
+      { templateStepId: stepBody.id, componentOptionId: body1.id, isActive: true },
+      { templateStepId: stepHandle.id, componentOptionId: handle1.id, isActive: true },
+      { templateStepId: stepColorFinal.id, componentOptionId: colorChrome.id, isActive: true },
+      { templateStepId: stepColorFinal.id, componentOptionId: colorGold.id, isActive: true },
+    ],
+    skipDuplicates: true,
+  });
+
+  console.log("✅ Seed done:", {
+    admin: admin.phone,
+    product: p1.slug,
+    template: template.slug,
+  });
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
