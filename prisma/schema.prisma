@@ -68,6 +68,9 @@ model Category {
   children       Category[] @relation("CategoryTree")
   products       Product[]
   megaMenu       MegaMenuCategory?
+  attributeGroups CategoryAttributeGroup[]
+
+
 
   @@index([parentId])
   @@index([isActive])
@@ -139,6 +142,9 @@ model Product {
   wishlist           WishlistItem[]
   relatedProducts    ProductRelated[]   @relation("ProductRelations")
   relatedTo          ProductRelated[]   @relation("RelatedToProducts")
+  attributes     ProductAttribute[]
+
+
 
   @@index([categoryId])
   @@index([brandId])
@@ -716,6 +722,79 @@ model ProductRelated {
 
   @@unique([productId, relatedId])
   @@index([productId])
+}
+
+model AttributeGroup {
+  id         String                    @id @default(cuid())
+  title      String
+  isActive   Boolean                   @default(true)
+  sortOrder  Int                       @default(0)
+  createdAt  DateTime                  @default(now())
+  updatedAt  DateTime                  @updatedAt
+  attributes Attribute[]
+  categories CategoryAttributeGroup[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model Attribute {
+  id           String             @id @default(cuid())
+  groupId      String
+  title        String
+  slug         String
+  isFilterable Boolean            @default(true)
+  sortOrder    Int                @default(0)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  group        AttributeGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  values       AttributeValue[]
+  products     ProductAttribute[]
+
+  @@unique([groupId, slug])
+  @@index([groupId])
+  @@index([isFilterable])
+}
+
+model AttributeValue {
+  id          String             @id @default(cuid())
+  attributeId String
+  value       String
+  slug        String?
+  sortOrder   Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  attribute   Attribute          @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  products    ProductAttribute[]
+
+  @@index([attributeId])
+}
+
+model ProductAttribute {
+  id               String         @id @default(cuid())
+  productId        String
+  attributeId      String
+  attributeValueId String
+  product          Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attribute        Attribute      @relation(fields: [attributeId], references: [id])
+  value            AttributeValue @relation(fields: [attributeValueId], references: [id])
+
+  @@unique([productId, attributeId])
+  @@index([productId])
+  @@index([attributeId])
+  @@index([attributeValueId])
+}
+
+model CategoryAttributeGroup {
+  id               String         @id @default(cuid())
+  categoryId       String
+  attributeGroupId String
+  category         Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  attributeGroup   AttributeGroup @relation(fields: [attributeGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, attributeGroupId])
+  @@index([categoryId])
+  @@index([attributeGroupId])
 }
 
 enum BlogStatus {
