@@ -27,6 +27,8 @@ export default function ProductsListPage() {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterBrand, setFilterBrand] = useState("");
+  const [attributeGroups, setAttributeGroups] = useState<any[]>([]);
+  const [selectedAttributeValues, setSelectedAttributeValues] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -46,10 +48,35 @@ export default function ProductsListPage() {
       setProducts(Array.isArray(data) ? data : []);
       setCategories(await catRes.json());
       setBrands(await brandRes.json());
+      // Load attribute groups for selected category
+      if (filterCategory) {
+        const selectedCat = (await catRes.json()).find((c: any) => c.title === filterCategory);
+        if (selectedCat) {
+          const attrRes = await fetch(`/api/admin/categories/${selectedCat.id}/attribute-groups`);
+          setAttributeGroups(await attrRes.json());
+        }
+      }
     } finally {
       setLoading(false);
     }
   }
+
+  // Load attributes when category changes
+   useEffect(() => {
+     if (!filterCategory) {
+       setAttributeGroups([]);
+       setSelectedAttributeValues([]);
+       return;
+     }
+   
+     const selectedCat = categories.find(c => c.title === filterCategory);
+     if (selectedCat) {
+       fetch(`/api/admin/categories/${selectedCat.id}/attribute-groups`)
+         .then(r => r.json())
+         .then(setAttributeGroups)
+         .catch(() => setAttributeGroups([]));
+     }
+   }, [filterCategory, categories]);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -92,7 +119,12 @@ export default function ProductsListPage() {
       filterStatus === "active" ? p.isActive :
       filterStatus === "inactive" ? !p.isActive :
       filterStatus === "outofstock" ? (p.trackStock && p.stock === 0) : true;
-    return matchSearch && matchCat && matchBrand && matchStatus;
+    const matchAttributes = selectedAttributeValues.length === 0 || 
+        (p as any).attributes?.some((attr: any) => 
+          selectedAttributeValues.includes(attr.attributeValueId)
+        );      
+
+      return matchSearch && matchCat && matchBrand && matchStatus && matchAttributes;
   });
 
   const activeCount = products.filter(p => p.isActive).length;
@@ -222,12 +254,63 @@ export default function ProductsListPage() {
             </button>
           ))}
           {(search || filterCategory || filterBrand || filterStatus) && (
-            <button onClick={() => { setSearch(""); setFilterCategory(""); setFilterBrand(""); setFilterStatus(""); }}
+            <button onClick={() => { 
+                setSearch(""); 
+                setFilterCategory(""); 
+                setFilterBrand(""); 
+                setFilterStatus(""); 
+                setSelectedAttributeValues([]);
+              }}
               className="px-3 py-1.5 rounded-lg text-xs font-black text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-all mr-auto">
               پاک کردن فیلترها
             </button>
           )}
         </div>
+
+        {/* فیلتر ویژگی‌ها */}
+        {attributeGroups.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/[0.06]">
+            <p className="text-xs font-black text-gray-500 mb-2">فیلتر با ویژگی‌ها:</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {attributeGroups.map(group => (
+                <div key={group.id}>
+                  <label className="block text-[10px] font-bold text-gray-400 mb-1">
+                    {group.attributeGroup.title}
+                  </label>
+                  {group.attributeGroup.attributes.map((attr: any) => (
+                    <select
+                      key={attr.id}
+                      value={selectedAttributeValues.find(v => 
+                        attr.values.some((val: any) => val.id === v)
+                      ) || ""}
+                      onChange={e => {
+                        const newValue = e.target.value;
+                        setSelectedAttributeValues(prev => {
+                          // Remove old value for this attribute
+                          const filtered = prev.filter(v => 
+                            !attr.values.some((val: any) => val.id === v)
+                          );
+                          // Add new value if selected
+                          return newValue ? [...filtered, newValue] : filtered;
+                        });
+                      }}
+                      className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all mb-2"
+                    >
+                      <option value="">{attr.title}: همه</option>
+                      {attr.values.map((val: any) => (
+                        <option key={val.id} value={val.id}>
+                          {val.value}
+                        </option>
+                      ))}
+                    </select>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+
       </div>
 
       {/* جدول */}
