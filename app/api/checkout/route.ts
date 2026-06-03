@@ -1,0 +1,98 @@
+import { NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { serialize } from "@/lib/serialize";
+
+export const runtime = "nodejs";
+
+function generateOrderNumber(): string {
+  const prefix = "MN";
+  const num = Math.floor(10000 + Math.random() * 90000);
+  return `${prefix}-${num}`;
+}
+
+export async function POST(req: Request) {
+  const user = await getAuthUser();
+  if (!user) return NextResponse.json({ error: "احراز هویت نشده" }, { status: 401 });
+
+  const { addressId, shippingMethodId, paymentMethod, items } = await req.json();
+
+  if (!addressId || !shippingMethodId || !items?.length)
+    return NextResponse.json({ error: "اطلاعات ناقص است" }, { status: 400 });
+
+  // بررسی آدرس
+  const address = await prisma.address.findFirst({ where: { id: addressId, userId: user.id } });
+  if (!address) return NextResponse.json({ error: "آدرس نامعتبر است" }, { status: 400 });
+
+  // بررسی روش ارسال
+  const shipping = await prisma.shippingMethod.findUnique({ where: { id: shippingMethodId } });
+  if (!shipping || !shipping.isActive) return NextResponse.json({ error: "روش ارسال نامعتبر است" }, { status: 400 });
+
+  // گرفتن محصولات از DB
+  const productIds = items.map((i: any) => i.productId);
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds }, isActive: true },
+    select: { id: true, title: true, price: true, salePrice: true },
+  });
+
+  if (products.length !== productIds.length)
+    return NextResponse.json({ error: "یک یا چند محصول در دسترس نیست" }, { status: 400 });
+
+  // محاسبه مبالغ
+  let itemsTotal = BigInt(0);
+  const orderItems = items.map((i: any) => {
+    const p = products.find(pr => pr.id === i.productId)!;
+    const unitPrice = p.price;
+    const unitSalePrice = p.salePrice;
+    const linePrice = (unitSalePrice ?? unitPrice) * BigInt(i.qty);
+    itemsTotal += linePrice;
+    return {
+      productId: p.id,
+      qty: i.qty,
+      unitPrice,
+      unitSalePrice,
+      titleSnapshot: p.title,
+    };
+  });
+
+  const shippingFee = shipping.fee;
+  const grandTotal = itemsTotal + shippingFee;
+
+  // ساخت سفارش
+  const order = await prisma.order.create({
+    data: {
+      userId: user.id,
+      addressId,
+      orderNumber: generateOrderNumber(),
+      status: "PENDING_PAYMENT",
+      itemsTotal,
+      shippingFee,
+      discountTotal: BigInt(0),
+      grandTotal,
+      items: { create: orderItems },
+      payments: {
+        create: {
+          amount: grandTotal,
+          status: "PENDING",
+          provider: paymentMethod === "online" ? "gateway" : "card_transfer",
+        },
+      },
+    },
+  });
+
+  // خالی کردن سبد خرید
+  const cart = await prisma.cart.findUnique({ where: { userId: user.id } });
+  if (cart) await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+     // کسر موجودی محصولات
+   await Promise.all(
+     orderItems.map((item: { productId: string; qty: number }) =>
+       prisma.product.updateMany({
+         where: { id: item.productId, trackStock: true, stock: { gt: 0 } },
+         data: { stock: { decrement: item.qty } },
+       })
+     )
+   );
+
+  return NextResponse.json(serialize({ orderId: order.id, orderNumber: order.orderNumber }));
+}
