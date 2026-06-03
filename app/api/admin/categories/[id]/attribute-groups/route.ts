@@ -3,10 +3,11 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const groups = await prisma.categoryAttributeGroup.findMany({
-    where: { categoryId: params.id },
+    where: { categoryId: id },
     include: {
       attributeGroup: {
         include: {
@@ -23,22 +24,24 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { attributeGroupId } = await req.json();
   const link = await prisma.categoryAttributeGroup.create({
-    data: { categoryId: params.id, attributeGroupId },
+    data: { categoryId: id, attributeGroupId },
   });
   return NextResponse.json(link);
 }
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { attributeGroupId } = await req.json();
   await prisma.categoryAttributeGroup.deleteMany({
-    where: { categoryId: params.id, attributeGroupId },
+    where: { categoryId: id, attributeGroupId },
   });
   return NextResponse.json({ success: true });
 }

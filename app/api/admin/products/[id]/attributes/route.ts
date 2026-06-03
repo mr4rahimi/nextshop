@@ -3,10 +3,11 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const attrs = await prisma.productAttribute.findMany({
-    where: { productId: params.id },
+    where: { productId: id },
     include: { attribute: true, value: true },
   });
   return NextResponse.json(attrs);
@@ -14,20 +15,21 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { attributes } = await req.json();
 
   // حذف ویژگی‌های قبلی
   await prisma.productAttribute.deleteMany({
-    where: { productId: params.id },
+    where: { productId: id },
   });
 
   // اضافه کردن ویژگی‌های جدید
   if (attributes && attributes.length > 0) {
     await prisma.productAttribute.createMany({
       data: attributes.map((a: any) => ({
-        productId: params.id,
+        productId: id,
         attributeId: a.attributeId,
         attributeValueId: a.attributeValueId,
       })),
