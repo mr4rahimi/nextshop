@@ -55,6 +55,7 @@ const MENU_GROUPS = [
           { href: "/admin/categories", label: "دسته‌بندی‌ها" },
           { href: "/admin/brands", label: "برندها" },
           { href: "/admin/spec-groups", label: "گروه مشخصات" },
+          { href: "/admin/attribute-groups", label: "گروه ویژگی ها" },
           { href: "/admin/products/bulk-price", label: "ویرایش گروهی قیمت", icon: "🏷️" },
           { href: "/admin/products/bulk-stock", label: "ویرایش گروهی موجودی", icon: "📦" },
         ],

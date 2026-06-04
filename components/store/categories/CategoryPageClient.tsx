@@ -23,6 +23,23 @@ interface Category {
   parent: { id: string; title: string; slug: string } | null;
   brands: Brand[];
   priceRange: { min: string; max: string };
+  attributeGroups?: {
+    id: string;
+    attributeGroup: {
+      id: string;
+      title: string;
+      attributes: {
+        id: string;
+        title: string;
+        slug: string;
+        values: {
+          id: string;
+          value: string;
+          slug: string | null;
+        }[];
+      }[];
+    };
+  }[];
 }
 
 interface ProductsResponse {
@@ -49,6 +66,109 @@ function formatPrice(val: string | number): string {
   return n.toLocaleString("fa-IR");
 }
 
+// ─── Attribute Filters Component ──────────────────────────────────────────────
+function AttributeFilters({
+  attributeGroups,
+  selectedAttributes,
+  onAttributeToggle,
+}: {
+  attributeGroups: Category["attributeGroups"];
+  selectedAttributes: Record<string, string[]>;
+  onAttributeToggle: (attributeId: string, valueId: string) => void;
+}) {
+  if (!attributeGroups || attributeGroups.length === 0) return null;
+
+  return (
+    <>
+      {attributeGroups.map((ag) => {
+        const group = ag.attributeGroup;
+        if (!group.attributes || group.attributes.length === 0) return null;
+        
+        return group.attributes.map((attr) => {
+          if (!attr.values || attr.values.length === 0) return null;
+          
+          return (
+            <AttributeFilterItem
+              key={attr.id}
+              attribute={attr}
+              selectedValues={selectedAttributes[attr.id] || []}
+              onToggle={(valueId) => onAttributeToggle(attr.id, valueId)}
+            />
+          );
+        });
+      })}
+    </>
+  );
+}
+
+function AttributeFilterItem({
+  attribute,
+  selectedValues,
+  onToggle,
+}: {
+  attribute: {
+    id: string;
+    title: string;
+    values: { id: string; value: string }[];
+  };
+  selectedValues: string[];
+  onToggle: (valueId: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(true);
+  const selectedCount = selectedValues.length;
+
+  return (
+    <div className="relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-gray-200/50 dark:shadow-none">
+      <button
+        className="flex items-center justify-between p-7 w-full cursor-pointer select-none"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-3">
+          <span className="w-3 h-3 rounded-full bg-purple-500" />
+          {attribute.title}
+          {selectedCount > 0 && (
+            <span className="text-[10px] font-black text-purple-500 bg-purple-500/10 px-3 py-1 rounded-full">
+              {toFarsi(selectedCount)}
+            </span>
+          )}
+        </h3>
+        <svg
+          className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="px-7 pb-8 space-y-1">
+          <ul className="space-y-1 max-h-72 overflow-y-auto pl-2">
+            {attribute.values.map((val) => (
+              <li key={val.id} className="group/attr">
+                <label className="flex items-center justify-between p-3 rounded-2xl hover:bg-purple-500/5 dark:hover:bg-purple-500/10 cursor-pointer transition-all border border-transparent hover:border-purple-500/20">
+                  <span className="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/attr:text-purple-600 transition-colors">
+                    {val.value}
+                  </span>
+                  <div className="relative flex items-center">
+                    <input
+                      type="checkbox"
+                      className="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-purple-500 checked:border-purple-500 transition-all cursor-pointer"
+                      checked={selectedValues.includes(val.id)}
+                      onChange={() => onToggle(val.id)}
+                    />
+                    <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M5 13l4 4L19 7" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 // ─── Filter Sidebar ───────────────────────────────────────────────────────────
 function FilterSidebar({
   brands,
@@ -61,6 +181,9 @@ function FilterSidebar({
   onApplyPrice,
   brandSearch,
   onBrandSearch,
+  attributeGroups,
+  selectedAttributes,
+  onAttributeToggle,
 }: {
   brands: Brand[];
   priceRange: { min: string; max: string };
@@ -72,6 +195,9 @@ function FilterSidebar({
   onApplyPrice: () => void;
   brandSearch: string;
   onBrandSearch: (v: string) => void;
+  attributeGroups?: Category["attributeGroups"];
+  selectedAttributes: Record<string, string[]>;
+  onAttributeToggle: (attributeId: string, valueId: string) => void;
 }) {
   const [priceOpen, setPriceOpen] = useState(true);
   const [brandOpen, setBrandOpen] = useState(true);
@@ -227,6 +353,7 @@ export default function CategoryPageClient({
   const [appliedMin, setAppliedMin] = useState("");
   const [appliedMax, setAppliedMax] = useState("");
   const [brandSearch, setBrandSearch] = useState("");
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string[]>>({});
 
   // Mobile filter offcanvas
   const [filterOpen, setFilterOpen] = useState(false);
@@ -262,6 +389,10 @@ export default function CategoryPageClient({
           sort,
         });
         if (selectedBrands.length === 1) params.set("brand", selectedBrands[0]);
+
+        Object.values(selectedAttributes).flat().forEach(valueId => {
+          params.append("attr", valueId);
+        });
         const absMin = String(Number(category?.priceRange?.min ?? 0));
         const absMax = String(Number(category?.priceRange?.max ?? 100000000));
 
@@ -278,14 +409,14 @@ export default function CategoryPageClient({
         setLoading(false);
       }
     },
-    [categorySlug, sort, selectedBrands, appliedMin, appliedMax]
+      [categorySlug, sort, selectedBrands, appliedMin, appliedMax, selectedAttributes]
+
   );
 
-  // اول بار و وقتی فیلتر تغییر می‌کنه
   useEffect(() => {
     setPage(1);
     fetchProducts(1, false);
-  }, [sort, selectedBrands, appliedMin, appliedMax, categorySlug]);
+  }, [sort, selectedBrands, appliedMin, appliedMax, selectedAttributes, categorySlug]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -323,6 +454,22 @@ export default function CategoryPageClient({
     setPage(p);
     fetchProducts(p, false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleAttributeToggle(attributeId: string, valueId: string) {
+    setSelectedAttributes((prev) => {
+      const current = prev[attributeId] || [];
+      const newValues = current.includes(valueId)
+        ? current.filter((id) => id !== valueId)
+        : [...current, valueId];
+      
+      if (newValues.length === 0) {
+        const { [attributeId]: _, ...rest } = prev;
+        return rest;
+      }
+      
+      return { ...prev, [attributeId]: newValues };
+    });
   }
 
   const sortLabels: Record<SortType, string> = {
@@ -457,6 +604,10 @@ export default function CategoryPageClient({
                 onApplyPrice={() => { handleApplyPrice(); setFilterOpen(false); }}
                 brandSearch={brandSearch}
                 onBrandSearch={setBrandSearch}
+                attributeGroups={category.attributeGroups}
+                selectedAttributes={selectedAttributes}
+                onAttributeToggle={handleAttributeToggle}
+
               />
             </div>
           </div>
@@ -477,6 +628,10 @@ export default function CategoryPageClient({
                 onApplyPrice={handleApplyPrice}
                 brandSearch={brandSearch}
                 onBrandSearch={setBrandSearch}
+                attributeGroups={category.attributeGroups}
+                selectedAttributes={selectedAttributes}
+                onAttributeToggle={handleAttributeToggle}
+
               />
             </aside>
 
@@ -512,6 +667,7 @@ export default function CategoryPageClient({
                       setSelectedBrands([]);
                       setMinPrice(""); setMaxPrice("");
                       setAppliedMin(""); setAppliedMax("");
+                      setSelectedAttributes({});
                     }}
                     className="mt-6 px-6 py-2.5 rounded-xl border border-blue-500/30 text-blue-600 dark:text-blue-400 font-bold text-sm hover:bg-blue-500 hover:text-white transition-all"
                   >

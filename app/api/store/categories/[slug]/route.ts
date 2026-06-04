@@ -43,6 +43,37 @@ export async function GET(
     _max: { price: true },
   });
 
+  // ویژگی‌های دسته‌بندی
+  const attributeGroups = await prisma.categoryAttributeGroup.findMany({
+    where: { categoryId: category.id },
+    include: {
+      attributeGroup: {
+        include: {
+          attributes: {
+            where: { isFilterable: true },
+            include: { 
+              values: { 
+                orderBy: { sortOrder: "asc" },
+                where: {
+                  // فقط مقادیری که در محصولات این دسته استفاده شده‌اند
+                  products: {
+                    some: {
+                      product: {
+                        isActive: true,
+                        categoryId: category.id
+                      }
+                    }
+                  }
+                }
+              } 
+            },
+            orderBy: { sortOrder: "asc" },
+          },
+        },
+      },
+    },
+  });
+
   return NextResponse.json(
     serialize({
       id: category.id,
@@ -59,6 +90,14 @@ export async function GET(
         min: priceAgg._min.price ?? 0,
         max: priceAgg._max.price ?? 100_000_000,
       },
+      attributeGroups: attributeGroups.map(ag => ({
+        id: ag.id,
+        attributeGroup: {
+          id: ag.attributeGroup.id,
+          title: ag.attributeGroup.title,
+          attributes: ag.attributeGroup.attributes.filter(attr => attr.values.length > 0),
+        },
+      })).filter(ag => ag.attributeGroup.attributes.length > 0),
     })
   );
 }

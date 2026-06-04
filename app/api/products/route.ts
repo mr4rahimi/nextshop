@@ -22,6 +22,10 @@ export async function GET(req: Request) {
   const minPriceStr = url.searchParams.get("minPrice");
   const maxPriceStr = url.searchParams.get("maxPrice");
 
+  const attributeValues = url.searchParams.getAll("attr");
+
+
+
   const where: any = { isActive: true };
 
   if (q) {
@@ -61,7 +65,16 @@ export async function GET(req: Request) {
   if (sort === "price_asc") orderBy = [{ salePrice: "asc" }, { price: "asc" }];
   if (sort === "price_desc") orderBy = [{ salePrice: "desc" }, { price: "desc" }];
   if (sort === "popular") orderBy = { ratingCount: "desc" };
-
+  if (attributeValues.length > 0) {
+    where.AND = where.AND ?? [];
+    where.AND.push({
+      attributes: {
+        some: {
+          attributeValueId: { in: attributeValues }
+        }
+      }
+    });
+  }
   const [items, total] = await Promise.all([
     prisma.product.findMany({
       where,
