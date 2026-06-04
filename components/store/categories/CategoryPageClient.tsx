@@ -327,6 +327,14 @@ function FilterSidebar({
           )}
         </div>
       )}
+
+      {/* Attribute Filters */}
+      <AttributeFilters 
+        attributeGroups={attributeGroups}
+        selectedAttributes={selectedAttributes}
+        onAttributeToggle={onAttributeToggle}
+      />
+      
     </div>
   );
 }
