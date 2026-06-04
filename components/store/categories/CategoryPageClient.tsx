@@ -71,11 +71,11 @@ function AttributeFilters({
   attributeGroups,
   selectedAttributes,
   onAttributeToggle,
-}: {
+ }: {
   attributeGroups: Category["attributeGroups"];
   selectedAttributes: Record<string, string[]>;
   onAttributeToggle: (attributeId: string, valueId: string) => void;
-}) {
+ }) {
   if (!attributeGroups || attributeGroups.length === 0) return null;
 
   return (
@@ -334,7 +334,6 @@ function FilterSidebar({
         selectedAttributes={selectedAttributes}
         onAttributeToggle={onAttributeToggle}
       />
-      
     </div>
   );
 }
