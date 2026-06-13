@@ -877,3 +877,29 @@ enum RuleType {
   EXCLUDES
   PRICE_RULE
 }
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  OTHER
+}
+
+model MediaFile {
+  id           String    @id @default(cuid())
+  fileName     String
+  originalName String
+  url          String
+  mimeType     String
+  type         MediaType
+  size         Int
+  title        String?
+  altText      String?
+  folder       String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([type])
+  @@index([createdAt])
+}

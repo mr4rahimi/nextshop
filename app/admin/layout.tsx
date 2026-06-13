@@ -68,6 +68,7 @@ const MENU_GROUPS = [
   {
     label: "محتوا",
     items: [
+      { href: "/admin/media", label: "کتابخانه رسانه", icon: "media" },
       {
         href: "/admin/blog", label: "مجله / بلاگ", icon: "blog",
         children: [
@@ -338,7 +339,7 @@ function Breadcrumb() {
     "spec-groups": "مشخصات", blog: "بلاگ", widgets: "ویجت‌ها",
     stories: "استوری‌ها", "hero-slides": "اسلایدر", shipping: "ارسال",
     "site-settings": "تنظیمات", footer: "فوتر", menu: "منو",
-    create: "جدید", comments: "نظرات",
+    create: "جدید", comments: "نظرات", media: "کتابخانه رسانه",
   };
 
   return (
