@@ -39,12 +39,12 @@ export default function BulkStockPage() {
   async function fetchData() {
     setLoading(true);
     const [pRes, cRes, bRes] = await Promise.all([
-      fetch("/api/admin/products"),
+      fetch("/api/admin/products?pageSize=5000"),
       fetch("/api/admin/categories"),
       fetch("/api/admin/brands"),
     ]);
     const data = await pRes.json();
-    setProducts(Array.isArray(data) ? data : []);
+    setProducts(Array.isArray(data) ? data : (data.items ?? []));
     setCategories(await cRes.json());
     setBrands(await bRes.json());
     setLoading(false);

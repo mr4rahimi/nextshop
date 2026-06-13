@@ -52,7 +52,7 @@ export default function BulkEditPage() {
     setLoading(true);
     try {
       const [prodRes, catRes, brandRes] = await Promise.all([
-        fetch("/api/admin/products"),
+        fetch("/api/admin/products?pageSize=5000"),
         fetch("/api/admin/categories"),
         fetch("/api/admin/brands"),
       ]);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 interface Product {
@@ -13,78 +13,120 @@ interface Product {
   isActive: boolean;
   stock?: number;
   trackStock?: boolean;
+  lowStockThreshold?: number;
   category?: { title: string };
   brand?: { title: string };
+  attributes?: { attributeValueId: string }[];
   createdAt: string;
 }
+
+const PAGE_SIZE = 50;
 
 function toFa(n: number) { return n.toLocaleString("fa-IR"); }
 
 export default function ProductsListPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterBrand, setFilterBrand] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+
   const [attributeGroups, setAttributeGroups] = useState<any[]>([]);
   const [selectedAttributeValues, setSelectedAttributeValues] = useState<string[]>([]);
-  const [filterStatus, setFilterStatus] = useState("");
+
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
 
-  async function fetchData() {
+  // آمار کلی (مستقل از فیلترها)
+  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, outofstock: 0 });
+
+  // ── دیتای اولیه: دسته‌بندی‌ها، برندها، آمار ──────────────────────────────────
+  useEffect(() => {
+    fetch("/api/admin/categories").then(r => r.json()).then(setCategories).catch(() => {});
+    fetch("/api/admin/brands").then(r => r.json()).then(setBrands).catch(() => {});
+
+    Promise.all([
+      fetch("/api/admin/products?pageSize=1").then(r => r.json()),
+      fetch("/api/admin/products?pageSize=1&status=active").then(r => r.json()),
+      fetch("/api/admin/products?pageSize=1&status=inactive").then(r => r.json()),
+      fetch("/api/admin/products?pageSize=1&status=outofstock").then(r => r.json()),
+    ]).then(([all, active, inactive, outofstock]) => {
+      setStats({
+        total: all.total ?? 0,
+        active: active.total ?? 0,
+        inactive: inactive.total ?? 0,
+        outofstock: outofstock.total ?? 0,
+      });
+    }).catch(() => {});
+  }, []);
+
+  // ── debounce جستجو ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // ── دریافت گروه‌های ویژگی بر اساس دسته‌بندی انتخاب‌شده ───────────────────────
+  useEffect(() => {
+    if (!filterCategory) {
+      setAttributeGroups([]);
+      setSelectedAttributeValues([]);
+      return;
+    }
+    const selectedCat = categories.find(c => c.title === filterCategory);
+    if (!selectedCat) return;
+    fetch(`/api/admin/categories/${selectedCat.id}/attribute-groups`)
+      .then(r => r.json())
+      .then(setAttributeGroups)
+      .catch(() => setAttributeGroups([]));
+  }, [filterCategory, categories]);
+
+  // ── دریافت محصولات (صفحه‌بندی‌شده) ───────────────────────────────────────────
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const [prodRes, catRes, brandRes] = await Promise.all([
-        fetch("/api/admin/products"),
-        fetch("/api/admin/categories"),
-        fetch("/api/admin/brands"),
-      ]);
-      const data = await prodRes.json();
-      setProducts(Array.isArray(data) ? data : []);
-      setCategories(await catRes.json());
-      setBrands(await brandRes.json());
-      // Load attribute groups for selected category
-      if (filterCategory) {
-        const selectedCat = (await catRes.json()).find((c: any) => c.title === filterCategory);
-        if (selectedCat) {
-          const attrRes = await fetch(`/api/admin/categories/${selectedCat.id}/attribute-groups`);
-          setAttributeGroups(await attrRes.json());
-        }
-      }
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+      });
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      if (filterCategory) params.set("category", filterCategory);
+      if (filterBrand) params.set("brand", filterBrand);
+      if (filterStatus) params.set("status", filterStatus);
+      selectedAttributeValues.forEach(v => params.append("attr", v));
+
+      const res = await fetch(`/api/admin/products?${params}`);
+      const data = await res.json();
+      setProducts(data.items ?? []);
+      setTotal(data.total ?? 0);
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, debouncedSearch, filterCategory, filterBrand, filterStatus, selectedAttributeValues]);
 
-  // Load attributes when category changes
-   useEffect(() => {
-     if (!filterCategory) {
-       setAttributeGroups([]);
-       setSelectedAttributeValues([]);
-       return;
-     }
-   
-     const selectedCat = categories.find(c => c.title === filterCategory);
-     if (selectedCat) {
-       fetch(`/api/admin/categories/${selectedCat.id}/attribute-groups`)
-         .then(r => r.json())
-         .then(setAttributeGroups)
-         .catch(() => setAttributeGroups([]));
-     }
-   }, [filterCategory, categories]);
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  useEffect(() => { fetchData(); }, []);
+  // وقتی فیلتر/جستجو تغییر کرد، برگرد به صفحه ۱
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filterCategory, filterBrand, filterStatus, selectedAttributeValues]);
 
   async function handleDelete(id: string) {
     setDeletingId(id);
     try {
       await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
       setProducts(prev => prev.filter(p => p.id !== id));
+      setTotal(t => Math.max(0, t - 1));
     } finally {
       setDeletingId(null);
       setConfirmId(null);
@@ -106,29 +148,16 @@ export default function ProductsListPage() {
     }
   }
 
-  const filtered = products.filter(p => {
-    const matchSearch =
-      p.title.toLowerCase().includes(search.toLowerCase()) ||
-      p.slug.toLowerCase().includes(search.toLowerCase()) ||
-      p.category?.title.toLowerCase().includes(search.toLowerCase()) ||
-      p.brand?.title.toLowerCase().includes(search.toLowerCase());
-    const matchCat = !filterCategory || p.category?.title === filterCategory;
-    const matchBrand = !filterBrand || p.brand?.title === filterBrand;
-    const matchStatus =
-      filterStatus === "" ? true :
-      filterStatus === "active" ? p.isActive :
-      filterStatus === "inactive" ? !p.isActive :
-      filterStatus === "outofstock" ? (p.trackStock && p.stock === 0) : true;
-    const matchAttributes = selectedAttributeValues.length === 0 || 
-        (p as any).attributes?.some((attr: any) => 
-          selectedAttributeValues.includes(attr.attributeValueId)
-        );      
+  function clearFilters() {
+    setSearch("");
+    setFilterCategory("");
+    setFilterBrand("");
+    setFilterStatus("");
+    setSelectedAttributeValues([]);
+  }
 
-      return matchSearch && matchCat && matchBrand && matchStatus && matchAttributes;
-  });
-
-  const activeCount = products.filter(p => p.isActive).length;
-  const outOfStock = products.filter(p => p.trackStock && p.stock === 0).length;
+  const hasFilters = !!(search || filterCategory || filterBrand || filterStatus || selectedAttributeValues.length > 0);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
@@ -162,7 +191,7 @@ export default function ProductsListPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">مدیریت محصولات</h1>
-          <p className="text-xs text-gray-500 mt-0.5">{toFa(products.length)} محصول در سیستم</p>
+          <p className="text-xs text-gray-500 mt-0.5">{toFa(stats.total)} محصول در سیستم</p>
         </div>
         <button
           onClick={() => router.push("/admin/products/create")}
@@ -178,10 +207,10 @@ export default function ProductsListPage() {
       {/* آمار */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "کل محصولات", value: products.length, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10" },
-          { label: "فعال", value: activeCount, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
-          { label: "غیرفعال", value: products.length - activeCount, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10" },
-          { label: "ناموجود", value: outOfStock, color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-500/10" },
+          { label: "کل محصولات", value: stats.total, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10" },
+          { label: "فعال", value: stats.active, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
+          { label: "غیرفعال", value: stats.inactive, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10" },
+          { label: "ناموجود", value: stats.outofstock, color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-500/10" },
         ].map(stat => (
           <div key={stat.label} className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4 flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center flex-shrink-0`}>
@@ -253,14 +282,8 @@ export default function ProductsListPage() {
               {f.label}
             </button>
           ))}
-          {(search || filterCategory || filterBrand || filterStatus) && (
-            <button onClick={() => { 
-                setSearch(""); 
-                setFilterCategory(""); 
-                setFilterBrand(""); 
-                setFilterStatus(""); 
-                setSelectedAttributeValues([]);
-              }}
+          {hasFilters && (
+            <button onClick={clearFilters}
               className="px-3 py-1.5 rounded-lg text-xs font-black text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-all mr-auto">
               پاک کردن فیلترها
             </button>
@@ -280,17 +303,15 @@ export default function ProductsListPage() {
                   {group.attributeGroup.attributes.map((attr: any) => (
                     <select
                       key={attr.id}
-                      value={selectedAttributeValues.find(v => 
+                      value={selectedAttributeValues.find(v =>
                         attr.values.some((val: any) => val.id === v)
                       ) || ""}
                       onChange={e => {
                         const newValue = e.target.value;
                         setSelectedAttributeValues(prev => {
-                          // Remove old value for this attribute
-                          const filtered = prev.filter(v => 
+                          const filtered = prev.filter(v =>
                             !attr.values.some((val: any) => val.id === v)
                           );
-                          // Add new value if selected
                           return newValue ? [...filtered, newValue] : filtered;
                         });
                       }}
@@ -309,8 +330,6 @@ export default function ProductsListPage() {
             </div>
           </div>
         )}
-
-
       </div>
 
       {/* جدول */}
@@ -328,7 +347,7 @@ export default function ProductsListPage() {
         )}
 
         {/* خالی */}
-        {!loading && filtered.length === 0 && (
+        {!loading && products.length === 0 && (
           <div className="py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 mx-auto mb-4 flex items-center justify-center">
               <svg className="w-8 h-8 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -336,9 +355,9 @@ export default function ProductsListPage() {
               </svg>
             </div>
             <p className="text-sm font-bold text-gray-400">
-              {search || filterCategory || filterBrand || filterStatus ? "محصولی با این فیلترها یافت نشد" : "هنوز محصولی ثبت نشده"}
+              {hasFilters ? "محصولی با این فیلترها یافت نشد" : "هنوز محصولی ثبت نشده"}
             </p>
-            {!search && !filterCategory && !filterBrand && !filterStatus && (
+            {!hasFilters && (
               <button onClick={() => router.push("/admin/products/create")}
                 className="mt-4 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-all">
                 اولین محصول را ایجاد کنید
@@ -348,10 +367,10 @@ export default function ProductsListPage() {
         )}
 
         {/* ردیف‌ها */}
-        {!loading && filtered.map((p, idx) => (
+        {!loading && products.map((p, idx) => (
           <div key={p.id}
             className={`group flex lg:grid lg:grid-cols-[56px_1fr_140px_120px_90px_160px] gap-3 px-5 py-3.5 items-center transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02] ${
-              idx < filtered.length - 1 ? "border-b border-gray-50 dark:border-white/[0.04]" : ""
+              idx < products.length - 1 ? "border-b border-gray-50 dark:border-white/[0.04]" : ""
             }`}>
 
             {/* تصویر */}
@@ -442,11 +461,40 @@ export default function ProductsListPage() {
         ))}
       </div>
 
-      {/* فوتر */}
-      {!loading && filtered.length > 0 && (
-        <p className="text-xs text-gray-400 text-left">
-          نمایش {toFa(filtered.length)} از {toFa(products.length)} محصول
-        </p>
+      {/* صفحه‌بندی */}
+      {!loading && total > 0 && (
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <p className="text-xs text-gray-400">
+            نمایش {toFa((page - 1) * PAGE_SIZE + 1)} تا {toFa(Math.min(page * PAGE_SIZE, total))} از {toFa(total)} محصول
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg text-xs font-black bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 disabled:opacity-40 hover:bg-gray-200 dark:hover:bg-white/10 transition-all">
+              قبلی
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+              .map((p, i, arr) => (
+                <span key={p} className="flex items-center gap-1.5">
+                  {i > 0 && arr[i - 1] !== p - 1 && <span className="text-gray-400 text-xs px-1">...</span>}
+                  <button onClick={() => setPage(p)}
+                    className={`w-8 h-8 rounded-lg text-xs font-black transition-all ${
+                      p === page
+                        ? "bg-blue-600 text-white shadow shadow-blue-500/20"
+                        : "bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10"
+                    }`}>
+                    {toFa(p)}
+                  </button>
+                </span>
+              ))}
+
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-lg text-xs font-black bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 disabled:opacity-40 hover:bg-gray-200 dark:hover:bg-white/10 transition-all">
+              بعدی
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
