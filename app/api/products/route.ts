@@ -35,7 +35,18 @@ export async function GET(req: Request) {
     ];
   }
 
-  if (category) where.category = { slug: category };
+  if (category) {
+  const cat = await prisma.category.findUnique({
+    where: { slug: category },
+    select: { id: true, children: { select: { id: true } } },
+  });
+  if (cat) {
+    const categoryIds = [cat.id, ...cat.children.map(c => c.id)];
+    where.categoryId = { in: categoryIds };
+  } else {
+    where.category = { slug: category };
+  }
+}
   if (brand) where.brand = { slug: brand };
 
   const minPrice = minPriceStr ? BigInt(minPriceStr) : null;
