@@ -141,12 +141,38 @@ export function buildProductSchema(opts: {
         : "https://schema.org/OutOfStock",
       itemCondition:   "https://schema.org/NewCondition",
       seller: { "@type": "Organization", name: process.env.NEXT_PUBLIC_STORE_NAME ?? "فروشگاه" },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: "0",
+          currency: opts.currency ?? "IRR",
+        },
+        shippingDestination: {
+          "@type": "DefinedRegion",
+          addressCountry: "IR",
+        },
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          handlingTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 1, unitCode: "DAY" },
+          transitTime:  { "@type": "QuantitativeValue", minValue: 1, maxValue: 3, unitCode: "DAY" },
+        },
+      },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "IR",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 7,
+        returnMethod: "https://schema.org/ReturnByMail",
+        returnFees: "https://schema.org/FreeReturn",
+      },
     },
   };
 
   // اگه تخفیف داشت، priceSpecification هم اضافه کن
   if (salePrice && salePrice < price) {
     schema.offers.priceSpecification = [
+      
       { "@type": "UnitPriceSpecification", price: salePrice, priceCurrency: opts.currency ?? "IRR", priceType: "https://schema.org/SalePrice" },
       { "@type": "UnitPriceSpecification", price,            priceCurrency: opts.currency ?? "IRR", priceType: "https://schema.org/ListPrice" },
     ];
