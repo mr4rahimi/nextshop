@@ -58,8 +58,17 @@ const MENU_GROUPS = [
           { href: "/admin/attribute-groups", label: "گروه ویژگی ها" },
           { href: "/admin/products/bulk-price", label: "ویرایش گروهی قیمت", icon: "🏷️" },
           { href: "/admin/products/bulk-stock", label: "ویرایش گروهی موجودی", icon: "📦" },
+
         ],
+        
       },
+      {
+            href: "/admin/guaranty", label: "گارانتی", icon: "shipping",
+            children: [
+              { href: "/admin/guaranty", label: "لیست گارانتی‌ها" },
+              { href: "/admin/guaranty/requests", label: "درخواست‌های گارانتی" },
+            ],
+          },
       { href: "/admin/orders", label: "سفارشات", icon: "orders" },
       { href: "/admin/users", label: "کاربران", icon: "users" },
       { href: "/admin/shipping", label: "ارسال و پرداخت", icon: "shipping" },
@@ -339,7 +348,7 @@ function Breadcrumb() {
     "spec-groups": "مشخصات", blog: "بلاگ", widgets: "ویجت‌ها",
     stories: "استوری‌ها", "hero-slides": "اسلایدر", shipping: "ارسال",
     "site-settings": "تنظیمات", footer: "فوتر", menu: "منو",
-    create: "جدید", comments: "نظرات", media: "کتابخانه رسانه",
+    create: "جدید", comments: "نظرات", media: "کتابخانه رسانه", guaranty: "گارانتی", requests: "درخواست‌ها",
   };
 
   return (

@@ -25,6 +25,7 @@ model User {
   reviews      Review[]
   walletTx     WalletTransaction[]
   wishlist     WishlistItem[]
+  guaranties Guaranty[]
   blogComments BlogComment[]
 
   @@index([role])
@@ -902,4 +903,45 @@ model MediaFile {
 
   @@index([type])
   @@index([createdAt])
+}
+
+enum GuarantyRequestStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+model Guaranty {
+  id           String    @id @default(cuid())
+  userId       String
+  serialNumber String    @unique
+  productTitle String
+  durationDays Int
+  startDate    DateTime  @default(now())
+  endDate      DateTime
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id])
+  requests GuarantyRequest[]
+
+  @@index([userId])
+  @@index([endDate])
+}
+
+model GuarantyRequest {
+  id          String                @id @default(cuid())
+  guarantyId  String
+  description String
+  status      GuarantyRequestStatus @default(PENDING)
+  adminNote   String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  guaranty Guaranty @relation(fields: [guarantyId], references: [id])
+
+  @@index([guarantyId])
+  @@index([status])
 }
