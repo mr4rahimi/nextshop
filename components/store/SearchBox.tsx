@@ -67,7 +67,7 @@ export default function SearchBox() {
     abortRef.current = new AbortController();
     setLoading(true);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=6`, {
+      const res = await fetch(`/api/store/search?q=${encodeURIComponent(q)}&limit=6`, {
         signal: abortRef.current.signal,
       });
       const data = await res.json();

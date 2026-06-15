@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
+export const SITE_URL = process.env.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 export function canonicalUrl(path: string) {
@@ -140,7 +140,7 @@ export function buildProductSchema(opts: {
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
       itemCondition:   "https://schema.org/NewCondition",
-      seller: { "@type": "Organization", name: process.env.NEXT_PUBLIC_STORE_NAME ?? "فروشگاه" },
+     seller: { "@type": "Organization", name: process.env.STORE_NAME ?? process.env.NEXT_PUBLIC_STORE_NAME ?? "فروشگاه" },
       shippingDetails: {
         "@type": "OfferShippingDetails",
         shippingRate: {

@@ -43,6 +43,7 @@ export default function HeaderTop({ logoUrl, siteName }: { logoUrl: string; site
           </div>
           {/* LEFT: dark mode + login + cart */}
           <div className="flex items-center gap-3">
+            
 
             {/* DARK MODE TOGGLE */}
             <button
