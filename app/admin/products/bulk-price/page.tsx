@@ -37,28 +37,49 @@ export default function BulkPricePage() {
   const [bulkField, setBulkField]   = useState<"price" | "salePrice" | "both">("both");
   const [bulkSaving, setBulkSaving] = useState(false);
 
+  const [attributeGroups, setAttributeGroups] = useState<any[]>([]);
+  const [selectedAttributeValues, setSelectedAttributeValues] = useState<string[]>([]);
+
   async function fetchData() {
     setLoading(true);
-    const [pRes, cRes, bRes] = await Promise.all([
-      fetch("/api/admin/products?pageSize=5000"),
+    const [cRes, bRes] = await Promise.all([
       fetch("/api/admin/categories"),
       fetch("/api/admin/brands"),
     ]);
-    const data = await pRes.json();
-    setProducts(Array.isArray(data) ? data : (data.items ?? []));
     setCategories(await cRes.json());
     setBrands(await bRes.json());
+    await fetchProducts();
     setLoading(false);
   }
 
+  const fetchProducts = useCallback(async () => {
+    const params = new URLSearchParams({ pageSize: "5000" });
+    if (search) params.set("search", search);
+    if (filterCat) params.set("category", filterCat);
+    if (filterBrand) params.set("brand", filterBrand);
+    selectedAttributeValues.forEach(v => params.append("attr", v));
+  
+    const res = await fetch(`/api/admin/products?${params}`);
+    const data = await res.json();
+    setProducts(Array.isArray(data) ? data : (data.items ?? []));
+  }, [search, filterCat, filterBrand, selectedAttributeValues]);
+
   useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  useEffect(() => {
+    if (!filterCat) { setAttributeGroups([]); setSelectedAttributeValues([]); return; }
+    const cat = categories.find(c => c.title === filterCat);
+    if (!cat) return;
+    fetch(`/api/admin/categories/${cat.id}/attribute-groups`)
+      .then(r => r.json())
+      .then(setAttributeGroups)
+      .catch(() => setAttributeGroups([]));
+  }, [filterCat, categories]);
 
   const filtered = products.filter(p => {
     const q = search.toLowerCase();
-    const matchS = !q || p.title.toLowerCase().includes(q) || p.slug.includes(q);
-    const matchC = !filterCat || p.category?.title === filterCat;
-    const matchB = !filterBrand || p.brand?.title === filterBrand;
-    return matchS && matchC && matchB;
+    return !q || p.title.toLowerCase().includes(q) || p.slug.includes(q);
   });
 
   function toggleSelect(id: string) {
@@ -292,6 +313,44 @@ export default function BulkPricePage() {
         </div>
       </div>
 
+      {attributeGroups.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/[0.06]">
+          <p className="text-xs font-black text-gray-500 mb-2">فیلتر با ویژگی‌ها:</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {attributeGroups.map(group => (
+              <div key={group.id}>
+                <label className="block text-[10px] font-bold text-gray-400 mb-1">
+                  {group.attributeGroup.title}
+                </label>
+                {group.attributeGroup.attributes.map((attr: any) => (
+                  <select
+                    key={attr.id}
+                    value={selectedAttributeValues.find(v =>
+                      attr.values.some((val: any) => val.id === v)
+                    ) || ""}
+                    onChange={e => {
+                      const newValue = e.target.value;
+                      setSelectedAttributeValues(prev => {
+                        const filtered = prev.filter(v =>
+                          !attr.values.some((val: any) => val.id === v)
+                        );
+                        return newValue ? [...filtered, newValue] : filtered;
+                      });
+                    }}
+                    className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all mb-2"
+                  >
+                    <option value="">{attr.title}: همه</option>
+                    {attr.values.map((val: any) => (
+                      <option key={val.id} value={val.id}>{val.value}</option>
+                    ))}
+                  </select>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* جدول */}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
 
@@ -382,6 +441,23 @@ export default function BulkPricePage() {
                   min="0"
                   value={vals.price}
                   onChange={e => handleEdit(p.id, "price", e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (isDirty) saveSingle(p).then(() => {
+                       
+                        const next = filtered[idx + 1];
+                        if (next) document.getElementById(`price-${next.id}`)?.focus();
+                      });
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                     
+                      setEdited(prev => { const n = { ...prev }; delete n[p.id]; return n; });
+                      const next = filtered[idx + 1];
+                      if (next) document.getElementById(`price-${next.id}`)?.focus();
+                    }
+                  }}
+                  id={`price-${p.id}`}
                   dir="ltr"
                   className={`w-full px-3 py-2 rounded-xl border text-sm font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-white/5 focus:outline-none transition-all ${
                     isDirty ? "border-amber-400 dark:border-amber-500/50" : "border-gray-200 dark:border-white/10 focus:border-blue-500"
@@ -396,6 +472,21 @@ export default function BulkPricePage() {
                   min="0"
                   value={vals.salePrice}
                   onChange={e => handleEdit(p.id, "salePrice", e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (isDirty) saveSingle(p).then(() => {
+                        const next = filtered[idx + 1];
+                        if (next) document.getElementById(`price-${next.id}`)?.focus();
+                      });
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                      setEdited(prev => { const n = { ...prev }; delete n[p.id]; return n; });
+                      const next = filtered[idx + 1];
+                      if (next) document.getElementById(`price-${next.id}`)?.focus();
+                    }
+                  }}
+                  id={`sale-${p.id}`}
                   placeholder="بدون تخفیف"
                   dir="ltr"
                   className={`w-full px-3 py-2 rounded-xl border text-sm font-bold text-emerald-600 dark:text-emerald-400 bg-gray-50 dark:bg-white/5 focus:outline-none transition-all ${
