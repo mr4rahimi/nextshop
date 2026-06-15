@@ -1,8 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
+import { sendOrderSms, OrderSmsEvent } from "@/lib/sms";
 
 export const runtime = "nodejs";
+
+
+const STATUS_TO_SMS_EVENT: Record<string, OrderSmsEvent> = {
+  PAID:            "orderPaid",
+  CONFIRMED:       "orderConfirm",
+  PROCESSING:      "orderPrepare",
+  PACKAGING:       "orderPack",
+  SHIPPED:         "orderSent",
+  DELIVERED:       "orderDelivered",
+  COMPLETED:       "orderDone",
+  CANCELED:        "orderCancel",
+};
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -43,10 +56,14 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
   const { id } = await ctx.params;
   const data = await _req.json();
 
-  // وضعیت قبلی سفارش
+  
   const prevOrder = await prisma.order.findUnique({
     where: { id },
-    select: { status: true, items: { select: { productId: true, qty: true } } },
+    select: {
+      status: true,
+      items: { select: { productId: true, qty: true } },
+      user: { select: { phone: true, firstName: true, lastName: true } },
+    },
   });
 
   const order = await prisma.order.update({
@@ -61,13 +78,13 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
     },
   });
 
-  
-  const shouldDeductStock =
-    prevOrder &&
-    ["PENDING_PAYMENT", "PAID"].includes(prevOrder.status) &&
-    data.status === "PROCESSING";
 
-  if (shouldDeductStock && prevOrder.items.length > 0) {
+  const shouldDeductStock =
+   prevOrder &&
+   ["PENDING_PAYMENT", "PAID"].includes(prevOrder.status) &&
+   data.status === "CONFIRMED";
+
+  if (shouldDeductStock && prevOrder?.items.length > 0) {
     await Promise.all(
       prevOrder.items.map(item =>
         prisma.product.updateMany({
@@ -76,6 +93,32 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
         })
       )
     );
+  }
+
+ 
+  if (prevOrder && data.status && data.status !== prevOrder.status) {
+    const event = STATUS_TO_SMS_EVENT[data.status];
+    const phone = prevOrder.user?.phone;
+
+    if (event && phone) {
+      const name = [prevOrder.user?.firstName, prevOrder.user?.lastName]
+        .filter(Boolean).join(" ") || phone;
+
+      const attributes: Record<string, string> = {
+        order_id: id.slice(-8).toUpperCase(),
+        name,
+      };
+
+   
+      if (data.trackingCode) {
+        attributes.tracking = data.trackingCode;
+      }
+
+   
+      sendOrderSms(phone, event, attributes).catch(err =>
+        console.error("[SMS] خطا در ارسال پیامک سفارش:", err)
+      );
+    }
   }
 
   return NextResponse.json(serialize(order));

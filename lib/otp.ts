@@ -77,47 +77,5 @@ export async function verifyOtp(
 // ─────────────────────────────────────────
 // ارسال SMS واقعی (فراز اس ام اس)
 // ─────────────────────────────────────────
-export async function sendSms(
-  phone: string,
-  code: string
-) {
-  const apiKey = process.env.IRANPAYAMAK_API_KEY;
-  const lineNumber = process.env.IRANPAYAMAK_LINE_NUMBER;
-  const patternCode = process.env.IRANPAYAMAK_PATTERN_CODE;
 
-  if (!apiKey || !lineNumber || !patternCode) {
-    throw new Error("IranPayamak env variables missing");
-  }
-
-  const response = await fetch(
-    "https://api.iranpayamak.com/ws/v1/sms/pattern",
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "Api-Key": apiKey,
-      },
-      body: JSON.stringify({
-        code: patternCode,
-        recipient: phone,
-        line_number: lineNumber,
-        number_format: "english",
-        attributes: {
-          code: code,
-        },
-      }),
-    }
-  );
-
-  const data = await response.json();
-
-  console.log("IranPayamak response:", data);
-
-  if (!response.ok) {
-    console.error("IranPayamak error:", data);
-    throw new Error("خطا در ارسال پیامک");
-  }
-
-  console.log(`OTP sent to ${phone}: ${code}`);
-}
+export { sendOtpSms as sendSms } from "@/lib/sms";

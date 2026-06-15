@@ -581,6 +581,19 @@ model StoreSettings {
   trustBadge3  String?   // نماد سوم (URL تصویر)
   trustBadge4  String?   // نماد چهارم (URL تصویر)
   maintenanceMode  Boolean @default(false)
+  smsApiKey              String?
+  smsLineNumber          String?
+  smsEnabled             Boolean @default(false)
+  smsPatternOtp          String?
+  smsPatternOrderNew     String?
+  smsPatternOrderPaid    String?
+  smsPatternOrderConfirm String?
+  smsPatternOrderPrepare String?
+  smsPatternOrderPack    String?
+  smsPatternOrderSent    String?
+  smsPatternOrderDelivered String?
+  smsPatternOrderDone    String?
+  smsPatternOrderCancel  String?
   updatedAt DateTime @updatedAt
 }
 

@@ -11,6 +11,19 @@ interface SiteSettings {
   footerText: string; maintenanceMode: boolean;
   enamadCode: string; samanCode: string;
   trustBadge3: string; trustBadge4: string;
+  smsApiKey: string;
+  smsLineNumber: string;
+  smsEnabled: boolean;
+  smsPatternOtp: string;
+  smsPatternOrderNew: string;
+  smsPatternOrderPaid: string;
+  smsPatternOrderConfirm: string;
+  smsPatternOrderPrepare: string;
+  smsPatternOrderPack: string;
+  smsPatternOrderSent: string;
+  smsPatternOrderDelivered: string;
+  smsPatternOrderDone: string;
+  smsPatternOrderCancel: string;
 }
 
 const EMPTY: SiteSettings = {
@@ -20,9 +33,14 @@ const EMPTY: SiteSettings = {
   socialInstagram: "", socialTelegram: "", socialWhatsapp: "", socialTwitter: "",
   footerText: "", maintenanceMode: false,
   enamadCode: "", samanCode: "", trustBadge3: "", trustBadge4: "",
+  smsApiKey: "", smsLineNumber: "", smsEnabled: false,
+  smsPatternOtp: "", smsPatternOrderNew: "", smsPatternOrderPaid: "",
+  smsPatternOrderConfirm: "", smsPatternOrderPrepare: "", smsPatternOrderPack: "",
+  smsPatternOrderSent: "", smsPatternOrderDelivered: "", smsPatternOrderDone: "",
+  smsPatternOrderCancel: "",
 };
 
-type Tab = "general" | "social" | "advanced";
+type Tab = "general" | "social" | "advanced" | "sms";
 
 export default function AdminSiteSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings>({ ...EMPTY });
@@ -54,6 +72,19 @@ export default function AdminSiteSettingsPage() {
         samanCode:       d.samanCode       ?? "",
         trustBadge3:     d.trustBadge3     ?? "",
         trustBadge4:     d.trustBadge4     ?? "",
+        smsApiKey:             d.smsApiKey             ?? "",
+        smsLineNumber:         d.smsLineNumber         ?? "",
+        smsEnabled:            d.smsEnabled            ?? false,
+        smsPatternOtp:         d.smsPatternOtp         ?? "",
+        smsPatternOrderNew:    d.smsPatternOrderNew    ?? "",
+        smsPatternOrderPaid:   d.smsPatternOrderPaid   ?? "",
+        smsPatternOrderConfirm: d.smsPatternOrderConfirm ?? "",
+        smsPatternOrderPrepare: d.smsPatternOrderPrepare ?? "",
+        smsPatternOrderPack:   d.smsPatternOrderPack   ?? "",
+        smsPatternOrderSent:   d.smsPatternOrderSent   ?? "",
+        smsPatternOrderDelivered: d.smsPatternOrderDelivered ?? "",
+        smsPatternOrderDone:   d.smsPatternOrderDone   ?? "",
+        smsPatternOrderCancel: d.smsPatternOrderCancel ?? "",
       });
       setLoading(false);
     });
@@ -122,6 +153,7 @@ export default function AdminSiteSettingsPage() {
           { key: "general", label: "عمومی و برندینگ" },
           { key: "social",  label: "شبکه‌های اجتماعی" },
           { key: "advanced", label: "تنظیمات پیشرفته" },
+          { key: "sms", label: "پیامک" }
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as Tab)}
             className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all ${tab === t.key ? "bg-white dark:bg-gray-900 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
@@ -362,6 +394,65 @@ export default function AdminSiteSettingsPage() {
                   onChange={e => set(f.key as any, e.target.value)} />
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "sms" && (
+        <div className="space-y-6">
+          {/* تنظیمات اتصال */}
+          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black text-gray-900 dark:text-white">تنظیمات اتصال ایران پیامک</h3>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-500">فعال</span>
+                <button type="button" onClick={() => set("smsEnabled", !settings.smsEnabled)}
+                  className={`w-10 h-6 rounded-full transition-colors relative ${settings.smsEnabled ? "bg-blue-600" : "bg-gray-200 dark:bg-white/10"}`}>
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${settings.smsEnabled ? "translate-x-5" : "translate-x-1"}`} />
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-gray-700 dark:text-gray-300">API Key</label>
+                <input dir="ltr" value={settings.smsApiKey} onChange={e => set("smsApiKey", e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all font-mono"
+                  placeholder="API Key ایران پیامک" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-gray-700 dark:text-gray-300">شماره خط</label>
+                <input dir="ltr" value={settings.smsLineNumber} onChange={e => set("smsLineNumber", e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all font-mono"
+                  placeholder="5000..." />
+              </div>
+            </div>
+          </div>
+      
+          {/* کدهای پترن */}
+          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+            <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4">کدهای پترن پیامک</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { key: "smsPatternOtp",          label: "کد تایید / ثبت‌نام",      hint: "متغیر: {code}" },
+                { key: "smsPatternOrderNew",     label: "ثبت سفارش - پرداخت موفق", hint: "متغیر: {order_id}, {name}" },
+                { key: "smsPatternOrderPaid",    label: "پرداخت شده",              hint: "متغیر: {order_id}, {name}" },
+                { key: "smsPatternOrderConfirm", label: "تأیید شده",               hint: "متغیر: {order_id}, {name}" },
+                { key: "smsPatternOrderPrepare", label: "در حال آماده‌سازی",       hint: "متغیر: {order_id}, {name}" },
+                { key: "smsPatternOrderPack",    label: "بسته‌بندی",               hint: "متغیر: {order_id}, {name}" },
+                { key: "smsPatternOrderSent",    label: "ارسال شده",               hint: "متغیر: {order_id}, {name}, {tracking}" },
+                { key: "smsPatternOrderDelivered", label: "تحویل داده شده",        hint: "متغیر: {order_id}, {name}" },
+                { key: "smsPatternOrderDone",    label: "تکمیل شده",              hint: "متغیر: {order_id}, {name}" },
+                { key: "smsPatternOrderCancel",  label: "لغو شده",                hint: "متغیر: {order_id}, {name}" },
+              ].map(({ key, label, hint }) => (
+                <div key={key} className="space-y-1.5">
+                  <label className="block text-xs font-black text-gray-700 dark:text-gray-300">{label}</label>
+                  <input dir="ltr" value={(settings as any)[key]} onChange={e => set(key as any, e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all font-mono"
+                    placeholder="کد پترن..." />
+                  <p className="text-[10px] text-gray-400">{hint}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
