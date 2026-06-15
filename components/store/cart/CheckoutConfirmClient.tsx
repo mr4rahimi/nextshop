@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+
 
 interface OrderItem {
   qty: number;
@@ -38,7 +39,7 @@ interface CardInfo {
 
 interface Props {
   order: Order;
-  paymentMethod: "online" | "card";
+  paymentMethod: "online" | "card" | "wallet";
   cardInfo: CardInfo;
 }
 
@@ -80,14 +81,23 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
   const router = useRouter();
   const [paying, setPaying] = useState(false);
 
+
+// اگه پرداخت با کیف پول بود، خودکار به success برو
+  useEffect(() => {
+    if (paymentMethod === "wallet") {
+      router.push(`/checkout/success/${order.id}`);
+    }
+  }, [paymentMethod, order.id]);
+
   async function handlePay() {
+    if (paymentMethod === "wallet") {
+      router.push(`/checkout/success/${order.id}`);
+      return;
+    }
     setPaying(true);
     if (paymentMethod === "online") {
-      // TODO: redirect به درگاه واقعی
-      // فعلاً mock — بعداً با اطلاعات درگاه جایگزین میشه
       router.push(`/checkout/payment/${order.id}`);
     } else {
-      // کارت به کارت — رفتن به صفحه انتظار
       router.push(`/checkout/pending/${order.id}`);
     }
   }
@@ -133,7 +143,7 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
                 <div>
                   <span className="block text-[10px] font-bold text-gray-400 uppercase">روش پرداخت:</span>
                   <p className="text-xs font-black text-gray-700 dark:text-gray-300 mt-1">
-                    {paymentMethod === "online" ? "درگاه پرداخت آنلاین" : "کارت به کارت"}
+                    {paymentMethod === "online" ? "درگاه پرداخت آنلاین" : paymentMethod === "wallet" ? "کیف پول" : "کارت به کارت"}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-1">شماره سفارش: #{order.orderNumber}</p>
                 </div>
@@ -148,13 +158,13 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
                 <div className="relative flex items-center justify-between px-6">
                   <div className="text-right">
                     <span className="block text-[10px] font-black text-blue-100/70 uppercase">
-                      {paymentMethod === "online" ? "تأیید و اتصال به درگاه" : "تأیید کارت به کارت"}
+                      {paymentMethod === "wallet" ? "سفارش پرداخت شد" : paymentMethod === "online" ? "تأیید و اتصال به درگاه" : "تأیید کارت به کارت"}
                     </span>
                     <div className="flex items-baseline gap-1">
                       <span className="text-xl font-black text-white tracking-tighter tabular-nums">
-                        {toFa(order.grandTotal)}
+                        {paymentMethod === "wallet" ? "از کیف پول" : toFa(order.grandTotal)}
                       </span>
-                      <span className="text-[9px] font-bold text-blue-100">تومان</span>
+                      {paymentMethod !== "wallet" && <span className="text-[9px] font-bold text-blue-100">تومان</span>}
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 shadow-inner transition-all duration-500 group-hover/pay:rotate-[360deg]">

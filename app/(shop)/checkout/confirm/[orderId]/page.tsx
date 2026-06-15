@@ -29,11 +29,13 @@ export default async function ConfirmPage({ params }: Props) {
     },
   });
 
-  if (!order || order.status !== "PENDING_PAYMENT") redirect("/cart");
+  if (!order || !["PENDING_PAYMENT", "PAID"].includes(order.status)) redirect("/cart");
 
   const storeSettings = await prisma.storeSettings.findUnique({ where: { id: "singleton" } });
 
-  const paymentMethod = order.payments[0]?.provider === "card_transfer" ? "card" : "online";
+  const paymentMethod = order.status === "PAID" && order.payments[0]?.provider === "WALLET"
+    ? "wallet"
+    : order.payments[0]?.provider === "card_transfer" ? "card" : "online";
 
   return (
     <CheckoutConfirmClient

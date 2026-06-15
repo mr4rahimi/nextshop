@@ -1,6 +1,7 @@
 "use client";
-
 import Link from "next/link";
+import { useEffect } from "react";
+import { useCart } from "@/components/store/cart/CartContext";
 
 interface Props {
   order: {
@@ -17,6 +18,11 @@ function formatDate(iso: string) { return new Date(iso).toLocaleDateString("fa-I
 
 export default function CheckoutSuccessClient({ order }: Props) {
   const ref = order.payments[0]?.providerRef;
+  const { clearCart } = useCart();
+
+  useEffect(() => {
+    clearCart();
+  }, []);
 
   return (
     <section className="relative overflow-hidden py-16 transition-colors duration-700" dir="rtl">

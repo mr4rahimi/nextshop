@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "احراز هویت نشده" }, { status: 401 });
 
-  const { addressId, shippingMethodId, paymentMethod, items } = await req.json();
+  const { addressId, shippingMethodId, paymentMethod, items, useWallet } = await req.json();
 
   if (!addressId || !shippingMethodId || !items?.length)
     return NextResponse.json({ error: "اطلاعات ناقص است" }, { status: 400 });
@@ -58,27 +58,78 @@ export async function POST(req: Request) {
   const shippingFee = shipping.fee;
   const grandTotal = itemsTotal + shippingFee;
 
-  // ساخت سفارش
-  const order = await prisma.order.create({
-    data: {
-      userId: user.id,
-      addressId,
-      orderNumber: generateOrderNumber(),
-      status: "PENDING_PAYMENT",
-      itemsTotal,
-      shippingFee,
-      discountTotal: BigInt(0),
-      grandTotal,
-      items: { create: orderItems },
-      payments: {
-        create: {
-          amount: grandTotal,
-          status: "PENDING",
-          provider: paymentMethod === "online" ? "gateway" : "card_transfer",
+
+  let walletDiscount = BigInt(0);
+  let finalGrandTotal = grandTotal;
+
+  if (useWallet) {
+    const settings = await prisma.storeSettings.findUnique({
+      where: { id: "singleton" },
+      select: { walletEnabled: true },
+    });
+
+    if (settings?.walletEnabled) {
+      const userData = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { walletBalance: true },
+      });
+      const balance = userData?.walletBalance ?? 0n;
+      if (balance > 0n) {
+        walletDiscount = balance >= grandTotal ? grandTotal : balance;
+        finalGrandTotal = grandTotal - walletDiscount;
+      }
+    }
+  }
+
+ 
+    const order = await prisma.order.create({
+      data: {
+        userId: user.id,
+        addressId,
+        orderNumber: generateOrderNumber(),
+        status: walletDiscount > 0n && finalGrandTotal === 0n ? "PAID" : "PENDING_PAYMENT",
+        itemsTotal,
+        shippingFee,
+        discountTotal: walletDiscount,
+        grandTotal: finalGrandTotal,
+        items: { create: orderItems },
+        payments: {
+          create: [
+           
+            ...(finalGrandTotal > 0n ? [{
+              amount: finalGrandTotal,
+              status: "PENDING" as const,
+              provider: paymentMethod === "online" ? "gateway" : "card_transfer",
+            }] : []),
+        
+            ...(walletDiscount > 0n ? [{
+              amount: walletDiscount,
+              status: "SUCCEEDED" as const,
+              provider: "WALLET",
+              providerRef: `wallet-${Date.now()}`,
+            }] : []),
+          ],
         },
       },
-    },
-  });
+    });
+
+  
+  if (walletDiscount > 0n) {
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { walletBalance: { decrement: walletDiscount } },
+      }),
+      prisma.walletTransaction.create({
+        data: {
+          userId: user.id,
+          amount: -walletDiscount,
+          reason: `پرداخت سفارش ${order.orderNumber}`,
+          meta: { orderId: order.id },
+        },
+      }),
+    ]);
+  }
 
   // خالی کردن سبد خرید
   const cart = await prisma.cart.findUnique({ where: { userId: user.id } });

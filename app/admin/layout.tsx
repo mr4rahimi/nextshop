@@ -34,6 +34,7 @@ const ICONS = {
   chevron:    "M19 9l-7 7-7-7",
   external:   "M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14",
   logout:     "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1",
+  wallet: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z",
 };
 
 // ── ساختار منو ────────────────────────────────────────────────────────────────
@@ -70,8 +71,10 @@ const MENU_GROUPS = [
             ],
           },
       { href: "/admin/orders", label: "سفارشات", icon: "orders" },
+      { href: "/admin/wallet", label: "کیف پول", icon: "wallet" },
       { href: "/admin/users", label: "کاربران", icon: "users" },
       { href: "/admin/shipping", label: "ارسال و پرداخت", icon: "shipping" },
+      
     ],
   },
   {
@@ -348,7 +351,7 @@ function Breadcrumb() {
     "spec-groups": "مشخصات", blog: "بلاگ", widgets: "ویجت‌ها",
     stories: "استوری‌ها", "hero-slides": "اسلایدر", shipping: "ارسال",
     "site-settings": "تنظیمات", footer: "فوتر", menu: "منو",
-    create: "جدید", comments: "نظرات", media: "کتابخانه رسانه", guaranty: "گارانتی", requests: "درخواست‌ها",
+    create: "جدید", comments: "نظرات", media: "کتابخانه رسانه", guaranty: "گارانتی", requests: "درخواست‌ها", wallet: "کیف پول",
   };
 
   return (

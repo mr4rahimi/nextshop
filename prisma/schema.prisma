@@ -19,6 +19,7 @@ model User {
   isActive     Boolean             @default(true)
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
+  walletBalance BigInt @default(0)
   addresses    Address[]
   cart         Cart?
   orders       Order[]
@@ -594,6 +595,7 @@ model StoreSettings {
   smsPatternOrderDelivered String?
   smsPatternOrderDone    String?
   smsPatternOrderCancel  String?
+  walletEnabled Boolean @default(false)
   updatedAt DateTime @updatedAt
 }
 

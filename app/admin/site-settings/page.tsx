@@ -24,6 +24,7 @@ interface SiteSettings {
   smsPatternOrderDelivered: string;
   smsPatternOrderDone: string;
   smsPatternOrderCancel: string;
+  walletEnabled: boolean;
 }
 
 const EMPTY: SiteSettings = {
@@ -38,9 +39,10 @@ const EMPTY: SiteSettings = {
   smsPatternOrderConfirm: "", smsPatternOrderPrepare: "", smsPatternOrderPack: "",
   smsPatternOrderSent: "", smsPatternOrderDelivered: "", smsPatternOrderDone: "",
   smsPatternOrderCancel: "",
+  walletEnabled: false,
 };
 
-type Tab = "general" | "social" | "advanced" | "sms";
+type Tab = "general" | "social" | "advanced" | "sms" | "wallet";
 
 export default function AdminSiteSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings>({ ...EMPTY });
@@ -85,6 +87,7 @@ export default function AdminSiteSettingsPage() {
         smsPatternOrderDelivered: d.smsPatternOrderDelivered ?? "",
         smsPatternOrderDone:   d.smsPatternOrderDone   ?? "",
         smsPatternOrderCancel: d.smsPatternOrderCancel ?? "",
+        walletEnabled: d.walletEnabled ?? false,
       });
       setLoading(false);
     });
@@ -153,7 +156,8 @@ export default function AdminSiteSettingsPage() {
           { key: "general", label: "عمومی و برندینگ" },
           { key: "social",  label: "شبکه‌های اجتماعی" },
           { key: "advanced", label: "تنظیمات پیشرفته" },
-          { key: "sms", label: "پیامک" }
+          { key: "sms", label: "پیامک" },
+          { key: "wallet", label: "کیف پول" }
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as Tab)}
             className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all ${tab === t.key ? "bg-white dark:bg-gray-900 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
@@ -453,6 +457,32 @@ export default function AdminSiteSettingsPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "wallet" && (
+        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+          <div className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all ${settings.walletEnabled ? "border-blue-400 bg-blue-50 dark:bg-blue-900/10" : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"}`}>
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${settings.walletEnabled ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600" : "bg-gray-100 dark:bg-gray-800 text-gray-400"}`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </div>
+              <div>
+                <p className={`font-black text-sm ${settings.walletEnabled ? "text-blue-700 dark:text-blue-400" : "text-gray-700 dark:text-gray-300"}`}>
+                  کیف پول
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {settings.walletEnabled ? "✓ کیف پول برای کاربران فعال است" : "کیف پول غیرفعال است"}
+                </p>
+              </div>
+            </div>
+            <button type="button" onClick={() => set("walletEnabled", !settings.walletEnabled)}
+              className={`w-12 h-7 rounded-full transition-colors relative ${settings.walletEnabled ? "bg-blue-600" : "bg-gray-200 dark:bg-white/10"}`}>
+              <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${settings.walletEnabled ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
           </div>
         </div>
       )}

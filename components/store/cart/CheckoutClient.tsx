@@ -32,11 +32,13 @@ interface StoreSettings {
   cardBank: string | null;
   cardReceiptInfo: string | null;
   paymentGatewayActive: boolean;
+  walletEnabled: boolean;
 }
 
 interface Props {
   initialAddresses: Address[];
   storeSettings: StoreSettings;
+  walletBalance: string;
 }
 
 function toFa(n: number | string) { return Number(n).toLocaleString("fa-IR"); }
@@ -82,8 +84,8 @@ function CheckoutSteps({ current }: { current: number }) {
 
 const EMPTY_ADDR = { title: "", receiver: "", phone: "", province: "", city: "", addressLine: "", postalCode: "", isDefault: false };
 
-export default function CheckoutClient({ initialAddresses, storeSettings }: Props) {
-  const { items, total, count } = useCart();
+export default function CheckoutClient({ initialAddresses, storeSettings, walletBalance }: Props) {
+  const { items, total, count, clearCart } = useCart();
   const router = useRouter();
 
   const [addresses, setAddresses] = useState<Address[]>(initialAddresses);
@@ -99,6 +101,8 @@ export default function CheckoutClient({ initialAddresses, storeSettings }: Prop
   const [selectedShipping, setSelectedShipping] = useState<ShippingMethod | null>(null);
 
   const [paymentMethod, setPaymentMethod] = useState<"online" | "card">("online");
+  const [useWallet, setUseWallet] = useState(false);
+  const walletBalanceNum = Number(walletBalance ?? "0");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -127,7 +131,8 @@ export default function CheckoutClient({ initialAddresses, storeSettings }: Prop
     const sale = Number(i.product.salePrice ?? i.product.price);
     return s + (orig - sale) * i.qty;
   }, 0);
-  const grandTotal = total + shippingFee;
+  const walletDiscount = useWallet ? Math.min(walletBalanceNum, total + shippingFee) : 0;
+  const grandTotal = total + shippingFee - walletDiscount;
 
   async function handleSaveAddress() {
     if (!newAddr.receiver || !newAddr.phone || !newAddr.province || !newAddr.city || !newAddr.addressLine) {
@@ -160,12 +165,14 @@ export default function CheckoutClient({ initialAddresses, storeSettings }: Prop
         addressId: selectedAddress.id,
         shippingMethodId: selectedShipping.id,
         paymentMethod,
+        useWallet,
         items: items.map(i => ({ productId: i.productId, qty: i.qty })),
       }),
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error ?? "خطا در ثبت سفارش"); setSubmitting(false); return; }
 
+  
     router.push(`/checkout/confirm/${data.orderId}`);
   }
 
@@ -455,6 +462,31 @@ export default function CheckoutClient({ initialAddresses, storeSettings }: Prop
                     </div>
                   </div>
 
+                  {/* کیف پول */}
+                  {storeSettings.walletEnabled && walletBalanceNum > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={() => setUseWallet(!useWallet)}
+                            className={`w-9 h-5 rounded-full transition-colors relative ${useWallet ? "bg-blue-600" : "bg-gray-200 dark:bg-white/10"}`}>
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${useWallet ? "-translate-x-4" : "translate-x-0.5"}`} />
+                          </button>
+                          <span className="text-xs font-bold text-gray-500 dark:text-gray-400">استفاده از کیف پول</span>
+                        </div>
+                        <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-lg">
+                          {toFa(walletBalanceNum)} تومان
+                        </span>
+                      </div>
+                      {useWallet && walletDiscount > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400">تخفیف کیف پول</span>
+                          <div className="flex-1 border-b border-dashed border-gray-300 dark:border-white/10 mx-3 mb-1" />
+                          <span className="text-sm font-black text-blue-600 dark:text-blue-400 tabular-nums">-{toFa(walletDiscount)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="relative h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-white/10 to-transparent" />
 
                   <div className="flex flex-col items-center gap-1">
@@ -467,7 +499,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings }: Prop
                 </div>
 
                 <div className="p-6">
-                  <button onClick={handleSubmit} disabled={submitting || !selectedAddress || !selectedShipping}
+                  <button onClick={handleSubmit} disabled={submitting || !selectedAddress || !selectedShipping }
                     className="group/pay relative w-full h-20 bg-blue-600 dark:bg-blue-500 rounded-[2.2rem] overflow-hidden transition-all duration-500 shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)] hover:shadow-[0_25px_50px_-12px_rgba(37,99,235,0.7)] hover:-translate-y-1 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                     <div className="relative flex items-center justify-between px-8">
                       <span className="text-white font-black text-xl tracking-tight">
