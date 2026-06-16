@@ -76,7 +76,7 @@ export default function MidBanners() {
   const large: Banner = {
     id: "b1",
     title: "ساخت ست شیرآلات یکپارچه",
-    subtitle: "هم‌رنگ، هم‌متریال، آماده خرید",
+    subtitle: "هم‌رنگ، هم‌متتومان، آماده خرید",
     imageSrc: "/mid-banners/01.webp",
     href: "/configurator",
   };

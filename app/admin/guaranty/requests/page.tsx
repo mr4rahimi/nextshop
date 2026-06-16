@@ -132,7 +132,7 @@ export default function GuarantyRequestsPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="جستجو بر اساس موبایل، سریال یا محصول..."
+            placeholder="جستجو بر اساس موبایل، ستومان یا محصول..."
             className="w-full pr-9 pl-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all" />
         </div>
       </div>
@@ -140,7 +140,7 @@ export default function GuarantyRequestsPage() {
       {/* لیست */}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="hidden lg:grid grid-cols-[1fr_140px_1fr_140px_140px_100px] gap-3 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
-          {["خریدار", "سریال محصول", "توضیحات", "تاریخ ثبت", "وضعیت", ""].map(h => (
+          {["خریدار", "ستومان محصول", "توضیحات", "تاریخ ثبت", "وضعیت", ""].map(h => (
             <div key={h} className="text-[11px] font-black text-gray-400">{h}</div>
           ))}
         </div>
@@ -235,7 +235,7 @@ export default function GuarantyRequestsPage() {
               <div className="text-xs text-gray-500 space-y-1 bg-gray-50 dark:bg-white/[0.02] rounded-xl p-3">
                 <p><span className="font-bold text-gray-400">خریدار: </span>{detailItem.guaranty.user.firstName} {detailItem.guaranty.user.lastName} (<span dir="ltr">{detailItem.guaranty.user.phone}</span>)</p>
                 <p><span className="font-bold text-gray-400">محصول: </span>{detailItem.guaranty.productTitle}</p>
-                <p><span className="font-bold text-gray-400">سریال: </span><span dir="ltr">{detailItem.guaranty.serialNumber}</span></p>
+                <p><span className="font-bold text-gray-400">ستومان: </span><span dir="ltr">{detailItem.guaranty.serialNumber}</span></p>
                 <p><span className="font-bold text-gray-400">انقضای گارانتی: </span>{formatDate(detailItem.guaranty.endDate)}</p>
               </div>
 

@@ -99,7 +99,7 @@ export async function POST(req: Request) {
     return NextResponse.json(serialize(guaranty));
   } catch (e: any) {
     if (e.code === "P2002") {
-      return NextResponse.json({ error: "این شماره سریال قبلاً ثبت شده است" }, { status: 409 });
+      return NextResponse.json({ error: "این شماره ستومان قبلاً ثبت شده است" }, { status: 409 });
     }
     throw e;
   }

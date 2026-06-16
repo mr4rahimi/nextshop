@@ -117,7 +117,7 @@ export default function AdminWalletPage() {
                 <p className="text-xs text-gray-400 mb-1">موجودی فعلی</p>
                 <p className="text-2xl font-black text-blue-600 dark:text-blue-400">
                   {toFa(Number(user.walletBalance))}
-                  <span className="text-sm font-bold text-gray-400 mr-1">ریال</span>
+                  <span className="text-sm font-bold text-gray-400 mr-1">تومان</span>
                 </p>
               </div>
             </div>
@@ -158,7 +158,7 @@ export default function AdminWalletPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-black text-gray-700 dark:text-gray-300">مبلغ (ریال) *</label>
+                <label className="block text-xs font-black text-gray-700 dark:text-gray-300">مبلغ (تومان) *</label>
                 <input required type="number" min="1" dir="ltr" value={amount} onChange={e => setAmount(e.target.value)}
                   className={inp} placeholder="مثلاً: 500000" />
               </div>
@@ -193,7 +193,7 @@ export default function AdminWalletPage() {
                         <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(tx.createdAt)}</p>
                       </div>
                       <p className={`text-sm font-black ${isPos ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-                        {isPos ? "+" : ""}{toFa(Math.abs(amt))} ریال
+                        {isPos ? "+" : ""}{toFa(Math.abs(amt))} تومان
                       </p>
                     </div>
                   );

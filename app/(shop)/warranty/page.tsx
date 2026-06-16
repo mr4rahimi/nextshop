@@ -87,7 +87,7 @@ function RequestForm({ guaranty }: { guaranty: GuarantyItem }) {
   return (
     <div className="mt-4 space-y-3">
       <p className="text-xs text-gray-500 leading-6">
-        لطفاً توضیحات خود را در مورد محصول با شماره سریال <span className="font-mono font-black text-gray-700 dark:text-gray-300" dir="ltr">{guaranty.serialNumber}</span> بنویسید و ثبت کنید. به‌زودی با شما تماس گرفته خواهد شد.
+        لطفاً توضیحات خود را در مورد محصول با شماره ستومان <span className="font-mono font-black text-gray-700 dark:text-gray-300" dir="ltr">{guaranty.serialNumber}</span> بنویسید و ثبت کنید. به‌زودی با شما تماس گرفته خواهد شد.
       </p>
 
       {error && (
@@ -154,13 +154,13 @@ export default function WarrantyPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-black text-gray-900 dark:text-white">استعلام گارانتی</h1>
-          <p className="text-sm text-gray-500 mt-2">شماره سریال محصول یا شماره موبایل خود را وارد کنید</p>
+          <p className="text-sm text-gray-500 mt-2">شماره ستومان محصول یا شماره موبایل خود را وارد کنید</p>
         </div>
 
         {/* فرم جستجو */}
         <form onSubmit={search} className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 flex flex-col sm:flex-row gap-3">
           <input dir="ltr" value={query} onChange={e => setQuery(e.target.value)}
-            placeholder="شماره سریال یا شماره موبایل..."
+            placeholder="شماره ستومان یا شماره موبایل..."
             className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all" />
           <button type="submit" disabled={loading}
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-sm font-black transition-all whitespace-nowrap">
@@ -182,7 +182,7 @@ export default function WarrantyPage() {
                 <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
                   <div>
                     <h3 className="text-base font-black text-gray-900 dark:text-white">{item.productTitle}</h3>
-                    <p className="text-xs text-gray-400 mt-1 font-mono" dir="ltr">سریال: {item.serialNumber}</p>
+                    <p className="text-xs text-gray-400 mt-1 font-mono" dir="ltr">ستومان: {item.serialNumber}</p>
                   </div>
                   <StatusBadge endDate={item.endDate} />
                 </div>

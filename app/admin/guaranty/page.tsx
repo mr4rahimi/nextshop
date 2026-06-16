@@ -278,7 +278,7 @@ export default function GuarantyListPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-black text-gray-700 dark:text-gray-300">شماره سریال محصول *</label>
+              <label className="block text-xs font-black text-gray-700 dark:text-gray-300">شماره ستومان محصول *</label>
               <input required dir="ltr" value={serialNumber} onChange={e => setSerialNumber(e.target.value)}
                 className={inp} placeholder="SN-XXXXXXX" />
             </div>
@@ -334,7 +334,7 @@ export default function GuarantyListPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="جستجو بر اساس نام، موبایل، سریال یا محصول..."
+            placeholder="جستجو بر اساس نام، موبایل، ستومان یا محصول..."
             className="w-full pr-9 pl-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all" />
         </div>
 
@@ -359,7 +359,7 @@ export default function GuarantyListPage() {
       {/* جدول */}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="hidden lg:grid grid-cols-[1fr_140px_140px_120px_120px_140px_140px] gap-3 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
-          {["خریدار", "محصول", "سریال", "تاریخ ثبت", "تاریخ پایان", "وضعیت", "عملیات"].map(h => (
+          {["خریدار", "محصول", "ستومان", "تاریخ ثبت", "تاریخ پایان", "وضعیت", "عملیات"].map(h => (
             <div key={h} className="text-[11px] font-black text-gray-400">{h}</div>
           ))}
         </div>
@@ -468,7 +468,7 @@ export default function GuarantyListPage() {
               )}
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-black text-gray-700 dark:text-gray-300">شماره سریال</label>
+                <label className="block text-xs font-black text-gray-700 dark:text-gray-300">شماره ستومان</label>
                 <input dir="ltr" value={editSerial} onChange={e => setEditSerial(e.target.value)} className={inp} />
               </div>
 

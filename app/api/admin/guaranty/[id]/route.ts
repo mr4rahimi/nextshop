@@ -46,7 +46,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json(serialize(updated));
   } catch (e: any) {
     if (e.code === "P2002") {
-      return NextResponse.json({ error: "این شماره سریال قبلاً ثبت شده است" }, { status: 409 });
+      return NextResponse.json({ error: "این شماره ستومان قبلاً ثبت شده است" }, { status: 409 });
     }
     throw e;
   }

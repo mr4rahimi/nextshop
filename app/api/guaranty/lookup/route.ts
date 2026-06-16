@@ -7,7 +7,7 @@ export async function GET(req: Request) {
   const query = url.searchParams.get("query")?.trim();
 
   if (!query) {
-    return NextResponse.json({ error: "شماره سریال یا موبایل را وارد کنید" }, { status: 400 });
+    return NextResponse.json({ error: "شماره ستومان یا موبایل را وارد کنید" }, { status: 400 });
   }
 
   const guaranties = await prisma.guaranty.findMany({

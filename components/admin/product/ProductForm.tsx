@@ -566,11 +566,11 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
         {/* ── ۲. قیمت و موجودی ── */}
         <Section title="قیمت‌گذاری و موجودی" icon="💰">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="قیمت اصلی (ریال) *">
+            <Field label="قیمت اصلی (تومان) *">
               <input required type="number" min="0" dir="ltr" value={form.price} className={inp}
                 onChange={e => set("price", e.target.value)} placeholder="0" />
             </Field>
-            <Field label="قیمت با تخفیف (ریال)">
+            <Field label="قیمت با تخفیف (تومان)">
               <input type="number" min="0" dir="ltr" value={form.salePrice} className={inp}
                 onChange={e => set("salePrice", e.target.value)} placeholder="اختیاری" />
             </Field>

@@ -55,7 +55,7 @@ export default function WalletPage() {
           <p className="text-sm font-bold opacity-70 mb-2">موجودی فعلی</p>
           <p className="text-4xl font-black tracking-tight">
             {toFa(Number(balance ?? 0n))}
-            <span className="text-lg font-bold opacity-70 mr-2">ریال</span>
+            <span className="text-lg font-bold opacity-70 mr-2">تومان</span>
           </p>
           <p className="text-xs opacity-60 mt-3">
             {transactions.length > 0
@@ -102,7 +102,7 @@ export default function WalletPage() {
                     <p className={`text-sm font-black ${isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                       {isPositive ? "+" : ""}{toFa(Math.abs(amount))}
                     </p>
-                    <p className="text-[10px] text-gray-400">ریال</p>
+                    <p className="text-[10px] text-gray-400">تومان</p>
                   </div>
                 </div>
               );

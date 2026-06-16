@@ -88,7 +88,7 @@ export default function UserGuarantyPage() {
           <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
             <div>
               <h3 className="text-base font-black text-gray-900 dark:text-white">{item.productTitle}</h3>
-              <p className="text-xs text-gray-400 mt-1 font-mono" dir="ltr">سریال: {item.serialNumber}</p>
+              <p className="text-xs text-gray-400 mt-1 font-mono" dir="ltr">ستومان: {item.serialNumber}</p>
             </div>
             <StatusBadge endDate={item.endDate} />
           </div>

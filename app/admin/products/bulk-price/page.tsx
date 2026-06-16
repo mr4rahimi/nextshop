@@ -195,7 +195,7 @@ export default function BulkPricePage() {
               <div>
                 <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-2">نوع تغییر</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {[{ v: "percent", l: "درصدی (%)" }, { v: "amount", l: "مبلغی (ریال)" }].map(t => (
+                  {[{ v: "percent", l: "درصدی (%)" }, { v: "amount", l: "مبلغی (تومان)" }].map(t => (
                     <button key={t.v} onClick={() => setBulkType(t.v as any)}
                       className={`py-2 rounded-xl text-xs font-black transition-all border ${
                         bulkType === t.v
@@ -230,7 +230,7 @@ export default function BulkPricePage() {
               {/* مقدار */}
               <div>
                 <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-2">
-                  مقدار {bulkType === "percent" ? "(درصد)" : "(ریال)"}
+                  مقدار {bulkType === "percent" ? "(درصد)" : "(تومان)"}
                 </label>
                 <div className="relative">
                   <input
@@ -253,7 +253,7 @@ export default function BulkPricePage() {
                 <span className="font-black text-gray-900 dark:text-white">{toFa(selected.size)} محصول</span> انتخاب شده —
                 {bulkValue ? (
                   <span className={`font-black mr-1 ${bulkDir === "increase" ? "text-emerald-600" : "text-red-500"}`}>
-                    {bulkDir === "increase" ? "+" : "-"}{bulkValue}{bulkType === "percent" ? "%" : " ریال"}
+                    {bulkDir === "increase" ? "+" : "-"}{bulkValue}{bulkType === "percent" ? "%" : " تومان"}
                   </span>
                 ) : " مقدار وارد نشده"}
               </div>
@@ -372,8 +372,8 @@ export default function BulkPricePage() {
           <span className="text-[11px] font-black text-gray-400 flex-1">
             {someSelected ? `${toFa(selected.size)} محصول انتخاب شده` : `${toFa(filtered.length)} محصول`}
           </span>
-          <span className="text-[11px] font-black text-gray-400 w-36 text-center hidden lg:block">قیمت اصلی (ریال)</span>
-          <span className="text-[11px] font-black text-gray-400 w-36 text-center hidden lg:block">قیمت تخفیف (ریال)</span>
+          <span className="text-[11px] font-black text-gray-400 w-36 text-center hidden lg:block">قیمت اصلی (تومان)</span>
+          <span className="text-[11px] font-black text-gray-400 w-36 text-center hidden lg:block">قیمت تخفیف (تومان)</span>
           <span className="text-[11px] font-black text-gray-400 w-20 text-center hidden lg:block">ذخیره</span>
         </div>
 
