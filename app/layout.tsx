@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { prisma } from "@/lib/prisma";
 import { SITE_URL } from "@/lib/seo";
 import type { Metadata } from "next";
+import AiChat from "@/components/AiChat";
 
 // ── تبدیل themeConfig به CSS variables ────────────────────────────────────────
 function buildCssVars(theme: Record<string, string>): string {
@@ -67,6 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeProvider>
           {children}
         </ThemeProvider>
+        <AiChat />
       </body>
     </html>
   );

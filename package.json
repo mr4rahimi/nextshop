@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.2",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "7.2.0",
     "@tiptap/extension-color": "^3.23.4",
@@ -26,6 +27,7 @@
     "lucide-react": "^0.562.0",
     "mysql2": "^3.22.4",
     "next": "16.1.1",
+    "openai": "^6.42.0",
     "pg": "^8.17.2",
     "react": "19.2.3",
     "react-dom": "19.2.3"

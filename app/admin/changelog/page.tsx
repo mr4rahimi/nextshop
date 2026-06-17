@@ -2,6 +2,25 @@
 
 const VERSIONS = [
 
+
+  {
+    version: "1.7.0",
+    date: "۱۴۰۴/۰۳/۲۷",
+    tag: "minor",
+    title: "تنظیمات ظاهری و رنگ‌بندی سایت و شروع سیستم چت",
+    description: "افزودن سیستم کامل مدیریت رنگ‌بندی سایت از پنل ادمین",
+    changes: [
+      { type: "feature", text: "صفحه تنظیمات ظاهری در پنل ادمین با color picker حرفه‌ای" },
+      { type: "feature", text: "پالت‌های رنگی آماده برای انتخاب سریع تم" },
+      { type: "feature", text: "تولید خودکار ۱۱ شید رنگی از یک رنگ پایه (primary و secondary)" },
+      { type: "feature", text: "پیش‌نمایش زنده تغییرات رنگ قبل از ذخیره" },
+      { type: "feature", text: "اعمال رنگ‌بندی برای همه کاربران بدون نیاز به rebuild" },
+      { type: "improvement", text: "جایگزینی رنگ‌های hardcoded با CSS variables در کامپوننت‌های فروشگاه" },
+      { type: "improvement", text: "ذخیره تنظیمات ظاهری در دیتابیس و inject خودکار در layout" },
+      { type: "improvement", text: "سیستم چت هوشمند راه اندازی اولیه" },
+    ],
+  },
+
   {
     version: "1.6.0",
     date: "۱۴۰۴/۰۳/۲6",
