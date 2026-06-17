@@ -227,7 +227,7 @@ export default function AuthClient() {
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-600/20 rounded-full blur-[80px] pointer-events-none" />
         <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-blue-400/20 rounded-full blur-[80px] pointer-events-none" />
 
-        <div className="relative overflow-hidden bg-white/70 dark:bg-gray-900/60 backdrop-blur-3xl border border-white dark:border-white/10 rounded-[3.5rem] p-8 md:p-10 shadow-2xl shadow-blue-500/10">
+        <div className="relative overflow-hidden bg-white/70 dark:bg-gray-900/60 backdrop-blur-3xl border border-white dark:border-white/10 rounded-[3.5rem] p-8 md:p-10 shadow-2xl shadow-primary-500/10">
 
           {/* Logo */}
           <div className="flex justify-center mb-8">
@@ -266,7 +266,7 @@ export default function AuthClient() {
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleCheckPhone()}
-                className="w-full px-6 py-5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-2xl text-left font-black tracking-widest outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-all"
+                className="w-full px-6 py-5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-2xl text-left font-black tracking-widest outline-none focus:border-primary-500 focus:ring-4 focus:ring-blue-500/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-all"
                 dir="ltr"
               />
               <button
@@ -288,13 +288,13 @@ export default function AuthClient() {
                 <div className="flex p-1 bg-gray-100 dark:bg-white/5 rounded-2xl">
                   <button
                     onClick={() => { setAuthMode("otp"); setOtpSent(false); setError(""); }}
-                    className={`flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all ${authMode === "otp" ? "bg-white dark:bg-gray-800 shadow-sm text-blue-600" : "text-gray-500"}`}
+                    className={`flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all ${authMode === "otp" ? "bg-white dark:bg-gray-800 shadow-sm text-primary-600" : "text-gray-500"}`}
                   >
                     کد تأیید (SMS)
                   </button>
                   <button
                     onClick={() => { setAuthMode("password"); setError(""); }}
-                    className={`flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all ${authMode === "password" ? "bg-white dark:bg-gray-800 shadow-sm text-blue-600" : "text-gray-500"}`}
+                    className={`flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all ${authMode === "password" ? "bg-white dark:bg-gray-800 shadow-sm text-primary-600" : "text-gray-500"}`}
                   >
                     رمز عبور
                   </button>
@@ -308,7 +308,7 @@ export default function AuthClient() {
                     <button
                       onClick={handleSendOtp}
                       disabled={loading}
-                      className="w-full py-4 bg-blue-50 dark:bg-blue-500/10 text-blue-600 border border-blue-200 dark:border-blue-500/20 rounded-2xl font-black text-[13px] hover:bg-blue-100 transition-all disabled:opacity-60"
+                      className="w-full py-4 bg-primary-50 dark:bg-primary-500/10 text-primary-600 border border-blue-200 dark:border-primary-500/20 rounded-2xl font-black text-[13px] hover:bg-blue-100 transition-all disabled:opacity-60"
                     >
                       {loading ? "در حال ارسال..." : "ارسال کد تأیید به شماره موبایل"}
                     </button>
@@ -326,7 +326,7 @@ export default function AuthClient() {
                             value={digit}
                             onChange={e => handleOtpChange(i, e.target.value)}
                             onKeyDown={e => handleOtpKeyDown(i, e)}
-                            className="w-14 h-14 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl text-center text-xl font-black text-blue-600 dark:text-blue-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
+                            className="w-14 h-14 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl text-center text-xl font-black text-primary-600 dark:text-primary-400 focus:border-primary-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
                           />
                         ))}
                       </div>
@@ -334,14 +334,14 @@ export default function AuthClient() {
                       {/* Timer */}
                       <div className="flex items-center justify-center gap-2 text-[11px] font-black">
                         {timer > 0 ? (
-                          <span className="text-blue-600 flex items-center gap-1">
+                          <span className="text-primary-600 flex items-center gap-1">
                             {formatTimer(timer)}
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                           </span>
                         ) : (
-                          <button onClick={handleSendOtp} disabled={loading} className="text-gray-400 hover:text-blue-600 transition-all underline decoration-dotted">
+                          <button onClick={handleSendOtp} disabled={loading} className="text-gray-400 hover:text-primary-600 transition-all underline decoration-dotted">
                             ارسال مجدد کد
                           </button>
                         )}
@@ -359,7 +359,7 @@ export default function AuthClient() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && handleLoginPassword()}
-                  className="w-full px-6 py-5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-2xl text-center font-black tracking-widest outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-gray-900 dark:text-white placeholder:text-gray-400 transition-all"
+                  className="w-full px-6 py-5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-2xl text-center font-black tracking-widest outline-none focus:border-primary-500 focus:ring-4 focus:ring-blue-500/10 text-gray-900 dark:text-white placeholder:text-gray-400 transition-all"
                 />
               )}
 
@@ -374,7 +374,7 @@ export default function AuthClient() {
 
               <button
                 onClick={() => { setStep("phone"); setError(""); setOtp(["","","",""]); setOtpSent(false); }}
-                className="w-full text-[10px] font-black text-gray-400 hover:text-blue-500 transition-all text-center"
+                className="w-full text-[10px] font-black text-gray-400 hover:text-primary-500 transition-all text-center"
               >
                 ویرایش شماره موبایل
               </button>
@@ -393,7 +393,7 @@ export default function AuthClient() {
                 placeholder="رمز عبور (حداقل ۶ کاراکتر)"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
-                className="w-full px-6 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-2xl font-black outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-gray-900 dark:text-white placeholder:text-gray-400 transition-all"
+                className="w-full px-6 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-2xl font-black outline-none focus:border-primary-500 focus:ring-4 focus:ring-blue-500/10 text-gray-900 dark:text-white placeholder:text-gray-400 transition-all"
               />
 
               <input
@@ -402,7 +402,7 @@ export default function AuthClient() {
                 value={newPasswordConfirm}
                 onChange={e => setNewPasswordConfirm(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleRegister()}
-                className="w-full px-6 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-2xl font-black outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-gray-900 dark:text-white placeholder:text-gray-400 transition-all"
+                className="w-full px-6 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-2xl font-black outline-none focus:border-primary-500 focus:ring-4 focus:ring-blue-500/10 text-gray-900 dark:text-white placeholder:text-gray-400 transition-all"
               />
 
               <button

@@ -86,7 +86,7 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
             <img src={logoUrl} className="h-8 w-auto max-w-[120px] object-contain" alt={siteName} />
           </Link>
           <button onClick={close}
-            className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 rounded-xl transition-all border border-transparent hover:border-red-100">
+            className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-secondary-500 rounded-xl transition-all border border-transparent hover:border-red-100">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -210,7 +210,7 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
             {/* لینک همه محصولات */}
             <div className="mt-6">
               <Link href="/products" onClick={close}
-                className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-red-500 to-secondary-500 text-white shadow-lg shadow-red-500/20 active:scale-95 transition-all">
+                className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-red-500 to-secondary-500 text-white shadow-lg shadow-secondary-500/20 active:scale-95 transition-all">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
@@ -225,10 +225,10 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
             </div>
             <ul className="space-y-2">
               {[
-                { label: "پشتیبانی ۲۴ ساعته", href: "#", color: "text-blue-500", icon: "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" },
+                { label: "پشتیبانی ۲۴ ساعته", href: "#", color: "text-primary-500", icon: "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" },
                 { label: "سوالات متداول", href: "#", color: "text-green-500", icon: "M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
                 { label: "گارانتی و ضمانت", href: "#", color: "text-purple-500", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
-                { label: "بازگرداندن کالا", href: "#", color: "text-red-500", icon: "M3 10h11M3 14h7m10-8v8a2 2 0 01-2 2h-4.586l-1.707 1.707a1 1 0 01-1.414 0L7.586 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2z" },
+                { label: "بازگرداندن کالا", href: "#", color: "text-secondary-500", icon: "M3 10h11M3 14h7m10-8v8a2 2 0 01-2 2h-4.586l-1.707 1.707a1 1 0 01-1.414 0L7.586 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2z" },
               ].map(item => (
                 <li key={item.label}>
                   <Link href={item.href} onClick={close}

@@ -5,7 +5,15 @@ import { prisma } from "@/lib/prisma";
 import { SITE_URL } from "@/lib/seo";
 import type { Metadata } from "next";
 
-// metadata داینامیک از DB
+// ── تبدیل themeConfig به CSS variables ────────────────────────────────────────
+function buildCssVars(theme: Record<string, string>): string {
+  if (!theme || Object.keys(theme).length === 0) return "";
+  const vars = Object.entries(theme)
+    .map(([key, value]) => `  ${key}: ${value};`)
+    .join("\n");
+  return `:root {\n${vars}\n}`;
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const s = await prisma.storeSettings.findUnique({ where: { id: "singleton" } });
@@ -28,7 +36,19 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // لود تم از دیتابیس
+  let cssVars = "";
+  try {
+    const s = await prisma.storeSettings.findUnique({
+      where: { id: "singleton" },
+      select: { themeConfig: true },
+    });
+    if (s?.themeConfig && typeof s.themeConfig === "object") {
+      cssVars = buildCssVars(s.themeConfig as Record<string, string>);
+    }
+  } catch {}
+
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning>
       <head>
@@ -37,6 +57,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `(function(){try{var t=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||(!t&&d)){document.documentElement.classList.add('dark')}}catch(e){}})()`,
           }}
         />
+        {cssVars && (
+          <style dangerouslySetInnerHTML={{ __html: cssVars }} />
+        )}
         <link rel="stylesheet" href="/assets/js/plugin/swiper/swiper-bundle.min.css" />
         <script src="/assets/js/plugin/swiper/swiper-bundle.min.js" defer></script>
       </head>

@@ -250,7 +250,7 @@ function FilterSidebar({
             </div>
             <button
               onClick={onApplyPrice}
-              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-[1.5rem] text-xs font-black transition-all active:scale-95"
+              className="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-[1.5rem] text-xs font-black transition-all active:scale-95"
             >
               تایید محدوده قیمت
             </button>
@@ -266,10 +266,10 @@ function FilterSidebar({
             onClick={() => setBrandOpen(!brandOpen)}
           >
             <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-3">
-              <span className="w-3 h-3 rounded-full bg-blue-500" />
+              <span className="w-3 h-3 rounded-full bg-primary-500" />
               برندها
               {selectedBrands.length > 0 && (
-                <span className="text-[10px] font-black text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full">
+                <span className="text-[10px] font-black text-primary-500 bg-primary-500/10 px-3 py-1 rounded-full">
                   {toFarsi(selectedBrands.length)}
                 </span>
               )}
@@ -288,7 +288,7 @@ function FilterSidebar({
                 <div className="relative">
                   <input
                     type="text"
-                    className="w-full bg-white/60 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-2xl py-3.5 pr-11 pl-4 text-xs font-bold text-gray-800 dark:text-white outline-none transition-all focus:border-blue-500/50"
+                    className="w-full bg-white/60 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-2xl py-3.5 pr-11 pl-4 text-xs font-bold text-gray-800 dark:text-white outline-none transition-all focus:border-primary-500/50"
                     placeholder="جستجوی برند..."
                     value={brandSearch}
                     onChange={(e) => onBrandSearch(e.target.value)}
@@ -304,14 +304,14 @@ function FilterSidebar({
               <ul className="space-y-1 max-h-72 overflow-y-auto pl-2">
                 {filteredBrands.map((b) => (
                   <li key={b.id} className="group/brand">
-                    <label className="flex items-center justify-between p-3 rounded-2xl hover:bg-blue-500/5 dark:hover:bg-blue-500/10 cursor-pointer transition-all border border-transparent hover:border-blue-500/20">
-                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-blue-600 transition-colors">
+                    <label className="flex items-center justify-between p-3 rounded-2xl hover:bg-primary-500/5 dark:hover:bg-primary-500/10 cursor-pointer transition-all border border-transparent hover:border-primary-500/20">
+                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/brand:text-primary-600 transition-colors">
                         {b.title}
                       </span>
                       <div className="relative flex items-center">
                         <input
                           type="checkbox"
-                          className="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer"
+                          className="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300/70 dark:border-white/20 checked:bg-primary-500 checked:border-primary-500 transition-all cursor-pointer"
                           checked={selectedBrands.includes(b.slug)}
                           onChange={() => onBrandToggle(b.slug)}
                         />
@@ -494,13 +494,13 @@ export default function CategoryPageClient({
 
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-[10px] font-black text-gray-400 mb-6 bg-white/30 dark:bg-white/[0.02] w-fit px-4 py-2 rounded-full border border-white/40 dark:border-white/5 backdrop-blur-md">
-            <Link href="/" className="hover:text-blue-500 transition-colors uppercase tracking-tighter">خانه</Link>
+            <Link href="/" className="hover:text-primary-500 transition-colors uppercase tracking-tighter">خانه</Link>
             <svg className="w-3 h-3 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M15 19l-7-7 7-7" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             {category.parent && (
               <>
-                <Link href={`/categories/${category.parent.slug}`} className="hover:text-blue-500 transition-colors uppercase tracking-tighter">
+                <Link href={`/categories/${category.parent.slug}`} className="hover:text-primary-500 transition-colors uppercase tracking-tighter">
                   {category.parent.title}
                 </Link>
                 <svg className="w-3 h-3 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -508,13 +508,13 @@ export default function CategoryPageClient({
                 </svg>
               </>
             )}
-            <span className="text-blue-600 dark:text-blue-400">{category.title}</span>
+            <span className="text-primary-600 dark:text-primary-400">{category.title}</span>
           </nav>
 
           {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
             <div className="relative">
-              <div className="absolute -right-4 top-0 w-1 h-12 bg-blue-500 rounded-full blur-[2px]" />
+              <div className="absolute -right-4 top-0 w-1 h-12 bg-primary-500 rounded-full blur-[2px]" />
               <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">
                 {category.title}
               </h1>
@@ -529,7 +529,7 @@ export default function CategoryPageClient({
             {/* Sort */}
             <div className="flex items-center gap-1 bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/40 dark:border-white/10 p-2 rounded-[1.8rem] shadow-xl shadow-gray-200/40 dark:shadow-none">
               <div className="flex items-center px-4 gap-2">
-                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
                 </svg>
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">مرتب‌سازی:</span>
@@ -541,7 +541,7 @@ export default function CategoryPageClient({
                     onClick={() => setSort(s)}
                     className={`px-4 py-2.5 rounded-[1.2rem] text-[11px] font-black transition-all ${
                       sort === s
-                        ? "bg-blue-500 text-white shadow-lg shadow-blue-500/25"
+                        ? "bg-primary-500 text-white shadow-lg shadow-primary-500/25"
                         : "text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-white/5"
                     }`}
                   >
@@ -559,7 +559,7 @@ export default function CategoryPageClient({
                 <Link
                   key={child.id}
                   href={`/categories/${child.slug}`}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-300 hover:border-blue-500 hover:text-blue-600 transition-all"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-300 hover:border-primary-500 hover:text-primary-600 transition-all"
                 >
                   {child.imageUrl && (
                     <img src={child.imageUrl} alt={child.title} className="w-6 h-6 object-contain" />
@@ -574,7 +574,7 @@ export default function CategoryPageClient({
           <div className="fixed bottom-28 right-6 z-[95] lg:hidden">
             <button
               onClick={() => setFilterOpen(true)}
-              className="flex items-center justify-center w-14 h-14 bg-white/40 dark:bg-white/[0.05] backdrop-blur-2xl text-blue-600 rounded-2xl shadow-xl border border-white/60 dark:border-white/10 active:scale-90 transition-all"
+              className="flex items-center justify-center w-14 h-14 bg-white/40 dark:bg-white/[0.05] backdrop-blur-2xl text-primary-600 rounded-2xl shadow-xl border border-white/60 dark:border-white/10 active:scale-90 transition-all"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -676,7 +676,7 @@ export default function CategoryPageClient({
                       setAppliedMin(""); setAppliedMax("");
                       setSelectedAttributes({});
                     }}
-                    className="mt-6 px-6 py-2.5 rounded-xl border border-blue-500/30 text-blue-600 dark:text-blue-400 font-bold text-sm hover:bg-blue-500 hover:text-white transition-all"
+                    className="mt-6 px-6 py-2.5 rounded-xl border border-primary-500/30 text-primary-600 dark:text-primary-400 font-bold text-sm hover:bg-primary-500 hover:text-white transition-all"
                   >
                     پاک کردن فیلترها
                   </button>
@@ -717,7 +717,7 @@ export default function CategoryPageClient({
                         <button
                           onClick={() => page > 1 && handlePageClick(page - 1)}
                           disabled={page === 1}
-                          className="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-white dark:hover:bg-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-primary-500 hover:bg-white dark:hover:bg-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -734,8 +734,8 @@ export default function CategoryPageClient({
                                 onClick={() => handlePageClick(p)}
                                 className={`w-11 h-11 rounded-[1.2rem] flex items-center justify-center text-xs font-black transition-all ${
                                   page === p
-                                    ? "bg-blue-500 text-white shadow-lg shadow-blue-500/40 ring-4 ring-blue-500/10"
-                                    : "bg-white/60 dark:bg-white/10 border border-white dark:border-white/5 text-gray-600 dark:text-gray-300 hover:bg-blue-500 hover:text-white"
+                                    ? "bg-primary-500 text-white shadow-lg shadow-primary-500/40 ring-4 ring-primary-500/10"
+                                    : "bg-white/60 dark:bg-white/10 border border-white dark:border-white/5 text-gray-600 dark:text-gray-300 hover:bg-primary-500 hover:text-white"
                                 }`}
                               >
                                 {toFarsi(p)}
@@ -747,7 +747,7 @@ export default function CategoryPageClient({
                               <span className="px-2 text-gray-400 font-black">...</span>
                               <button
                                 onClick={() => handlePageClick(totalPages)}
-                                className="w-11 h-11 rounded-[1.2rem] bg-white/60 dark:bg-white/10 border border-white dark:border-white/5 flex items-center justify-center text-xs font-black text-gray-600 dark:text-gray-300 hover:bg-blue-500 hover:text-white transition-all"
+                                className="w-11 h-11 rounded-[1.2rem] bg-white/60 dark:bg-white/10 border border-white dark:border-white/5 flex items-center justify-center text-xs font-black text-gray-600 dark:text-gray-300 hover:bg-primary-500 hover:text-white transition-all"
                               >
                                 {toFarsi(totalPages)}
                               </button>
@@ -759,7 +759,7 @@ export default function CategoryPageClient({
                         <button
                           onClick={() => page < totalPages && handlePageClick(page + 1)}
                           disabled={page >= totalPages}
-                          className="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-white dark:hover:bg-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-primary-500 hover:bg-white dark:hover:bg-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -801,7 +801,7 @@ export default function CategoryPageClient({
           {category.description && (
             <div className="mt-16 bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[3rem] p-10 shadow-xl">
               <div className="flex items-center gap-3 mb-6">
-                <span className="w-2 h-8 bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.6)]" />
+                <span className="w-2 h-8 bg-primary-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.6)]" />
                 <h2 className="text-2xl font-black text-gray-900 dark:text-white">
                   درباره دسته‌بندی {category.title}
                 </h2>

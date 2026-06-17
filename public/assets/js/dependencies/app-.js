@@ -163,7 +163,7 @@ function startOtpTimer() {
 
     resendBtn.disabled = true;
     resendBtn.style.opacity = "0.5";
-    resendBtn.classList.remove('text-blue-600');
+    resendBtn.classList.remove('text-primary-600');
     resendBtn.classList.add('text-gray-400');
 
     clearInterval(otpCountdown);
@@ -177,7 +177,7 @@ function startOtpTimer() {
             resendBtn.disabled = false;
             resendBtn.style.opacity = "1";
             resendBtn.classList.remove('text-gray-400');
-            resendBtn.classList.add('text-blue-600', 'hover:text-blue-700');
+            resendBtn.classList.add('text-primary-600', 'hover:text-blue-700');
         }
     }, 1000);
 }
@@ -558,14 +558,14 @@ function initProductVariables() {
         btn.addEventListener('click', () => {
             // Reset all size buttons
             sizeBtns.forEach(b => {
-                b.classList.remove('border-blue-600', 'bg-blue-50', 'dark:bg-blue-600/10', 'text-blue-600', 'dark:text-blue-400');
+                b.classList.remove('border-blue-600', 'bg-blue-50', 'dark:bg-blue-600/10', 'text-primary-600', 'dark:text-blue-400');
                 b.classList.add('border-transparent', 'bg-gray-100', 'dark:bg-white/5', 'text-gray-700', 'dark:text-gray-300');
             });
 
             // Apply active style to selected button
             btn.classList.replace('border-transparent', 'border-blue-600');
             btn.classList.replace('bg-gray-100', 'bg-blue-50');
-            btn.classList.add('dark:bg-blue-600/10', 'text-blue-600', 'dark:text-blue-400');
+            btn.classList.add('dark:bg-blue-600/10', 'text-primary-600', 'dark:text-blue-400');
 
             // Update size text
             if (sizeNameDisplay) {
@@ -2082,7 +2082,7 @@ function initTermsNavigation() {
             const linkSectionId = linkHref.substring(1); // remove leading #
 
             link.classList.remove(
-                'text-blue-600',
+                'text-primary-600',
                 'bg-blue-600/5',
                 'border-blue-600/10',
                 'dark:text-blue-400'
@@ -2091,7 +2091,7 @@ function initTermsNavigation() {
 
             if (linkSectionId === currentSectionId) {
                 link.classList.add(
-                    'text-blue-600',
+                    'text-primary-600',
                     'bg-blue-600/5',
                     'border-blue-600/10'
                 );

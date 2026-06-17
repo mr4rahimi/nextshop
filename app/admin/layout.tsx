@@ -35,6 +35,7 @@ const ICONS = {
   external:   "M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14",
   logout:     "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1",
   wallet: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z",
+  appearance: "M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01",
 };
 
 // ── ساختار منو ────────────────────────────────────────────────────────────────
@@ -109,6 +110,7 @@ const MENU_GROUPS = [
           { href: "/admin/site-settings", label: "تنظیمات عمومی" },
           { href: "/admin/menu", label: "منوی هدر" },
           { href: "/admin/footer", label: "فوتر" },
+          { href: "/admin/appearance", label: "ظاهر سایت", icon: "appearance" },
           { href: "/admin/admins", label: "مدیریت ادمین‌ها", icon: "🔐" },
           { href: "/admin/changelog", label: "نسخه برنامه", icon: "🚀" }
         ],
@@ -351,7 +353,7 @@ function Breadcrumb() {
     "spec-groups": "مشخصات", blog: "بلاگ", widgets: "ویجت‌ها",
     stories: "استوری‌ها", "hero-slides": "اسلایدر", shipping: "ارسال",
     "site-settings": "تنظیمات", footer: "فوتر", menu: "منو",
-    create: "جدید", comments: "نظرات", media: "کتابخانه رسانه", guaranty: "گارانتی", requests: "درخواست‌ها", wallet: "کیف پول",
+    create: "جدید", comments: "نظرات", media: "کتابخانه رسانه", guaranty: "گارانتی", requests: "درخواست‌ها", wallet: "کیف پول", appearance: "ظاهر سایت",
   };
 
   return (

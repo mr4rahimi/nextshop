@@ -4,7 +4,7 @@ export default function ProductCard({ product }: { product: Product }) {
   return (
     <div className="swiper-slide h-auto p-4">
       <div className="group relative h-full pt-12">
-        <div className="absolute inset-0 bg-white/80 dark:bg-[#0a0a0a]/40 backdrop-blur-[20px] rounded-[3rem] border border-gray-100 dark:border-white/[0.08] shadow-[0_20px_50px_rgba(0,0,0,0.02)] transition-all duration-700 group-hover:border-blue-500/50"></div>
+        <div className="absolute inset-0 bg-white/80 dark:bg-[#0a0a0a]/40 backdrop-blur-[20px] rounded-[3rem] border border-gray-100 dark:border-white/[0.08] shadow-[0_20px_50px_rgba(0,0,0,0.02)] transition-all duration-700 group-hover:border-primary-500/50"></div>
 
         <div className="relative p-7 flex flex-col h-full z-10 transition-transform duration-500 group-hover:-translate-y-4">
 
@@ -27,7 +27,7 @@ export default function ProductCard({ product }: { product: Product }) {
           </div>
 
           {/* Title */}
-          <h3 className="text-[15px] font-black text-gray-800 dark:text-zinc-100 mb-6 line-clamp-2 leading-7 h-14 group-hover:text-blue-600 transition-colors">
+          <h3 className="text-[15px] font-black text-gray-800 dark:text-zinc-100 mb-6 line-clamp-2 leading-7 h-14 group-hover:text-primary-600 transition-colors">
             {product.title}
           </h3>
 

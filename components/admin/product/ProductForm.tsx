@@ -84,7 +84,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 // ── Input styles ──────────────────────────────────────────────────────────────
-const inp = "w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all";
+const inp = "w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 transition-all";
 const ta  = `${inp} resize-none`;
 
 // ── AttributesSection component ───────────────────────────────────────────────
@@ -315,7 +315,7 @@ function RelatedSearch({ productId, currentProductTitle }: { productId?: string;
                     <p className="text-xs font-black text-gray-900 dark:text-white truncate">{p.title}</p>
                     {p.category && <p className="text-[10px] text-gray-400">{p.category.title}</p>}
                   </div>
-                  <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-primary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                   </svg>
                 </button>
@@ -793,7 +793,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
                     onClick={() => setRelated("categorySort", o.v as "newest" | "popular")}
                     className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all border ${
                       form.relatedSettings.categorySort === o.v
-                        ? "bg-blue-600 text-white border-blue-600"
+                        ? "bg-blue-600 text-white border-primary-600"
                         : "bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-white/10"
                     }`}>
                     {o.l}
@@ -822,7 +822,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
                     onClick={() => setRelated("brandSort", o.v as "newest" | "popular")}
                     className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all border ${
                       form.relatedSettings.brandSort === o.v
-                        ? "bg-blue-600 text-white border-blue-600"
+                        ? "bg-blue-600 text-white border-primary-600"
                         : "bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-white/10"
                     }`}>
                     {o.l}

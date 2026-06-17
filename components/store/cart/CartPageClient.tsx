@@ -16,16 +16,16 @@ function CheckoutSteps({ current }: { current: number }) {
     <div className="max-w-4xl mx-auto mb-16 px-4" dir="rtl">
       <div className="relative flex items-center justify-between">
         <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 dark:bg-white/5 -translate-y-1/2 rounded-full" />
-        <div className="absolute top-1/2 right-0 h-1 bg-blue-500 -translate-y-1/2 rounded-full transition-all duration-700"
+        <div className="absolute top-1/2 right-0 h-1 bg-primary-500 -translate-y-1/2 rounded-full transition-all duration-700"
           style={{ width: current === 0 ? "0%" : current === 1 ? "50%" : "100%" }} />
         {steps.map((s, i) => (
           <div key={i} className={`relative z-10 flex flex-col items-center gap-3 ${i > current ? "opacity-50" : ""}`}>
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border-4 ${i <= current ? "bg-blue-500 text-white shadow-lg shadow-blue-500/40 border-white dark:border-[#0f172a]" : "bg-white/40 dark:bg-white/[0.02] text-gray-400 border-gray-100 dark:border-white/5"}`}>
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border-4 ${i <= current ? "bg-primary-500 text-white shadow-lg shadow-primary-500/40 border-white dark:border-[#0f172a]" : "bg-white/40 dark:bg-white/[0.02] text-gray-400 border-gray-100 dark:border-white/5"}`}>
               <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={s.icon} />
               </svg>
             </div>
-            <span className={`text-[11px] font-black uppercase tracking-widest ${i <= current ? "text-blue-600 dark:text-blue-400" : "text-gray-400"}`}>
+            <span className={`text-[11px] font-black uppercase tracking-widest ${i <= current ? "text-primary-600 dark:text-primary-400" : "text-gray-400"}`}>
               {s.label}
             </span>
           </div>
@@ -50,12 +50,12 @@ export default function CartPageClient() {
     return (
       <section className="relative py-16 transition-colors duration-700">
         <div className="flex flex-col items-center justify-center min-h-[600px] px-6 py-12 text-center relative overflow-hidden">
-          <div className="absolute -z-10 w-80 h-80 bg-blue-500/10 blur-[120px] rounded-full" />
+          <div className="absolute -z-10 w-80 h-80 bg-primary-500/10 blur-[120px] rounded-full" />
           <div className="relative mb-10 group">
-            <div className="absolute inset-0 scale-150 border border-blue-500/5 rounded-full animate-[ping_3s_linear_infinite]" />
-            <div className="absolute inset-0 scale-125 border border-blue-500/10 rounded-full animate-[ping_2s_linear_infinite]" />
+            <div className="absolute inset-0 scale-150 border border-primary-500/5 rounded-full animate-[ping_3s_linear_infinite]" />
+            <div className="absolute inset-0 scale-125 border border-primary-500/10 rounded-full animate-[ping_2s_linear_infinite]" />
             <div className="relative w-44 h-44 bg-white/40 dark:bg-white/[0.03] backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[3.5rem] flex items-center justify-center shadow-2xl transition-all duration-700 group-hover:scale-110 group-hover:rotate-3">
-              <svg className="w-20 h-20 text-blue-500/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-20 h-20 text-primary-500/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               <div className="absolute -top-1 -right-1 w-12 h-12 bg-rose-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-rose-500/40 rotate-12 animate-bounce">
@@ -73,7 +73,7 @@ export default function CartPageClient() {
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-5 mt-12">
             <Link href="/products"
-              className="w-full sm:w-auto px-12 py-5 bg-blue-600 text-white rounded-[2rem] font-black shadow-xl shadow-blue-600/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 group">
+              className="w-full sm:w-auto px-12 py-5 bg-primary-600 text-white rounded-[2rem] font-black shadow-xl shadow-primary-600/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 group">
               برو به فروشگاه
               <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -81,13 +81,13 @@ export default function CartPageClient() {
             </Link>
           </div>
           {!isLoggedIn && (
-            <div className="mt-12 p-5 bg-blue-500/5 dark:bg-blue-400/5 rounded-[2rem] border border-blue-500/10 flex items-center gap-3 max-w-md">
-              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+            <div className="mt-12 p-5 bg-primary-500/5 dark:bg-primary-400/5 rounded-[2rem] border border-primary-500/10 flex items-center gap-3 max-w-md">
+              <div className="w-8 h-8 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-primary-600 dark:text-primary-400" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
               </div>
-              <p className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+              <p className="text-[11px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest">
                 با ورود به حساب، محصولات قبلی در سبد نمایش داده می‌شوند.
               </p>
             </div>
@@ -116,10 +116,10 @@ export default function CartPageClient() {
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between px-6 mb-8">
               <div className="flex items-center gap-4">
-                <div className="w-2 h-10 bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)]" />
+                <div className="w-2 h-10 bg-primary-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)]" />
                 <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">سبد خرید شما</h1>
               </div>
-              <span className="px-5 py-2 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl text-xs font-black uppercase tracking-widest">
+              <span className="px-5 py-2 bg-primary-500/10 text-primary-600 dark:text-primary-400 rounded-2xl text-xs font-black uppercase tracking-widest">
                 {toFa(count)} کالا
               </span>
             </div>
@@ -148,7 +148,7 @@ export default function CartPageClient() {
                       {/* اطلاعات */}
                       <div className="flex-1 space-y-3 text-center md:text-right">
                         <Link href={`/products/${item.product.slug}`}>
-                          <h3 className="text-base md:text-lg font-black text-gray-800 dark:text-gray-100 leading-8 hover:text-blue-600 transition-colors line-clamp-2">
+                          <h3 className="text-base md:text-lg font-black text-gray-800 dark:text-gray-100 leading-8 hover:text-primary-600 transition-colors line-clamp-2">
                             {item.product.title}
                           </h3>
                         </Link>
@@ -170,7 +170,7 @@ export default function CartPageClient() {
                           </button>
                           <div className="flex items-center bg-gray-100/50 dark:bg-white/5 p-1.5 rounded-[1.2rem] border border-gray-200/50 dark:border-white/10 shadow-inner">
                             <button onClick={() => updateQty(item.productId, item.qty + 1)}
-                              className="w-9 h-9 flex items-center justify-center bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-500/30 hover:scale-105 active:scale-90 transition-all">
+                              className="w-9 h-9 flex items-center justify-center bg-primary-600 text-white rounded-lg shadow-lg shadow-primary-500/30 hover:scale-105 active:scale-90 transition-all">
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v12M6 12h12" />
                               </svg>
@@ -191,7 +191,7 @@ export default function CartPageClient() {
                               {toFa(origPrice * item.qty)} تومان
                             </span>
                           )}
-                          <span className="block text-2xl font-black text-blue-600 dark:text-blue-400 tracking-tighter">
+                          <span className="block text-2xl font-black text-primary-600 dark:text-primary-400 tracking-tighter">
                             {toFa(price * item.qty)} <span className="text-[10px] font-bold text-gray-500">تومان</span>
                           </span>
                         </div>
@@ -206,7 +206,7 @@ export default function CartPageClient() {
           {/* خلاصه فاکتور */}
           <div className="lg:col-span-1 lg:sticky lg:top-24">
             <div className="relative group max-w-sm mx-auto">
-              <div className="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-[80px]" />
+              <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary-500/10 rounded-full blur-[80px]" />
               <div className="relative bg-white/20 dark:bg-black/20 backdrop-blur-[60px] border border-white/50 dark:border-white/5 rounded-[3.5rem] p-2 shadow-2xl overflow-hidden">
 
                 <div className="p-8 pb-4 text-center">
@@ -238,7 +238,7 @@ export default function CartPageClient() {
                   <div className="relative h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-white/10 to-transparent" />
 
                   <div className="flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[5px]">Net Payable</span>
+                    <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-[5px]">Net Payable</span>
                     <div className="flex items-baseline gap-1">
                       <span className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter tabular-nums">{toFa(total)}</span>
                       <span className="text-[10px] font-bold text-gray-400">تومان</span>
@@ -248,7 +248,7 @@ export default function CartPageClient() {
 
                 <div className="p-6">
                   <button onClick={handleCheckout}
-                    className="group/pay relative w-full h-20 bg-blue-600 dark:bg-blue-500 rounded-[2.2rem] overflow-hidden transition-all duration-500 shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)] hover:shadow-[0_25px_50px_-12px_rgba(37,99,235,0.7)] hover:-translate-y-1 active:scale-95">
+                    className="group/pay relative w-full h-20 bg-primary-600 dark:bg-primary-500 rounded-[2.2rem] overflow-hidden transition-all duration-500 shadow-[0_20px_40px_-10px_rgba(37,99,235,0.5)] hover:shadow-[0_25px_50px_-12px_rgba(37,99,235,0.7)] hover:-translate-y-1 active:scale-95">
                     <div className="relative flex items-center justify-between px-8">
                       <span className="text-white font-black text-lg tracking-tight">
                         {isLoggedIn ? "تأیید و ادامه" : "ورود و ادامه"}

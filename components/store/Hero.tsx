@@ -31,11 +31,11 @@ function SuggestionCard({ product }: { product: SuggestProduct }) {
 
   return (
     <Link href={`/products/${product.slug}`}
-      className="group/card block relative bg-gray-50 dark:bg-[#0c0c0e] p-4 rounded-[2.5rem] border border-gray-100 dark:border-white/5 transition-all duration-500 hover:border-blue-500/30 dark:hover:shadow-[0_20px_40px_-10px_rgba(59,130,246,0.15)] hover:-translate-y-1">
+      className="group/card block relative bg-gray-50 dark:bg-[#0c0c0e] p-4 rounded-[2.5rem] border border-gray-100 dark:border-white/5 transition-all duration-500 hover:border-primary-500/30 dark:hover:shadow-[0_20px_40px_-10px_rgba(59,130,246,0.15)] hover:-translate-y-1">
 
       {disc && (
         <div className="absolute top-5 right-5 z-20">
-          <span className="bg-red-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-lg shadow-red-500/30">
+          <span className="bg-red-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-lg shadow-secondary-500/30">
             {fa(disc)}٪-
           </span>
         </div>
@@ -46,8 +46,8 @@ function SuggestionCard({ product }: { product: SuggestProduct }) {
         onClick={e => { e.preventDefault(); e.stopPropagation(); toggle(product.id); }}
         className={`absolute top-5 left-5 z-20 w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${
           isWished
-            ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-500"
-            : "bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 text-gray-400 hover:text-red-500"
+            ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-secondary-500"
+            : "bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 text-gray-400 hover:text-secondary-500"
         }`}>
         <svg className="w-4 h-4" fill={isWished ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -65,11 +65,11 @@ function SuggestionCard({ product }: { product: SuggestProduct }) {
         {/* اطلاعات */}
         <div className="flex-1 min-w-0">
           {product.brand && (
-            <span className="text-[9px] font-black text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-lg">
+            <span className="text-[9px] font-black text-primary-600 bg-primary-500/10 px-2 py-0.5 rounded-lg">
               {product.brand.title}
             </span>
           )}
-          <h3 className="text-[13px] font-black text-gray-800 dark:text-gray-100 leading-6 line-clamp-2 mt-1 group-hover/card:text-blue-600 transition-colors">
+          <h3 className="text-[13px] font-black text-gray-800 dark:text-gray-100 leading-6 line-clamp-2 mt-1 group-hover/card:text-primary-600 transition-colors">
             {product.title}
           </h3>
           <div className="mt-2">
@@ -165,11 +165,11 @@ export default function HeroSection() {
             {/* هدر */}
             <div className="flex justify-between items-center mb-5">
               <div className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse" />
+                <span className="w-2.5 h-2.5 rounded-full bg-primary-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse" />
                 <h2 className="text-base font-black text-gray-900 dark:text-white">پیشنهادات لحظه‌ای</h2>
               </div>
               <Link href="/products"
-                className="text-[10px] font-black text-blue-600 bg-blue-500/10 hover:bg-blue-600 hover:text-white px-3 py-1.5 rounded-xl transition-all border border-blue-500/20">
+                className="text-[10px] font-black text-primary-600 bg-primary-500/10 hover:bg-primary-600 hover:text-white px-3 py-1.5 rounded-xl transition-all border border-primary-500/20">
                 مشاهده همه
               </Link>
             </div>
@@ -202,14 +202,14 @@ export default function HeroSection() {
                 <div className="grid grid-cols-5 gap-2">
                   {suggestions.slice(0, 4).map(p => (
                     <Link key={p.id} href={`/products/${p.slug}`}
-                      className="aspect-square bg-gray-50 dark:bg-white/5 rounded-2xl p-2 border border-gray-100 dark:border-white/5 hover:border-blue-500/30 transition-all group overflow-hidden">
+                      className="aspect-square bg-gray-50 dark:bg-white/5 rounded-2xl p-2 border border-gray-100 dark:border-white/5 hover:border-primary-500/30 transition-all group overflow-hidden">
                       {p.mainImage
                         ? <img src={p.mainImage} alt={p.title} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" />
                         : <div className="w-full h-full flex items-center justify-center text-gray-300">📦</div>}
                     </Link>
                   ))}
                   <Link href="/products"
-                    className="aspect-square bg-blue-600 hover:bg-blue-700 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg shadow-blue-500/30 transition-all active:scale-95">
+                    className="aspect-square bg-primary-600 hover:bg-primary-700 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg shadow-primary-500/30 transition-all active:scale-95">
                     <span className="text-xs font-black">+</span>
                     <svg className="w-4 h-4 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />

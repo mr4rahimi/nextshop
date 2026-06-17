@@ -56,12 +56,12 @@ export default function ManaProductCard({ product }: Props) {
       <div className={`absolute inset-0 backdrop-blur-[20px] rounded-[3rem] border shadow-[0_20px_50px_rgba(0,0,0,0.02)] transition-all duration-700 ${
          isOutOfStock
            ? "bg-gray-100/80 dark:bg-[#0a0a0a]/60 border-gray-200 dark:border-white/[0.04] opacity-70"
-           : "bg-white/80 dark:bg-[#0a0a0a]/40 border-gray-100 dark:border-white/[0.08] group-hover:border-blue-500/50 dark:group-hover:shadow-[0_0_60px_rgba(37,99,235,0.12)]"
+           : "bg-white/80 dark:bg-[#0a0a0a]/40 border-gray-100 dark:border-white/[0.08] group-hover:border-primary-500/50 dark:group-hover:shadow-[0_0_60px_rgba(37,99,235,0.12)]"
        }`} />
        
       {discountPercent && discountPercent > 0 && (
         <div className="absolute -top-6 -right-2 z-20">
-          <div className="bg-red-500 text-white text-[12px] font-black w-12 h-12 rounded-[1.2rem] flex items-center justify-center shadow-xl shadow-red-500/40 rotate-12 group-hover:rotate-0 transition-all duration-500 border-2 border-white dark:border-white/20">
+          <div className="bg-secondary-500 text-white text-[12px] font-black w-12 h-12 rounded-[1.2rem] flex items-center justify-center shadow-xl shadow-secondary-500/40 rotate-12 group-hover:rotate-0 transition-all duration-500 border-2 border-white dark:border-white/20">
             {toFarsi(discountPercent)}٪
           </div>
         </div>
@@ -72,7 +72,7 @@ export default function ManaProductCard({ product }: Props) {
         className="relative p-7 flex flex-col h-full z-10 transition-transform duration-500 group-hover:-translate-y-4"
       >
         <div className="relative mb-8 flex items-center justify-center min-h-[180px]">
-          <div className="absolute w-40 h-40 bg-blue-500/20 dark:bg-indigo-500/20 blur-[70px] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-1000" />
+          <div className="absolute w-40 h-40 bg-primary-500/20 dark:bg-primary-500/20 blur-[70px] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-1000" />
 
           {product.image ? (
             <img
@@ -107,12 +107,12 @@ export default function ManaProductCard({ product }: Props) {
         </div>
 
         {product.brand && (
-          <span className="text-[10px] font-bold text-blue-600 bg-blue-600/10 px-2 py-0.5 rounded-lg w-fit mb-2">
+          <span className="text-[10px] font-bold text-primary-600 bg-primary-600/10 px-2 py-0.5 rounded-lg w-fit mb-2">
             {product.brand.title}
           </span>
         )}
 
-        <h3 className="text-[15px] font-black text-gray-800 dark:text-zinc-100 mb-6 line-clamp-2 leading-7 h-14 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+        <h3 className="text-[15px] font-black text-gray-800 dark:text-zinc-100 mb-6 line-clamp-2 leading-7 h-14 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
           {product.title}
         </h3>
 

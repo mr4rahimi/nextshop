@@ -104,22 +104,22 @@ export default function BestSellersSection() {
         <div
           className="
             relative overflow-hidden rounded-3xl
-            border border-indigo-200/45
-            bg-gradient-to-br from-indigo-50/80 via-sky-50/70 to-slate-50/70
+            border border-primary-200/45
+            bg-gradient-to-br from-primary-50/80 via-sky-50/70 to-slate-50/70
             backdrop-blur-xl
             shadow-[0_18px_55px_-18px_rgba(99,102,241,0.28)]
             p-4 md:p-6
           "
         >
           {/* glow */}
-          <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-indigo-300/20 blur-3xl" />
+          <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary-300/20 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-28 -left-28 h-72 w-72 rounded-full bg-sky-300/18 blur-3xl" />
 
           <div className="relative md:flex md:items-stretch md:gap-6">
             {/* Right (desktop) / Top (mobile) */}
             <div className="flex items-center justify-between md:flex-col md:items-start md:justify-center md:w-[260px]">
               <div className="flex flex-col gap-1">
-                <div className="inline-flex items-center gap-2 text-indigo-700 font-extrabold">
+                <div className="inline-flex items-center gap-2 text-primary-700 font-extrabold">
                   <TrendingUp size={18} />
                   پرفروش‌ترین‌ها
                 </div>
@@ -135,10 +135,10 @@ export default function BestSellersSection() {
                 href="/products?sort=best"
                 className="
                   inline-flex items-center gap-2
-                  rounded-2xl bg-indigo-600 px-4 py-2.5
+                  rounded-2xl bg-primary-600 px-4 py-2.5
                   text-sm font-extrabold text-white
                   shadow-[0_12px_25px_-12px_rgba(99,102,241,0.5)]
-                  hover:bg-indigo-700 transition
+                  hover:bg-primary-700 transition
                 "
               >
                 نمایش همه

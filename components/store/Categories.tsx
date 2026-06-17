@@ -72,11 +72,11 @@ export default function CategoriesSection({ categoryIds }: Props) {
 
           <Link
             href="/categories"
-            className="group/link relative overflow-hidden px-8 py-3.5 rounded-2xl transition-all duration-500 flex items-center gap-3 bg-white/40 backdrop-blur-md border border-gray-200 text-gray-800 hover:border-blue-500/50 hover:text-white dark:bg-white/[0.03] dark:border-white/10 dark:text-gray-300 dark:hover:text-white"
+            className="group/link relative overflow-hidden px-8 py-3.5 rounded-2xl transition-all duration-500 flex items-center gap-3 bg-white/40 backdrop-blur-md border border-gray-200 text-gray-800 hover:border-primary-500/50 hover:text-white dark:bg-white/[0.03] dark:border-white/10 dark:text-gray-300 dark:hover:text-white"
           >
-            <span className="absolute inset-0 bg-blue-600 translate-y-full group-hover/link:translate-y-0 transition-transform duration-500 ease-out" />
+            <span className="absolute inset-0 bg-primary-600 translate-y-full group-hover/link:translate-y-0 transition-transform duration-500 ease-out" />
             <span className="relative z-10 text-[13px] font-black tracking-tight">مشاهده تمامی دسته‌ها</span>
-            <div className="relative z-10 w-5 h-5 flex items-center justify-center bg-blue-600/10 dark:bg-white/5 rounded-lg group-hover/link:bg-white/20 transition-colors">
+            <div className="relative z-10 w-5 h-5 flex items-center justify-center bg-primary-600/10 dark:bg-white/5 rounded-lg group-hover/link:bg-white/20 transition-colors">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
               </svg>

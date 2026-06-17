@@ -110,7 +110,7 @@ export default function WishlistPage() {
                       onClick={() => toggle(p.id)}
                       className={`absolute top-2 left-2 w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
                         isWished
-                          ? "bg-red-50 dark:bg-red-900/20 text-red-500"
+                          ? "bg-red-50 dark:bg-red-900/20 text-secondary-500"
                           : "bg-white dark:bg-gray-800 text-gray-400"
                       }`}>
                       <svg className="w-4 h-4" fill={isWished ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
@@ -122,10 +122,10 @@ export default function WishlistPage() {
                   {/* اطلاعات */}
                   <div className="p-3">
                     {p.brand && (
-                      <p className="text-[10px] font-bold text-blue-500 mb-1">{p.brand.title}</p>
+                      <p className="text-[10px] font-bold text-primary-500 mb-1">{p.brand.title}</p>
                     )}
                     <Link href={`/products/${p.slug}`}>
-                      <h3 className="text-xs font-black text-gray-900 dark:text-white line-clamp-2 mb-3 hover:text-blue-600 transition-colors">
+                      <h3 className="text-xs font-black text-gray-900 dark:text-white line-clamp-2 mb-3 hover:text-primary-600 transition-colors">
                         {p.title}
                       </h3>
                     </Link>
@@ -140,7 +140,7 @@ export default function WishlistPage() {
                         </p>
                       </div>
                       <Link href={`/products/${p.slug}`}
-                        className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                        className="text-[10px] font-bold text-primary-600 dark:text-primary-400 hover:underline">
                         مشاهده →
                       </Link>
                     </div>

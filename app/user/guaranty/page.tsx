@@ -44,7 +44,7 @@ function StatusBadge({ endDate }: { endDate: string }) {
 
 const REQUEST_STATUS_CFG: Record<string, { label: string; color: string }> = {
   PENDING:     { label: "در انتظار بررسی", color: "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20" },
-  IN_PROGRESS: { label: "در حال بررسی",   color: "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20" },
+  IN_PROGRESS: { label: "در حال بررسی",   color: "bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 border-blue-200 dark:border-primary-500/20" },
   RESOLVED:    { label: "حل شده",         color: "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20" },
   REJECTED:    { label: "رد شده",         color: "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20" },
 };
@@ -118,7 +118,7 @@ export default function UserGuarantyPage() {
                   </div>
                   <p className="text-xs text-gray-600 dark:text-gray-300 leading-6">{req.description}</p>
                   {req.adminNote && (
-                    <p className="text-[11px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 rounded-xl px-3 py-2 mt-1">
+                    <p className="text-[11px] text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-500/10 rounded-xl px-3 py-2 mt-1">
                       پاسخ پشتیبانی: {req.adminNote}
                     </p>
                   )}

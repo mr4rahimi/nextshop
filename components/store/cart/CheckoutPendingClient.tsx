@@ -61,11 +61,11 @@ export default function CheckoutPendingClient({ order, cardInfo }: Props) {
         <div className="space-y-6">
 
           {/* مبلغ قابل پرداخت */}
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-[2.5rem] p-8 text-center text-white shadow-2xl shadow-blue-500/30">
-            <p className="text-sm font-black text-blue-100/80 uppercase tracking-widest mb-2">مبلغ قابل پرداخت</p>
+          <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-[2.5rem] p-8 text-center text-white shadow-2xl shadow-primary-500/30">
+            <p className="text-sm font-black text-primary-100/80 uppercase tracking-widest mb-2">مبلغ قابل پرداخت</p>
             <div className="flex items-baseline justify-center gap-2">
               <span className="text-5xl font-black tracking-tighter tabular-nums">{toFa(order.grandTotal)}</span>
-              <span className="text-sm font-bold text-blue-200">تومان</span>
+              <span className="text-sm font-bold text-primary-200">تومان</span>
             </div>
           </div>
 
@@ -84,7 +84,7 @@ export default function CheckoutPendingClient({ order, cardInfo }: Props) {
                     </p>
                   </div>
                   <button onClick={copyCard}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${copied ? "bg-emerald-500 text-white" : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 hover:bg-blue-100"}`}>
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${copied ? "bg-emerald-500 text-white" : "bg-primary-50 dark:bg-primary-900/20 text-primary-600 hover:bg-primary-100"}`}>
                     {copied ? (
                       <>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,7 +153,7 @@ export default function CheckoutPendingClient({ order, cardInfo }: Props) {
           {/* دکمه‌ها */}
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/user/orders"
-              className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black text-sm text-center shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all hover:scale-[1.01] active:scale-95">
+              className="flex-1 py-4 bg-primary-600 text-white rounded-2xl font-black text-sm text-center shadow-lg shadow-primary-500/20 hover:bg-primary-700 transition-all hover:scale-[1.01] active:scale-95">
               مشاهده سفارش‌هایم
             </Link>
             <Link href="/products"

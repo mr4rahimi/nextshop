@@ -98,7 +98,7 @@ export default function ChangePasswordClient() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black text-gray-400 uppercase">قدرت رمز:</span>
-                <span className={`text-[10px] font-black ${strength >= 4 ? "text-emerald-500" : strength >= 3 ? "text-amber-500" : "text-red-500"}`}>
+                <span className={`text-[10px] font-black ${strength >= 4 ? "text-emerald-500" : strength >= 3 ? "text-amber-500" : "text-secondary-500"}`}>
                   {strengthLabel}
                 </span>
               </div>
@@ -132,7 +132,7 @@ export default function ChangePasswordClient() {
 
           {/* match indicator */}
           {form.confirmPassword && (
-            <div className={`flex items-center gap-2 text-[11px] font-bold ${form.newPassword === form.confirmPassword ? "text-emerald-500" : "text-red-500"}`}>
+            <div className={`flex items-center gap-2 text-[11px] font-bold ${form.newPassword === form.confirmPassword ? "text-emerald-500" : "text-secondary-500"}`}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {form.newPassword === form.confirmPassword
                   ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />

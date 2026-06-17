@@ -34,11 +34,11 @@ function formatDate(iso: string) {
 
 const STATUS_MAP: Record<string, { label: string; color: string; dot: string }> = {
   PENDING_PAYMENT: { label: "در انتظار پرداخت", color: "bg-amber-500/10 text-amber-500 border-amber-500/10",   dot: "bg-amber-500" },
-  PAID:            { label: "پرداخت شده",        color: "bg-blue-500/10 text-blue-500 border-blue-500/10",       dot: "bg-blue-500" },
+  PAID:            { label: "پرداخت شده",        color: "bg-primary-500/10 text-primary-500 border-primary-500/10",       dot: "bg-primary-500" },
   PROCESSING:      { label: "در حال پردازش",     color: "bg-primary-500/10 text-primary-500 border-primary-500/10", dot: "bg-primary-500" },
   SHIPPED:         { label: "ارسال شده",          color: "bg-purple-500/10 text-purple-500 border-purple-500/10", dot: "bg-purple-500" },
   DELIVERED:       { label: "تحویل شده",          color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/10", dot: "bg-emerald-500 animate-pulse" },
-  CANCELED:        { label: "لغو شده",            color: "bg-red-500/10 text-red-500 border-red-500/10",         dot: "bg-red-500" },
+  CANCELED:        { label: "لغو شده",            color: "bg-red-500/10 text-secondary-500 border-red-500/10",         dot: "bg-red-500" },
   REFUNDED:        { label: "مسترد شده",          color: "bg-gray-500/10 text-gray-500 border-gray-500/10",      dot: "bg-gray-500" },
 };
 

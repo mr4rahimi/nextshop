@@ -48,7 +48,7 @@ export default function WalletPage() {
       </div>
 
       {/* کارت موجودی */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-blue-500/30">
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-primary-500/30">
         <div className="absolute -top-12 -left-12 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
         <div className="absolute -bottom-8 -right-8 w-36 h-36 bg-white/5 rounded-full blur-xl" />
         <div className="relative z-10">
@@ -86,7 +86,7 @@ export default function WalletPage() {
                     <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${
                       isPositive ? "bg-emerald-50 dark:bg-emerald-500/10" : "bg-red-50 dark:bg-red-500/10"
                     }`}>
-                      <svg className={`w-5 h-5 ${isPositive ? "text-emerald-500" : "text-red-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`w-5 h-5 ${isPositive ? "text-emerald-500" : "text-secondary-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         {isPositive
                           ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                           : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />

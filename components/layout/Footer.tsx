@@ -48,7 +48,7 @@ export default function Footer() {
 
   const socials = [
     { key: "instagram", url: settings.socialInstagram, label: "اینستاگرام", color: "hover:text-pink-500 hover:bg-pink-500/10" },
-    { key: "telegram",  url: settings.socialTelegram,  label: "تلگرام",     color: "hover:text-blue-400 hover:bg-blue-400/10" },
+    { key: "telegram",  url: settings.socialTelegram,  label: "تلگرام",     color: "hover:text-primary-400 hover:bg-blue-400/10" },
     { key: "whatsapp",  url: settings.socialWhatsapp,  label: "واتساپ",     color: "hover:text-green-500 hover:bg-green-500/10" },
     { key: "twitter",   url: settings.socialTwitter,   label: "توییتر",     color: "hover:text-sky-400 hover:bg-sky-400/10" },
   ].filter(s => s.url);

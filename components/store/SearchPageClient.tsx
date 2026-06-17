@@ -162,7 +162,7 @@ export default function SearchPageClient({ initialQ, initialPage, initialData }:
                       <div className="mt-auto pt-2">
                         {disc > 0 && <span className="block text-[10px] text-gray-400 line-through tabular-nums">{toFa(orig)} تومان</span>}
                         {p.trackStock && p.stock === 0 ? (
-                          <span className="text-sm font-black text-red-500">ناموجود</span>
+                          <span className="text-sm font-black text-secondary-500">ناموجود</span>
                         ) : (
                           <span className="text-sm font-black text-primary-600 dark:text-primary-400 tabular-nums">{toFa(price)} تومان</span>
                         )}

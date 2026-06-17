@@ -26,7 +26,7 @@ export default function MobileBottomNav({ phone }: { phone?: string | null }) {
           {/* خانه */}
           <li>
             <Link href="/"
-              className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors ${isActive("/") ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`}>
+              className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors ${isActive("/") ? "text-primary-600 dark:text-primary-400" : "text-gray-400 dark:text-gray-500"}`}>
               <svg className="w-6 h-6" fill={isActive("/") ? "currentColor" : "none"} stroke="currentColor" strokeWidth={isActive("/") ? 0 : 2} viewBox="0 0 24 24">
                 {isActive("/")
                   ? <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
@@ -40,7 +40,7 @@ export default function MobileBottomNav({ phone }: { phone?: string | null }) {
           {/* علاقه‌مندی */}
           <li>
             <Link href="/user/wishlist"
-              className={`relative flex flex-col items-center gap-1 px-3 py-1 transition-colors ${isActive("/user/wishlist") ? "text-red-500" : "text-gray-400 dark:text-gray-500"}`}>
+              className={`relative flex flex-col items-center gap-1 px-3 py-1 transition-colors ${isActive("/user/wishlist") ? "text-secondary-500" : "text-gray-400 dark:text-gray-500"}`}>
               <div className="relative">
                 <svg className="w-6 h-6" fill={isActive("/user/wishlist") ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -58,7 +58,7 @@ export default function MobileBottomNav({ phone }: { phone?: string | null }) {
           {/* سبد خرید — وسط بالاتر */}
           <li className="-mt-8">
             <Link href="/cart"
-              className="relative flex items-center justify-center w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-2xl text-white shadow-lg shadow-blue-500/40 transition-all active:scale-95">
+              className="relative flex items-center justify-center w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-2xl text-white shadow-lg shadow-primary-500/40 transition-all active:scale-95">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
@@ -84,7 +84,7 @@ export default function MobileBottomNav({ phone }: { phone?: string | null }) {
           {/* پروفایل */}
           <li>
             <Link href="/user"
-              className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors ${isActive("/user") && !isActive("/user/wishlist") ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`}>
+              className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors ${isActive("/user") && !isActive("/user/wishlist") ? "text-primary-600 dark:text-primary-400" : "text-gray-400 dark:text-gray-500"}`}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>

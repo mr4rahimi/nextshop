@@ -143,7 +143,7 @@ function RelatedSection({ title, products }: { title: string; products: RelatedP
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <span className="w-1.5 h-8 bg-blue-600 rounded-full" />
+        <span className="w-1.5 h-8 bg-primary-600 rounded-full" />
         <h2 className="text-xl font-black text-gray-900 dark:text-white">{title}</h2>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -182,7 +182,7 @@ function RelatedSection({ title, products }: { title: string; products: RelatedP
                   {outOfStock ? (
                     <span className="text-xs font-black text-gray-400">ناموجود</span>
                   ) : (
-                    <span className="text-sm font-black text-blue-600 dark:text-blue-400 tabular-nums">
+                    <span className="text-sm font-black text-primary-600 dark:text-primary-400 tabular-nums">
                       {price.toLocaleString("fa-IR")} <span className="text-[10px] font-bold text-gray-400">تومان</span>
                     </span>
                   )}
@@ -256,11 +256,11 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
       <section className="product-hero relative pt-8 overflow-hidden">
         <div className="container relative z-10 px-4">
           <nav className="flex items-center gap-2 mb-8 text-[11px] font-bold text-gray-400 dark:text-gray-500">
-            <Link href="/" className="hover:text-blue-600 transition-colors">خانه</Link>
+            <Link href="/" className="hover:text-primary-600 transition-colors">خانه</Link>
             <span className="text-[8px] opacity-40">‹</span>
             {product.category && (
               <>
-                <Link href={`/categories/${product.category.slug}`} className="hover:text-blue-600 transition-colors">
+                <Link href={`/categories/${product.category.slug}`} className="hover:text-primary-600 transition-colors">
                   {product.category.title}
                 </Link>
                 <span className="text-[8px] opacity-40">‹</span>
@@ -308,13 +308,13 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                         onClick={() => setSelectedImageIdx(i)}
                         className={`flex-shrink-0 w-16 h-16 rounded-2xl border-2 overflow-hidden bg-white/40 dark:bg-white/5 transition-all ${
                           i === selectedImageIdx
-                            ? "border-blue-600 opacity-100"
+                            ? "border-primary-600 opacity-100"
                             : "border-transparent opacity-50 hover:opacity-80"
                         }`}
                       >
                         {item.type === "video" ? (
                           <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                            <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-6 h-6 text-primary-600" fill="currentColor" viewBox="0 0 24 24">
                               <path d="M8 5v14l11-7z" />
                             </svg>
                           </div>
@@ -333,7 +333,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
               <div className="space-y-3">
                 <div className="flex items-center gap-3 flex-wrap">
                   {product.brand && (
-                    <span className="text-[10px] font-black text-blue-600 bg-blue-600/10 px-3 py-1 rounded-lg">
+                    <span className="text-[10px] font-black text-primary-600 bg-primary-600/10 px-3 py-1 rounded-lg">
                       {product.brand.title}
                     </span>
                   )}
@@ -374,7 +374,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                       <div className="grid grid-cols-1 gap-2">
                         {(product.features as string[]).map((f, i) => (
                           <div key={i} className="flex items-center gap-3 group">
-                            <div className="w-6 h-6 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-600 flex-shrink-0">
+                            <div className="w-6 h-6 rounded-lg bg-primary-600/10 flex items-center justify-center text-primary-600 flex-shrink-0">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                               </svg>
@@ -408,7 +408,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                     <div className="space-y-4">
                       {product.warranty && (
                         <div className="flex items-center gap-4 group">
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-50 dark:bg-white/[0.03] text-gray-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-500/10 group-hover:text-blue-600 transition-all">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-50 dark:bg-white/[0.03] text-gray-400 group-hover:bg-primary-50 dark:group-hover:bg-primary-500/10 group-hover:text-primary-600 transition-all">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                             </svg>
@@ -422,13 +422,13 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
 
                     {isOutOfStock ? (
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-red-50 dark:bg-red-500/10 text-red-500">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-red-50 dark:bg-red-500/10 text-secondary-500">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </div>
                         <div>
-                          <p className="text-[12px] font-bold text-red-500">ناموجود</p>
+                          <p className="text-[12px] font-bold text-secondary-500">ناموجود</p>
                           <p className="text-[10px] font-bold text-gray-400">این محصول موجود نیست</p>
                         </div>
                       </div>
@@ -512,7 +512,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                     <div className="flex items-center justify-center gap-4 pt-2">
                       <button
                         onClick={() => toggle(product.id)}
-                        className={`flex items-center gap-1.5 text-[11px] font-bold transition-colors ${isWished ? "text-red-500" : "text-gray-500 hover:text-red-500"}`}>
+                        className={`flex items-center gap-1.5 text-[11px] font-bold transition-colors ${isWished ? "text-secondary-500" : "text-gray-500 hover:text-secondary-500"}`}>
                         <svg className="w-4 h-4" fill={isWished ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                         </svg>
@@ -526,7 +526,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                         مقایسه
                       </button>
                       <div className="w-px h-4 bg-gray-200 dark:bg-white/10" />
-                      <button className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 hover:text-blue-500 transition-colors">
+                      <button className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 hover:text-primary-500 transition-colors">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" />
                         </svg>
@@ -586,7 +586,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                   onClick={() => setActiveTab(tab.key as typeof activeTab)}
                   className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-black whitespace-nowrap transition-all ${
                     activeTab === tab.key
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                      ? "bg-primary-600 text-white shadow-lg shadow-primary-500/20"
                       : "text-gray-500 hover:text-gray-700 dark:hover:text-white"
                   }`}
                 >
@@ -608,7 +608,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                       <div className="lg:col-span-7 space-y-6 order-2 lg:order-1">
                         {product.summaryTitle && (
                           <div className="flex items-center gap-3">
-                            <span className="w-2 h-8 bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.6)]" />
+                            <span className="w-2 h-8 bg-primary-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.6)]" />
                             <h3 className="text-2xl font-black text-zinc-900 dark:text-white">{product.summaryTitle}</h3>
                           </div>
                         )}
@@ -621,7 +621,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 pt-6 border-t border-white/20 dark:border-white/5">
                             {(product.summaryFeatures as string[]).map((f, i) => (
                               <div key={i} className="flex items-center gap-3 group">
-                                <div className="w-8 h-8 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                <div className="w-8 h-8 rounded-lg bg-primary-600/10 flex items-center justify-center text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition-all">
                                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                                   </svg>
@@ -634,7 +634,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                       </div>
                       {product.summaryImage && (
                         <div className="lg:col-span-5 order-1 lg:order-2 relative group">
-                          <div className="absolute -inset-4 bg-gradient-to-tr from-blue-600/20 to-indigo-600/20 rounded-[3.5rem] blur-2xl opacity-50 group-hover:opacity-80 transition duration-1000" />
+                          <div className="absolute -inset-4 bg-gradient-to-tr from-primary-600/20 to-primary-600/20 rounded-[3.5rem] blur-2xl opacity-50 group-hover:opacity-80 transition duration-1000" />
                           <img
                             src={product.summaryImage}
                             alt={product.summaryTitle || product.title}
@@ -657,12 +657,12 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                       { icon: "M9 12l2 2 4-4", label: "ضمانت ۱۰۰٪ اصالت کالا" },
                     ].map((b, i) => (
                       <div key={i} className="flex items-center gap-3 group cursor-default">
-                        <div className="w-11 h-11 rounded-full bg-white/50 dark:bg-white/5 flex items-center justify-center transition-all group-hover:bg-blue-600 group-hover:text-white text-blue-600 shadow-sm border border-white/40 dark:border-white/5">
+                        <div className="w-11 h-11 rounded-full bg-white/50 dark:bg-white/5 flex items-center justify-center transition-all group-hover:bg-primary-600 group-hover:text-white text-primary-600 shadow-sm border border-white/40 dark:border-white/5">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={b.icon} />
                           </svg>
                         </div>
-                        <span className="text-[11px] font-black text-zinc-600 dark:text-zinc-400 group-hover:text-blue-600 transition-colors">{b.label}</span>
+                        <span className="text-[11px] font-black text-zinc-600 dark:text-zinc-400 group-hover:text-primary-600 transition-colors">{b.label}</span>
                       </div>
                     ))}
                   </div>
@@ -677,7 +677,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                       <div className="lg:col-span-7 space-y-6">
                         {product.expertTitle && (
                           <div className="flex items-center gap-3">
-                            <span className="w-12 h-1.5 bg-blue-600 rounded-full" />
+                            <span className="w-12 h-1.5 bg-primary-600 rounded-full" />
                             <h3 className="text-2xl font-black text-zinc-900 dark:text-white">{product.expertTitle}</h3>
                           </div>
                         )}
@@ -689,7 +689,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                       </div>
                       {product.expertImage && (
                         <div className="lg:col-span-5 relative">
-                          <div className="absolute -inset-4 bg-blue-600/10 rounded-[4rem] -rotate-3" />
+                          <div className="absolute -inset-4 bg-primary-600/10 rounded-[4rem] -rotate-3" />
                           <img
                             src={product.expertImage}
                             alt={product.expertTitle || "بررسی تخصصی"}
@@ -713,7 +713,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                     Object.entries(specGroups).map(([groupTitle, items]) => (
                       <div key={groupTitle} className="space-y-6">
                         <div className="flex items-center gap-4">
-                          <div className="w-1.5 h-8 bg-blue-600 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.6)]" />
+                          <div className="w-1.5 h-8 bg-primary-600 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.6)]" />
                           <h4 className="text-lg font-black text-zinc-900 dark:text-white">{groupTitle}</h4>
                         </div>
                         <div className="relative p-8 rounded-[2.5rem] bg-white/30 dark:bg-[#0c0c0c]/40 backdrop-blur-3xl border border-white/50 dark:border-white/10">
@@ -762,7 +762,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                         <div key={r.id} className="group relative p-8 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-2xl border border-gray-200 dark:border-white/10 rounded-[3rem] transition-all hover:shadow-2xl hover:-translate-y-1">
                           <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                             <div className="flex items-center gap-4">
-                              <div className="w-14 h-14 rounded-[1.5rem] bg-blue-600/10 flex items-center justify-center text-blue-600 font-black text-lg border border-blue-600/20">
+                              <div className="w-14 h-14 rounded-[1.5rem] bg-primary-600/10 flex items-center justify-center text-primary-600 font-black text-lg border border-primary-600/20">
                                 {userInitials(r.user)}
                               </div>
                               <div>
@@ -800,7 +800,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                             <div className="w-12 h-12 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-2xl flex items-center justify-center text-[18px] font-black shadow-xl">
                               Q
                             </div>
-                            <div className="w-1 h-12 bg-blue-600/20 rounded-full hidden md:block" />
+                            <div className="w-1 h-12 bg-primary-600/20 rounded-full hidden md:block" />
                           </div>
                           <div className="flex-1 space-y-4">
                             <button
@@ -808,7 +808,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                               onClick={() => setOpenFaqIdx(openFaqIdx === i ? null : i)}
                             >
                               <span>{item.q}</span>
-                              <svg className={`w-5 h-5 text-blue-600 transition-transform flex-shrink-0 mr-2 ${openFaqIdx === i ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className={`w-5 h-5 text-primary-600 transition-transform flex-shrink-0 mr-2 ${openFaqIdx === i ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                               </svg>
                             </button>

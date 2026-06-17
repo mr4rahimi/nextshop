@@ -40,7 +40,7 @@ function faDate(iso: string) {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   PENDING_PAYMENT: { label: "انتظار پرداخت", color: "text-amber-500 dark:text-amber-400",   bg: "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20" },
-  PAID:            { label: "پرداخت شده",    color: "text-blue-500 dark:text-blue-400",     bg: "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20" },
+  PAID:            { label: "پرداخت شده",    color: "text-primary-500 dark:text-primary-400",     bg: "bg-primary-50 dark:bg-primary-500/10 border-blue-200 dark:border-primary-500/20" },
   PROCESSING:      { label: "در حال پردازش", color: "text-indigo-500 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20" },
   SHIPPED:         { label: "ارسال شده",      color: "text-purple-500 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20" },
   DELIVERED:       { label: "تحویل داده شده",color: "text-emerald-500 dark:text-emerald-400",bg: "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20" },
@@ -231,7 +231,7 @@ function BarChart() {
       <div className="flex items-end gap-1.5 h-24">
         {values.map((v, i) => (
           <div key={i} className="flex-1 flex flex-col items-center gap-1">
-            <div className="w-full rounded-t-lg bg-blue-500/20 dark:bg-blue-500/30 hover:bg-blue-500/50 transition-all cursor-pointer relative group"
+            <div className="w-full rounded-t-lg bg-primary-500/20 dark:bg-primary-500/30 hover:bg-primary-500/50 transition-all cursor-pointer relative group"
               style={{ height: `${(v / max) * 100}%` }}>
               <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap z-10">
                 {fa(v * 12)}
@@ -282,7 +282,7 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
       {/* کارت‌های آمار اصلی */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="کاربران" value={fa(stats.totalUsers)} icon="👤"
-          accent="border-blue-200 dark:border-blue-500/20" sub="کاربر ثبت‌نام‌شده" href="/admin/users" />
+          accent="border-blue-200 dark:border-primary-500/20" sub="کاربر ثبت‌نام‌شده" href="/admin/users" />
         <StatCard label="سفارشات" value={fa(stats.totalOrders)} icon="📦"
           accent="border-purple-200 dark:border-purple-500/20" sub="کل سفارشات" href="/admin/orders" />
         <StatCard label="محصولات فعال" value={fa(stats.totalProducts)} icon="🛍️"
@@ -300,7 +300,7 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 px-2 py-1 rounded-lg font-bold">استاتیک</span>
-            <Link href="/admin/orders" className="text-[10px] text-blue-500 dark:text-blue-400 hover:underline font-bold">جزئیات ←</Link>
+            <Link href="/admin/orders" className="text-[10px] text-primary-500 dark:text-primary-400 hover:underline font-bold">جزئیات ←</Link>
           </div>
         </div>
         <DailyOrdersChart />
@@ -313,7 +313,7 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-sm font-black text-gray-900 dark:text-white">وضعیت سفارشات</h2>
-            <Link href="/admin/orders" className="text-[10px] text-blue-500 dark:text-blue-400 hover:underline font-bold">همه ←</Link>
+            <Link href="/admin/orders" className="text-[10px] text-primary-500 dark:text-primary-400 hover:underline font-bold">همه ←</Link>
           </div>
           <DonutChart data={donutData} />
         </div>
@@ -348,7 +348,7 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
               ))}
             </div>
             <Link href={activeTab === "orders" ? "/admin/orders" : "/admin/products"}
-              className="text-[10px] text-blue-500 dark:text-blue-400 hover:underline font-bold">همه ←</Link>
+              className="text-[10px] text-primary-500 dark:text-primary-400 hover:underline font-bold">همه ←</Link>
           </div>
 
           {activeTab === "orders" ? (
@@ -417,7 +417,7 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
           <div className="space-y-2">
             {[
               { href: "/admin/products/create", label: "محصول جدید",       icon: "➕", color: "hover:border-emerald-300 dark:hover:border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-500/5" },
-              { href: "/admin/orders",          label: "بررسی سفارشات",    icon: "📋", color: "hover:border-blue-300 dark:hover:border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-500/5" },
+              { href: "/admin/orders",          label: "بررسی سفارشات",    icon: "📋", color: "hover:border-blue-300 dark:hover:border-primary-500/30 hover:bg-primary-50 dark:hover:bg-primary-500/5" },
               { href: "/admin/blog/create",     label: "مطلب جدید",         icon: "✍️", color: "hover:border-purple-300 dark:hover:border-purple-500/30 hover:bg-purple-50 dark:hover:bg-purple-500/5" },
               { href: "/admin/widgets",         label: "ویرایش صفحه اصلی", icon: "🧩", color: "hover:border-amber-300 dark:hover:border-amber-500/30 hover:bg-amber-50 dark:hover:bg-amber-500/5" },
               { href: "/admin/site-settings",   label: "تنظیمات سایت",     icon: "⚙️", color: "hover:border-gray-300 dark:hover:border-gray-500/30 hover:bg-gray-50 dark:hover:bg-gray-500/5" },

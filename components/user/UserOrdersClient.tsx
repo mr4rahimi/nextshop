@@ -27,7 +27,7 @@ interface Props {
 
 const STATUS_MAP: Record<string, { label: string; color: string; dot?: string }> = {
   PENDING_PAYMENT: { label: "در انتظار پرداخت", color: "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400",     dot: "bg-amber-500 animate-pulse" },
-  PAID:            { label: "پرداخت شده",        color: "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400",         dot: "bg-blue-500" },
+  PAID:            { label: "پرداخت شده",        color: "bg-primary-500/10 border-primary-500/20 text-primary-600 dark:text-primary-400",         dot: "bg-primary-500" },
   CONFIRMED:       { label: "تأیید شده",          color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400", dot: "bg-indigo-500" },
   PROCESSING:      { label: "در حال آماده‌سازی", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-600 dark:text-cyan-400",         dot: "bg-cyan-500 animate-pulse" },
   PACKAGING:       { label: "بسته‌بندی",          color: "bg-violet-500/10 border-violet-500/20 text-violet-600 dark:text-violet-400", dot: "bg-violet-500" },
@@ -108,7 +108,7 @@ export default function UserOrdersClient({ orders, total, page, pageSize, curren
               <div key={order.id}
                 className={`relative overflow-hidden bg-white/40 dark:bg-gray-950/60 backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-none group transition-all hover:border-primary-500/30 ${isCanceled ? "opacity-70 hover:opacity-100" : ""}`}>
 
-                <div className="absolute -top-24 -left-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/15 transition-colors" />
+                <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary-500/10 rounded-full blur-3xl group-hover:bg-primary-500/15 transition-colors" />
 
                 <div className="relative z-10">
                   {/* Header */}

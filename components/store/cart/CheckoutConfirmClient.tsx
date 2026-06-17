@@ -49,14 +49,14 @@ function CheckoutSteps() {
   return (
     <div className="max-w-4xl mx-auto mb-16 px-4" dir="rtl">
       <div className="relative flex items-center justify-between">
-        <div className="absolute top-1/2 left-0 w-full h-1 bg-blue-500 -translate-y-1/2 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.4)]" />
+        <div className="absolute top-1/2 left-0 w-full h-1 bg-primary-500 -translate-y-1/2 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.4)]" />
         {[
           { label: "تکمیل شد", done: true },
           { label: "تکمیل شد", done: true },
           { label: "پرداخت نهایی", done: false },
         ].map((s, i) => (
           <div key={i} className="relative z-10 flex flex-col items-center gap-3">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border-4 border-white dark:border-[#0f172a] shadow-lg ${s.done ? "bg-emerald-500 text-white" : "bg-blue-500 text-white shadow-xl shadow-blue-500/40"}`}>
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border-4 border-white dark:border-[#0f172a] shadow-lg ${s.done ? "bg-emerald-500 text-white" : "bg-primary-500 text-white shadow-xl shadow-primary-500/40"}`}>
               {s.done ? (
                 <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -67,7 +67,7 @@ function CheckoutSteps() {
                 </svg>
               )}
             </div>
-            <span className={`text-[11px] font-black uppercase tracking-widest ${s.done ? "text-emerald-500" : "text-blue-600 dark:text-blue-400"}`}>
+            <span className={`text-[11px] font-black uppercase tracking-widest ${s.done ? "text-emerald-500" : "text-primary-600 dark:text-primary-400"}`}>
               {s.label}
             </span>
           </div>
@@ -135,7 +135,7 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
 
               {/* روش پرداخت */}
               <div className="flex items-start gap-4 p-4 bg-white/50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
-                <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0">
+                <div className="w-10 h-10 bg-primary-500/10 rounded-xl flex items-center justify-center text-primary-600 flex-shrink-0">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                   </svg>
@@ -153,18 +153,18 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
             {/* دکمه پرداخت */}
             <div className="lg:col-span-1">
               <button onClick={handlePay} disabled={paying}
-                className="group/pay relative w-full h-20 bg-blue-600 dark:bg-blue-500 rounded-[2.2rem] overflow-hidden transition-all duration-500 shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] hover:shadow-[0_25px_50px_-12px_rgba(37,99,235,0.6)] hover:-translate-y-1 active:scale-95 disabled:opacity-60">
+                className="group/pay relative w-full h-20 bg-primary-600 dark:bg-primary-500 rounded-[2.2rem] overflow-hidden transition-all duration-500 shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] hover:shadow-[0_25px_50px_-12px_rgba(37,99,235,0.6)] hover:-translate-y-1 active:scale-95 disabled:opacity-60">
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/pay:animate-[shimmer_1.5s_infinite]" />
                 <div className="relative flex items-center justify-between px-6">
                   <div className="text-right">
-                    <span className="block text-[10px] font-black text-blue-100/70 uppercase">
+                    <span className="block text-[10px] font-black text-primary-100/70 uppercase">
                       {paymentMethod === "wallet" ? "سفارش پرداخت شد" : paymentMethod === "online" ? "تأیید و اتصال به درگاه" : "تأیید کارت به کارت"}
                     </span>
                     <div className="flex items-baseline gap-1">
                       <span className="text-xl font-black text-white tracking-tighter tabular-nums">
                         {paymentMethod === "wallet" ? "از کیف پول" : toFa(order.grandTotal)}
                       </span>
-                      {paymentMethod !== "wallet" && <span className="text-[9px] font-bold text-blue-100">تومان</span>}
+                      {paymentMethod !== "wallet" && <span className="text-[9px] font-bold text-primary-100">تومان</span>}
                     </div>
                   </div>
                   <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 shadow-inner transition-all duration-500 group-hover/pay:rotate-[360deg]">
@@ -217,7 +217,7 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
               <span className="text-[10px] font-bold text-gray-400">پرداخت امن و تضمین شده</span>
             </div>
             <p className="text-[9px] text-gray-400 font-bold leading-relaxed max-w-md text-center">
-              با کلیک بر روی دکمه پرداخت، <Link href="#" className="text-blue-500 hover:underline">شرایط و قوانین</Link> فروشگاه را پذیرفته‌اید.
+              با کلیک بر روی دکمه پرداخت، <Link href="#" className="text-primary-500 hover:underline">شرایط و قوانین</Link> فروشگاه را پذیرفته‌اید.
             </p>
           </div>
         </div>

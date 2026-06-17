@@ -56,12 +56,12 @@ function ProductSlide({ product }: { product: Product }) {
         <div className={`absolute inset-0 backdrop-blur-[20px] rounded-[3rem] border shadow-[0_20px_50px_rgba(0,0,0,0.02)] transition-all duration-700 ${
           isOutOfStock
             ? "bg-gray-100/80 dark:bg-[#0a0a0a]/60 border-gray-200 dark:border-white/[0.04] opacity-70"
-            : "bg-white/80 dark:bg-[#0a0a0a]/40 border-gray-100 dark:border-white/[0.08] group-hover:border-blue-500/50 dark:group-hover:shadow-[0_0_60px_rgba(37,99,235,0.12)]"
+            : "bg-white/80 dark:bg-[#0a0a0a]/40 border-gray-100 dark:border-white/[0.08] group-hover:border-primary-500/50 dark:group-hover:shadow-[0_0_60px_rgba(37,99,235,0.12)]"
         }`} />
 
         {discount && (
           <div className="absolute -top-6 -right-2 z-20">
-            <div className="bg-red-500 text-white text-[12px] font-black w-12 h-12 rounded-[1.2rem] flex items-center justify-center shadow-xl shadow-red-500/40 rotate-12 group-hover:rotate-0 transition-all duration-500 border-2 border-white dark:border-white/20">
+            <div className="bg-red-500 text-white text-[12px] font-black w-12 h-12 rounded-[1.2rem] flex items-center justify-center shadow-xl shadow-secondary-500/40 rotate-12 group-hover:rotate-0 transition-all duration-500 border-2 border-white dark:border-white/20">
               {discount}٪
             </div>
           </div>
@@ -71,7 +71,7 @@ function ProductSlide({ product }: { product: Product }) {
 
           {/* Image */}
           <div className="relative mb-8 flex items-center justify-center min-h-[180px]">
-            <div className="absolute w-40 h-40 bg-blue-500/20 dark:bg-indigo-500/20 blur-[70px] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-1000" />
+            <div className="absolute w-40 h-40 bg-primary-500/20 dark:bg-primary-500/20 blur-[70px] rounded-full opacity-0 group-hover:opacity-100 transition-all duration-1000" />
 
             {product.image ? (
               <img src={product.image} alt={product.title}
@@ -101,13 +101,13 @@ function ProductSlide({ product }: { product: Product }) {
 
           {/* Brand */}
           {product.brand && (
-            <span className="text-[10px] font-bold text-blue-600 bg-blue-600/10 px-2 py-0.5 rounded-lg w-fit mb-2">
+            <span className="text-[10px] font-bold text-primary-600 bg-primary-600/10 px-2 py-0.5 rounded-lg w-fit mb-2">
               {product.brand.title}
             </span>
           )}
 
           {/* Title */}
-          <h3 className="text-[15px] font-black text-gray-800 dark:text-zinc-100 mb-6 line-clamp-2 leading-7 h-14 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+          <h3 className="text-[15px] font-black text-gray-800 dark:text-zinc-100 mb-6 line-clamp-2 leading-7 h-14 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
             {product.title}
           </h3>
 
@@ -225,7 +225,7 @@ export default function ProductsByCategorySection({
           <div className="flex items-end justify-between mb-6 gap-4 flex-wrap">
             <div className="flex items-center gap-6">
               {/* Icon */}
-              <div className="relative w-16 h-16 bg-white dark:bg-black border border-gray-100 dark:border-blue-500/40 rounded-[1.8rem] flex items-center justify-center text-blue-600 shadow-2xl">
+              <div className="relative w-16 h-16 bg-white dark:bg-black border border-gray-100 dark:border-primary-500/40 rounded-[1.8rem] flex items-center justify-center text-primary-600 shadow-2xl">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
@@ -234,8 +234,8 @@ export default function ProductsByCategorySection({
                 <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
                   {categoryTitle}
                 </h2>
-                <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] mt-2 flex items-center gap-2">
-                  <span className="w-8 h-[2px] bg-blue-500/30" />
+                <p className="text-[10px] font-black text-primary-500 uppercase tracking-[0.4em] mt-2 flex items-center gap-2">
+                  <span className="w-8 h-[2px] bg-primary-500/30" />
                   {loading ? "در حال بارگذاری..." : `${products.length} محصول`}
                 </p>
               </div>
@@ -244,11 +244,11 @@ export default function ProductsByCategorySection({
             {categorySlug && (
               <Link
                 href={`/categories/${categorySlug}`}
-                className="group/link relative overflow-hidden px-8 py-3.5 rounded-2xl transition-all duration-500 flex items-center gap-3 bg-white/40 backdrop-blur-md border border-gray-200 text-gray-800 hover:border-blue-500/50 hover:text-white dark:bg-white/[0.03] dark:border-white/10 dark:text-gray-300 dark:hover:text-white"
+                className="group/link relative overflow-hidden px-8 py-3.5 rounded-2xl transition-all duration-500 flex items-center gap-3 bg-white/40 backdrop-blur-md border border-gray-200 text-gray-800 hover:border-primary-500/50 hover:text-white dark:bg-white/[0.03] dark:border-white/10 dark:text-gray-300 dark:hover:text-white"
               >
-                <span className="absolute inset-0 bg-blue-600 translate-y-full group-hover/link:translate-y-0 transition-transform duration-500 ease-out" />
+                <span className="absolute inset-0 bg-primary-600 translate-y-full group-hover/link:translate-y-0 transition-transform duration-500 ease-out" />
                 <span className="relative z-10 text-[13px] font-black tracking-tight">مشاهده همه محصولات</span>
-                <div className="relative z-10 w-5 h-5 flex items-center justify-center bg-blue-600/10 dark:bg-white/5 rounded-lg group-hover/link:bg-white/20 transition-colors">
+                <div className="relative z-10 w-5 h-5 flex items-center justify-center bg-primary-600/10 dark:bg-white/5 rounded-lg group-hover/link:bg-white/20 transition-colors">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
                   </svg>
@@ -275,12 +275,12 @@ export default function ProductsByCategorySection({
           {/* Navigation */}
           {!loading && products.length > 0 && (
             <div className="flex justify-center gap-4 mt-10">
-              <button className={`${uid.current}-prev w-14 h-14 rounded-2xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-blue-600 hover:text-white transition-all shadow-lg group`}>
+              <button className={`${uid.current}-prev w-14 h-14 rounded-2xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-primary-600 hover:text-white transition-all shadow-lg group`}>
                 <svg className="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeWidth={2.5} d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-              <button className={`${uid.current}-next w-14 h-14 rounded-2xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-blue-600 hover:text-white transition-all shadow-lg group`}>
+              <button className={`${uid.current}-next w-14 h-14 rounded-2xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-primary-600 hover:text-white transition-all shadow-lg group`}>
                 <svg className="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeWidth={2.5} d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>

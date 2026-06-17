@@ -184,7 +184,7 @@ export default function UserSidebar({ user }: Props) {
           <div className="pt-3 mt-2 border-t border-gray-200/30 dark:border-white/5">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-red-500 hover:bg-red-500/10 transition-all group"
+              className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-secondary-500 hover:bg-red-500/10 transition-all group"
             >
               <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

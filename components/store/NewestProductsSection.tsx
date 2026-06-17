@@ -75,7 +75,7 @@ function NewestProductCard({ product }: { product: Product }) {
               ناموجود
             </div>
           ) : discount ? (
-            <div className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-lg shadow-red-500/40">
+            <div className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-lg shadow-secondary-500/40">
               {discount}٪-
             </div>
           ) : (

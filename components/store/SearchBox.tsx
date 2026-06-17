@@ -167,7 +167,7 @@ export default function SearchBox() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">جستجوهای اخیر</span>
                 <button onClick={() => { clearRecent(); setRecent([]); }}
-                  className="text-[10px] font-bold text-red-400 hover:text-red-500 transition-colors">
+                  className="text-[10px] font-bold text-red-400 hover:text-secondary-500 transition-colors">
                   پاک کردن
                 </button>
               </div>
@@ -217,7 +217,7 @@ export default function SearchBox() {
                       <div className="flex flex-wrap gap-2">
                         {result.suggestions.categories.map(c => (
                           <Link key={c.slug} href={`/categories/${c.slug}`} onClick={() => setOpen(false)}
-                            className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl text-xs font-black hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all">
+                            className="flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 rounded-xl text-xs font-black hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-all">
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
                             </svg>

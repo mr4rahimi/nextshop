@@ -30,7 +30,7 @@ export default function CheckoutSuccessClient({ order }: Props) {
         <div className="relative bg-white/40 dark:bg-white/[0.02] backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[3.5rem] p-8 md:p-12 shadow-2xl overflow-hidden">
 
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-[80px]" />
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px]" />
+          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-primary-500/10 rounded-full blur-[80px]" />
 
           <div className="relative flex flex-col items-center text-center">
 
@@ -51,7 +51,7 @@ export default function CheckoutSuccessClient({ order }: Props) {
             <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
               <div className="p-6 bg-white/60 dark:bg-white/5 rounded-[2.5rem] border border-white/60 dark:border-white/10">
                 <span className="block text-[10px] font-black text-gray-400 mb-2">شماره سفارش</span>
-                <span className="block text-lg font-black text-blue-600 tracking-widest">#{order.orderNumber}</span>
+                <span className="block text-lg font-black text-primary-600 tracking-widest">#{order.orderNumber}</span>
               </div>
               <div className="p-6 bg-white/60 dark:bg-white/5 rounded-[2.5rem] border border-white/60 dark:border-white/10">
                 <span className="block text-[10px] font-black text-gray-400 mb-2">تاریخ ثبت</span>
@@ -92,7 +92,7 @@ export default function CheckoutSuccessClient({ order }: Props) {
             {/* دکمه‌ها */}
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
               <Link href="/user/orders"
-                className="px-10 h-16 bg-blue-600 text-white font-black rounded-3xl shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center">
+                className="px-10 h-16 bg-primary-600 text-white font-black rounded-3xl shadow-xl shadow-primary-500/20 hover:bg-primary-700 transition-all active:scale-95 flex items-center justify-center">
                 پیگیری سفارش
               </Link>
               <Link href="/products"

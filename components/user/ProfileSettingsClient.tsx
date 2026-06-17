@@ -100,7 +100,7 @@ export default function ProfileSettingsClient({ user }: Props) {
               <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tighter">حداکثر ۲ مگابایت — ۴۰۰×۴۰۰ پیکسل</p>
               {form.avatarUrl && (
                 <button onClick={() => setForm(f => ({ ...f, avatarUrl: "" }))}
-                  className="mt-2 text-[10px] font-bold text-red-500 hover:text-red-600 transition-colors">
+                  className="mt-2 text-[10px] font-bold text-secondary-500 hover:text-red-600 transition-colors">
                   حذف تصویر
                 </button>
               )}

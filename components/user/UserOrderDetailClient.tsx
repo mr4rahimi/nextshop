@@ -18,7 +18,7 @@ interface Props { order: Order; }
 
 const STATUS_MAP: Record<string, { label: string; color: string; dot: string }> = {
   PENDING_PAYMENT: { label: "در انتظار پرداخت", color: "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400",     dot: "bg-amber-500 animate-pulse" },
-  PAID:            { label: "پرداخت شده",        color: "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400",         dot: "bg-blue-500" },
+  PAID:            { label: "پرداخت شده",        color: "bg-primary-500/10 border-primary-500/20 text-primary-600 dark:text-primary-400",         dot: "bg-primary-500" },
   CONFIRMED:       { label: "تأیید شده",          color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400", dot: "bg-indigo-500" },
   PROCESSING:      { label: "در حال آماده‌سازی", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-600 dark:text-cyan-400",         dot: "bg-cyan-500 animate-pulse" },
   PACKAGING:       { label: "بسته‌بندی",          color: "bg-violet-500/10 border-violet-500/20 text-violet-600 dark:text-violet-400", dot: "bg-violet-500" },
@@ -174,7 +174,7 @@ export default function UserOrderDetailClient({ order }: Props) {
       {/* پیام لغو/مرجوع */}
       {isCanceled && (
         <div className={`flex items-center gap-4 p-6 rounded-[2.5rem] border ${order.status === "CANCELED" ? "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800" : "bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800"}`}>
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${order.status === "CANCELED" ? "bg-red-100 dark:bg-red-900/30 text-red-500" : "bg-amber-100 dark:bg-amber-900/30 text-amber-600"}`}>
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${order.status === "CANCELED" ? "bg-red-100 dark:bg-red-900/30 text-secondary-500" : "bg-amber-100 dark:bg-amber-900/30 text-amber-600"}`}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>

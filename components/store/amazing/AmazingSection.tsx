@@ -40,7 +40,7 @@ export default function AmazingSection({ productIds = [], endsAt }: Props) {
             {/* چپ */}
             <div className="w-full lg:w-1/3 xl:w-1/4 p-10 flex flex-col justify-between border-b lg:border-b-0 lg:border-l border-gray-100 dark:border-white/5">
               <div>
-                <span className="text-red-500 text-[11px] font-black uppercase">Special Offers</span>
+                <span className="text-secondary-500 text-[11px] font-black uppercase">Special Offers</span>
                 <h2 className="text-5xl font-black mt-6 mb-6">
                   تایم <br />
                   <span className="text-secondary-500">طلایی</span>

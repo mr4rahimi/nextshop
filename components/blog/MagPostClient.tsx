@@ -65,7 +65,7 @@ function ShareButtons({ title, url: urlProp }: { title: string; url: string }) {
     <div className="flex items-center gap-2 flex-wrap">
       <span className="text-xs font-black text-gray-500">اشتراک‌گذاری:</span>
       <a href={`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`} target="_blank" rel="noopener noreferrer"
-        className="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 hover:bg-blue-100 transition-all">
+        className="w-9 h-9 flex items-center justify-center rounded-xl bg-primary-50 dark:bg-blue-900/20 text-primary-500 hover:bg-blue-100 transition-all">
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-2.026 9.546c-.148.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.18 14.71l-2.965-.924c-.645-.204-.657-.645.136-.953l11.57-4.461c.537-.194 1.006.131.641.876z" /></svg>
       </a>
       <a href={`https://wa.me/?text=${encodeURIComponent(title + " " + url)}`} target="_blank" rel="noopener noreferrer"

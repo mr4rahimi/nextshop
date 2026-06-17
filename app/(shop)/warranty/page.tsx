@@ -98,11 +98,11 @@ function RequestForm({ guaranty }: { guaranty: GuarantyItem }) {
 
       <textarea rows={4} value={description} onChange={e => setDescription(e.target.value)}
         placeholder="توضیح مشکل خود را اینجا بنویسید..."
-        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all resize-none" />
+        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 transition-all resize-none" />
 
       <div className="flex gap-2">
         <button onClick={submit} disabled={submitting}
-          className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-sm font-black transition-all">
+          className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl text-sm font-black transition-all">
           {submitting ? "در حال ارسال..." : "ثبت درخواست"}
         </button>
         <button onClick={() => setOpen(false)}
@@ -148,8 +148,8 @@ export default function WarrantyPage() {
 
         {/* هدر */}
         <div className="text-center mb-10">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center">
-            <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary-50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-500/20 flex items-center justify-center">
+            <svg className="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
@@ -161,9 +161,9 @@ export default function WarrantyPage() {
         <form onSubmit={search} className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 flex flex-col sm:flex-row gap-3">
           <input dir="ltr" value={query} onChange={e => setQuery(e.target.value)}
             placeholder="شماره ستومان یا شماره موبایل..."
-            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all" />
+            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 transition-all" />
           <button type="submit" disabled={loading}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-sm font-black transition-all whitespace-nowrap">
+            className="px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl text-sm font-black transition-all whitespace-nowrap">
             {loading ? "در حال جستجو..." : "استعلام گارانتی"}
           </button>
         </form>
