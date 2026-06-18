@@ -597,6 +597,7 @@ model StoreSettings {
   smsPatternOrderCancel  String?
   walletEnabled Boolean @default(false)
   themeConfig Json?
+  chatSettings Json?
   updatedAt DateTime @updatedAt
 }
 

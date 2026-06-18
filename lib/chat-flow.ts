@@ -1,0 +1,157 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// ساختار داده‌ی درخت دکمه‌های چت (flow)
+// این فایل بین ادمین، route چت و ویجت مشترک استفاده می‌شود
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type FlowActionType = "categories" | "connect_context" | "reply" | "free_text";
+
+export interface FlowAction {
+  type: FlowActionType;
+  contextTopic?: string; // فقط برای connect_context
+  replyText?: string;    // فقط برای reply
+}
+
+export interface FlowNode {
+  id: string;
+  label: string;            // متن روی دکمه
+  message?: string;         // پیامی که موقع کلیک به کاربر نشان داده می‌شود (اختیاری)
+  showOther?: boolean;      // نمایش دکمه‌ی «سایر» در این مرحله
+  action?: FlowAction;      // فقط وقتی برگ است (children خالی) معنی دارد
+  children: FlowNode[];     // اگر پر باشد → این node یک منوست
+}
+
+// ─── موضوعات قابل اتصال (ثابت، هم‌خوان با فیلدهای chatSettings) ────────────────
+export const CONTEXT_TOPICS = [
+  { value: "warranty", label: "گارانتی", desc: "از اطلاعات گارانتی پاسخ می‌دهد" },
+  { value: "shipping", label: "ارسال و هزینه‌ها", desc: "روش‌ها و هزینه‌های ارسال" },
+  { value: "contact", label: "راه‌های ارتباطی", desc: "تلفن، ایمیل و شبکه‌های اجتماعی" },
+  { value: "address", label: "آدرس و ساعات کاری", desc: "آدرس و ساعت کار فروشگاه" },
+  { value: "about", label: "درباره فروشگاه", desc: "اطلاعات کلی کسب‌وکار" },
+] as const;
+
+// ─── انواع رفتار برگ ──────────────────────────────────────────────────────────
+export const ACTION_TYPES: {
+  value: FlowActionType;
+  label: string;
+  desc: string;
+}[] = [
+  {
+    value: "categories",
+    label: "نمایش دسته‌بندی محصولات",
+    desc: "دسته‌بندی‌های سایت به‌صورت خودکار به‌شکل دکمه نشان داده می‌شوند",
+  },
+  {
+    value: "connect_context",
+    label: "اتصال به موضوع مشخص",
+    desc: "سوال کاربر همراه با موضوع انتخابی به هوش مصنوعی می‌رود",
+  },
+  {
+    value: "reply",
+    label: "پاسخ ثابت (بدون هوش مصنوعی)",
+    desc: "متنی که می‌نویسید مستقیم نمایش داده می‌شود — سریع و رایگان",
+  },
+  {
+    value: "free_text",
+    label: "سوال آزاد",
+    desc: "ورودی متنی باز می‌شود و سوال آزاد به هوش مصنوعی می‌رود",
+  },
+];
+
+// ─── تولید شناسه‌ی یکتا ────────────────────────────────────────────────────────
+let idCounter = 0;
+export function newNodeId(): string {
+  idCounter += 1;
+  return `n_${Date.now().toString(36)}_${idCounter.toString(36)}`;
+}
+
+export function createNode(partial?: Partial<FlowNode>): FlowNode {
+  return {
+    id: newNodeId(),
+    label: "",
+    message: "",
+    showOther: false,
+    action: { type: "free_text" },
+    children: [],
+    ...partial,
+  };
+}
+
+// ─── helper های immutable برای ویرایش درخت بر اساس id ─────────────────────────
+
+export function updateNodeById(
+  nodes: FlowNode[],
+  id: string,
+  updater: (node: FlowNode) => FlowNode
+): FlowNode[] {
+  return nodes.map((node) => {
+    if (node.id === id) return updater(node);
+    if (node.children.length) {
+      return { ...node, children: updateNodeById(node.children, id, updater) };
+    }
+    return node;
+  });
+}
+
+export function removeNodeById(nodes: FlowNode[], id: string): FlowNode[] {
+  return nodes
+    .filter((node) => node.id !== id)
+    .map((node) =>
+      node.children.length
+        ? { ...node, children: removeNodeById(node.children, id) }
+        : node
+    );
+}
+
+export function addChildToNode(
+  nodes: FlowNode[],
+  parentId: string,
+  child: FlowNode
+): FlowNode[] {
+  return updateNodeById(nodes, parentId, (node) => ({
+    ...node,
+    children: [...node.children, child],
+  }));
+}
+
+// جابجایی یک node بین خواهر-برادرها (بالا/پایین)
+export function moveNodeInSiblings(
+  nodes: FlowNode[],
+  id: string,
+  direction: -1 | 1
+): FlowNode[] {
+  const idx = nodes.findIndex((n) => n.id === id);
+  if (idx !== -1) {
+    const target = idx + direction;
+    if (target < 0 || target >= nodes.length) return nodes;
+    const copy = [...nodes];
+    [copy[idx], copy[target]] = [copy[target], copy[idx]];
+    return copy;
+  }
+  // جستجو در سطوح پایین‌تر
+  return nodes.map((node) =>
+    node.children.length
+      ? { ...node, children: moveNodeInSiblings(node.children, id, direction) }
+      : node
+  );
+}
+
+// ─── اعتبارسنجی: هر node یا منوست یا برگ با action معتبر ──────────────────────
+export function getNodeIssues(node: FlowNode): string[] {
+  const issues: string[] = [];
+  if (!node.label.trim()) issues.push("متن دکمه خالی است");
+
+  const isMenu = node.children.length > 0;
+  if (!isMenu) {
+    if (!node.action) {
+      issues.push("رفتار دکمه مشخص نشده");
+    } else {
+      if (node.action.type === "connect_context" && !node.action.contextTopic) {
+        issues.push("موضوع اتصال انتخاب نشده");
+      }
+      if (node.action.type === "reply" && !node.action.replyText?.trim()) {
+        issues.push("متن پاسخ ثابت خالی است");
+      }
+    }
+  }
+  return issues;
+}
