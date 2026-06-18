@@ -45,3 +45,4 @@ next-env.d.ts
 app.backup/
 components.backup/
 CLAUDE.md
+SECURITY_CHANGES.md
