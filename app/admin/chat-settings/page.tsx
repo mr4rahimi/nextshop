@@ -26,6 +26,7 @@ interface ChatSettings {
   aboutBusiness: string;
   welcomeMessage: string;
   isEnabled: boolean;
+  historyLimit: number;
   faq: FaqItem[];
   flow: FlowNode[];
 }
@@ -42,6 +43,7 @@ const DEFAULTS: ChatSettings = {
   aboutBusiness: "",
   welcomeMessage: "سلام! من دستیار خرید این فروشگاه هستم. چطور می‌تونم کمکت کنم؟",
   isEnabled: true,
+  historyLimit: 4,
   faq: [],
   flow: [],
 };
@@ -180,6 +182,30 @@ export default function ChatSettingsPage() {
               className={inputClass}
             />
           </Field>
+        </div>
+
+        {/* تنظیمات تاریخچه */}
+        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+          <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">حافظه‌ی گفتگو</h2>
+          <Field
+            label="تعداد پیام‌های تاریخچه"
+            hint="چند پیام آخر همراه هر سوال به هوش مصنوعی ارسال شود"
+          >
+            <input
+              type="number"
+              min={0}
+              max={20}
+              value={settings.historyLimit}
+              onChange={(e) =>
+                setSettings((p) => ({ ...p, historyLimit: Math.max(0, Number(e.target.value) || 0) }))
+              }
+              className={inputClass}
+            />
+          </Field>
+          <div className="mt-3 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-bold leading-6">
+            ⚠ هرچه این عدد بیشتر باشد، توکن بیشتری مصرف می‌شود و طول پیام ارسالی افزایش می‌یابد.
+            مقدار پیشنهادی: ۴ تا ۶
+          </div>
         </div>
 
         {/* اطلاعات تماس */}

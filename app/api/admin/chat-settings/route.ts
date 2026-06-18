@@ -26,6 +26,7 @@ const DEFAULT_CHAT_SETTINGS = {
   // چت
   welcomeMessage: "سلام! من دستیار خرید این فروشگاه هستم. چطور می‌تونم کمکت کنم؟",
   isEnabled: true,
+  historyLimit: 4,  
   // سوالات متداول — آرایه‌ای از { question, answer }
   faq: [] as { question: string; answer: string }[],
 };

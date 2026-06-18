@@ -962,3 +962,28 @@ model GuarantyRequest {
   @@index([guarantyId])
   @@index([status])
 }
+
+model ChatConversation {
+  id            String        @id @default(cuid())
+  userId        String?
+  sessionId     String?
+  createdAt     DateTime      @default(now())
+  lastMessageAt DateTime      @default(now())
+  messages      ChatMessage[]
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([lastMessageAt])
+}
+
+model ChatMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  role           String           // "user" | "assistant"
+  content        String           @db.Text
+  context        String?          // مثل "topic:warranty" یا "category:printer" یا "free"
+  createdAt      DateTime         @default(now())
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}

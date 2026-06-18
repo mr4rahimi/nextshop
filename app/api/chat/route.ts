@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { prisma } from "@/lib/prisma";
+import { getOrCreateConversation, saveMessage } from "@/lib/chat-history";
+import { getAuthUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -254,12 +256,14 @@ function buildProductsContext(products: Product[]): string {
 
 function streamFromSystemPrompt(
   systemPrompt: string,
-  messages: Message[]
+  messages: Message[],
+  onComplete?: (fullText: string) => void
 ): ReadableStream {
   const encoder = new TextEncoder();
 
   return new ReadableStream({
     async start(controller) {
+      let fullText = "";
       try {
         const stream = await client.chat.completions.create({
           model: MODEL,
@@ -274,6 +278,7 @@ function streamFromSystemPrompt(
         for await (const chunk of stream) {
           const text = chunk.choices[0]?.delta?.content ?? "";
           if (text) {
+            fullText += text;
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ text })}\n\n`)
             );
@@ -282,6 +287,7 @@ function streamFromSystemPrompt(
 
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
+        if (onComplete) onComplete(fullText);
       } catch (err) {
         console.error("Stream error:", err);
         controller.enqueue(
@@ -303,12 +309,65 @@ const sseHeaders = {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const messages: Message[] = body.messages;
+  let messages: Message[] = body.messages;
   const context: ChatContext = body.context ?? null;
+  const sessionId: string | null = body.sessionId ?? null;
+  const incomingConvId: string | null = body.conversationId ?? null;
 
   if (!messages?.length) {
     return NextResponse.json({ error: "No messages provided" }, { status: 400 });
   }
+
+  // محدودیت تاریخچه از تنظیمات
+  const settingsForLimit = await getBusinessInfo();
+  const historyLimit = Number(
+    (settingsForLimit as { historyLimit?: number }).historyLimit ?? 4
+  );
+  if (historyLimit > 0 && messages.length > historyLimit) {
+    messages = messages.slice(-historyLimit);
+  }
+
+  // شناسایی کاربر و آماده‌سازی مکالمه
+  const user = await getAuthUser();
+  const conversationId = await getOrCreateConversation({
+    conversationId: incomingConvId,
+    userId: user?.id ?? null,
+    sessionId,
+  });
+
+  // برچسب context برای ذخیره‌سازی
+  const ctxLabel =
+    context?.kind === "topic" ? `topic:${context.topic}` :
+    context?.kind === "category" ? `category:${context.slug}` :
+    context?.kind === "free" ? "free" : "menu";
+
+  // ذخیره‌ی آخرین پیام کاربر
+  const lastUser = [...messages].reverse().find((m) => m.role === "user");
+  if (lastUser) {
+    await saveMessage({
+      conversationId,
+      role: "user",
+      content: lastUser.content,
+      context: ctxLabel,
+    });
+  }
+
+  // تابع کمکی: ساخت پاسخ نهایی همراه با هدر conversationId و ذخیره‌ی جواب
+  const respond = (stream: ReadableStream) =>
+    new NextResponse(stream, {
+      headers: { ...sseHeaders, "X-Conversation-Id": conversationId },
+    });
+
+  const saveAssistant = (fullText: string) => {
+    if (fullText.trim()) {
+      saveMessage({
+        conversationId,
+        role: "assistant",
+        content: fullText,
+        context: ctxLabel,
+      }).catch(() => {});
+    }
+  };
 
   const encoder = new TextEncoder();
 
@@ -326,8 +385,8 @@ export async function POST(req: NextRequest) {
 
 ${topicContext}${buildFaqText(business)}`;
 
-    const stream = streamFromSystemPrompt(systemPrompt, messages);
-    return new NextResponse(stream, { headers: sseHeaders });
+    const stream = streamFromSystemPrompt(systemPrompt, messages, saveAssistant);
+    return respond(stream);
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -350,8 +409,8 @@ ${topicContext}${buildFaqText(business)}`;
 محصولات این دسته‌بندی:
 ${productsContext}`;
 
-    const stream = streamFromSystemPrompt(systemPrompt, messages);
-    return new NextResponse(stream, { headers: sseHeaders });
+    const stream = streamFromSystemPrompt(systemPrompt, messages, saveAssistant);
+    return respond(stream);
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -365,6 +424,7 @@ ${productsContext}`;
   // اگه نیاز به سوال بیشتر داره → مستقیم برگردون (بدون DB call)
   if (intent.needs_clarification && intent.clarification_question) {
     const text = intent.clarification_question;
+    saveAssistant(text);
     const stream = new ReadableStream({
       start(controller) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
@@ -372,7 +432,7 @@ ${productsContext}`;
         controller.close();
       },
     });
-    return new NextResponse(stream, { headers: sseHeaders });
+    return respond(stream);
   }
 
   // Fetch محصولات (فقط اگه search باشه)
@@ -406,6 +466,6 @@ ${productsContext}`;
 ${categoriesText}
 ${productSection}`;
 
-  const stream = streamFromSystemPrompt(systemPrompt, messages);
-  return new NextResponse(stream, { headers: sseHeaders });
+  const stream = streamFromSystemPrompt(systemPrompt, messages, saveAssistant);
+    return respond(stream);
 }
