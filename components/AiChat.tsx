@@ -40,6 +40,8 @@ export default function AiChat() {
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const conversationIdRef = useRef<string | null>(null);
+  const restoredRef = useRef(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -51,16 +53,69 @@ export default function AiChat() {
         .then((r) => r.json())
         .then((cfg: ChatConfig) => {
           setConfig(cfg);
-          if (cfg.isEnabled) initRoot(cfg);
+          if (cfg.isEnabled && !restoredRef.current) initRoot(cfg);
         })
         .catch(() => setConfig({ isEnabled: true, welcomeMessage: "سلام!", flow: [] }));
     }
   }, [open, config]);
 
+  // بازیابی وضعیت چت بعد از رفرش
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("chat_state");
+      if (saved) {
+        const s = JSON.parse(saved);
+        if (s.bubbles?.length) {
+          setBubbles(s.bubbles);
+          setButtons(s.buttons ?? []);
+          setInputMode(s.inputMode ?? false);
+          setActiveContext(s.activeContext ?? null);
+          setApiMessages(s.apiMessages ?? []);
+          conversationIdRef.current = s.conversationId ?? null;
+          restoredRef.current = true;
+        }
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ذخیره‌ی خودکار وضعیت
+  useEffect(() => {
+    if (bubbles.length === 0) return;
+    try {
+      localStorage.setItem(
+        "chat_state",
+        JSON.stringify({
+          bubbles,
+          buttons,
+          inputMode,
+          activeContext,
+          apiMessages,
+          conversationId: conversationIdRef.current,
+        })
+      );
+    } catch {}
+  }, [bubbles, buttons, inputMode, activeContext, apiMessages]);
+
+
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     if (inputMode) setTimeout(() => inputRef.current?.focus(), 100);
   }, [bubbles, buttons, inputMode]);
+
+  function getSessionId(): string {
+    try {
+      let sid = localStorage.getItem("chat_session_id");
+      if (!sid) {
+        sid = `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+        localStorage.setItem("chat_session_id", sid);
+      }
+      return sid;
+    } catch {
+      return "anon";
+    }
+  }
 
   // ─── شروع از منوی اصلی ─────────────────────────────────────────────────────
   function initRoot(cfg: ChatConfig) {
@@ -78,6 +133,8 @@ export default function AiChat() {
   }
 
   function goHome() {
+    conversationIdRef.current = null;
+    try { localStorage.removeItem("chat_state"); } catch {}
     if (config) initRoot(config);
   }
 
@@ -216,9 +273,18 @@ export default function AiChat() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextApi, context: activeContext }),
+        body: JSON.stringify({
+          messages: nextApi,
+          context: activeContext,
+          sessionId: getSessionId(),
+          conversationId: conversationIdRef.current,
+        }),
       });
       if (!res.ok) throw new Error("server");
+
+      // conversationId را از هدر بگیر و نگه دار
+      const convId = res.headers.get("X-Conversation-Id");
+      if (convId) conversationIdRef.current = convId;
 
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
