@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export async function GET() {
   const s = await prisma.storeSettings.findUnique({ where: { id: "singleton" } });
   return NextResponse.json({
-    storeName:       s?.storeName       ?? "مانا شاپ",
+    storeName:       s?.storeName       || null,
     storeLogo:       s?.storeLogo       ?? null,
     siteFavicon:     s?.siteFavicon     ?? null,
     siteDescription: s?.siteDescription ?? null,

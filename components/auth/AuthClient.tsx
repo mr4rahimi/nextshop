@@ -12,6 +12,19 @@ export default function AuthClient() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
 
+  const [storeLogo, setStoreLogo] = useState<string | null>(null);
+  const [storeName, setStoreName] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/store/site-settings")
+      .then(r => r.json())
+      .then(d => {
+        setStoreLogo(d.storeLogo ?? null);
+        setStoreName(d.storeName ?? null);
+      })
+      .catch(() => {});
+  }, []);
+
   const [step, setStep] = useState<Step>("phone");
   const [authMode, setAuthMode] = useState<AuthMode>("otp");
   const [phone, setPhone] = useState("");
@@ -219,12 +232,13 @@ export default function AuthClient() {
 
         <div className="relative overflow-hidden bg-white/70 dark:bg-gray-900/60 backdrop-blur-3xl border border-white dark:border-white/10 rounded-[3.5rem] p-8 md:p-10 shadow-2xl shadow-primary-500/10">
 
-          {/* Logo */}
-          <div className="flex justify-center mb-8">
-            <Link href="/" className="flex items-center gap-2">
-              <img src="/assets/images/logo.png" className="w-30" alt="لوگو" />
-            </Link>
-          </div>
+          {storeLogo && (
+            <div className="flex justify-center mb-8">
+              <Link href="/" className="flex items-center gap-2">
+                <img src={storeLogo} className="w-30" alt={storeName ?? ""} />
+              </Link>
+            </div>
+          )}
 
           {/* Title */}
           <div className="text-center mb-8">

@@ -6,7 +6,7 @@ import CartIcon from "@/components/store/cart/CartIcon";
 import SearchBox from "@/components/store/SearchBox";
 import WishlistIcon from "@/components/store/wishlist/WishlistIcon";
 
-export default function HeaderTop({ logoUrl, siteName }: { logoUrl: string; siteName: string }) {
+export default function HeaderTop({ logoUrl, siteName }: { logoUrl: string | null; siteName: string | null }) {
   const { theme, toggle } = useTheme();
 
   return (
@@ -29,7 +29,7 @@ export default function HeaderTop({ logoUrl, siteName }: { logoUrl: string; site
             </button>
  
             <Link href="/" className="flex items-center gap-2">
-              <img src={logoUrl} className="w-28 h-auto" alt={siteName} />
+              {logoUrl && <img src={logoUrl} className="w-28 h-auto" alt={siteName ?? ""} />}
             </Link>
           </div>
 

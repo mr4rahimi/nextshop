@@ -4,12 +4,12 @@ import HeaderMenu from "./HeaderMenu";
 import MobileMenuPortal from "./MobileMenuPortal";
 
 export default async function Header() {
-  let logoUrl = "/assets/images/logo.png";
-  let siteName = "مانا شاپ";
+  let logoUrl: string | null = null;
+  let siteName: string | null = null;
   try {
     const s = await prisma.storeSettings.findUnique({ where: { id: "singleton" } });
-    if (s?.storeLogo) logoUrl = s.storeLogo;
-    if (s?.storeName) siteName = s.storeName;
+    logoUrl = s?.storeLogo || null;
+    siteName = s?.storeName || null;
   } catch {}
 
   return (

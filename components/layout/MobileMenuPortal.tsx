@@ -10,7 +10,7 @@ interface MegaCat {
 }
 interface MenuItem { id: string; title: string; url: string | null; openInNewTab: boolean; }
 
-export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", siteName = "مانا شاپ" }: { logoUrl?: string; siteName?: string }) {
+export default function MobileMenuPortal({ logoUrl, siteName }: { logoUrl?: string | null; siteName?: string | null }) {
   const [open, setOpen]         = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [megaCats, setMegaCats] = useState<MegaCat[]>([]);
@@ -78,7 +78,7 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
         {}
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/40 dark:border-gray-800 bg-white/30 dark:bg-gray-900/30 flex-shrink-0">
           <Link href="/" onClick={close}>
-            <img src={logoUrl} className="h-8 w-auto max-w-[120px] object-contain" alt={siteName} />
+            {logoUrl && <img src={logoUrl} className="h-8 w-auto max-w-[120px] object-contain" alt={siteName ?? ""} />}
           </Link>
           <button onClick={close}
             className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-secondary-500 rounded-xl transition-all border border-transparent hover:border-red-100">
