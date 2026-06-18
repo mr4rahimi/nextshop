@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const SECRET = process.env.JWT_SECRET || "mymonta-secret-key-change-in-production";
+const SECRET = process.env.JWT_SECRET ?? "";
 
 function b64urlDecode(str: string): Uint8Array {
   str = str.replace(/-/g, "+").replace(/_/g, "/");

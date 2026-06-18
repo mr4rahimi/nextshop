@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
-const SECRET = process.env.JWT_SECRET || "mymonta-secret-key-change-in-production";
+const SECRET = process.env.JWT_SECRET;
+if (!SECRET) throw new Error("JWT_SECRET env variable is not set");
 const COOKIE_NAME = "auth_token";
 const EXPIRES_IN = 60 * 60 * 24 * 30;
 
@@ -77,7 +78,9 @@ export async function clearAuthCookie() {
 }
 
 export async function hashPassword(password: string): Promise<string> {
-  const data = new TextEncoder().encode(password + (process.env.PASSWORD_SALT || "mymonta-salt"));
+  const salt = process.env.PASSWORD_SALT;
+  if (!salt) throw new Error("PASSWORD_SALT env variable is not set");
+  const data = new TextEncoder().encode(password + salt);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
