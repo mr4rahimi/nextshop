@@ -8,16 +8,15 @@ export type ProductCardData = {
   imageSrc: string;
   href: string;
 
-  price: number; // قیمت نهایی
-  compareAtPrice?: number; // قیمت قبل تخفیف (برای خط خورده)
-  discountPercent?: number; // مثلا 25
+  price: number;
+  compareAtPrice?: number;
+  discountPercent?: number;
 
-  rating: number; // 1..5 (فعلا عددی)
-  stock: number; // موجودی
+  rating: number;
+  stock: number;
 };
 
 function formatToman(amount: number) {
-  // نمایش با جداکننده هزارگان + تومان
   return `${amount.toLocaleString("fa-IR")} تومان`;
 }
 
@@ -89,7 +88,7 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
 
         {/* content */}
         <div className="mt-3 flex-1 flex flex-col justify-between">
-          {/* title (ارتفاع ثابت) */}
+          {}
           <h3 className="text-sm font-bold text-zinc-900 leading-6 line-clamp-2 min-h-[48px]">
             {product.title}
           </h3>

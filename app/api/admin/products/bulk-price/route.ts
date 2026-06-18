@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-// آپدیت قیمت تک محصول
 export async function PATCH(req: Request) {
   const { id, price, salePrice } = await req.json();
   await prisma.product.update({
@@ -16,12 +15,10 @@ export async function PATCH(req: Request) {
   return NextResponse.json({ success: true });
 }
 
-// آپدیت گروهی قیمت
 export async function POST(req: Request) {
   const { ids, type, value, field } = await req.json();
   // type: "percent" | "amount"
   // field: "price" | "salePrice" | "both"
-  // value: عدد (مثبت = افزایش، منفی = کاهش)
 
   const products = await prisma.product.findMany({
     where: { id: { in: ids } },

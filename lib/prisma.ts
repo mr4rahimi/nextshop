@@ -10,12 +10,10 @@ const globalForPrisma = globalThis as unknown as {
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is not set");
 
-// یک Pool مشترک (برای dev/hmr)
 const pool =
   globalForPrisma.pgPool ??
   new Pool({
     connectionString: databaseUrl,
-    // اگر بعداً خطای SSL گرفتی، این را باز می‌کنیم:
     // ssl: { rejectUnauthorized: false },
   });
 

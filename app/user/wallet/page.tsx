@@ -47,7 +47,7 @@ export default function WalletPage() {
         <p className="text-sm text-gray-500 mt-1">موجودی و تاریخچه تراکنش‌های کیف پول شما</p>
       </div>
 
-      {/* کارت موجودی */}
+      {}
       <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-primary-500/30">
         <div className="absolute -top-12 -left-12 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
         <div className="absolute -bottom-8 -right-8 w-36 h-36 bg-white/5 rounded-full blur-xl" />
@@ -65,7 +65,7 @@ export default function WalletPage() {
         </div>
       </div>
 
-      {/* تاریخچه تراکنش‌ها */}
+      {}
       <div className="bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-xl shadow-gray-200/40 dark:shadow-none">
         <div className="px-6 py-5 border-b border-gray-200/30 dark:border-white/5">
           <h2 className="text-base font-black text-gray-900 dark:text-white">تاریخچه تراکنش‌ها</h2>

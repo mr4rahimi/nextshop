@@ -6,8 +6,6 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ThemeProvider, useTheme } from "@/components/layout/ThemeProvider";
 
-
-// ── آیکون‌های SVG ─────────────────────────────────────────────────────────────
 function Icon({ path, className = "w-4 h-4" }: { path: string; className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,7 +39,6 @@ const ICONS = {
   "chat-history": "M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
 };
 
-// ── ساختار منو ────────────────────────────────────────────────────────────────
 const MENU_GROUPS = [
   {
     label: "اصلی",

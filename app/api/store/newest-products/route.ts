@@ -14,7 +14,6 @@ export async function GET(req: Request) {
     return NextResponse.json([]);
   }
 
-  // از هر دسته perCategory محصول جدید
   const results = await Promise.all(
     ids.map(async (categoryId) => {
       const products = await prisma.product.findMany({

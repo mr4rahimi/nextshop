@@ -20,7 +20,6 @@ interface Widget {
   createdAt: string;
 }
 
-// ─── Meta info برای هر نوع ویجت ──────────────────────────────────────────────
 const WIDGET_META: Record<WidgetType, { label: string; icon: string; color: string; desc: string }> = {
   STORY:                { label: "استوری",                  icon: "📸", color: "bg-pink-50 border-pink-200 dark:bg-pink-900/20 dark:border-pink-800",    desc: "نمایش استوری‌های تصویری" },
   HERO_SLIDER:          { label: "اسلایدر اصلی",            icon: "🖼️", color: "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800",    desc: "اسلایدر بنر صفحه اصلی" },
@@ -294,7 +293,7 @@ export default function WidgetsPage() {
         </div>
       )}
 
-      {/* راهنما */}
+      {}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4">
         <p className="text-xs text-blue-700 dark:text-blue-300 font-bold flex items-center gap-2">
           <span>💡</span>

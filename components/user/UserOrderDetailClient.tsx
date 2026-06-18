@@ -82,7 +82,7 @@ export default function UserOrderDetailClient({ order }: Props) {
             مسیر سفارش
           </h3>
 
-          {/* دسکتاپ — افقی */}
+          {}
           <div className="hidden md:flex items-start gap-0 overflow-x-auto pb-2 relative z-10">
             {TIMELINE_STEPS.map((step, i) => {
               const done   = currentIdx >= 0 && i <= currentIdx;
@@ -119,7 +119,7 @@ export default function UserOrderDetailClient({ order }: Props) {
             })}
           </div>
 
-          {/* موبایل — عمودی */}
+          {}
           <div className="md:hidden space-y-0 relative before:absolute before:right-[19px] before:top-2 before:w-0.5 before:h-[calc(100%-16px)] before:bg-gray-200/50 dark:before:bg-white/5">
             {TIMELINE_STEPS.map((step, i) => {
               const done   = currentIdx >= 0 && i <= currentIdx;
@@ -150,7 +150,7 @@ export default function UserOrderDetailClient({ order }: Props) {
             })}
           </div>
 
-          {/* کد رهگیری */}
+          {}
           {order.trackingCode && (
             <div className="mt-6 p-4 bg-primary-500/5 border border-primary-500/20 rounded-2xl flex items-center justify-between relative z-10">
               <div className="flex items-center gap-3">
@@ -171,7 +171,7 @@ export default function UserOrderDetailClient({ order }: Props) {
         </div>
       )}
 
-      {/* پیام لغو/مرجوع */}
+      {}
       {isCanceled && (
         <div className={`flex items-center gap-4 p-6 rounded-[2.5rem] border ${order.status === "CANCELED" ? "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800" : "bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800"}`}>
           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${order.status === "CANCELED" ? "bg-red-100 dark:bg-red-900/30 text-secondary-500" : "bg-amber-100 dark:bg-amber-900/30 text-amber-600"}`}>
@@ -190,7 +190,7 @@ export default function UserOrderDetailClient({ order }: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        {/* اقلام سفارش */}
+        {}
         <div className="lg:col-span-2">
           <div className="relative overflow-hidden bg-white/40 dark:bg-gray-950/60 backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
             <div className="relative z-10 p-8 border-b border-gray-100 dark:border-white/5">
@@ -261,7 +261,7 @@ export default function UserOrderDetailClient({ order }: Props) {
           </div>
         </div>
 
-        {/* آدرس تحویل */}
+        {}
         {order.address && (
           <div className="relative overflow-hidden bg-white/40 dark:bg-gray-950/60 backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
             <div className="absolute -top-20 -left-20 w-40 h-40 bg-primary-500/10 rounded-full blur-3xl" />

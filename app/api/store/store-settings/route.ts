@@ -5,7 +5,6 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const s = await prisma.storeSettings.findUnique({ where: { id: "singleton" } });
-  // فقط اطلاعات عمومی برگردان (نه merchant key)
   return NextResponse.json({
     cardNumber:      s?.cardNumber ?? null,
     cardHolder:      s?.cardHolder ?? null,

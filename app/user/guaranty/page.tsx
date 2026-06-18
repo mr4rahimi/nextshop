@@ -104,7 +104,7 @@ export default function UserGuarantyPage() {
             </div>
           </div>
 
-          {/* درخواست‌های ثبت‌شده */}
+          {}
           {item.requests.length > 0 && (
             <div className="space-y-2 pt-4 border-t border-gray-200/30 dark:border-white/5">
               <p className="text-xs font-black text-gray-500 dark:text-gray-400">درخواست‌های ثبت‌شده:</p>

@@ -80,7 +80,6 @@ export async function GET(req: Request) {
   return NextResponse.json(serialize({ items, total, page, pageSize, stats: statsMap }));
 }
 
-// ─── POST /api/admin/media — آپلود (چندفایلی) ──────────────────────────────
 export async function POST(req: Request) {
   const formData = await req.formData();
   const files = formData.getAll("files") as File[];

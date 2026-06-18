@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import ChatFlowEditor from "@/components/admin/ChatFlowEditor";
 import { FlowNode } from "@/lib/chat-flow";
 
-// ── انواع داده ──────────────────────────────────────────────────────────────
 interface FaqItem {
   question: string;
   answer: string;
@@ -48,7 +47,6 @@ const DEFAULTS: ChatSettings = {
   flow: [],
 };
 
-// ── کامپوننت‌های فرم کوچک ──────────────────────────────────────────────────────
 function Field({
   label,
   hint,
@@ -72,7 +70,6 @@ function Field({
 const inputClass =
   "w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all";
 
-// ── صفحه اصلی ──────────────────────────────────────────────────────────────────
 export default function ChatSettingsPage() {
   const [settings, setSettings] = useState<ChatSettings>(DEFAULTS);
   const [loading, setLoading] = useState(true);
@@ -102,7 +99,6 @@ export default function ChatSettingsPage() {
     setTimeout(() => setSaved(false), 3000);
   }
 
-  // ── کمک‌کننده‌های FAQ ──────────────────────────────────────────────────────
   function addFaq() {
     setSettings((p) => ({ ...p, faq: [...p.faq, { question: "", answer: "" }] }));
   }
@@ -128,7 +124,7 @@ export default function ChatSettingsPage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
-      {/* هدر */}
+      {}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">تنظیمات چت هوشمند</h1>
@@ -137,7 +133,7 @@ export default function ChatSettingsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* فعال/غیرفعال */}
+          {}
           <label className="flex items-center gap-2 cursor-pointer">
             <span className="text-xs font-black text-gray-600 dark:text-gray-300">
               {settings.isEnabled ? "فعال" : "غیرفعال"}
@@ -171,7 +167,7 @@ export default function ChatSettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        {/* پیام خوش‌آمد */}
+        {}
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
           <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">پیام خوش‌آمدگویی</h2>
           <Field label="اولین پیامی که کاربر هنگام باز کردن چت می‌بیند">
@@ -184,7 +180,7 @@ export default function ChatSettingsPage() {
           </Field>
         </div>
 
-        {/* تنظیمات تاریخچه */}
+        {}
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
           <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">حافظه‌ی گفتگو</h2>
           <Field
@@ -208,7 +204,7 @@ export default function ChatSettingsPage() {
           </div>
         </div>
 
-        {/* اطلاعات تماس */}
+        {}
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-4">
           <h2 className="text-sm font-black text-gray-900 dark:text-white">اطلاعات تماس</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -247,7 +243,7 @@ export default function ChatSettingsPage() {
           </Field>
         </div>
 
-        {/* شبکه‌های اجتماعی */}
+        {}
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-4">
           <h2 className="text-sm font-black text-gray-900 dark:text-white">شبکه‌های اجتماعی</h2>
           <Field label="اینستاگرام">
@@ -285,7 +281,7 @@ export default function ChatSettingsPage() {
           </Field>
         </div>
 
-        {/* ارسال و گارانتی */}
+        {}
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-4">
           <h2 className="text-sm font-black text-gray-900 dark:text-white">ارسال و گارانتی</h2>
           <Field label="روش‌های ارسال" hint="مثلاً: پست پیشتاز، تیپاکس، پیک موتوری">
@@ -314,7 +310,7 @@ export default function ChatSettingsPage() {
           </Field>
         </div>
 
-        {/* درباره کسب‌وکار */}
+        {}
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 xl:col-span-2">
           <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">درباره کسب‌وکار</h2>
           <Field
@@ -330,7 +326,7 @@ export default function ChatSettingsPage() {
           </Field>
         </div>
 
-        {/* سوالات متداول */}
+        {}
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 xl:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-black text-gray-900 dark:text-white">سوالات متداول</h2>
@@ -387,7 +383,7 @@ export default function ChatSettingsPage() {
           )}
         </div>
 
-        {/* درخت دکمه‌های هدایت‌گر */}
+        {}
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 xl:col-span-2">
           <div className="mb-4">
             <h2 className="text-sm font-black text-gray-900 dark:text-white">

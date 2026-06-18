@@ -11,11 +11,7 @@ export default function HeaderTop({ logoUrl, siteName }: { logoUrl: string; site
 
   return (
     <>
-      {/* TOP BANNER 
-      <div className="bg-primary-900 text-white py-1.5 text-center text-[11px] font-medium tracking-wide hidden md:block">
-        🎉 جشنواره زمستانی: تا ۵۰٪ تخفیف | کد:
-        <span className="text-secondary-400 mr-1">WINTER2025</span>
-      </div> */}
+      {}
 
       <div className="container">
         <div className="flex items-center justify-between h-20 gap-8">
@@ -51,14 +47,14 @@ export default function HeaderTop({ logoUrl, siteName }: { logoUrl: string; site
               aria-label="تغییر حالت نمایش"
               className="p-2.5 rounded-xl border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-md hover:border-primary-500/50 hover:bg-white/80 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400 hover:text-primary-500 transition-all duration-300 shadow-sm"
             >
-              {/* Sun icon - نمایش در dark mode */}
+              {}
               <svg
                 className="w-5 h-5 hidden dark:block"
                 fill="none" stroke="currentColor" viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
               </svg>
-              {/* Moon icon - نمایش در light mode */}
+              {}
               <svg
                 className="w-5 h-5 block dark:hidden"
                 fill="none" stroke="currentColor" viewBox="0 0 24 24"

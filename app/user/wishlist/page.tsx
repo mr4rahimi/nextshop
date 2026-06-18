@@ -33,7 +33,6 @@ export default function WishlistPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  // sync با context
   useEffect(() => {
     setItems(prev => prev.filter(i => has(i.productId)));
   }, [has]);
@@ -54,7 +53,7 @@ export default function WishlistPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[#050505] py-8" dir="rtl">
       <div className="container max-w-5xl mx-auto px-4">
 
-        {/* هدر */}
+        {}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-black text-gray-900 dark:text-white">علاقه‌مندی‌ها</h1>
@@ -93,7 +92,7 @@ export default function WishlistPage() {
 
               return (
                 <div key={item.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-white/5 rounded-2xl overflow-hidden group hover:shadow-lg transition-all">
-                  {/* تصویر */}
+                  {}
                   <div className="relative aspect-square bg-gray-50 dark:bg-gray-800">
                     <Link href={`/products/${p.slug}`}>
                       {p.mainImage
@@ -105,7 +104,7 @@ export default function WishlistPage() {
                         {fa(discount)}٪
                       </span>
                     )}
-                    {/* دکمه حذف */}
+                    {}
                     <button
                       onClick={() => toggle(p.id)}
                       className={`absolute top-2 left-2 w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
@@ -119,7 +118,7 @@ export default function WishlistPage() {
                     </button>
                   </div>
 
-                  {/* اطلاعات */}
+                  {}
                   <div className="p-3">
                     {p.brand && (
                       <p className="text-[10px] font-bold text-primary-500 mb-1">{p.brand.title}</p>

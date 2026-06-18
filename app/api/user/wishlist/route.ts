@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// GET — لیست علاقه‌مندی‌ها
 export async function GET() {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -35,7 +34,6 @@ export async function GET() {
   })));
 }
 
-// POST — اضافه کردن به علاقه‌مندی
 export async function POST(req: Request) {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -52,7 +50,6 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, id: item.id });
 }
 
-// DELETE — حذف از علاقه‌مندی
 export async function DELETE(req: Request) {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

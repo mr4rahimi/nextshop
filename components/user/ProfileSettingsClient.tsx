@@ -110,7 +110,7 @@ export default function ProfileSettingsClient({ user }: Props) {
           {/* Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            {/* نام */}
+            {}
             <div className="space-y-2">
               <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 mr-1 uppercase tracking-wider">نام</label>
               <input type="text" placeholder="مثلاً: علی"
@@ -118,7 +118,7 @@ export default function ProfileSettingsClient({ user }: Props) {
                 value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />
             </div>
 
-            {/* نام خانوادگی */}
+            {}
             <div className="space-y-2">
               <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 mr-1 uppercase tracking-wider">نام خانوادگی</label>
               <input type="text" placeholder="مثلاً: رضایی"
@@ -126,7 +126,7 @@ export default function ProfileSettingsClient({ user }: Props) {
                 value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
             </div>
 
-            {/* موبایل — غیر قابل تغییر */}
+            {}
             <div className="space-y-2">
               <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 mr-1 uppercase tracking-wider">شماره موبایل (تأیید شده)</label>
               <div className="relative">
@@ -138,7 +138,7 @@ export default function ProfileSettingsClient({ user }: Props) {
               </div>
             </div>
 
-            {/* ایمیل */}
+            {}
             <div className="space-y-2">
               <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 mr-1 uppercase tracking-wider">آدرس ایمیل</label>
               <input type="email" placeholder="example@mail.com" dir="ltr"
@@ -146,7 +146,7 @@ export default function ProfileSettingsClient({ user }: Props) {
                 value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
             </div>
 
-            {/* کد ملی */}
+            {}
             <div className="space-y-2 md:col-span-2">
               <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 mr-1 uppercase tracking-wider">کد ملی</label>
               <input type="text" placeholder="۱۰ رقم" maxLength={10} dir="ltr"

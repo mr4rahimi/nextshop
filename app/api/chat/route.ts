@@ -18,7 +18,6 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
 type Message = { role: "user" | "assistant"; content: string };
 
-// زمینه‌ی فعال که از دکمه‌های flow می‌آید
 type ChatContext =
   | { kind: "category"; slug: string }
   | { kind: "topic"; topic: string }
@@ -63,8 +62,6 @@ interface BusinessInfo {
   faq?: { question: string; answer: string }[];
 }
 
-// ─── Cache دسته‌بندی‌ها (10 دقیقه) ───────────────────────────────────────────
-
 let categoriesCache: { data: Category[]; ts: number } | null = null;
 
 async function getCategories(): Promise<Category[]> {
@@ -94,8 +91,6 @@ function buildCategoriesText(cats: Category[]): string {
     .join("\n");
 }
 
-// ─── Cache اطلاعات کسب‌وکار (5 دقیقه) ─────────────────────────────────────────
-
 let businessCache: { data: BusinessInfo; ts: number } | null = null;
 
 async function getBusinessInfo(): Promise<BusinessInfo> {
@@ -116,7 +111,6 @@ async function getBusinessInfo(): Promise<BusinessInfo> {
   }
 }
 
-// متن زمینه را برای یک موضوع مشخص می‌سازد
 function buildTopicContext(topic: string, s: BusinessInfo): string {
   switch (topic) {
     case "warranty":
@@ -153,8 +147,6 @@ function buildFaqText(s: BusinessInfo): string {
     .join("\n\n");
   return items ? `\n\nسوالات متداول:\n${items}` : "";
 }
-
-// ─── Step 1: Intent Detection (بدون DB) ──────────────────────────────────────
 
 async function detectIntent(
   messages: Message[],
@@ -207,8 +199,6 @@ ${categoriesText}
   }
 }
 
-// ─── Fetch محصولات هدفمند ─────────────────────────────────────────────────────
-
 async function fetchProducts(opts: {
   category_slug?: string | null;
   search_query?: string | null;
@@ -251,8 +241,6 @@ function buildProductsContext(products: Product[]): string {
     })
     .join("\n");
 }
-
-// ─── ساخت stream عمومی از یک system prompt ───────────────────────────────────
 
 function streamFromSystemPrompt(
   systemPrompt: string,
@@ -318,7 +306,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No messages provided" }, { status: 400 });
   }
 
-  // محدودیت تاریخچه از تنظیمات
   const settingsForLimit = await getBusinessInfo();
   const historyLimit = Number(
     (settingsForLimit as { historyLimit?: number }).historyLimit ?? 4
@@ -327,7 +314,6 @@ export async function POST(req: NextRequest) {
     messages = messages.slice(-historyLimit);
   }
 
-  // شناسایی کاربر و آماده‌سازی مکالمه
   const user = await getAuthUser();
   const conversationId = await getOrCreateConversation({
     conversationId: incomingConvId,
@@ -335,13 +321,11 @@ export async function POST(req: NextRequest) {
     sessionId,
   });
 
-  // برچسب context برای ذخیره‌سازی
   const ctxLabel =
     context?.kind === "topic" ? `topic:${context.topic}` :
     context?.kind === "category" ? `category:${context.slug}` :
     context?.kind === "free" ? "free" : "menu";
 
-  // ذخیره‌ی آخرین پیام کاربر
   const lastUser = [...messages].reverse().find((m) => m.role === "user");
   if (lastUser) {
     await saveMessage({
@@ -352,7 +336,6 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // تابع کمکی: ساخت پاسخ نهایی همراه با هدر conversationId و ذخیره‌ی جواب
   const respond = (stream: ReadableStream) =>
     new NextResponse(stream, {
       headers: { ...sseHeaders, "X-Conversation-Id": conversationId },
@@ -372,7 +355,6 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
 
   // ════════════════════════════════════════════════════════════════════════
-  // مسیر A: زمینه‌ی موضوع مشخص (از دکمه‌ی connect_context) → بدون Intent
   // ════════════════════════════════════════════════════════════════════════
   if (context?.kind === "topic") {
     const business = await getBusinessInfo();
@@ -390,7 +372,6 @@ ${topicContext}${buildFaqText(business)}`;
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // مسیر B: زمینه‌ی دسته‌بندی (از دکمه‌ی categories) → بدون Intent
   // ════════════════════════════════════════════════════════════════════════
   if (context?.kind === "category") {
     const products = await fetchProducts({ category_slug: context.slug });
@@ -414,14 +395,12 @@ ${productsContext}`;
   }
 
   // ════════════════════════════════════════════════════════════════════════
-  // مسیر C: سوال آزاد (free یا بدون context) → منطق Intent Detection (مثل قبل)
   // ════════════════════════════════════════════════════════════════════════
   const categories = await getCategories();
   const categoriesText = buildCategoriesText(categories);
 
   const intent = await detectIntent(messages, categoriesText);
 
-  // اگه نیاز به سوال بیشتر داره → مستقیم برگردون (بدون DB call)
   if (intent.needs_clarification && intent.clarification_question) {
     const text = intent.clarification_question;
     saveAssistant(text);
@@ -435,7 +414,6 @@ ${productsContext}`;
     return respond(stream);
   }
 
-  // Fetch محصولات (فقط اگه search باشه)
   let productsContext = "";
   if (intent.intent === "search" && (intent.category_slug || intent.search_query)) {
     const products = await fetchProducts({

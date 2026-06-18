@@ -41,7 +41,6 @@ export default function HeroBannerSlider() {
   const prev = () => setIndex((i) => (i - 1 + slides.length) % slides.length);
   const goTo = (i: number) => setIndex(i);
 
-  // autoplay هر 4 ثانیه
   useEffect(() => {
     const stop = () => {
       if (timerRef.current) window.clearInterval(timerRef.current);
@@ -71,7 +70,6 @@ export default function HeroBannerSlider() {
     else prev();
   };
 
-
   const stopLinkClick = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -86,7 +84,7 @@ export default function HeroBannerSlider() {
         aria-roledescription="carousel"
         aria-label="بنرهای فروشگاه"
       >
-        {/* لینک فقط روی خود تصویر */}
+        {}
         {/* slides */}
         <div className="relative w-full h-[500px] md:h-[520px]">
           {slides.map((slide, i) => {
@@ -147,7 +145,7 @@ export default function HeroBannerSlider() {
           })}
         </div>
 
-        {/* arrows (کلیکشون لینک رو فعال نکنه) */}
+        {}
         <button
           type="button"
           onMouseDown={stopLinkClick}
@@ -174,7 +172,7 @@ export default function HeroBannerSlider() {
           <ChevronLeft size={22} />
         </button>
 
-        {/* dots (کلیکشون لینک رو فعال نکنه) */}
+        {}
         <div
           className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 flex items-center gap-2"
           onMouseDown={(e) => {

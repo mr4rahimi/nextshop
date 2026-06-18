@@ -5,7 +5,6 @@ import Link from "next/link";
 import AddToCartButton from "@/components/store/cart/AddToCartButton";
 import { useWishlist } from "@/components/store/wishlist/WishlistContext";
 
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SpecItem {
   id: string;
@@ -237,8 +236,6 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
   const isOutOfStock = product.trackStock && product.stock <= 0;
   const isLowStock = product.trackStock && product.stock > 0 && product.stock <= product.lowStockThreshold;
   const isWished = has(product.id);
-
-
 
   // Add to cart handler (stub)
   function handleAddToCart() {
@@ -496,14 +493,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                         images: product.images ?? [],
                       }} />
                     )}
-                    {/*
-                       <span>افزودن به سبد خرید</span>
-                      <svg className="w-5 h-5 group-hover/btn:translate-x-[-4px] transition-transform" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                        <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
-                        <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6" />
-                      </svg>
-
-                    */}
+                    {}
                      
                       
                   
@@ -839,7 +829,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
         </div>
       </section>
 
-      {/* ── محصولات مرتبط ── */}
+      {}
       {(categoryRelated.length > 0 || brandRelated.length > 0 || manualRelated.length > 0) && (
         <section className="pb-16">
           <div className="container px-4 space-y-12">

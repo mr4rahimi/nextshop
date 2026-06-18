@@ -112,7 +112,7 @@ export default function GuarantyRequestsPage() {
         <p className="text-xs text-gray-500 mt-0.5">{toFa(total)} درخواست ثبت شده</p>
       </div>
 
-      {/* فیلتر */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4 flex flex-wrap gap-3 items-center">
         <div className="flex gap-2 flex-wrap">
           {STATUS_TABS.map(tab => (
@@ -137,7 +137,7 @@ export default function GuarantyRequestsPage() {
         </div>
       </div>
 
-      {/* لیست */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="hidden lg:grid grid-cols-[1fr_140px_1fr_140px_140px_100px] gap-3 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
           {["خریدار", "ستومان محصول", "توضیحات", "تاریخ ثبت", "وضعیت", ""].map(h => (
@@ -182,7 +182,7 @@ export default function GuarantyRequestsPage() {
         ))}
       </div>
 
-      {/* صفحه‌بندی */}
+      {}
       {!loading && total > PAGE_SIZE && (
         <div className="flex items-center justify-between flex-wrap gap-3">
           <p className="text-xs text-gray-400">
@@ -216,7 +216,7 @@ export default function GuarantyRequestsPage() {
         </div>
       )}
 
-      {/* مودال جزئیات */}
+      {}
       {detailItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setDetailItem(null)}>
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"

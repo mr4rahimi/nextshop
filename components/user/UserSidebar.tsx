@@ -95,11 +95,11 @@ export default function UserSidebar({ user }: Props) {
 
   const SidebarContent = () => (
     <div className="space-y-6">
-      {/* کارت کاربر */}
+      {}
       <div className="relative overflow-hidden bg-white/40 dark:bg-gray-950/60 backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-none">
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-500/10 rounded-full blur-3xl" />
 
-        {/* آواتار و نام */}
+        {}
         <div className="relative flex flex-col items-center text-center pb-6 mb-6 border-b border-gray-200/30 dark:border-white/5">
           <div className="relative mb-4">
             <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-tr from-primary-500/20 to-primary-500/5 p-1 backdrop-blur-md border border-white/50">
@@ -123,7 +123,7 @@ export default function UserSidebar({ user }: Props) {
           </span>
         </div>
 
-        {/* منو */}
+        {}
         <nav className="space-y-1.5 relative">
           {menuItems.map((item) => {
             const active = pathname === item.href;
@@ -143,7 +143,7 @@ export default function UserSidebar({ user }: Props) {
             );
           })}
 
-          {/* تنظیمات با subitem */}
+          {}
           <div>
             <button
               onClick={() => setSettingsOpen(!settingsOpen)}
@@ -180,7 +180,7 @@ export default function UserSidebar({ user }: Props) {
             )}
           </div>
 
-          {/* خروج */}
+          {}
           <div className="pt-3 mt-2 border-t border-gray-200/30 dark:border-white/5">
             <button
               onClick={handleLogout}
@@ -195,7 +195,7 @@ export default function UserSidebar({ user }: Props) {
         </nav>
       </div>
 
-      {/* پشتیبانی */}
+      {}
       <div className="p-6 rounded-[2.5rem] bg-white/10 dark:bg-primary-500/5 backdrop-blur-2xl border border-white/40 dark:border-white/10 relative overflow-hidden group shadow-[0_20px_40px_rgba(0,0,0,0.05)]">
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary-500/20 rounded-full blur-3xl group-hover:bg-primary-500/30 transition-all duration-700" />
         <div className="relative z-10">

@@ -53,7 +53,7 @@ type SortType = "newest" | "popular" | "price_asc" | "price_desc";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 12;
-const INFINITE_SCROLL_LIMIT = 10; // تا صفحه 10 infinite scroll
+const INFINITE_SCROLL_LIMIT = 10;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toFarsi(n: number): string {
@@ -365,13 +365,10 @@ export default function CategoryPageClient({
   // Mobile filter offcanvas
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // مقداردهی اولیه قیمت از category prop — فقط یک بار
   useEffect(() => {
     if (!category?.priceRange) return;
     const min = String(Number(category.priceRange.min));
     const max = String(Number(category.priceRange.max));
-    // فقط اگه min و max با هم فرق دارن فیلتر پیش‌فرض بذار
-    // در غیر اینصورت خالی بذار تا همه محصولات نشون داده بشن
     if (min !== max) {
       setMinPrice(min);
       setMaxPrice(max);
@@ -709,7 +706,7 @@ export default function CategoryPageClient({
                     <div ref={sentinelRef} className="h-10 mt-4" />
                   )}
 
-                  {/* Pagination (صفحه 11 به بعد) */}
+                  {}
                   {!useInfiniteScroll && totalPages > 1 && (
                     <div className="mt-16 flex items-center justify-center">
                       <div className="flex items-center gap-2 bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/40 dark:border-white/10 p-2 rounded-[2rem] shadow-xl shadow-gray-200/40 dark:shadow-none">

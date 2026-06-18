@@ -4,7 +4,6 @@ import { getAuthUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-// جزئیات یک مکالمه با همه‌ی پیام‌ها
 export async function GET(
   _req: Request,
   ctx: { params: Promise<{ id: string }> }
@@ -61,7 +60,6 @@ export async function GET(
   });
 }
 
-// حذف یک مکالمه
 export async function DELETE(
   _req: Request,
   ctx: { params: Promise<{ id: string }> }

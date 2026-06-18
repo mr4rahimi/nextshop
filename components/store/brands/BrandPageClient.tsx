@@ -208,10 +208,8 @@ export default function BrandPageClient({
           sort,
         });
 
-        // فقط اگه دسته‌بندی انتخاب شده باشه
         if (selectedCategories.length === 1) params.set("category", selectedCategories[0]);
 
-        // فقط وقتی با محدوده کامل برند فرق داره
         const absMin = String(Number(brand?.priceRange?.min ?? 0));
         const absMax = String(Number(brand?.priceRange?.max ?? 100_000_000));
         if (appliedMin && appliedMin !== absMin) params.set("minPrice", appliedMin);
@@ -231,7 +229,6 @@ export default function BrandPageClient({
     [brandSlug, sort, selectedCategories, appliedMin, appliedMax, brand]
   );
 
-  // اول بار و وقتی فیلتر تغییر می‌کنه
   useEffect(() => {
     setPage(1);
     fetchProducts(1, false);
@@ -347,7 +344,7 @@ export default function BrandPageClient({
             </div>
           </div>
 
-          {/* دسته‌بندی‌های مرتبط */}
+          {}
           {brand.categories.length > 0 && (
             <div className="flex flex-wrap gap-3 mb-10">
               {brand.categories.map((cat) => (
@@ -475,7 +472,7 @@ export default function BrandPageClient({
                     </div>
                   )}
 
-                  {/* Pagination صفحه ۱۱ به بعد */}
+                  {}
                   {!useInfiniteScroll && totalPages > 1 && (
                     <div className="mt-16 flex items-center justify-center">
                       <div className="flex items-center gap-2 bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/40 dark:border-white/10 p-2 rounded-[2rem] shadow-xl">

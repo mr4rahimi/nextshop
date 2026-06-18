@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-
 interface OrderItem {
   qty: number;
   unitPrice: string;
@@ -81,8 +80,6 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
   const router = useRouter();
   const [paying, setPaying] = useState(false);
 
-
-// اگه پرداخت با کیف پول بود، خودکار به success برو
   useEffect(() => {
     if (paymentMethod === "wallet") {
       router.push(`/checkout/success/${order.id}`);
@@ -113,11 +110,11 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="bg-white/40 dark:bg-white/[0.02] backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-8 shadow-xl">
 
-          {/* خلاصه سفارش */}
+          {}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
             <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
 
-              {/* آدرس */}
+              {}
               <div className="flex items-start gap-4 p-4 bg-white/50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
                 <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-600 flex-shrink-0">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +130,7 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
                 </div>
               </div>
 
-              {/* روش پرداخت */}
+              {}
               <div className="flex items-start gap-4 p-4 bg-white/50 dark:bg-white/5 rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
                 <div className="w-10 h-10 bg-primary-500/10 rounded-xl flex items-center justify-center text-primary-600 flex-shrink-0">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,7 +147,7 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
               </div>
             </div>
 
-            {/* دکمه پرداخت */}
+            {}
             <div className="lg:col-span-1">
               <button onClick={handlePay} disabled={paying}
                 className="group/pay relative w-full h-20 bg-primary-600 dark:bg-primary-500 rounded-[2.2rem] overflow-hidden transition-all duration-500 shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] hover:shadow-[0_25px_50px_-12px_rgba(37,99,235,0.6)] hover:-translate-y-1 active:scale-95 disabled:opacity-60">
@@ -177,7 +174,7 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
             </div>
           </div>
 
-          {/* اطلاعات اقلام */}
+          {}
           <div className="mt-8 pt-6 border-t border-gray-100 dark:border-white/5">
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-sm font-black text-gray-700 dark:text-gray-300">اقلام سفارش ({toFa(order.items.length)} قلم)</h4>
@@ -208,7 +205,7 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
             </div>
           </div>
 
-          {/* پاورقی */}
+          {}
           <div className="flex flex-wrap items-center justify-center gap-6 mt-8 pt-6 border-t border-gray-100 dark:border-white/5">
             <div className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-all">
               <svg className="w-5 h-5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">

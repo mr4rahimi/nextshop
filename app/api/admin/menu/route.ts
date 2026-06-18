@@ -4,7 +4,6 @@ import { serialize } from "@/lib/serialize";
 
 export const runtime = "nodejs";
 
-// GET — همه تنظیمات منو
 export async function GET() {
   const [menuItems, megaMenuCats] = await Promise.all([
     prisma.menuItem.findMany({ orderBy: { sortOrder: "asc" } }),
@@ -27,12 +26,10 @@ export async function GET() {
   return NextResponse.json(serialize({ menuItems, megaMenuCats }));
 }
 
-// POST — افزودن لینک منو
 export async function POST(req: Request) {
   const data = await req.json();
 
   if (data.type === "megaMenu") {
-    // افزودن دسته به مگامنو
     const existing = await prisma.megaMenuCategory.findUnique({ where: { categoryId: data.categoryId } });
     if (existing) return NextResponse.json({ error: "این دسته قبلاً اضافه شده" }, { status: 400 });
     const maxSort = await prisma.megaMenuCategory.aggregate({ _max: { sortOrder: true } });
@@ -43,7 +40,6 @@ export async function POST(req: Request) {
     return NextResponse.json(serialize(item));
   }
 
-  // افزودن لینک ساده
   const maxSort = await prisma.menuItem.aggregate({ _max: { sortOrder: true } });
   const item = await prisma.menuItem.create({
     data: {
@@ -57,12 +53,10 @@ export async function POST(req: Request) {
   return NextResponse.json(item);
 }
 
-// PUT — بروزرسانی ترتیب یا اطلاعات
 export async function PUT(req: Request) {
   const data = await req.json();
 
   if (data.type === "reorderMega") {
-    // reorder مگامنو
     await Promise.all(data.items.map((item: { id: string; sortOrder: number }) =>
       prisma.megaMenuCategory.update({ where: { id: item.id }, data: { sortOrder: item.sortOrder } })
     ));

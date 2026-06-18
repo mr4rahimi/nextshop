@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-// DELETE — حذف یک آیتم
 export async function DELETE(req: Request) {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "لاگین نشده" }, { status: 401 });

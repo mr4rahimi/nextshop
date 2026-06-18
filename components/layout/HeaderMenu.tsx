@@ -33,7 +33,7 @@ export default function HeaderMenu() {
       <div className="container">
         <ul className="flex items-center gap-1 py-2" dir="rtl">
 
-          {/* مگامنو */}
+          {}
           {megaCats.length > 0 && (
             <li className="relative" onMouseLeave={megaLeave}>
               <button onMouseEnter={() => megaEnter(megaCats[0].category.id)}
@@ -54,7 +54,7 @@ export default function HeaderMenu() {
                   className="absolute top-full right-0 mt-2 w-[900px] rounded-3xl border border-gray-100 dark:border-white/10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl shadow-2xl overflow-hidden z-50"
                 >
                   <div className="flex" style={{ maxHeight: "min(500px, calc(100vh - 120px))" }}>
-                    {/* ستون دسته‌ها */}
+                    {}
                     <div className="w-70 bg-gray-50/80 dark:bg-gray-800/40 border-l border-gray-100 dark:border-white/5 py-2 overflow-y-auto flex-shrink-0">
                       {megaCats.map(m => (
                         <button key={m.category.id} onMouseEnter={() => megaEnter(m.category.id)}
@@ -73,7 +73,7 @@ export default function HeaderMenu() {
                       ))}
                     </div>
 
-                    {/* محتوای دسته فعال */}
+                    {}
                     {activeCat && (
                       <div className="flex-1 flex gap-5 p-6 overflow-hidden">
                         <div className="flex-1 overflow-y-auto">
@@ -94,7 +94,7 @@ export default function HeaderMenu() {
                             ))}
                           </div>
                         </div>
-                        {/* تصویر */}
+                        {}
                         <div className="w-36 flex-shrink-0">
                           <Link href={`/categories/${activeCat.slug}`}
                             className="block relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-square group shadow-md">
@@ -118,7 +118,7 @@ export default function HeaderMenu() {
             </li>
           )}
 
-          {/* لینک‌های منو */}
+          {}
           {menuItems.map(item => (
             <li key={item.id}>
               <Link href={item.url ?? "#"} target={item.openInNewTab ? "_blank" : undefined} rel={item.openInNewTab ? "noopener noreferrer" : undefined}

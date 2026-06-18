@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 
-// ── تبدیل رنگ ──────────────────────────────────────────────────────────────────
 function hexToRgb(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;
@@ -43,14 +42,12 @@ function hexToOklchString(hex: string): string {
   }
 }
 
-// ساخت scale از یه رنگ پایه
 function generateColorScale(baseHex: string, steps: number[]): Record<string, string> {
   try {
     const [r, g, b] = hexToRgb(baseHex);
     const [, C, H] = rgbToOklch(r, g, b);
     const result: Record<string, string> = {};
     steps.forEach(step => {
-      // L رو بر اساس step محاسبه کن (50=87%, 500=53%, 950=10%)
       const L = 0.97 - (step / 1000) * 0.87;
       const chroma = step === 50 || step === 100 ? C * 0.25 :
                      step === 200 ? C * 0.5 :
@@ -69,7 +66,6 @@ function generateColorScale(baseHex: string, steps: number[]): Record<string, st
   }
 }
 
-// oklch رو به hex تقریبی تبدیل می‌کنه برای color picker
 function oklchToHex(oklchStr: string): string {
   try {
     const match = oklchStr.match(/oklch\(([\d.]+)%\s+([\d.]+)\s+([\d.]+)\)/);
@@ -107,7 +103,6 @@ function oklchToHex(oklchStr: string): string {
   }
 }
 
-// ── تعریف گروه‌های رنگ ─────────────────────────────────────────────────────────
 const COLOR_STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 
 const DEFAULT_PRIMARY = "#3b82f6";
@@ -143,14 +138,13 @@ function buildCssVarsFromTheme(theme: ThemeConfig): Record<string, string> {
   return vars;
 }
 
-// ── کامپوننت پیش‌نمایش ─────────────────────────────────────────────────────────
 function ThemePreview({ theme }: { theme: ThemeConfig }) {
   const scale = generateColorScale(theme.primaryBase, COLOR_STEPS);
   const secScale = generateColorScale(theme.secondaryBase, COLOR_STEPS);
 
   return (
     <div className="space-y-4">
-      {/* دکمه‌ها */}
+      {}
       <div className="flex flex-wrap gap-3">
         <div className="px-5 py-2.5 rounded-xl text-white text-sm font-black"
           style={{ backgroundColor: scale["step-500"] }}>
@@ -166,7 +160,7 @@ function ThemePreview({ theme }: { theme: ThemeConfig }) {
         </div>
       </div>
 
-      {/* Scale اصلی */}
+      {}
       <div>
         <p className="text-xs font-black text-gray-400 mb-2">رنگ‌های primary</p>
         <div className="flex rounded-xl overflow-hidden">
@@ -181,7 +175,7 @@ function ThemePreview({ theme }: { theme: ThemeConfig }) {
         </div>
       </div>
 
-      {/* Scale ثانویه */}
+      {}
       <div>
         <p className="text-xs font-black text-gray-400 mb-2">رنگ‌های secondary</p>
         <div className="flex rounded-xl overflow-hidden">
@@ -196,7 +190,7 @@ function ThemePreview({ theme }: { theme: ThemeConfig }) {
         </div>
       </div>
 
-      {/* رنگ‌های custom */}
+      {}
       <div className="flex gap-3">
         <div className="flex-1 h-12 rounded-xl border border-gray-200 dark:border-white/10 flex items-center justify-center text-xs font-black text-gray-700"
           style={{ backgroundColor: theme.customLight }}>
@@ -208,7 +202,7 @@ function ThemePreview({ theme }: { theme: ThemeConfig }) {
         </div>
       </div>
 
-      {/* کارت نمونه */}
+      {}
       <div className="p-4 rounded-2xl border"
         style={{ backgroundColor: theme.customLight, borderColor: scale["step-100"] }}>
         <div className="flex items-center justify-between">
@@ -226,7 +220,6 @@ function ThemePreview({ theme }: { theme: ThemeConfig }) {
   );
 }
 
-// ── صفحه اصلی ──────────────────────────────────────────────────────────────────
 export default function AppearancePage() {
   const [theme, setTheme] = useState<ThemeConfig>({
     primaryBase: DEFAULT_PRIMARY,
@@ -295,7 +288,6 @@ export default function AppearancePage() {
     </div>
   );
 
-  // ── preset های آماده ──────────────────────────────────────────────────────────
   const PRESETS = [
     { name: "آبی (پیش‌فرض)", primary: "#3b82f6", secondary: "#ef4444" },
     { name: "بنفش",          primary: "#8b5cf6", secondary: "#f59e0b" },
@@ -309,7 +301,7 @@ export default function AppearancePage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
-      {/* هدر */}
+      {}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">تنظیمات ظاهری</h1>
@@ -332,9 +324,9 @@ export default function AppearancePage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        {/* ستون چپ: کنترل‌ها */}
+        {}
         <div className="space-y-4">
-          {/* preset ها */}
+          {}
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">پالت‌های آماده</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -356,7 +348,7 @@ export default function AppearancePage() {
             </div>
           </div>
 
-          {/* رنگ primary */}
+          {}
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">رنگ اصلی (Primary)</h2>
             <p className="text-xs text-gray-400 mb-4">رنگ دکمه‌ها، لینک‌ها، و عناصر اصلی سایت</p>
@@ -382,7 +374,7 @@ export default function AppearancePage() {
               </div>
             </div>
 
-            {/* نمایش شیدهای خودکار */}
+            {}
             <div className="flex rounded-xl overflow-hidden">
               {COLOR_STEPS.map(step => {
                 const scale = generateColorScale(theme.primaryBase, COLOR_STEPS);
@@ -401,7 +393,7 @@ export default function AppearancePage() {
             </div>
           </div>
 
-          {/* رنگ secondary */}
+          {}
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">رنگ ثانویه (Secondary)</h2>
             <p className="text-xs text-gray-400 mb-4">رنگ تخفیف‌ها، برچسب‌های ویژه و تأکیدهای ثانویه</p>
@@ -438,7 +430,7 @@ export default function AppearancePage() {
             </div>
           </div>
 
-          {/* رنگ‌های custom */}
+          {}
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">رنگ‌های پس‌زمینه</h2>
             <div className="grid grid-cols-2 gap-4">
@@ -472,13 +464,13 @@ export default function AppearancePage() {
           </div>
         </div>
 
-        {/* ستون راست: پیش‌نمایش */}
+        {}
         <div className="space-y-4">
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 sticky top-8">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">پیش‌نمایش زنده</h2>
             <ThemePreview theme={theme} />
 
-            {/* نمایش CSS variables */}
+            {}
             <div className="mt-5 pt-4 border-t border-gray-100 dark:border-white/[0.06]">
               <p className="text-xs font-black text-gray-400 mb-2">CSS Variables تولیدشده</p>
               <div className="bg-gray-50 dark:bg-black/20 rounded-xl p-3 max-h-48 overflow-y-auto">

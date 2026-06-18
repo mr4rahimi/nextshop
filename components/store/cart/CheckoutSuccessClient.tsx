@@ -34,7 +34,7 @@ export default function CheckoutSuccessClient({ order }: Props) {
 
           <div className="relative flex flex-col items-center text-center">
 
-            {/* آیکون موفق */}
+            {}
             <div className="relative mb-8">
               <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-2xl animate-pulse" />
               <div className="relative w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.4)] border-4 border-white dark:border-gray-900">
@@ -47,7 +47,7 @@ export default function CheckoutSuccessClient({ order }: Props) {
             <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2">پرداخت با موفقیت انجام شد!</h2>
             <p className="text-gray-500 dark:text-gray-400 font-bold text-sm mb-10 uppercase tracking-widest">Order Confirmed Successfully</p>
 
-            {/* اطلاعات سفارش */}
+            {}
             <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
               <div className="p-6 bg-white/60 dark:bg-white/5 rounded-[2.5rem] border border-white/60 dark:border-white/10">
                 <span className="block text-[10px] font-black text-gray-400 mb-2">شماره سفارش</span>
@@ -66,7 +66,7 @@ export default function CheckoutSuccessClient({ order }: Props) {
               </div>
             </div>
 
-            {/* باکس وضعیت */}
+            {}
             <div className="w-full bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-[2.5rem] p-6 mb-10 flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-600">
@@ -89,7 +89,7 @@ export default function CheckoutSuccessClient({ order }: Props) {
               <p className="text-[11px] text-gray-400 font-bold mb-6">کد پیگیری پرداخت: <span className="text-gray-600 dark:text-gray-300 font-black">{ref}</span></p>
             )}
 
-            {/* دکمه‌ها */}
+            {}
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
               <Link href="/user/orders"
                 className="px-10 h-16 bg-primary-600 text-white font-black rounded-3xl shadow-xl shadow-primary-500/20 hover:bg-primary-700 transition-all active:scale-95 flex items-center justify-center">

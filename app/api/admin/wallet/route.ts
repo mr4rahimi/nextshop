@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-// GET — جستجوی کاربر با موبایل
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const phone = url.searchParams.get("phone")?.trim();
@@ -23,7 +22,6 @@ export async function GET(req: Request) {
   return NextResponse.json(serialize(user));
 }
 
-// POST — افزایش یا کاهش موجودی
 export async function POST(req: Request) {
   const body = await req.json();
   const { userId, amount, reason, type } = body;

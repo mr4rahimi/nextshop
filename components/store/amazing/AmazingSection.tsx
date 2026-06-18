@@ -37,7 +37,7 @@ export default function AmazingSection({ productIds = [], endsAt }: Props) {
         <div className="relative bg-white/40 dark:bg-white/[0.02] backdrop-blur-3xl rounded-[4rem] p-2 overflow-hidden border border-white/80 dark:border-white/10 shadow-2xl">
           <div className="relative z-10 flex flex-col lg:flex-row">
 
-            {/* چپ */}
+            {}
             <div className="w-full lg:w-1/3 xl:w-1/4 p-10 flex flex-col justify-between border-b lg:border-b-0 lg:border-l border-gray-100 dark:border-white/5">
               <div>
                 <span className="text-secondary-500 text-[11px] font-black uppercase">Special Offers</span>
@@ -55,7 +55,7 @@ export default function AmazingSection({ productIds = [], endsAt }: Props) {
               </button>
             </div>
 
-            {/* راست */}
+            {}
             <div className="w-full lg:w-2/3 xl:w-3/4 p-8 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
               {products.map(p => (
                 <AmazingCard key={p.id} {...p} />

@@ -24,7 +24,6 @@ export async function POST(req: Request) {
   if (!receiver || !phone || !province || !city || !addressLine)
     return NextResponse.json({ error: "فیلدهای اجباری را پر کنید" }, { status: 400 });
 
-  // اگه پیش‌فرض باشه بقیه رو false کن
   if (isDefault) {
     await prisma.address.updateMany({ where: { userId: user.id }, data: { isDefault: false } });
   }

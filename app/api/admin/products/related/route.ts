@@ -4,7 +4,6 @@ import { serialize } from "@/lib/serialize";
 
 export const runtime = "nodejs";
 
-// GET - گرفتن محصولات مرتبط یک محصول
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const productId = url.searchParams.get("productId");
@@ -28,7 +27,6 @@ export async function GET(req: Request) {
   return NextResponse.json(serialize(related.map(r => r.related)));
 }
 
-// POST - اضافه کردن محصول مرتبط
 export async function POST(req: Request) {
   const { productId, relatedId } = await req.json();
   const count = await prisma.productRelated.count({ where: { productId } });
@@ -42,7 +40,6 @@ export async function POST(req: Request) {
   return NextResponse.json({ success: true });
 }
 
-// DELETE - حذف محصول مرتبط
 export async function DELETE(req: Request) {
   const { productId, relatedId } = await req.json();
   await prisma.productRelated.deleteMany({ where: { productId, relatedId } });

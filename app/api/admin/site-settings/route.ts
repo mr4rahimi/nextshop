@@ -32,7 +32,6 @@ export async function PUT(req: Request) {
     trustBadge4:     data.trustBadge4     ?? null,
   };
 
-  // فیلدهای پرداخت/ارسال هم حفظ بشن اگه ارسال شدن
   if (data.cardNumber    !== undefined) updateData.cardNumber    = data.cardNumber    ?? null;
   if (data.cardHolder    !== undefined) updateData.cardHolder    = data.cardHolder    ?? null;
   if (data.cardBank      !== undefined) updateData.cardBank      = data.cardBank      ?? null;

@@ -30,7 +30,6 @@ export default function AddressesClient({ initialAddresses }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // شهرهای استان انتخاب‌شده
   const cities = PROVINCES.find(p => p.name === form.province)?.cities ?? [];
 
   function openAdd() { setEditing(null); setForm({ ...EMPTY_FORM }); setShowForm(true); }
@@ -93,7 +92,7 @@ export default function AddressesClient({ initialAddresses }: Props) {
       <div className="relative overflow-hidden bg-white/40 dark:bg-gray-950/60 backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-none">
         <div className="absolute -top-12 -left-12 w-32 h-32 bg-primary-500/10 rounded-full blur-3xl" />
 
-        {/* Header کارت */}
+        {}
         <div className="relative flex flex-wrap items-center justify-between gap-4 mb-8 pb-6 border-b border-gray-200/30 dark:border-white/5">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center border border-primary-500/20">
@@ -116,7 +115,7 @@ export default function AddressesClient({ initialAddresses }: Props) {
           </button>
         </div>
 
-        {/* لیست آدرس‌ها */}
+        {}
         {addresses.length === 0 && !showForm ? (
           <div className="text-center py-12 relative z-10">
             <div className="w-16 h-16 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -139,7 +138,7 @@ export default function AddressesClient({ initialAddresses }: Props) {
                     : "bg-white/20 dark:bg-white/5 border-white/40 dark:border-white/10 hover:border-primary-500/30 group"
                 }`}>
 
-                {/* badge پیش‌فرض */}
+                {}
                 {a.isDefault && (
                   <div className="absolute top-4 left-4">
                     <span className="px-2 py-1 rounded-lg bg-primary-500 text-white text-[8px] font-black uppercase">پیش‌فرض</span>
@@ -204,7 +203,7 @@ export default function AddressesClient({ initialAddresses }: Props) {
           </div>
         )}
 
-        {/* فرم افزودن/ویرایش */}
+        {}
         {showForm && (
           <div className="mt-8 pt-8 border-t border-gray-200/30 dark:border-white/5 relative z-10">
             <h3 className="text-base font-black text-gray-900 dark:text-white mb-6">
@@ -214,7 +213,7 @@ export default function AddressesClient({ initialAddresses }: Props) {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                {/* عنوان */}
+                {}
                 <div className="space-y-2">
                   <label className="text-[11px] font-black text-gray-600 dark:text-gray-400 mr-2">عنوان آدرس</label>
                   <input type="text" placeholder="مثلاً: منزل، محل کار"
@@ -222,7 +221,7 @@ export default function AddressesClient({ initialAddresses }: Props) {
                     value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
                 </div>
 
-                {/* گیرنده */}
+                {}
                 <div className="space-y-2">
                   <label className="text-[11px] font-black text-gray-600 dark:text-gray-400 mr-2">نام گیرنده *</label>
                   <input type="text" placeholder="نام و نام‌خانوادگی"
@@ -230,7 +229,7 @@ export default function AddressesClient({ initialAddresses }: Props) {
                     value={form.receiver} onChange={e => setForm(f => ({ ...f, receiver: e.target.value }))} />
                 </div>
 
-                {/* شماره تماس */}
+                {}
                 <div className="space-y-2">
                   <label className="text-[11px] font-black text-gray-600 dark:text-gray-400 mr-2">شماره تماس تحویل‌گیرنده *</label>
                   <input type="tel" placeholder="09120000000" dir="ltr"
@@ -238,7 +237,7 @@ export default function AddressesClient({ initialAddresses }: Props) {
                     value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, "") }))} />
                 </div>
 
-                {/* استان و شهر */}
+                {}
                 <div className="space-y-2">
                   <label className="text-[11px] font-black text-gray-600 dark:text-gray-400 mr-2">استان و شهر *</label>
                   <div className="grid grid-cols-2 gap-3">
@@ -262,7 +261,7 @@ export default function AddressesClient({ initialAddresses }: Props) {
                   </div>
                 </div>
 
-                {/* کد پستی */}
+                {}
                 <div className="space-y-2">
                   <label className="text-[11px] font-black text-gray-600 dark:text-gray-400 mr-2">کد پستی (۱۰ رقمی)</label>
                   <input type="text" placeholder="1234567890" dir="ltr" maxLength={10}
@@ -271,7 +270,7 @@ export default function AddressesClient({ initialAddresses }: Props) {
                 </div>
               </div>
 
-              {/* نشانی */}
+              {}
               <div className="space-y-2">
                 <label className="text-[11px] font-black text-gray-600 dark:text-gray-400 mr-2">نشانی دقیق پستی *</label>
                 <textarea rows={3} placeholder="خیابان، کوچه، پلاک، واحد..."
@@ -279,7 +278,7 @@ export default function AddressesClient({ initialAddresses }: Props) {
                   value={form.addressLine} onChange={e => setForm(f => ({ ...f, addressLine: e.target.value }))} />
               </div>
 
-              {/* پیش‌فرض */}
+              {}
               <label className="flex items-center gap-3 cursor-pointer">
                 <div className="relative">
                   <input type="checkbox" className="sr-only peer"

@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { FlowNode } from "@/lib/chat-flow";
 
-// ─── انواع ───────────────────────────────────────────────────────────────────
 type Bubble = { role: "user" | "assistant"; content: string };
 
 type ChatContext =
@@ -35,7 +34,6 @@ export default function AiChat() {
   const [inputMode, setInputMode] = useState(false);
   const [activeContext, setActiveContext] = useState<ChatContext>(null);
 
-  // پیام‌هایی که واقعاً به مدل می‌رود (در محدوده‌ی context فعلی)
   const [apiMessages, setApiMessages] = useState<Bubble[]>([]);
 
   const [input, setInput] = useState("");
@@ -46,7 +44,6 @@ export default function AiChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // ─── بارگذاری تنظیمات هنگام اولین باز شدن ──────────────────────────────────
   useEffect(() => {
     if (open && !config) {
       fetch("/api/store/chat-config")
@@ -59,7 +56,6 @@ export default function AiChat() {
     }
   }, [open, config]);
 
-  // بازیابی وضعیت چت بعد از رفرش
   useEffect(() => {
     try {
       const saved = localStorage.getItem("chat_state");
@@ -79,7 +75,6 @@ export default function AiChat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ذخیره‌ی خودکار وضعیت
   useEffect(() => {
     if (bubbles.length === 0) return;
     try {
@@ -96,8 +91,6 @@ export default function AiChat() {
       );
     } catch {}
   }, [bubbles, buttons, inputMode, activeContext, apiMessages]);
-
-
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -117,7 +110,6 @@ export default function AiChat() {
     }
   }
 
-  // ─── شروع از منوی اصلی ─────────────────────────────────────────────────────
   function initRoot(cfg: ChatConfig) {
     setBubbles([{ role: "assistant", content: cfg.welcomeMessage }]);
     setButtons(flowToButtons(cfg.flow, false));
@@ -138,9 +130,7 @@ export default function AiChat() {
     if (config) initRoot(config);
   }
 
-  // ─── کلیک روی یک node ──────────────────────────────────────────────────────
   async function handleNode(node: FlowNode) {
-    // حباب انتخاب کاربر
     setBubbles((b) => [...b, { role: "user", content: node.label }]);
 
     const isMenu = node.children.length > 0;
@@ -154,7 +144,6 @@ export default function AiChat() {
       return;
     }
 
-    // برگ → بر اساس action
     const action = node.action ?? { type: "free_text" as const };
 
     if (node.message?.trim()) {
@@ -219,7 +208,6 @@ export default function AiChat() {
     }
   }
 
-  // ─── کلیک روی یک دسته‌بندی ─────────────────────────────────────────────────
   function handleCategory(cat: CategoryItem) {
     setBubbles((b) => [
       ...b,
@@ -232,7 +220,6 @@ export default function AiChat() {
     setInputMode(true);
   }
 
-  // ─── دکمه‌ی سایر ───────────────────────────────────────────────────────────
   function handleOther() {
     setBubbles((b) => [
       ...b,
@@ -245,7 +232,6 @@ export default function AiChat() {
     setInputMode(true);
   }
 
-  // ─── دریافت دسته‌بندی‌ها ────────────────────────────────────────────────────
   async function fetchCategories(): Promise<CategoryItem[]> {
     try {
       const res = await fetch("/api/store/categories-list");
@@ -256,7 +242,6 @@ export default function AiChat() {
     }
   }
 
-  // ─── ارسال پیام متنی به مدل ─────────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
@@ -282,7 +267,6 @@ export default function AiChat() {
       });
       if (!res.ok) throw new Error("server");
 
-      // conversationId را از هدر بگیر و نگه دار
       const convId = res.headers.get("X-Conversation-Id");
       if (convId) conversationIdRef.current = convId;
 
@@ -341,12 +325,11 @@ export default function AiChat() {
     }
   };
 
-  // اگه چت غیرفعاله، چیزی نشون نده
   if (config && !config.isEnabled) return null;
 
   return (
     <>
-      {/* دکمه‌ی شناور */}
+      {}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="دستیار خرید"
@@ -370,7 +353,7 @@ export default function AiChat() {
         )}
       </button>
 
-      {/* پاپ‌آپ */}
+      {}
       {open && (
         <div dir="rtl" style={{
           position: "fixed", bottom: "92px", right: "24px", zIndex: 9998,
@@ -387,7 +370,7 @@ export default function AiChat() {
             .td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
           `}</style>
 
-          {/* هدر */}
+          {}
           <div style={{
             background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
             padding: "14px 16px", display: "flex", alignItems: "center", gap: "10px",
@@ -422,7 +405,7 @@ export default function AiChat() {
             </button>
           </div>
 
-          {/* بدنه */}
+          {}
           <div style={{
             flex: 1, overflowY: "auto", padding: "16px",
             display: "flex", flexDirection: "column", gap: "10px",
@@ -455,7 +438,7 @@ export default function AiChat() {
               </div>
             ))}
 
-            {/* دکمه‌های مرحله‌ی فعلی */}
+            {}
             {buttons.length > 0 && !loading && (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "4px" }}>
                 {buttons.map((item, i) => {
@@ -504,7 +487,7 @@ export default function AiChat() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* ورودی متنی — فقط در حالت inputMode */}
+          {}
           {inputMode && (
             <div style={{
               padding: "12px", borderTop: "1px solid #f3f4f6",

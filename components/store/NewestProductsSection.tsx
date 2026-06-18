@@ -156,7 +156,6 @@ export default function NewestProductsSection({ categoryIds = [], perCategory = 
 
   if (!loading && products.length === 0) return null;
 
-  // ساخت تب‌ها از دسته‌بندی‌های منحصربه‌فرد
   const uniqueCategories = Array.from(
     new Map(
       products

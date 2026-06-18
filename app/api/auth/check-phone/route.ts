@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-// بررسی وجود شماره در سیستم
 export async function POST(req: Request) {
   const { phone } = await req.json();
 

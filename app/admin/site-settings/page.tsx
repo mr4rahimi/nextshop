@@ -108,9 +108,6 @@ export default function AdminSiteSettingsPage() {
     setSettings(s => ({ ...s, [key]: val }));
   }
 
-  // آپلود تصویر — به عنوان URL ذخیره میشه (ادمین URL وارد می‌کنه)
-  // در آینده می‌شه به آپلود واقعی تبدیل کرد
-
   if (loading) return (
     <div className="p-6 space-y-4">
       {Array.from({ length: 4 }).map((_, i) => (
@@ -166,18 +163,18 @@ export default function AdminSiteSettingsPage() {
         ))}
       </div>
 
-      {/* ── تب عمومی ───────────────────────────────────────────── */}
+      {}
       {tab === "general" && (
         <div className="space-y-6">
 
-          {/* لوگو و فاویکن */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-6">
             <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
               <span className="w-1.5 h-5 bg-blue-600 rounded-full" />
               هویت بصری
             </h3>
 
-            {/* لوگو */}
+            {}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <label className={lbl}>لوگو سایت</label>
@@ -198,7 +195,7 @@ export default function AdminSiteSettingsPage() {
                 </div>
               </div>
 
-              {/* فاویکن */}
+              {}
               <div className="space-y-3">
                 <label className={lbl}>فاویکن (Favicon)</label>
                 <div className="flex items-start gap-4">
@@ -220,7 +217,7 @@ export default function AdminSiteSettingsPage() {
             </div>
           </div>
 
-          {/* اطلاعات سایت */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
             <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
               <span className="w-1.5 h-5 bg-blue-600 rounded-full" />
@@ -270,7 +267,7 @@ export default function AdminSiteSettingsPage() {
         </div>
       )}
 
-      {/* ── تب شبکه‌های اجتماعی ────────────────────────────────── */}
+      {}
       {tab === "social" && (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5">
           <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
@@ -301,7 +298,7 @@ export default function AdminSiteSettingsPage() {
         </div>
       )}
 
-      {/* ── تب پیشرفته ──────────────────────────────────────────── */}
+      {}
       {tab === "advanced" && (
         <div className="space-y-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
@@ -310,7 +307,7 @@ export default function AdminSiteSettingsPage() {
               تنظیمات پیشرفته
             </h3>
 
-            {/* حالت تعمیر */}
+            {}
             <div className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all ${settings.maintenanceMode ? "border-amber-400 bg-amber-50 dark:bg-amber-900/10" : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"}`}>
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${settings.maintenanceMode ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600" : "bg-gray-100 dark:bg-gray-800 text-gray-400"}`}>
@@ -351,7 +348,7 @@ export default function AdminSiteSettingsPage() {
             )}
           </div>
 
-          {/* پیش‌نمایش SEO */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
             <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
               <span className="w-1.5 h-5 bg-blue-600 rounded-full" />
@@ -375,7 +372,7 @@ export default function AdminSiteSettingsPage() {
         </div>
       )}
 
-      {/* نمادهای اعتماد — فقط در تب advanced */}
+      {}
       {tab === "advanced" && (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
           <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
@@ -404,7 +401,7 @@ export default function AdminSiteSettingsPage() {
 
       {tab === "sms" && (
         <div className="space-y-6">
-          {/* تنظیمات اتصال */}
+          {}
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-gray-900 dark:text-white">تنظیمات اتصال ایران پیامک</h3>
@@ -432,7 +429,7 @@ export default function AdminSiteSettingsPage() {
             </div>
           </div>
       
-          {/* کدهای پترن */}
+          {}
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4">کدهای پترن پیامک</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -487,7 +484,7 @@ export default function AdminSiteSettingsPage() {
         </div>
       )}
 
-      {/* دکمه ذخیره پایین صفحه */}
+      {}
       <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-800">
         <button onClick={handleSave} disabled={saving}
           className="px-8 py-3 bg-blue-600 text-white rounded-xl text-sm font-black hover:bg-blue-700 disabled:opacity-60 transition-all shadow-lg shadow-blue-500/20">

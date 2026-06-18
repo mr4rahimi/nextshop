@@ -34,7 +34,6 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleDateString("fa-IR", { year: "numeric", month: "long", day: "numeric" });
 }
 
-// استخراج عناوین H2 از HTML
 function extractHeadings(html: string) {
   const matches = [...html.matchAll(/<h2[^>]*id="([^"]*)"[^>]*>(.*?)<\/h2>/gi)];
   if (matches.length === 0) {

@@ -80,7 +80,7 @@ export default function AdminBlogPage() {
         </div>
       </div>
 
-      {/* فیلتر */}
+      {}
       <div className="flex flex-wrap items-center gap-3">
         <form onSubmit={e => { e.preventDefault(); setQ(qInput); setPage(1); }} className="flex gap-2">
           <input className="border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-900 dark:text-white outline-none focus:border-blue-500 w-52"
@@ -99,7 +99,7 @@ export default function AdminBlogPage() {
         </div>
       </div>
 
-      {/* جدول */}
+      {}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         {loading ? (
           <div className="space-y-px">{Array.from({length:6}).map((_,i) => <div key={i} className="h-16 bg-gray-50 dark:bg-gray-800/50 animate-pulse" />)}</div>

@@ -9,7 +9,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const max = await prisma.footerItem.aggregate({ where: { columnId }, _max: { sortOrder: true } });
 
   if (data.bulk) {
-    // آپدیت ترتیب bulk
     await Promise.all(data.items.map((item: { id: string; sortOrder: number }) =>
       prisma.footerItem.update({ where: { id: item.id }, data: { sortOrder: item.sortOrder } })
     ));

@@ -215,7 +215,7 @@ export default function ProductsByBrandSection({
           {/* Header */}
           <div className="flex items-end justify-between mb-6 gap-4 flex-wrap">
             <div className="flex items-center gap-6">
-              {/* Brand logo یا آیکون پیش‌فرض */}
+              {}
               <div className="relative w-16 h-16 bg-white dark:bg-black border border-gray-100 dark:border-primary-500/40 rounded-[1.8rem] flex items-center justify-center shadow-2xl overflow-hidden">
                 {brandLogoUrl ? (
                   <img src={brandLogoUrl} alt={brandTitle} className="w-10 h-10 object-contain" />

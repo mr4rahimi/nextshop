@@ -225,7 +225,7 @@ export default function HeroSlidesAdminPage() {
                 </svg>
               </div>
 
-              {/* شماره */}
+              {}
               <span className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-black text-gray-500 flex-shrink-0">
                 {index + 1}
               </span>

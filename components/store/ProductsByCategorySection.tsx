@@ -164,7 +164,6 @@ export default function ProductsByCategorySection({
   const [loading, setLoading] = useState(true);
   const [swiperReady, setSwiperReady] = useState(false);
   const swiperRef = useRef<any>(null);
-  // unique class برای هر instance (چون ممکنه چند ویجت داشته باشیم)
   const uid = useRef(`pbc-${Math.random().toString(36).slice(2, 7)}`);
 
   useEffect(() => {

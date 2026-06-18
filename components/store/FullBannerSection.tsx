@@ -19,7 +19,7 @@ export default function FullBannerSection({ imageUrl, linkUrl, alt = "بنر" }:
         alt={alt}
         className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-[1.02]"
       />
-      {/* overlay خفیف روی هاور */}
+      {}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500 rounded-[2rem]" />
     </div>
   );

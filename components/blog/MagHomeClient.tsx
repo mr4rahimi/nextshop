@@ -35,7 +35,7 @@ function PostCard({ post, featured = false }: { post: Post; featured?: boolean }
         )}
         {/* gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-        {/* محتوا */}
+        {}
         <div className="absolute bottom-0 right-0 left-0 p-8">
           {post.category && (
             <span className="inline-block px-3 py-1 bg-primary-500 text-white text-[10px] font-black rounded-xl mb-3 uppercase tracking-wider">
@@ -65,7 +65,7 @@ function PostCard({ post, featured = false }: { post: Post; featured?: boolean }
   return (
     <Link href={`/mag/${post.slug}`}
       className="group bg-white dark:bg-gray-900/60 backdrop-blur-sm rounded-[2rem] border border-gray-100 dark:border-white/5 overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
-      {/* تصویر */}
+      {}
       <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800 overflow-hidden">
         {post.coverImage ? (
           <img src={post.coverImage} alt={post.title}
@@ -83,7 +83,7 @@ function PostCard({ post, featured = false }: { post: Post; featured?: boolean }
           </span>
         )}
       </div>
-      {/* متن */}
+      {}
       <div className="p-5 flex flex-col flex-1">
         <h3 className="font-black text-gray-900 dark:text-white leading-relaxed line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors mb-2">
           {post.title}
@@ -174,7 +174,7 @@ export default function MagHomeClient({ initialPosts, categories }: Props) {
 
       <div className="container py-12 space-y-12">
 
-        {/* ── فیلتر دسته‌بندی ──────────────────────────────────────── */}
+        {}
         {categories.length > 0 && (
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
             <button onClick={() => filterByCategory("")}
@@ -209,19 +209,19 @@ export default function MagHomeClient({ initialPosts, categories }: Props) {
           </div>
         ) : (
           <>
-            {/* مطلب ویژه */}
+            {}
             {featuredPost && !activeCategory && (
               <PostCard post={featuredPost} featured />
             )}
 
-            {/* گرید مطالب */}
+            {}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {(activeCategory ? posts : restPosts).map(post => (
                 <PostCard key={post.id} post={post} />
               ))}
             </div>
 
-            {/* دکمه بیشتر */}
+            {}
             {hasMore && (
               <div className="flex justify-center">
                 <button onClick={loadMore} disabled={loading}

@@ -5,7 +5,7 @@ import { useCart, CartProduct } from "@/components/store/cart/CartContext";
 interface Props {
   product: CartProduct;
   className?: string;
-  variant?: "icon" | "full"; // icon = دکمه + کوچک | full = تمام عرض با متن
+  variant?: "icon" | "full";
 }
 
 export default function AddToCartButton({ product, className, variant = "icon" }: Props) {
@@ -13,7 +13,6 @@ export default function AddToCartButton({ product, className, variant = "icon" }
   const cartItem = items.find(i => i.productId === product.id);
   const qty = cartItem?.qty ?? 0;
 
-  // ── حالت icon: دکمه + کوچک یا counter ─────────────────────────────────────
   if (variant === "icon") {
     if (qty === 0) {
       return (
@@ -48,7 +47,6 @@ export default function AddToCartButton({ product, className, variant = "icon" }
     );
   }
 
-  // ── حالت full: تمام عرض با متن ────────────────────────────────────────────
   if (qty === 0) {
     return (
       <button

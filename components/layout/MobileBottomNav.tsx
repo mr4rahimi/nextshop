@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useCart } from "@/components/store/cart/CartContext";
 import { useWishlist } from "@/components/store/wishlist/WishlistContext";
 
-// شماره تلفن از site-settings — فعلاً استاتیک، بعداً داینامیک
 const STORE_PHONE = "02100000000";
 
 export default function MobileBottomNav({ phone }: { phone?: string | null }) {
@@ -23,7 +22,7 @@ export default function MobileBottomNav({ phone }: { phone?: string | null }) {
       <div className="relative bg-white/80 dark:bg-gray-950/90 backdrop-blur-2xl border border-gray-200 dark:border-gray-800 rounded-3xl px-2 py-3 shadow-2xl shadow-black/10 dark:shadow-black/40">
         <ul className="flex items-center justify-around">
 
-          {/* خانه */}
+          {}
           <li>
             <Link href="/"
               className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors ${isActive("/") ? "text-primary-600 dark:text-primary-400" : "text-gray-400 dark:text-gray-500"}`}>
@@ -37,7 +36,7 @@ export default function MobileBottomNav({ phone }: { phone?: string | null }) {
             </Link>
           </li>
 
-          {/* علاقه‌مندی */}
+          {}
           <li>
             <Link href="/user/wishlist"
               className={`relative flex flex-col items-center gap-1 px-3 py-1 transition-colors ${isActive("/user/wishlist") ? "text-secondary-500" : "text-gray-400 dark:text-gray-500"}`}>
@@ -55,7 +54,7 @@ export default function MobileBottomNav({ phone }: { phone?: string | null }) {
             </Link>
           </li>
 
-          {/* سبد خرید — وسط بالاتر */}
+          {}
           <li className="-mt-8">
             <Link href="/cart"
               className="relative flex items-center justify-center w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-2xl text-white shadow-lg shadow-primary-500/40 transition-all active:scale-95">
@@ -70,7 +69,7 @@ export default function MobileBottomNav({ phone }: { phone?: string | null }) {
             </Link>
           </li>
 
-          {/* پشتیبانی — تماس مستقیم */}
+          {}
           <li>
             <a href={`tel:${tel}`}
               className="flex flex-col items-center gap-1 px-3 py-1 text-gray-400 dark:text-gray-500 hover:text-emerald-500 transition-colors">
@@ -81,7 +80,7 @@ export default function MobileBottomNav({ phone }: { phone?: string | null }) {
             </a>
           </li>
 
-          {/* پروفایل */}
+          {}
           <li>
             <Link href="/user"
               className={`flex flex-col items-center gap-1 px-3 py-1 transition-colors ${isActive("/user") && !isActive("/user/wishlist") ? "text-primary-600 dark:text-primary-400" : "text-gray-400 dark:text-gray-500"}`}>

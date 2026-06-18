@@ -69,7 +69,6 @@ export default function AdminsPage() {
 
     try {
       if (editingAdmin) {
-        // ویرایش ادمین موجود
         const res = await fetch(`/api/admin/users/${editingAdmin.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -83,7 +82,6 @@ export default function AdminsPage() {
         });
         if (!res.ok) throw new Error("خطا در ویرایش");
       } else {
-        // ادمین جدید — اول register کن بعد role رو ADMIN کن
         const res = await fetch("/api/admin/admins", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -121,7 +119,7 @@ export default function AdminsPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6" dir="rtl">
 
-      {/* هدر */}
+      {}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-gray-900 dark:text-white">مدیریت ادمین‌ها</h1>
@@ -136,7 +134,7 @@ export default function AdminsPage() {
         </button>
       </div>
 
-      {/* لیست */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-gray-400">در حال بارگذاری...</div>
@@ -206,7 +204,7 @@ export default function AdminsPage() {
         )}
       </div>
 
-      {/* مودال */}
+      {}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-md shadow-2xl">

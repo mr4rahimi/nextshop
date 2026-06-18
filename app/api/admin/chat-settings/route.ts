@@ -4,30 +4,23 @@ import { getAuthUser } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 export const runtime = "nodejs";
 
-// ساختار پیش‌فرض تنظیمات چت
 const DEFAULT_CHAT_SETTINGS = {
-  // اطلاعات تماس
   phone: "",
   email: "",
   address: "",
   workingHours: "",
-  // شبکه‌های اجتماعی
   socials: {
     instagram: "",
     telegram: "",
     whatsapp: "",
   },
-  // ارسال و گارانتی
   shippingInfo: "",
   shippingCost: "",
   warrantyInfo: "",
-  // اطلاعات کلی
   aboutBusiness: "",
-  // چت
   welcomeMessage: "سلام! من دستیار خرید این فروشگاه هستم. چطور می‌تونم کمکت کنم؟",
   isEnabled: true,
   historyLimit: 4,  
-  // سوالات متداول — آرایه‌ای از { question, answer }
   faq: [] as { question: string; answer: string }[],
 };
 
@@ -36,7 +29,6 @@ export async function GET() {
     where: { id: "singleton" },
     select: { chatSettings: true },
   });
-
 
   const saved = (settings?.chatSettings as Record<string, unknown>) ?? {};
   return NextResponse.json({ ...DEFAULT_CHAT_SETTINGS, ...saved });

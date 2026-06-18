@@ -4,7 +4,6 @@ import { serialize } from "@/lib/serialize";
 
 export const runtime = "nodejs";
 
-// دریافت دسته‌بندی‌های انتخاب‌شده بر اساس ids
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const ids = url.searchParams.get("ids")?.split(",").filter(Boolean) ?? [];
@@ -18,7 +17,6 @@ export async function GET(req: Request) {
     select: { id: true, title: true, slug: true, imageUrl: true },
   });
 
-  // مرتب کردن بر اساس ترتیب ids (ترتیب انتخاب ادمین)
   const sorted = ids
     .map(id => categories.find(c => c.id === id))
     .filter(Boolean);

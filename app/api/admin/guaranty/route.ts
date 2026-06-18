@@ -58,7 +58,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "تمام فیلدهای ضروری را وارد کنید" }, { status: 400 });
   }
 
-  // پیدا کردن یا ساختن کاربر
   let user = await prisma.user.findUnique({ where: { phone } });
   if (!user) {
     user = await prisma.user.create({
@@ -66,12 +65,11 @@ export async function POST(req: Request) {
         phone,
         firstName: firstName || null,
         lastName:  lastName  || null,
-        passwordHash: "", // کاربر بدون پسورد - فقط برای ثبت گارانتی توسط ادمین
+        passwordHash: "",
         role: "CUSTOMER",
       },
     });
   } else if (firstName || lastName) {
-    // اگه کاربر موجود بود ولی نام نداشت، آپدیت کن
     if (!user.firstName && !user.lastName) {
       user = await prisma.user.update({
         where: { id: user.id },

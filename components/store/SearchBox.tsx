@@ -47,10 +47,8 @@ export default function SearchBox() {
   const abortRef  = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // بارگذاری جستجوهای اخیر
   useEffect(() => { setRecent(getRecent()); }, []);
 
-  // کلیک خارج → بستن
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
@@ -134,7 +132,7 @@ export default function SearchBox() {
           placeholder="جستجوی سراسری در محصولات ..."
           className="w-full bg-gray-200/60 dark:bg-primary-950/60 border border-gray-300/30 dark:border-white/5 rounded-2xl py-4 pr-12 pl-14 text-sm font-bold text-right outline-none focus:bg-white dark:focus:bg-primary-950 focus:ring-4 focus:ring-primary-500/30 transition-all placeholder:text-gray-500"
         />
-        {/* آیکون جستجو */}
+        {}
         <div className="absolute right-4 flex items-center pointer-events-none text-gray-400">
           {loading
             ? <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -146,7 +144,7 @@ export default function SearchBox() {
               </svg>
           }
         </div>
-        {/* دکمه پاک کردن */}
+        {}
         {query && (
           <button onClick={() => { setQuery(""); setResult(null); inputRef.current?.focus(); }}
             className="absolute left-4 w-6 h-6 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-500 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
@@ -161,7 +159,7 @@ export default function SearchBox() {
       {showDropdown && (
         <div className="absolute top-full right-0 left-0 mt-2 bg-white dark:bg-gray-900 rounded-3xl shadow-2xl shadow-black/10 dark:shadow-black/40 border border-gray-100 dark:border-white/10 overflow-hidden z-[200]">
 
-          {/* جستجوهای اخیر — وقتی چیزی تایپ نشده */}
+          {}
           {!query && recent.length > 0 && (
             <div className="p-4">
               <div className="flex items-center justify-between mb-3">
@@ -185,7 +183,7 @@ export default function SearchBox() {
             </div>
           )}
 
-          {/* نتایج live */}
+          {}
           {query.length >= 2 && (
             <>
               {loading && !result && (
@@ -210,7 +208,7 @@ export default function SearchBox() {
 
               {result && hasResult && (
                 <div>
-                  {/* پیشنهادها — دسته و برند */}
+                  {}
                   {(result.suggestions.categories.length > 0 || result.suggestions.brands.length > 0) && (
                     <div className="px-4 pt-4 pb-3 border-b border-gray-100 dark:border-white/5">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">دسته‌بندی و برند</p>
@@ -238,7 +236,7 @@ export default function SearchBox() {
                     </div>
                   )}
 
-                  {/* محصولات */}
+                  {}
                   {result.products.length > 0 && (
                     <div className="p-2">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3 py-2">
@@ -257,16 +255,16 @@ export default function SearchBox() {
                             <Link key={p.id} href={`/products/${p.slug}`}
                               onClick={() => { setOpen(false); addRecent(query); setRecent(getRecent()); }}
                               className={`flex items-center gap-4 px-3 py-3 rounded-2xl transition-all ${i === activeIdx ? "bg-primary-50 dark:bg-primary-900/20" : "hover:bg-gray-50 dark:hover:bg-white/5"}`}>
-                              {/* تصویر */}
+                              {}
                               <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-white/5 flex items-center justify-center overflow-hidden flex-shrink-0">
                                 {img
                                   ? <img src={img} alt={p.title} className="w-full h-full object-contain p-1" />
                                   : <svg className="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                 }
                               </div>
-                              {/* اطلاعات */}
+                              {}
                               <div className="flex-1 min-w-0">
-                                {/* هایلایت query در عنوان */}
+                                {}
                                 <p className="text-sm font-black text-gray-900 dark:text-white line-clamp-1">
                                   {highlightMatch(p.title, query)}
                                 </p>
@@ -275,7 +273,7 @@ export default function SearchBox() {
                                   {p.brand && <span className="text-[10px] text-gray-400">{p.brand.title}</span>}
                                 </div>
                               </div>
-                              {/* قیمت */}
+                              {}
                               <div className="flex-shrink-0 text-left">
                                 {disc > 0 && (
                                   <span className="block text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded-lg mb-1 text-center">
@@ -294,7 +292,7 @@ export default function SearchBox() {
                     </div>
                   )}
 
-                  {/* دکمه مشاهده همه */}
+                  {}
                   {result.total > 6 && (
                     <div className="px-4 py-3 border-t border-gray-100 dark:border-white/5">
                       <button onClick={() => handleSubmit()}
@@ -316,7 +314,6 @@ export default function SearchBox() {
   );
 }
 
-// هایلایت قسمت تطبیق یافته
 function highlightMatch(text: string, query: string) {
   if (!query) return text;
   const idx = text.toLowerCase().indexOf(query.toLowerCase());

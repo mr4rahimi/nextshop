@@ -79,7 +79,6 @@ export default function MediaLibraryPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── debounce جستجو ──────────────────────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 400);
     return () => clearTimeout(t);
@@ -109,7 +108,6 @@ export default function MediaLibraryPage() {
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
-  // ── آپلود ──────────────────────────────────────────────────────────────────
   async function uploadFiles(files: FileList | File[]) {
     const arr = Array.from(files);
     if (arr.length === 0) return;
@@ -117,7 +115,6 @@ export default function MediaLibraryPage() {
     setUploading(true);
     setUploadProgress({ done: 0, all: arr.length });
 
-    // برای جلوگیری از حجم بسیار بزرگ یک درخواست، به‌صورت دسته‌ای (هر بار ۵ فایل) آپلود می‌کنیم
     const chunkSize = 5;
     let done = 0;
     try {
@@ -144,7 +141,6 @@ export default function MediaLibraryPage() {
     if (e.dataTransfer.files?.length) uploadFiles(e.dataTransfer.files);
   }
 
-  // ── انتخاب ─────────────────────────────────────────────────────────────────
   function toggleSelect(id: string) {
     setSelected(prev => {
       const next = new Set(prev);
@@ -166,7 +162,6 @@ export default function MediaLibraryPage() {
     fetchItems();
   }
 
-  // ── جزئیات ─────────────────────────────────────────────────────────────────
   function openDetail(item: MediaItem) {
     setDetailItem(item);
     setEditTitle(item.title ?? "");
@@ -218,7 +213,7 @@ export default function MediaLibraryPage() {
       onDragLeave={() => setDragOver(false)}
       onDrop={onDrop}
     >
-      {/* هدر */}
+      {}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">کتابخانه رسانه</h1>
@@ -243,7 +238,7 @@ export default function MediaLibraryPage() {
         </div>
       </div>
 
-      {/* نوار پیشرفت آپلود */}
+      {}
       {uploadProgress && (
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4">
           <div className="flex items-center justify-between mb-2">
@@ -257,7 +252,7 @@ export default function MediaLibraryPage() {
         </div>
       )}
 
-      {/* تب‌های نوع فایل */}
+      {}
       <div className="flex items-center gap-2 flex-wrap">
         {TYPE_TABS.map(tab => {
           const count = tab.value === "ALL"
@@ -279,7 +274,7 @@ export default function MediaLibraryPage() {
           );
         })}
 
-        {/* جستجو */}
+        {}
         <div className="relative flex-1 min-w-[200px]">
           <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -300,10 +295,10 @@ export default function MediaLibraryPage() {
         )}
       </div>
 
-      {/* گرید فایل‌ها */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-4 relative min-h-[300px]">
 
-        {/* اورلی درگ‌اند‌دراپ */}
+        {}
         {dragOver && (
           <div className="absolute inset-0 z-20 bg-blue-500/10 border-2 border-dashed border-blue-500 rounded-2xl flex items-center justify-center pointer-events-none">
             <p className="text-blue-600 dark:text-blue-400 font-black text-lg">فایل‌ها را اینجا رها کنید</p>
@@ -335,7 +330,7 @@ export default function MediaLibraryPage() {
                 }`}
                 onClick={() => openDetail(item)}
               >
-                {/* چک‌باکس انتخاب */}
+                {}
                 <button
                   onClick={e => { e.stopPropagation(); toggleSelect(item.id); }}
                   className={`absolute top-1.5 right-1.5 z-10 w-5 h-5 rounded-lg flex items-center justify-center transition-all border ${
@@ -351,7 +346,7 @@ export default function MediaLibraryPage() {
                   )}
                 </button>
 
-                {/* پیش‌نمایش */}
+                {}
                 <div className="aspect-square w-full">
                   {item.type === "IMAGE" ? (
                     <img src={item.url} alt={item.altText ?? item.originalName} className="w-full h-full object-cover" />
@@ -360,7 +355,7 @@ export default function MediaLibraryPage() {
                   )}
                 </div>
 
-                {/* اطلاعات */}
+                {}
                 <div className="p-2">
                   <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 truncate" title={item.originalName}>
                     {item.title || item.originalName}
@@ -373,7 +368,7 @@ export default function MediaLibraryPage() {
         )}
       </div>
 
-      {/* صفحه‌بندی */}
+      {}
       {!loading && total > PAGE_SIZE && (
         <div className="flex items-center justify-between flex-wrap gap-3">
           <p className="text-xs text-gray-400">
@@ -407,7 +402,7 @@ export default function MediaLibraryPage() {
         </div>
       )}
 
-      {/* مودال حذف گروهی */}
+      {}
       {confirmBulkDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
@@ -432,7 +427,7 @@ export default function MediaLibraryPage() {
         </div>
       )}
 
-      {/* مودال جزئیات */}
+      {}
       {detailItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setDetailItem(null)}>
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
@@ -449,7 +444,7 @@ export default function MediaLibraryPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* پیش‌نمایش */}
+              {}
               <div className="space-y-3">
                 <div className="aspect-square rounded-xl overflow-hidden bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
                   {detailItem.type === "IMAGE" ? (
@@ -473,7 +468,7 @@ export default function MediaLibraryPage() {
                 </div>
               </div>
 
-              {/* فرم ویرایش */}
+              {}
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-black text-gray-700 dark:text-gray-300">عنوان</label>

@@ -52,7 +52,6 @@ const DURATION_PRESETS = [
 ];
 
 export default function GuarantyListPage() {
-  // ── فرم ثبت ──────────────────────────────────────────────────────────────
   const [phone, setPhone] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -65,7 +64,6 @@ export default function GuarantyListPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState(false);
 
-  // ── لیست ─────────────────────────────────────────────────────────────────
   const [items, setItems] = useState<GuarantyItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -74,7 +72,6 @@ export default function GuarantyListPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sort, setSort] = useState("newest");
 
-  // ── ویرایش ───────────────────────────────────────────────────────────────
   const [editItem, setEditItem] = useState<GuarantyItem | null>(null);
   const [editSerial, setEditSerial] = useState("");
   const [editProduct, setEditProduct] = useState("");
@@ -87,7 +84,6 @@ export default function GuarantyListPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // ── lookup کاربر با موبایل ───────────────────────────────────────────────
   useEffect(() => {
     if (phone.length < 10) { setUserLookup("idle"); return; }
     const t = setTimeout(async () => {
@@ -109,7 +105,6 @@ export default function GuarantyListPage() {
     return () => clearTimeout(t);
   }, [phone]);
 
-  // ── debounce جستجو ──────────────────────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 400);
     return () => clearTimeout(t);
@@ -117,7 +112,6 @@ export default function GuarantyListPage() {
 
   useEffect(() => { setPage(1); }, [debouncedSearch, sort]);
 
-  // ── دریافت لیست ──────────────────────────────────────────────────────────────
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
@@ -139,7 +133,6 @@ export default function GuarantyListPage() {
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
-  // ── ثبت گارانتی ──────────────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
@@ -170,7 +163,6 @@ export default function GuarantyListPage() {
     }
   }
 
-  // ── ویرایش ───────────────────────────────────────────────────────────────
   function openEdit(item: GuarantyItem) {
     setEditItem(item);
     setEditSerial(item.serialNumber);
@@ -225,13 +217,13 @@ export default function GuarantyListPage() {
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
 
-      {/* هدر */}
+      {}
       <div>
         <h1 className="text-xl font-black text-gray-900 dark:text-white">مدیریت گارانتی</h1>
         <p className="text-xs text-gray-500 mt-0.5">{toFa(total)} گارانتی ثبت شده</p>
       </div>
 
-      {/* فرم ثبت گارانتی جدید */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
         <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">ثبت گارانتی جدید</h2>
 
@@ -290,7 +282,7 @@ export default function GuarantyListPage() {
             </div>
           </div>
 
-          {/* مدت گارانتی */}
+          {}
           <div className="space-y-2">
             <label className="block text-xs font-black text-gray-700 dark:text-gray-300">مدت گارانتی (روز) *</label>
             <div className="flex flex-wrap gap-2">
@@ -327,7 +319,7 @@ export default function GuarantyListPage() {
         </form>
       </div>
 
-      {/* فیلتر و جستجو */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4 flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px]">
           <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -356,7 +348,7 @@ export default function GuarantyListPage() {
         </div>
       </div>
 
-      {/* جدول */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="hidden lg:grid grid-cols-[1fr_140px_140px_120px_120px_140px_140px] gap-3 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
           {["خریدار", "محصول", "ستومان", "تاریخ ثبت", "تاریخ پایان", "وضعیت", "عملیات"].map(h => (
@@ -409,7 +401,7 @@ export default function GuarantyListPage() {
         ))}
       </div>
 
-      {/* صفحه‌بندی */}
+      {}
       {!loading && total > PAGE_SIZE && (
         <div className="flex items-center justify-between flex-wrap gap-3">
           <p className="text-xs text-gray-400">
@@ -443,7 +435,7 @@ export default function GuarantyListPage() {
         </div>
       )}
 
-      {/* مودال ویرایش */}
+      {}
       {editItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setEditItem(null)}>
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
@@ -502,7 +494,7 @@ export default function GuarantyListPage() {
         </div>
       )}
 
-      {/* مودال حذف */}
+      {}
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">

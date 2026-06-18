@@ -84,7 +84,7 @@ export default function SpecGroupsPage() {
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
 
-      {/* هدر */}
+      {}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">جداول مشخصات فنی</h1>
@@ -101,7 +101,7 @@ export default function SpecGroupsPage() {
         </button>
       </div>
 
-      {/* فرم */}
+      {}
       {showForm && (
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
@@ -116,7 +116,7 @@ export default function SpecGroupsPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="p-5 space-y-5">
-            {/* نام جدول */}
+            {}
             <div>
               <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">نام جدول *</label>
               <input
@@ -128,7 +128,7 @@ export default function SpecGroupsPage() {
               />
             </div>
 
-            {/* آیتم‌ها */}
+            {}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-black text-gray-700 dark:text-gray-300">
@@ -147,12 +147,12 @@ export default function SpecGroupsPage() {
               <div className="space-y-2 bg-gray-50 dark:bg-white/[0.02] rounded-xl border border-gray-100 dark:border-white/[0.06] p-3">
                 {form.items.map((item: any, index: number) => (
                   <div key={index} className="flex items-center gap-2 group">
-                    {/* شماره */}
+                    {}
                     <span className="w-6 h-6 flex items-center justify-center text-[10px] font-black text-gray-400 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg flex-shrink-0">
                       {index + 1}
                     </span>
 
-                    {/* اینپوت */}
+                    {}
                     <input
                       value={item.title}
                       onChange={e => handleItemChange(index, e.target.value)}
@@ -160,7 +160,7 @@ export default function SpecGroupsPage() {
                       className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
                     />
 
-                    {/* جابجایی */}
+                    {}
                     <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button type="button" onClick={() => moveItem(index, -1)} disabled={index === 0}
                         className="w-5 h-5 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 dark:hover:text-white disabled:opacity-20 transition-all">
@@ -176,7 +176,7 @@ export default function SpecGroupsPage() {
                       </button>
                     </div>
 
-                    {/* حذف */}
+                    {}
                     <button type="button" onClick={() => removeItem(index)}
                       className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-400 hover:text-red-500 hover:border-red-300 dark:hover:border-red-500/30 opacity-0 group-hover:opacity-100 transition-all">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,7 +192,7 @@ export default function SpecGroupsPage() {
               </div>
             </div>
 
-            {/* دکمه‌ها */}
+            {}
             <div className="flex gap-3 pt-2 border-t border-gray-100 dark:border-white/[0.06]">
               <button type="submit" disabled={saving}
                 className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-black transition-all">
@@ -207,7 +207,7 @@ export default function SpecGroupsPage() {
         </div>
       )}
 
-      {/* لیست جداول */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-white/[0.06]">
           <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -243,25 +243,25 @@ export default function SpecGroupsPage() {
                       </svg>
                     </button>
 
-                    {/* آیکن جدول */}
+                    {}
                     <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center flex-shrink-0">
                       <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M3 14h18M10 3v18M14 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z" />
                       </svg>
                     </div>
 
-                    {/* اطلاعات */}
+                    {}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-black text-gray-900 dark:text-white">{g.title}</p>
                       <p className="text-[11px] text-gray-400">{g.items.length} مشخصه</p>
                     </div>
 
-                    {/* تعداد */}
+                    {}
                     <span className="text-[10px] font-bold text-gray-400 bg-gray-100 dark:bg-white/5 px-2.5 py-1 rounded-full border border-gray-200 dark:border-white/10 flex-shrink-0">
                       {g.items.length} فیلد
                     </span>
 
-                    {/* دکمه‌ها */}
+                    {}
                     <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                       <button onClick={() => handleEdit(g)}
                         className="w-8 h-8 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:border-blue-300 dark:hover:border-blue-500/30 transition-all">
@@ -278,7 +278,7 @@ export default function SpecGroupsPage() {
                     </div>
                   </div>
 
-                  {/* مشخصه‌ها */}
+                  {}
                   {isOpen && (
                     <div className="px-5 pb-3 bg-gray-50 dark:bg-white/[0.01]">
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 pt-2">

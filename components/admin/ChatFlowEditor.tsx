@@ -17,7 +17,6 @@ import {
 const inputClass =
   "w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all";
 
-// رنگ‌های متمایز برای هر سطح عمق (برای خوانایی درخت)
 const DEPTH_BORDERS = [
   "border-blue-300 dark:border-blue-500/40",
   "border-emerald-300 dark:border-emerald-500/40",
@@ -27,7 +26,6 @@ const DEPTH_BORDERS = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ویرایشگر یک node (بازگشتی)
 // ─────────────────────────────────────────────────────────────────────────────
 function NodeEditor({
   node,
@@ -51,7 +49,6 @@ function NodeEditor({
   const issues = getNodeIssues(node);
   const borderColor = DEPTH_BORDERS[depth % DEPTH_BORDERS.length];
 
-  // ── به‌روزرسانی‌های فرزندان این node
   const updateChildren = (next: FlowNode[]) =>
     onChange((n) => ({ ...n, children: next }));
 
@@ -62,7 +59,7 @@ function NodeEditor({
 
   return (
     <div className={`rounded-2xl border-2 ${borderColor} bg-white dark:bg-[#0f1117]`}>
-      {/* سرتیتر node */}
+      {}
       <div className="flex items-center gap-2 p-3">
         <button
           onClick={() => setOpen((v) => !v)}
@@ -84,7 +81,7 @@ function NodeEditor({
           placeholder="متن دکمه (مثلاً: مشاوره خرید محصول)"
         />
 
-        {/* نوع node */}
+        {}
         <span
           className={`shrink-0 px-2 py-1 rounded-lg text-[10px] font-black ${
             isMenu
@@ -95,7 +92,7 @@ function NodeEditor({
           {isMenu ? "منو" : "مقصد"}
         </span>
 
-        {/* جابجایی */}
+        {}
         <div className="flex flex-col shrink-0">
           <button
             onClick={() => onMove(-1)} disabled={isFirst}
@@ -115,7 +112,7 @@ function NodeEditor({
           </button>
         </div>
 
-        {/* حذف */}
+        {}
         <button
           onClick={onRemove}
           className="text-red-300 hover:text-red-600 transition-all shrink-0"
@@ -128,7 +125,7 @@ function NodeEditor({
         </button>
       </div>
 
-      {/* هشدار مشکلات */}
+      {}
       {issues.length > 0 && (
         <div className="mx-3 mb-2 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px] font-bold">
           ⚠ {issues.join(" • ")}
@@ -137,7 +134,7 @@ function NodeEditor({
 
       {open && (
         <div className="px-3 pb-3 space-y-3">
-          {/* پیام نمایشی هنگام کلیک */}
+          {}
           <div className="space-y-1">
             <label className="block text-[11px] font-black text-gray-500 dark:text-gray-400">
               پیام هنگام کلیک (اختیاری)
@@ -151,7 +148,7 @@ function NodeEditor({
             />
           </div>
 
-          {/* اگر برگ است → انتخاب رفتار */}
+          {}
           {!isMenu && (
             <div className="space-y-2 p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.04]">
               <label className="block text-[11px] font-black text-gray-500 dark:text-gray-400">
@@ -177,7 +174,7 @@ function NodeEditor({
                 {ACTION_TYPES.find((a) => a.value === (node.action?.type ?? "free_text"))?.desc}
               </p>
 
-              {/* تنظیمات اختصاصی هر action */}
+              {}
               {node.action?.type === "connect_context" && (
                 <select
                   value={node.action.contextTopic ?? ""}
@@ -215,7 +212,7 @@ function NodeEditor({
             </div>
           )}
 
-          {/* اگر منوست → toggle سایر */}
+          {}
           {isMenu && (
             <label className="flex items-center gap-2 cursor-pointer">
               <button
@@ -237,7 +234,7 @@ function NodeEditor({
             </label>
           )}
 
-          {/* فرزندان */}
+          {}
           {node.children.length > 0 && (
             <div className="space-y-2 pr-3 border-r-2 border-dashed border-gray-200 dark:border-white/10">
               {node.children.map((child, i) => (
@@ -257,7 +254,7 @@ function NodeEditor({
             </div>
           )}
 
-          {/* افزودن زیردکمه */}
+          {}
           <button
             onClick={addChild}
             className="w-full py-2 rounded-xl border-2 border-dashed border-gray-200 dark:border-white/10 text-gray-400 hover:text-blue-500 hover:border-blue-300 text-xs font-black transition-all"
@@ -271,10 +268,9 @@ function NodeEditor({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// پیش‌نمایش زنده — شبیه‌سازی چیزی که کاربر می‌بیند
 // ─────────────────────────────────────────────────────────────────────────────
 function FlowPreview({ flow, welcome }: { flow: FlowNode[]; welcome: string }) {
-  const [stack, setStack] = useState<FlowNode[]>([]); // مسیر فعلی
+  const [stack, setStack] = useState<FlowNode[]>([]);
   const current = stack.length ? stack[stack.length - 1].children : flow;
   const currentParent = stack[stack.length - 1];
 
@@ -284,7 +280,7 @@ function FlowPreview({ flow, welcome }: { flow: FlowNode[]; welcome: string }) {
 
   return (
     <div className="rounded-2xl bg-gray-100 dark:bg-black/30 p-4 min-h-[360px] flex flex-col">
-      {/* حباب خوش‌آمد / پیام والد فعلی */}
+      {}
       <div className="bg-white dark:bg-white/10 rounded-2xl rounded-tr-sm px-3 py-2 text-xs text-gray-700 dark:text-gray-200 max-w-[85%] mb-3 leading-6">
         {currentParent?.message?.trim()
           ? currentParent.message
@@ -293,7 +289,7 @@ function FlowPreview({ flow, welcome }: { flow: FlowNode[]; welcome: string }) {
           : welcome || "سلام! چطور می‌تونم کمکت کنم؟"}
       </div>
 
-      {/* دکمه‌ها */}
+      {}
       <div className="space-y-2 mt-auto">
         {current.map((node) => {
           const isLeaf = node.children.length === 0;
@@ -321,7 +317,7 @@ function FlowPreview({ flow, welcome }: { flow: FlowNode[]; welcome: string }) {
           );
         })}
 
-        {/* دکمه‌ی سایر (اگر والد فعلی روشنش کرده) */}
+        {}
         {currentParent?.showOther && (
           <button className="w-full text-right px-3 py-2.5 rounded-xl bg-white/60 dark:bg-white/5 border border-dashed border-gray-300 dark:border-white/15 text-xs font-black text-gray-500 flex items-center justify-between">
             <span>سایر (سوال خود را بنویسید)</span>
@@ -335,7 +331,7 @@ function FlowPreview({ flow, welcome }: { flow: FlowNode[]; welcome: string }) {
           </p>
         )}
 
-        {/* بازگشت */}
+        {}
         {stack.length > 0 && (
           <button
             onClick={() => setStack((s) => s.slice(0, -1))}
@@ -359,7 +355,6 @@ function FlowPreview({ flow, welcome }: { flow: FlowNode[]; welcome: string }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// کامپوننت اصلی — کنترل‌شده
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ChatFlowEditor({
   value,
@@ -372,7 +367,7 @@ export default function ChatFlowEditor({
 }) {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-      {/* ادیتور */}
+      {}
       <div className="xl:col-span-2 space-y-3">
         {value.length === 0 ? (
           <p className="text-xs text-gray-400 text-center py-8">
@@ -401,7 +396,7 @@ export default function ChatFlowEditor({
         </button>
       </div>
 
-      {/* پیش‌نمایش */}
+      {}
       <div className="xl:col-span-1">
         <div className="sticky top-8">
           <p className="text-xs font-black text-gray-400 mb-2">پیش‌نمایش زنده</p>

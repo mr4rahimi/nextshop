@@ -6,7 +6,6 @@ import { useMemo, useRef } from "react";
 import ProductCard, { ProductCardData } from "./ProductCard";
 
 export default function BestSellersSection() {
-  // سمپل — بعداً از بک‌اند میاد (پرفروش‌ها)
   const products: ProductCardData[] = useMemo(
     () => [
       {
@@ -179,7 +178,7 @@ export default function BestSellersSection() {
                   </div>
                 ))}
               </div>
-              {/* بدون dots/فلش طبق استاندارد این صفحه */}
+              {}
             </div>
           </div>
         </div>

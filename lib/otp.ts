@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 const OTP_EXPIRE_MINUTES = 2;
 
 // ─────────────────────────────────────────
-// تولید OTP
 // ─────────────────────────────────────────
 export function generateOtp(): string {
 
@@ -11,10 +10,8 @@ export function generateOtp(): string {
 }
 
 // ─────────────────────────────────────────
-// ذخیره OTP
 // ─────────────────────────────────────────
 export async function saveOtp(phone: string, code: string) {
-  // کدهای قبلی را invalid کن
   await prisma.otpCode.updateMany({
     where: {
       phone,
@@ -39,7 +36,6 @@ export async function saveOtp(phone: string, code: string) {
 }
 
 // ─────────────────────────────────────────
-// بررسی OTP
 // ─────────────────────────────────────────
 export async function verifyOtp(
   phone: string,
@@ -61,7 +57,6 @@ export async function verifyOtp(
 
   if (!otp) return false;
 
-  // یکبار مصرف
   await prisma.otpCode.update({
     where: {
       id: otp.id,
@@ -75,7 +70,6 @@ export async function verifyOtp(
 }
 
 // ─────────────────────────────────────────
-// ارسال SMS واقعی (فراز اس ام اس)
 // ─────────────────────────────────────────
 
 export { sendOtpSms as sendSms } from "@/lib/sms";

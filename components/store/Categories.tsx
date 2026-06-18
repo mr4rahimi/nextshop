@@ -11,7 +11,7 @@ interface Category {
 }
 
 interface Props {
-  categoryIds?: string[]; // از config ویجت
+  categoryIds?: string[];
 }
 
 export default function CategoriesSection({ categoryIds }: Props) {

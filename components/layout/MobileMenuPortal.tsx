@@ -16,7 +16,6 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
   const [megaCats, setMegaCats] = useState<MegaCat[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
-  // لود منو
   useEffect(() => {
     fetch("/api/store/header-menu").then(r => r.json()).then(d => {
       setMegaCats(d.megaMenuCats ?? []);
@@ -24,7 +23,6 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
     });
   }, []);
 
-  // listen به event از HeaderTop
   useEffect(() => {
     const toggle = () => setOpen(o => !o);
     window.addEventListener("toggle-mobile-menu", toggle);
@@ -38,7 +36,6 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
     return () => window.removeEventListener("keydown", h);
   }, []);
 
-  // قفل scroll
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -47,8 +44,6 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
   function close() { setOpen(false); }
 
   return (
-    // این div مستقیماً بعد از <header> در DOM قرار می‌گیره
-    // position:fixed + z بالا + هیچ parent با transform/backdrop-filter نداره
     <div className="lg:hidden">
       {/* ── Overlay ─────────────────────────────── */}
       <div
@@ -80,7 +75,7 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
         className="bg-white dark:bg-gray-950 shadow-2xl"
         dir="rtl"
       >
-        {/* هدر panel */}
+        {}
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/40 dark:border-gray-800 bg-white/30 dark:bg-gray-900/30 flex-shrink-0">
           <Link href="/" onClick={close}>
             <img src={logoUrl} className="h-8 w-auto max-w-[120px] object-contain" alt={siteName} />
@@ -93,10 +88,10 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
           </button>
         </div>
 
-        {/* محتوا */}
+        {}
         <div className="flex-1 overflow-y-auto">
 
-          {/* بنر ورود */}
+          {}
           <div className="px-4 py-4">
             <Link href="/user" onClick={close}
               className="flex items-center justify-between p-4 rounded-[1.8rem] bg-gradient-to-br from-primary-600 to-indigo-700 text-white shadow-xl shadow-primary-500/20 active:scale-95 transition-all">
@@ -117,7 +112,7 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
             </Link>
           </div>
 
-          {/* دکمه سبد */}
+          {}
           <div className="px-4 pb-4">
             <Link href="/cart" onClick={close}
               className="flex items-center gap-3 p-3 rounded-2xl bg-gray-100 dark:bg-white/[0.06] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-all active:scale-95">
@@ -129,7 +124,7 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
           </div>
 
           <nav className="px-3 pb-8">
-            {/* دسته‌بندی‌ها */}
+            {}
             {megaCats.length > 0 && (
               <>
                 <div className="flex items-center gap-2 px-3 mb-3">
@@ -156,7 +151,7 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
                         </svg>
                       </button>
 
-                      {/* زیردسته‌ها */}
+                      {}
                       <div className={`overflow-hidden transition-all duration-300 ${expanded === m.category.id ? "max-h-[600px]" : "max-h-0"}`}>
                         <ul className="mt-2 mr-2 space-y-1.5 border-r-2 border-primary-500/20 pr-2">
                           <li>
@@ -181,7 +176,7 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
               </>
             )}
 
-            {/* لینک‌های منو */}
+            {}
             {menuItems.length > 0 && (
               <>
                 <div className="flex items-center gap-2 px-3 mb-3 mt-4">
@@ -207,7 +202,7 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
               </>
             )}
 
-            {/* لینک همه محصولات */}
+            {}
             <div className="mt-6">
               <Link href="/products" onClick={close}
                 className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-red-500 to-secondary-500 text-white shadow-lg shadow-secondary-500/20 active:scale-95 transition-all">
@@ -218,7 +213,7 @@ export default function MobileMenuPortal({ logoUrl = "/assets/images/logo.png", 
               </Link>
             </div>
 
-            {/* خدمات مشتریان */}
+            {}
             <div className="flex items-center gap-2 px-3 mt-8 mb-3">
               <span className="w-1 h-4 bg-primary-600 rounded-full" />
               <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">خدمات مشتریان</span>

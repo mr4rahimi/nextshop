@@ -273,7 +273,7 @@ function RelatedSearch({ productId, currentProductTitle }: { productId?: string;
 
   return (
     <div className="space-y-3">
-      {/* محصولات انتخاب شده */}
+      {}
       {selected.length > 0 && (
         <div className="space-y-2">
           {selected.map(p => (
@@ -296,7 +296,7 @@ function RelatedSearch({ productId, currentProductTitle }: { productId?: string;
         </div>
       )}
 
-      {/* جستجو */}
+      {}
       {productId ? (
         <div className="relative">
           <input value={query} onChange={e => search(e.target.value)}
@@ -467,7 +467,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
 
-      {/* هدر */}
+      {}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => router.push("/admin/products")}
@@ -484,7 +484,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           </div>
         </div>
 
-        {/* دکمه ذخیره بالا */}
+        {}
         <button type="button" onClick={handleSubmit as any} disabled={saving}
           className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-500/30">
           {saving ? (
@@ -501,7 +501,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
         </button>
       </div>
 
-      {/* پیام‌ها */}
+      {}
       {error && (
         <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400 font-bold">
           <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -521,7 +521,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
 
       <form onSubmit={handleSubmit} className="space-y-4">
 
-        {/* ── ۱. اطلاعات پایه ── */}
+        {}
         <Section title="اطلاعات پایه" icon="📋">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="عنوان محصول *">
@@ -563,7 +563,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           </div>
         </Section>
 
-        {/* ── ۲. قیمت و موجودی ── */}
+        {}
         <Section title="قیمت‌گذاری و موجودی" icon="💰">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="قیمت اصلی (تومان) *">
@@ -599,7 +599,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           )}
         </Section>
 
-        {/* ── ۳. تصاویر ── */}
+        {}
         <Section title="تصاویر" icon="🖼️">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <UploadField label="تصویر اصلی" fieldKey="mainImage" value={form.mainImage} />
@@ -652,7 +652,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           </Field>
         </Section>
 
-        {/* ── ۴. ویژگی‌ها و رنگ‌ها ── */}
+        {}
         <Section title="ویژگی‌ها، رنگ‌ها و گارانتی" icon="✨" defaultOpen={false}>
           {(["features", "colors", "summaryFeatures"] as const).map(key => (
             <Field key={key} label={key === "features" ? "ویژگی‌های اصلی" : key === "colors" ? "رنگ‌های موجود" : "ویژگی‌های اجمالی"}>
@@ -682,7 +682,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           ))}
         </Section>
 
-        {/* ── ۵. بررسی اجمالی ── */}
+        {}
         <Section title="بررسی اجمالی (Summary)" icon="📝" defaultOpen={false}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="عنوان">
@@ -695,7 +695,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           </Field>
         </Section>
 
-        {/* ── ۶. بررسی تخصصی ── */}
+        {}
         <Section title="بررسی تخصصی (Expert)" icon="🔬" defaultOpen={false}>
           <Field label="عنوان">
             <input value={form.expertTitle} className={inp} onChange={e => set("expertTitle", e.target.value)} />
@@ -706,7 +706,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           <UploadField label="تصویر" fieldKey="expertImage" value={form.expertImage} />
         </Section>
 
-        {/* ── ۷. مشخصات فنی ── */}
+        {}
         <Section title="مشخصات فنی (Specs)" icon="⚙️" defaultOpen={false}>
           <Field label="انتخاب گروه مشخصات">
             <select className={inp} defaultValue=""
@@ -740,7 +740,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
             </div>
           )}
         </Section>
-        {/* ── ۷.۵. ویژگی‌های قابل فیلتر (Attributes) ── */}
+        {}
         <Section title="ویژگی‌های قابل فیلتر" icon="🏷️" defaultOpen={false}>
           <AttributesSection 
             categoryId={form.categoryId} 
@@ -748,7 +748,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           />
         </Section>
 
-        {/* ── ۸. سوالات متداول ── */}
+        {}
         <Section title="سوالات متداول (FAQ)" icon="❓" defaultOpen={false}>
           <div className="space-y-3">
             {form.faq.map((item, i) => (
@@ -772,9 +772,9 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           </div>
         </Section>
 
-        {/* ── ۹. محصولات مرتبط ── */}
+        {}
         <Section title="محصولات مرتبط" icon="🔗" defaultOpen={false}>
-          {/* ردیف ۱: همین دسته‌بندی */}
+          {}
           <div className="p-4 bg-gray-50 dark:bg-white/[0.02] rounded-xl border border-gray-100 dark:border-white/[0.06] space-y-3">
             <div className="flex items-center justify-between">
               <div>
@@ -803,7 +803,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
             )}
           </div>
 
-          {/* ردیف ۲: همین برند */}
+          {}
           <div className="p-4 bg-gray-50 dark:bg-white/[0.02] rounded-xl border border-gray-100 dark:border-white/[0.06] space-y-3">
             <div className="flex items-center justify-between">
               <div>
@@ -832,7 +832,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
             )}
           </div>
 
-          {/* ردیف ۳: انتخاب دستی */}
+          {}
           <div className="p-4 bg-gray-50 dark:bg-white/[0.02] rounded-xl border border-gray-100 dark:border-white/[0.06] space-y-3">
             <div>
               <p className="text-sm font-black text-gray-900 dark:text-white">محصولات دستی</p>
@@ -842,7 +842,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           </div>
         </Section>
 
-        {/* ── ۱۰. SEO ── */}
+        {}
         <Section title="بهینه‌سازی موتورهای جستجو (SEO)" icon="🔍" defaultOpen={false}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="عنوان SEO">
@@ -863,7 +863,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           </Field>
         </Section>
 
-        {/* دکمه‌های پایین */}
+        {}
         <div className="flex gap-3 justify-end pb-6">
           <button type="button" onClick={() => router.push("/admin/products")}
             className="px-5 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-black transition-all">

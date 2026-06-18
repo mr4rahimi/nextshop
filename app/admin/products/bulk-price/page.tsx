@@ -127,7 +127,6 @@ export default function BulkPricePage() {
     setSaving(prev => ({ ...prev, [p.id]: false }));
     setSaved(prev => ({ ...prev, [p.id]: true }));
     setTimeout(() => setSaved(prev => ({ ...prev, [p.id]: false })), 2000);
-    // آپدیت محلی
     setProducts(prev => prev.map(pr => pr.id === p.id
       ? { ...pr, price: vals.price, salePrice: vals.salePrice || null }
       : pr
@@ -156,7 +155,7 @@ export default function BulkPricePage() {
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
 
-      {/* مودال تغییر گروهی */}
+      {}
       {showBulk && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -170,7 +169,7 @@ export default function BulkPricePage() {
             </div>
 
             <div className="space-y-4">
-              {/* فیلد */}
+              {}
               <div>
                 <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-2">اعمال بر روی</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -191,7 +190,7 @@ export default function BulkPricePage() {
                 </div>
               </div>
 
-              {/* نوع تغییر */}
+              {}
               <div>
                 <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-2">نوع تغییر</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -208,7 +207,7 @@ export default function BulkPricePage() {
                 </div>
               </div>
 
-              {/* جهت */}
+              {}
               <div>
                 <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-2">جهت تغییر</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -227,7 +226,7 @@ export default function BulkPricePage() {
                 </div>
               </div>
 
-              {/* مقدار */}
+              {}
               <div>
                 <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-2">
                   مقدار {bulkType === "percent" ? "(درصد)" : "(تومان)"}
@@ -248,7 +247,7 @@ export default function BulkPricePage() {
                 </div>
               </div>
 
-              {/* خلاصه */}
+              {}
               <div className="bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06] rounded-xl p-3 text-xs text-gray-600 dark:text-gray-400">
                 <span className="font-black text-gray-900 dark:text-white">{toFa(selected.size)} محصول</span> انتخاب شده —
                 {bulkValue ? (
@@ -273,7 +272,7 @@ export default function BulkPricePage() {
         </div>
       )}
 
-      {/* هدر */}
+      {}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">ویرایش گروهی قیمت</h1>
@@ -290,7 +289,7 @@ export default function BulkPricePage() {
         )}
       </div>
 
-      {/* فیلترها */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="relative">
@@ -351,10 +350,10 @@ export default function BulkPricePage() {
         </div>
       )}
 
-      {/* جدول */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
 
-        {/* هدر */}
+        {}
         <div className="flex items-center gap-4 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
           <button onClick={toggleAll}
             className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${
@@ -396,7 +395,7 @@ export default function BulkPricePage() {
                 isSelected ? "bg-blue-50/50 dark:bg-blue-500/5" : "hover:bg-gray-50 dark:hover:bg-white/[0.02]"
               } ${idx < filtered.length - 1 ? "border-b border-gray-50 dark:border-white/[0.04]" : ""}`}>
 
-              {/* چک‌باکس */}
+              {}
               <button onClick={() => toggleSelect(p.id)}
                 className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${
                   isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-white/20 hover:border-blue-400"
@@ -408,7 +407,7 @@ export default function BulkPricePage() {
                 )}
               </button>
 
-              {/* تصویر */}
+              {}
               <div className="w-10 h-10 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 border border-gray-100 dark:border-white/[0.06] flex-shrink-0 flex items-center justify-center">
                 {p.mainImage ? (
                   <img src={p.mainImage} alt={p.title} className="w-full h-full object-cover" />
@@ -419,7 +418,7 @@ export default function BulkPricePage() {
                 )}
               </div>
 
-              {/* اطلاعات محصول */}
+              {}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-black text-gray-900 dark:text-white truncate">{p.title}</p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -434,7 +433,7 @@ export default function BulkPricePage() {
                 </div>
               </div>
 
-              {/* قیمت اصلی */}
+              {}
               <div className="w-36 hidden lg:block">
                 <input
                   type="number"
@@ -465,7 +464,7 @@ export default function BulkPricePage() {
                 />
               </div>
 
-              {/* قیمت تخفیف */}
+              {}
               <div className="w-36 hidden lg:block">
                 <input
                   type="number"
@@ -495,7 +494,7 @@ export default function BulkPricePage() {
                 />
               </div>
 
-              {/* دکمه ذخیره */}
+              {}
               <div className="w-20 hidden lg:flex justify-center">
                 {isSaved ? (
                   <span className="flex items-center gap-1 text-[11px] font-black text-emerald-600">
@@ -522,7 +521,7 @@ export default function BulkPricePage() {
         })}
       </div>
 
-      {/* راهنما */}
+      {}
       <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/20 rounded-xl">
         <svg className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

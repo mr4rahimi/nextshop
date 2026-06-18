@@ -32,12 +32,10 @@ export default function AdminFooterPage() {
   const [loading, setLoading] = useState(true);
   const [expandedCol, setExpandedCol] = useState<string | null>(null);
 
-  // فرم ستون جدید
   const [showAddCol, setShowAddCol] = useState(false);
   const [newColForm, setNewColForm] = useState({ title: "", type: "LINKS" as ColType });
   const [addingCol, setAddingCol] = useState(false);
 
-  // فرم آیتم
   const [editingItem, setEditingItem] = useState<{ colId: string; item?: FooterItem } | null>(null);
   const [itemForm, setItemForm] = useState({ label: "", url: "" });
 
@@ -94,7 +92,6 @@ export default function AdminFooterPage() {
     if (!editingItem || !itemForm.label) return;
     const { colId, item } = editingItem;
     if (item) {
-      // ویرایش
       const res = await fetch(`/api/admin/footer/${colId}/items`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: item.id, label: itemForm.label, url: itemForm.url, isActive: item.isActive }),
@@ -105,7 +102,6 @@ export default function AdminFooterPage() {
         : c
       ));
     } else {
-      // افزودن
       const res = await fetch(`/api/admin/footer/${colId}/items`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ label: itemForm.label, url: itemForm.url }),
@@ -158,7 +154,7 @@ export default function AdminFooterPage() {
         </button>
       </div>
 
-      {/* راهنما */}
+      {}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4">
         <p className="text-xs font-bold text-blue-700 dark:text-blue-300">
           ستون‌های فعال در فوتر سایت نمایش داده می‌شوند. عرض هر ستون بر اساس تعداد ستون‌های فعال محاسبه می‌شود.
@@ -166,7 +162,7 @@ export default function AdminFooterPage() {
         </p>
       </div>
 
-      {/* فرم ستون جدید */}
+      {}
       {showAddCol && (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-blue-200 dark:border-blue-800 p-6 space-y-4">
           <h3 className="font-black text-sm text-gray-900 dark:text-white">ستون جدید</h3>
@@ -204,7 +200,7 @@ export default function AdminFooterPage() {
         </div>
       )}
 
-      {/* لیست ستون‌ها */}
+      {}
       {columns.length === 0 && !showAddCol ? (
         <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 text-gray-400">
           <p className="font-bold">هنوز ستونی تعریف نشده</p>
@@ -214,7 +210,7 @@ export default function AdminFooterPage() {
         <div className="space-y-4">
           {columns.map((col, i) => (
             <div key={col.id} className={`bg-white dark:bg-gray-900 rounded-2xl border ${col.isActive ? "border-gray-200 dark:border-gray-700" : "border-gray-100 dark:border-gray-800 opacity-60"}`}>
-              {/* هدر ستون */}
+              {}
               <div className="flex items-center gap-4 p-5">
                 <div className="flex flex-col gap-1 flex-shrink-0">
                   <button onClick={() => moveColumn(i, -1)} disabled={i === 0}
@@ -257,10 +253,10 @@ export default function AdminFooterPage() {
                 </div>
               </div>
 
-              {/* لینک‌های LINKS */}
+              {}
               {col.type === "LINKS" && expandedCol === col.id && (
                 <div className="border-t border-gray-100 dark:border-gray-800 p-5 space-y-3">
-                  {/* فرم آیتم */}
+                  {}
                   {editingItem?.colId === col.id && (
                     <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4 space-y-3">
                       <p className="text-xs font-black text-blue-700 dark:text-blue-400">
@@ -285,7 +281,7 @@ export default function AdminFooterPage() {
                     </div>
                   )}
 
-                  {/* لیست آیتم‌ها */}
+                  {}
                   {col.items.length > 0 && (
                     <div className="space-y-2">
                       {col.items.map(item => (

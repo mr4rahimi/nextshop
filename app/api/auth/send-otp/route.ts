@@ -26,7 +26,6 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
 
-      // فقط dev
       ...(process.env.NODE_ENV !== "production" && {
         devCode: code,
       }),

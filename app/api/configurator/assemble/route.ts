@@ -102,7 +102,6 @@ export async function POST(req: Request) {
       },
     });
 
-    // ساخت محصول فروشگاهی (MVP ساده)
     const slug = `custom-${hash.slice(0, 10)}`;
     const product = await tx.product.create({
       data: {

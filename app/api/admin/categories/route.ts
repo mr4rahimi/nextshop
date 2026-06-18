@@ -45,7 +45,6 @@ export async function PUT(req: Request) {
       sortOrder: data.sortOrder,
       isActive: data.isActive,
 
-      // ✅ relation صحیح
       parent: data.parentId
         ? { connect: { id: data.parentId } }
         : { disconnect: true },

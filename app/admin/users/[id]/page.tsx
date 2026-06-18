@@ -118,10 +118,10 @@ export default function AdminUserDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ستون راست — پروفایل */}
+        {}
         <div className="space-y-6">
 
-          {/* کارت پروفایل */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex flex-col items-center text-center">
               <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-blue-500/20 to-blue-500/5 border border-blue-500/10 flex items-center justify-center overflow-hidden mb-4">
@@ -163,7 +163,7 @@ export default function AdminUserDetailPage() {
             </div>
           </div>
 
-          {/* آمار */}
+          {}
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: "سفارش", value: user._count.orders, color: "blue" },
@@ -177,7 +177,7 @@ export default function AdminUserDetailPage() {
             ))}
           </div>
 
-          {/* کیف پول */}
+          {}
           <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-5 text-white">
             <p className="text-[11px] font-black opacity-70 uppercase">موجودی کیف پول</p>
             <p className="text-2xl font-black mt-1 tabular-nums">{toFa(user.walletBalance)}</p>
@@ -185,10 +185,10 @@ export default function AdminUserDetailPage() {
           </div>
         </div>
 
-        {/* ستون چپ — جزئیات */}
+        {}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* فرم ویرایش */}
+          {}
           {editing && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-blue-200 dark:border-blue-800 p-6 space-y-4">
               <h3 className="font-black text-sm text-gray-900 dark:text-white">ویرایش اطلاعات کاربر</h3>
@@ -230,7 +230,7 @@ export default function AdminUserDetailPage() {
             </div>
           )}
 
-          {/* سفارشات */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
               <h3 className="font-black text-sm text-gray-900 dark:text-white">سفارشات اخیر</h3>
@@ -259,7 +259,7 @@ export default function AdminUserDetailPage() {
             )}
           </div>
 
-          {/* آدرس‌ها */}
+          {}
           {user.addresses.length > 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
@@ -281,7 +281,7 @@ export default function AdminUserDetailPage() {
             </div>
           )}
 
-          {/* تراکنش‌های کیف پول */}
+          {}
           {user.walletTx.length > 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">

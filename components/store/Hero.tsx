@@ -23,7 +23,6 @@ function discount(p: string, s: string | null) {
   return pct > 0 ? pct : null;
 }
 
-// ── کارت پیشنهاد ─────────────────────────────────────────────────────────────
 function SuggestionCard({ product }: { product: SuggestProduct }) {
   const { has, toggle } = useWishlist();
   const isWished = has(product.id);
@@ -41,7 +40,7 @@ function SuggestionCard({ product }: { product: SuggestProduct }) {
         </div>
       )}
 
-      {/* دکمه علاقه‌مندی */}
+      {}
       <button
         onClick={e => { e.preventDefault(); e.stopPropagation(); toggle(product.id); }}
         className={`absolute top-5 left-5 z-20 w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${
@@ -55,14 +54,14 @@ function SuggestionCard({ product }: { product: SuggestProduct }) {
       </button>
 
       <div className="flex items-center gap-4">
-        {/* تصویر */}
+        {}
         <div className="relative w-24 h-24 bg-white dark:bg-white/5 rounded-[2rem] flex-shrink-0 p-2 transition-transform duration-500 group-hover/card:scale-105">
           {product.mainImage
             ? <img src={product.mainImage} alt={product.title} className="w-full h-full object-contain drop-shadow-lg" />
             : <div className="w-full h-full flex items-center justify-center text-gray-300 text-2xl">📦</div>}
         </div>
 
-        {/* اطلاعات */}
+        {}
         <div className="flex-1 min-w-0">
           {product.brand && (
             <span className="text-[9px] font-black text-primary-600 bg-primary-500/10 px-2 py-0.5 rounded-lg">
@@ -105,9 +104,7 @@ export default function HeroSection() {
   ];
 
   useEffect(() => {
-    // اسلایدها
     fetch("/api/store/hero-slides").then(r => r.json()).then(setSlides).catch(() => {});
-    // پیشنهادات از amazing-products
     fetch("/api/store/amazing-products?count=6").then(r => r.json()).then(setSuggestions).catch(() => {});
   }, []);
 
@@ -159,10 +156,10 @@ export default function HeroSection() {
       <section className="container transition-colors duration-500">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-          {/* ── سمت راست: پیشنهادات ── */}
+          {}
           <div className="lg:col-span-4 relative bg-white dark:bg-[#0a0a0a] lg:bg-white/80 lg:dark:bg-[#0a0a0a]/60 lg:backdrop-blur-3xl rounded-[3rem] p-6 border border-gray-100 dark:border-white/5 flex flex-col shadow-sm overflow-hidden">
 
-            {/* هدر */}
+            {}
             <div className="flex justify-between items-center mb-5">
               <div className="flex items-center gap-2.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-primary-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse" />
@@ -174,7 +171,7 @@ export default function HeroSection() {
               </Link>
             </div>
 
-            {/* اسلایدر پیشنهادات */}
+            {}
             {suggestions.length === 0 ? (
               <div className="flex-1 space-y-3">
                 {Array.from({ length: 2 }).map((_, i) => (
@@ -195,7 +192,7 @@ export default function HeroSection() {
               </div>
             )}
 
-            {/* دسترسی سریع */}
+            {}
             {suggestions.length > 0 && (
               <div className="mt-5 pt-5 border-t border-gray-100 dark:border-white/5">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">دسترسی سریع</p>
@@ -220,7 +217,7 @@ export default function HeroSection() {
             )}
           </div>
 
-          {/* ── اسلایدر اصلی ── */}
+          {}
           <div className="lg:col-span-8 relative overflow-hidden rounded-[2.5rem] min-h-[400px]">
             <div className="swiper mainHeroSwiper h-full min-h-[400px]">
               <div className="swiper-wrapper">
@@ -244,7 +241,7 @@ export default function HeroSection() {
                 ))}
               </div>
 
-              {/* کنترل‌ها */}
+              {}
               <div className="absolute bottom-8 left-8 flex gap-3 z-10">
                 <button className="hero-prev w-12 h-12 bg-white/20 hover:bg-white/60 backdrop-blur-md rounded-2xl flex items-center justify-center text-white text-2xl transition-all border border-white/20">‹</button>
                 <button className="hero-next w-12 h-12 bg-white/20 hover:bg-white/60 backdrop-blur-md rounded-2xl flex items-center justify-center text-white text-2xl transition-all border border-white/20">›</button>

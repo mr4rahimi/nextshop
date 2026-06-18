@@ -3,10 +3,8 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-// کش سبک — تنظیمات زیاد تغییر نمی‌کند
 export const revalidate = 60;
 
-// فقط داده‌های لازم برای رندر ویجت را برمی‌گرداند (نه اطلاعات حساس کامل)
 export async function GET() {
   const settings = await prisma.storeSettings.findUnique({
     where: { id: "singleton" },

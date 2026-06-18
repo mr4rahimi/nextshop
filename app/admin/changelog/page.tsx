@@ -2,7 +2,6 @@
 
 const VERSIONS = [
 
-
   {
     version: "1.8.0",
     date: "۱۴۰۴/۰۳/۲۸",
@@ -24,7 +23,6 @@ const VERSIONS = [
       { type: "improvement", text: "بهینه‌سازی مصرف توکن با ارسال هدفمند اطلاعات بر اساس موضوع انتخابی کاربر" },
     ],
   },
-
 
   {
     version: "1.7.0",
@@ -60,7 +58,6 @@ const VERSIONS = [
     ],
   },
 
-
   {
     version: "1.5.0",
     date: "۱۴۰۴/۰۳/۲۵",
@@ -94,7 +91,6 @@ const VERSIONS = [
       { type: "fix", text: "اصلاح آدرس‌های canonical و نام فروشگاه در متادیتای سئو" },
     ],
   },
-
 
    {
     version: "1.4.0",
@@ -209,7 +205,7 @@ export default function ChangelogPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-8" dir="rtl">
 
-      {/* هدر */}
+      {}
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-black text-gray-900 dark:text-white">نسخه‌های برنامه</h1>
@@ -222,7 +218,7 @@ export default function ChangelogPage() {
         </div>
       </div>
 
-      {/* لیست نسخه‌ها */}
+      {}
       <div className="relative">
         <div className="absolute right-[22px] top-8 bottom-8 w-px bg-gray-200 dark:bg-white/[0.06]" />
 

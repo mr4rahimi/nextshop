@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-// GET — لیست همه ویجت‌ها
 export async function GET() {
   const widgets = await prisma.widget.findMany({
     orderBy: { sortOrder: "asc" },
@@ -11,7 +10,6 @@ export async function GET() {
   return NextResponse.json(widgets);
 }
 
-// POST — ساخت ویجت جدید
 export async function POST(req: Request) {
   const data = await req.json();
   const last = await prisma.widget.findFirst({ orderBy: { sortOrder: "desc" } });
@@ -27,7 +25,6 @@ export async function POST(req: Request) {
   return NextResponse.json(widget);
 }
 
-// PUT — ویرایش (شامل sortOrder برای drag & drop)
 export async function PUT(req: Request) {
   const data = await req.json();
 

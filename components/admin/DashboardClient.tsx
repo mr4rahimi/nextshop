@@ -117,9 +117,7 @@ function DonutChart({ data }: { data: { label: string; value: number; color: str
   );
 }
 
-// ── LineChart — نمودار روزانه سفارشات (SVG برداری) ───────────────────────────
 function DailyOrdersChart() {
-  // داده نمونه ۳۰ روز — بعداً از API می‌گیریم
   const raw = [3,7,5,12,8,15,10,6,18,14,9,22,17,11,25,19,8,16,21,13,7,24,18,12,20,15,9,27,22,16];
   const days = raw.map((v, i) => {
     const d = new Date(); d.setDate(d.getDate() - (29 - i));
@@ -138,15 +136,12 @@ function DailyOrdersChart() {
     ...d,
   }));
 
-  // path اصلی
   const linePath = pts.map((p, i) => (i === 0 ? `M${p.x},${p.y}` : `C${pts[i-1].x + (pts[i].x - pts[i-1].x)/2},${pts[i-1].y} ${pts[i-1].x + (pts[i].x - pts[i-1].x)/2},${p.y} ${p.x},${p.y}`)).join(" ");
-  // fill برای gradient
   const fillPath = `${linePath} L${pts[pts.length-1].x},${PAD.t + innerH} L${pts[0].x},${PAD.t + innerH} Z`;
 
   const [hovered, setHovered] = useState<number | null>(null);
   const hovPt = hovered !== null ? pts[hovered] : null;
 
-  // نقاط label (هر ۶ روز)
   const labelPts = pts.filter((_, i) => i % 6 === 0 || i === pts.length - 1);
 
   return (
@@ -157,7 +152,7 @@ function DailyOrdersChart() {
             <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
             <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
           </linearGradient>
-          {/* خطوط راهنما */}
+          {}
           {[0.25, 0.5, 0.75, 1].map((t, i) => (
             <line key={i} x1={PAD.l} x2={W - PAD.r}
               y1={PAD.t + t * innerH} y2={PAD.t + t * innerH}
@@ -166,7 +161,7 @@ function DailyOrdersChart() {
           ))}
         </defs>
 
-        {/* خطوط راهنما */}
+        {}
         {[0.25, 0.5, 0.75, 1].map((t, i) => (
           <line key={i} x1={PAD.l} x2={W - PAD.r}
             y1={PAD.t + t * innerH} y2={PAD.t + t * innerH}
@@ -205,14 +200,14 @@ function DailyOrdersChart() {
           </>
         )}
 
-        {/* نقاط */}
+        {}
         {pts.map((p, i) => (
           <circle key={i} cx={p.x} cy={p.y} r={hovered === i ? 5 : 3}
             fill={hovered === i ? "#3b82f6" : "#60a5fa"}
             className="transition-all duration-150" />
         ))}
 
-        {/* label‌های محور x */}
+        {}
         {labelPts.map((p, i) => (
           <text key={i} x={p.x} y={H - 6} textAnchor="middle" fontSize="8" className="fill-gray-400">{p.day}</text>
         ))}
@@ -221,7 +216,6 @@ function DailyOrdersChart() {
   );
 }
 
-// ── BarChart (استاتیک هفتگی) ─────────────────────────────────────────────────
 function BarChart() {
   const days = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
   const values = [42, 78, 55, 91, 63, 87, 49];
@@ -268,7 +262,7 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
 
-      {/* عنوان */}
+      {}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">داشبورد</h1>
@@ -279,7 +273,7 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
         </div>
       </div>
 
-      {/* کارت‌های آمار اصلی */}
+      {}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="کاربران" value={fa(stats.totalUsers)} icon="👤"
           accent="border-blue-200 dark:border-primary-500/20" sub="کاربر ثبت‌نام‌شده" href="/admin/users" />
@@ -291,7 +285,7 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
           accent="border-amber-200 dark:border-amber-500/20" sub="از سفارشات تأیید شده" />
       </div>
 
-      {/* نمودار روزانه سفارشات */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -306,10 +300,10 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
         <DailyOrdersChart />
       </div>
 
-      {/* ردیف میانی */}
+      {}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* دونات */}
+        {}
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-sm font-black text-gray-900 dark:text-white">وضعیت سفارشات</h2>
@@ -318,7 +312,7 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
           <DonutChart data={donutData} />
         </div>
 
-        {/* بار چارت هفتگی */}
+        {}
         <div className="lg:col-span-2 bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
           <div className="flex items-center justify-between mb-5">
             <div>
@@ -331,10 +325,10 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
         </div>
       </div>
 
-      {/* ردیف پایین */}
+      {}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* لیست */}
+        {}
         <div className="lg:col-span-2 bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-white/[0.06]">
             <div className="flex gap-1 bg-gray-100 dark:bg-white/5 p-1 rounded-xl">
@@ -411,7 +405,7 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
           )}
         </div>
 
-        {/* دسترسی سریع */}
+        {}
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
           <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">دسترسی سریع</h2>
           <div className="space-y-2">
@@ -433,7 +427,7 @@ export default function DashboardClient({ stats, orderStats, recentOrders, topPr
         </div>
       </div>
 
-      {/* کارت‌های ثانویه */}
+      {}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "دسته‌بندی‌ها", value: fa(stats.totalCategories), icon: "📂", href: "/admin/categories" },

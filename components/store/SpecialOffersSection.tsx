@@ -179,7 +179,7 @@ export default function SpecialOffersSection() {
                 ))}
               </div>
 
-              {/* نکته: هیچ dots/فلش نداریم طبق خواسته */}
+              {}
             </div>
           </div>
         </div>

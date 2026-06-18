@@ -60,11 +60,9 @@ export function CartProvider({ children, isLoggedIn }: { children: ReactNode; is
   const [items, setItems] = useState<CartItem[]>([]);
   const [ready, setReady] = useState(false);
 
-  // لود اولیه
   useEffect(() => {
     async function init() {
       if (isLoggedIn) {
-        // لود از DB
         const res = await fetch("/api/cart");
         const dbItems = await res.json();
         const mapped: CartItem[] = dbItems.map((i: any) => ({
@@ -73,17 +71,14 @@ export function CartProvider({ children, isLoggedIn }: { children: ReactNode; is
           product: i.product,
         }));
 
-        // merge با localStorage
         const lsItems = readLS();
         if (lsItems.length > 0) {
-          // sync localStorage به DB
           await fetch("/api/cart/sync", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ items: lsItems.map(i => ({ productId: i.productId, qty: i.qty })) }),
           });
           localStorage.removeItem(LS_KEY);
-          // لود مجدد از DB
           const res2 = await fetch("/api/cart");
           const merged = await res2.json();
           setItems(merged.map((i: any) => ({ productId: i.productId, qty: i.qty, product: i.product })));
@@ -98,7 +93,6 @@ export function CartProvider({ children, isLoggedIn }: { children: ReactNode; is
     init();
   }, [isLoggedIn]);
 
-  // sync به DB یا LS
   const syncToServer = useCallback(async (productId: string, qty: number | null) => {
     if (!isLoggedIn) return;
     if (qty === null) {

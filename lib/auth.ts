@@ -3,9 +3,8 @@ import { prisma } from "@/lib/prisma";
 
 const SECRET = process.env.JWT_SECRET || "mymonta-secret-key-change-in-production";
 const COOKIE_NAME = "auth_token";
-const EXPIRES_IN = 60 * 60 * 24 * 30; // 30 روز
+const EXPIRES_IN = 60 * 60 * 24 * 30;
 
-// ── ابزار Base64URL ───────────────────────────────────────────────────────────
 function base64UrlEncode(data: Uint8Array): string {
   return Buffer.from(data).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
@@ -15,7 +14,6 @@ function base64UrlDecode(str: string): Buffer {
   return Buffer.from(str, "base64");
 }
 
-// ── ساخت JWT با HMAC-SHA256 ───────────────────────────────────────────────────
 async function createHmac(data: string, secret: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -78,7 +76,6 @@ export async function clearAuthCookie() {
   cookieStore.delete(COOKIE_NAME);
 }
 
-// ── هش رمز عبور با SHA-256 ───────────────────────────────────────────────────
 export async function hashPassword(password: string): Promise<string> {
   const data = new TextEncoder().encode(password + (process.env.PASSWORD_SALT || "mymonta-salt"));
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);

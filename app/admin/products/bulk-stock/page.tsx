@@ -140,7 +140,7 @@ export default function BulkStockPage() {
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
 
-      {/* مودال گروهی */}
+      {}
       {showBulk && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -154,7 +154,7 @@ export default function BulkStockPage() {
             </div>
 
             <div className="space-y-4">
-              {/* نوع */}
+              {}
               <div>
                 <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-2">نوع عملیات</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -177,7 +177,7 @@ export default function BulkStockPage() {
                 </div>
               </div>
 
-              {/* مقدار */}
+              {}
               <div>
                 <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-2">تعداد</label>
                 <input
@@ -191,7 +191,7 @@ export default function BulkStockPage() {
                 />
               </div>
 
-              {/* خلاصه */}
+              {}
               <div className="bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06] rounded-xl p-3 text-xs text-gray-600 dark:text-gray-400">
                 <span className="font-black text-gray-900 dark:text-white">{toFa(selected.size)} محصول</span> انتخاب شده —
                 {bulkValue ? (
@@ -216,7 +216,7 @@ export default function BulkStockPage() {
         </div>
       )}
 
-      {/* هدر */}
+      {}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">ویرایش گروهی موجودی</h1>
@@ -233,7 +233,7 @@ export default function BulkStockPage() {
         )}
       </div>
 
-      {/* آمار */}
+      {}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "کل محصولات", value: products.length, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10" },
@@ -250,7 +250,7 @@ export default function BulkStockPage() {
         ))}
       </div>
 
-      {/* فیلترها */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="relative">
@@ -291,9 +291,9 @@ export default function BulkStockPage() {
         </div>
       </div>
 
-      {/* جدول */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
-        {/* هدر */}
+        {}
         <div className="flex items-center gap-4 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
           <button onClick={toggleAll}
             className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${
@@ -329,7 +329,7 @@ export default function BulkStockPage() {
                 isSelected ? "bg-blue-50/50 dark:bg-blue-500/5" : "hover:bg-gray-50 dark:hover:bg-white/[0.02]"
               } ${idx < filtered.length - 1 ? "border-b border-gray-50 dark:border-white/[0.04]" : ""}`}>
 
-              {/* چک‌باکس */}
+              {}
               <button onClick={() => toggleSelect(p.id)}
                 className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${
                   isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-white/20 hover:border-blue-400"
@@ -337,7 +337,7 @@ export default function BulkStockPage() {
                 {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </button>
 
-              {/* تصویر */}
+              {}
               <div className="w-10 h-10 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 border border-gray-100 dark:border-white/[0.06] flex-shrink-0 flex items-center justify-center">
                 {p.mainImage
                   ? <img src={p.mainImage} alt={p.title} className="w-full h-full object-cover" />
@@ -345,7 +345,7 @@ export default function BulkStockPage() {
                 }
               </div>
 
-              {/* اطلاعات */}
+              {}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-black text-gray-900 dark:text-white truncate">{p.title}</p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -354,7 +354,7 @@ export default function BulkStockPage() {
                 </div>
               </div>
 
-              {/* ردیابی */}
+              {}
               <div className="w-24 hidden lg:flex justify-center">
                 <button onClick={() => handleEdit(p.id, "trackStock", !vals.trackStock)}
                   className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${vals.trackStock ? "bg-blue-600" : "bg-gray-200 dark:bg-white/10"}`}>
@@ -362,7 +362,7 @@ export default function BulkStockPage() {
                 </button>
               </div>
 
-              {/* موجودی */}
+              {}
               <div className="w-28 hidden lg:block">
                 <input
                   type="number" min="0"
@@ -376,7 +376,7 @@ export default function BulkStockPage() {
                 />
               </div>
 
-              {/* آستانه */}
+              {}
               <div className="w-24 hidden lg:block">
                 <input
                   type="number" min="1"
@@ -390,14 +390,14 @@ export default function BulkStockPage() {
                 />
               </div>
 
-              {/* وضعیت */}
+              {}
               <div className="w-20 hidden lg:block">
                 <span className={`text-[10px] font-black px-2 py-1 rounded-lg border ${status.bg} ${status.color}`}>
                   {status.label}
                 </span>
               </div>
 
-              {/* ذخیره */}
+              {}
               <div className="w-16 hidden lg:flex justify-center">
                 {isSaved ? (
                   <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -417,7 +417,7 @@ export default function BulkStockPage() {
         })}
       </div>
 
-      {/* راهنما */}
+      {}
       <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-500/5 border border-amber-100 dark:border-amber-500/20 rounded-xl">
         <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

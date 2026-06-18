@@ -75,7 +75,7 @@ export default function AdminOrdersPage() {
           <p className="text-sm text-gray-500 mt-1">{toFa(total)} سفارش ثبت شده</p>
         </div>
 
-        {/* جستجو */}
+        {}
         <form onSubmit={handleSearch} className="flex items-center gap-2">
           <div className="relative">
             <input type="text" placeholder="شماره سفارش، نام یا موبایل..."
@@ -95,7 +95,7 @@ export default function AdminOrdersPage() {
         </form>
       </div>
 
-      {/* فیلتر وضعیت */}
+      {}
       <div className="flex flex-wrap gap-2">
         <button onClick={() => { setStatusFilter(""); setPage(1); }}
           className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${!statusFilter ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900" : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
@@ -109,7 +109,7 @@ export default function AdminOrdersPage() {
         ))}
       </div>
 
-      {/* جدول */}
+      {}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
         {loading ? (
           <div className="space-y-px">

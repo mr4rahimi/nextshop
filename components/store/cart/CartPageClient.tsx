@@ -45,7 +45,6 @@ export default function CartPageClient() {
     return s + (orig - sale) * i.qty;
   }, 0);
 
-  // سبد خالی
   if (count === 0) {
     return (
       <section className="relative py-16 transition-colors duration-700">
@@ -112,7 +111,7 @@ export default function CartPageClient() {
       <div className="px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
 
-          {/* آیتم‌ها */}
+          {}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between px-6 mb-8">
               <div className="flex items-center gap-4">
@@ -136,7 +135,7 @@ export default function CartPageClient() {
                     className="group relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-[30px] border border-white/40 dark:border-white/10 rounded-[2.8rem] p-6 md:p-8 transition-all duration-500 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] hover:-translate-y-1">
                     <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
 
-                      {/* تصویر */}
+                      {}
                       <Link href={`/products/${item.product.slug}`}
                         className="relative w-40 h-40 flex-shrink-0 bg-gradient-to-br from-white to-gray-100 dark:from-white/10 dark:to-transparent rounded-[2.2rem] p-4 border border-white dark:border-white/5 shadow-inner overflow-hidden flex items-center justify-center">
                         {img
@@ -145,7 +144,7 @@ export default function CartPageClient() {
                         }
                       </Link>
 
-                      {/* اطلاعات */}
+                      {}
                       <div className="flex-1 space-y-3 text-center md:text-right">
                         <Link href={`/products/${item.product.slug}`}>
                           <h3 className="text-base md:text-lg font-black text-gray-800 dark:text-gray-100 leading-8 hover:text-primary-600 transition-colors line-clamp-2">
@@ -159,7 +158,7 @@ export default function CartPageClient() {
                         )}
                       </div>
 
-                      {/* قیمت و تعداد */}
+                      {}
                       <div className="flex flex-col items-center md:items-end gap-6 md:min-w-[200px] border-t md:border-t-0 md:border-r border-gray-200/50 dark:border-white/5 pt-6 md:pt-2 md:pr-8">
                         <div className="flex items-center gap-3">
                           <button onClick={() => removeItem(item.productId)}
@@ -203,7 +202,7 @@ export default function CartPageClient() {
             </div>
           </div>
 
-          {/* خلاصه فاکتور */}
+          {}
           <div className="lg:col-span-1 lg:sticky lg:top-24">
             <div className="relative group max-w-sm mx-auto">
               <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary-500/10 rounded-full blur-[80px]" />

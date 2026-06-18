@@ -48,10 +48,10 @@ export default function UserDashboardClient({ user, stats, recentOrders }: Props
   return (
     <div className="space-y-8">
 
-      {/* ── کیف پول + امتیاز ──────────────────────────────────────────── */}
+      {}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-        {/* کیف پول */}
+        {}
         <div className="group relative p-8 rounded-[2.5rem] bg-white/40 dark:bg-white/[0.03] backdrop-blur-3xl border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.04)] dark:shadow-none transition-all duration-500 hover:-translate-y-2">
           <div className="absolute -top-10 -left-10 w-32 h-32 bg-secondary-500/10 rounded-full blur-3xl group-hover:bg-secondary-500/20 transition-all duration-700" />
           <div className="relative z-10">
@@ -78,7 +78,7 @@ export default function UserDashboardClient({ user, stats, recentOrders }: Props
           </div>
         </div>
 
-        {/* امتیاز باشگاه — استاتیک */}
+        {}
         <div className="group relative p-8 rounded-[2.5rem] bg-white/40 dark:bg-white/[0.03] backdrop-blur-3xl border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.04)] dark:shadow-none transition-all duration-500 hover:-translate-y-2">
           <div className="absolute -top-10 -left-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700" />
           <div className="relative z-10">
@@ -110,7 +110,7 @@ export default function UserDashboardClient({ user, stats, recentOrders }: Props
         </div>
       </div>
 
-      {/* ── آمار سفارشات ──────────────────────────────────────────────── */}
+      {}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {[
           { label: "سفارش‌های موفق",    value: stats.successOrders,    color: "emerald", icon: "M5 13l4 4L19 7" },
@@ -137,7 +137,7 @@ export default function UserDashboardClient({ user, stats, recentOrders }: Props
         ))}
       </div>
 
-      {/* ── آخرین سفارشات ─────────────────────────────────────────────── */}
+      {}
       <div className="relative overflow-hidden bg-white/40 dark:bg-white/[0.02] backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.02)]">
         <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary-500/5 rounded-full blur-[100px]" />
         <div className="relative z-10">
@@ -226,7 +226,7 @@ export default function UserDashboardClient({ user, stats, recentOrders }: Props
         </div>
       </div>
 
-      {/* ── تیکت‌های اخیر — استاتیک ──────────────────────────────────── */}
+      {}
       <div className="relative overflow-hidden bg-white/40 dark:bg-white/[0.02] backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.02)]">
         <div className="absolute -top-12 -left-12 w-48 h-48 bg-emerald-500/5 rounded-full blur-[80px]" />
         <div className="relative z-10">

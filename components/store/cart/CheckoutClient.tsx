@@ -108,7 +108,6 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
 
   const addrCities = PROVINCES.find(p => p.name === newAddr.province)?.cities ?? [];
 
-  // لود روش‌های ارسال وقتی آدرس انتخاب شد
   useEffect(() => {
     if (!selectedAddress) return;
     fetch(`/api/store/shipping?city=${encodeURIComponent(selectedAddress.city)}`)
@@ -183,10 +182,10 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
       <div className="container">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-          {/* ستون اصلی */}
+          {}
           <div className="lg:col-span-9 space-y-6">
 
-            {/* ── آدرس تحویل ─────────────────────────────────────── */}
+            {}
             <div className="bg-white/40 dark:bg-white/[0.02] backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-8 shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
@@ -208,7 +207,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
                 )}
               </div>
 
-              {/* آدرس انتخاب‌شده */}
+              {}
               {selectedAddress && !showAddressList && (
                 <div className="p-6 bg-primary-500/5 rounded-3xl border border-primary-500/10">
                   <p className="text-gray-800 dark:text-gray-200 font-bold leading-loose text-sm">
@@ -231,7 +230,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
                 </div>
               )}
 
-              {/* لیست آدرس‌ها */}
+              {}
               {showAddressList && (
                 <div className="space-y-3">
                   {addresses.map(a => (
@@ -262,7 +261,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
                 </div>
               )}
 
-              {/* فرم آدرس جدید */}
+              {}
               {showAddForm && (
                 <div className="mt-4 space-y-4 p-5 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
                   <h4 className="font-black text-sm text-gray-900 dark:text-white">آدرس جدید</h4>
@@ -302,7 +301,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
               )}
             </div>
 
-            {/* ── روش ارسال ──────────────────────────────────────── */}
+            {}
             <div className="bg-white/40 dark:bg-white/[0.02] backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-8 shadow-xl">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 bg-primary-600/10 rounded-xl flex items-center justify-center text-primary-600">
@@ -354,7 +353,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
               )}
             </div>
 
-            {/* ── روش پرداخت ─────────────────────────────────────── */}
+            {}
             <div className="bg-white/40 dark:bg-white/[0.02] backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-8 shadow-xl">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 bg-primary-600/10 rounded-xl flex items-center justify-center text-primary-600">
@@ -369,7 +368,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* پرداخت آنلاین */}
+                {}
                 <div onClick={() => setPaymentMethod("online")}
                   className={`cursor-pointer flex items-center p-6 border-2 rounded-[2rem] transition-all ${paymentMethod === "online" ? "border-primary-600 bg-white dark:bg-white/5 shadow-sm" : "border-gray-100 dark:border-white/5 bg-white/50 dark:bg-white/[0.02] hover:border-primary-300"}`}>
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ml-4 transition-all ${paymentMethod === "online" ? "bg-primary-600 text-white shadow-lg shadow-primary-500/20" : "bg-gray-100 dark:bg-white/5 text-gray-400"}`}>
@@ -386,7 +385,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
                   </div>
                 </div>
 
-                {/* کارت به کارت */}
+                {}
                 <div onClick={() => setPaymentMethod("card")}
                   className={`cursor-pointer flex items-center p-6 border-2 rounded-[2rem] transition-all ${paymentMethod === "card" ? "border-primary-600 bg-white dark:bg-white/5 shadow-sm" : "border-gray-100 dark:border-white/5 bg-white/50 dark:bg-white/[0.02] hover:border-primary-300"}`}>
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ml-4 transition-all ${paymentMethod === "card" ? "bg-primary-600 text-white shadow-lg shadow-primary-500/20" : "bg-gray-100 dark:bg-white/5 text-gray-400"}`}>
@@ -404,7 +403,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
                 </div>
               </div>
 
-              {/* اطلاعات کارت به کارت */}
+              {}
               {paymentMethod === "card" && storeSettings.cardNumber && (
                 <div className="mt-6 p-5 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
                   <p className="text-xs font-black text-gray-700 dark:text-gray-300">اطلاعات کارت برای انتقال وجه:</p>
@@ -429,7 +428,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
             )}
           </div>
 
-          {/* ── خلاصه فاکتور ────────────────────────────────────── */}
+          {}
           <div className="lg:col-span-3">
             <div className="sticky top-8">
               <div className="relative bg-white/20 dark:bg-black/20 backdrop-blur-[60px] border border-white/50 dark:border-white/5 rounded-[3.5rem] p-2 shadow-2xl overflow-hidden">
@@ -462,7 +461,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
                     </div>
                   </div>
 
-                  {/* کیف پول */}
+                  {}
                   {storeSettings.walletEnabled && walletBalanceNum > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">

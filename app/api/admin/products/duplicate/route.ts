@@ -17,7 +17,6 @@ export async function POST(req: Request) {
 
   if (!original) return NextResponse.json({ error: "محصول یافت نشد" }, { status: 404 });
 
-  // ساخت slug یکتا
   const baseSlug = `${original.slug}-copy`;
   let slug = baseSlug;
   let counter = 1;

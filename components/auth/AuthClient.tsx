@@ -24,7 +24,7 @@ export default function AuthClient() {
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [verifiedCode, setVerifiedCode] = useState(""); // کد تأییدشده برای register
+  const [verifiedCode, setVerifiedCode] = useState("");
 
   const otpRefs = [
     useRef<HTMLInputElement>(null),
@@ -33,7 +33,6 @@ export default function AuthClient() {
     useRef<HTMLInputElement>(null),
   ];
 
-  // ── تایمر ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (timer <= 0) return;
     const t = setTimeout(() => setTimer(timer - 1), 1000);
@@ -46,7 +45,6 @@ export default function AuthClient() {
     return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
   }
 
-  // ── مرحله ۱: بررسی شماره ────────────────────────────────────────────────
   async function handleCheckPhone() {
     setError("");
     if (!/^09[0-9]{9}$/.test(phone)) {
@@ -71,7 +69,6 @@ export default function AuthClient() {
     }
   }
 
-  // ── ارسال OTP ─────────────────────────────────────────────────────────────
   async function handleSendOtp() {
     setError("");
     setLoading(true);
@@ -87,7 +84,6 @@ export default function AuthClient() {
       setTimer(120);
       setOtp(["", "", "", ""]);
       setTimeout(() => otpRefs[0].current?.focus(), 100);
-      // در محیط dev کد رو نشون بده
       if (data.devCode) console.log(`[DEV] کد OTP: ${data.devCode}`);
     } catch {
       setError("خطا در ارسال کد");
@@ -96,7 +92,6 @@ export default function AuthClient() {
     }
   }
 
-  // ── مدیریت ورودی OTP ─────────────────────────────────────────────────────
   function handleOtpChange(index: number, value: string) {
     if (!/^[0-9]?$/.test(value)) return;
     const newOtp = [...otp];
@@ -111,7 +106,6 @@ export default function AuthClient() {
     }
   }
 
-  // ── تأیید OTP ─────────────────────────────────────────────────────────────
   async function handleVerifyOtp() {
     setError("");
     const code = otp.join("");
@@ -141,7 +135,6 @@ export default function AuthClient() {
     }
   }
 
-  // ── ورود با رمز ──────────────────────────────────────────────────────────
   async function handleLoginPassword() {
     setError("");
     if (!password) { setError("رمز عبور را وارد کنید"); return; }
@@ -163,7 +156,6 @@ export default function AuthClient() {
     }
   }
 
-  // ── ثبت‌نام با رمز جدید ───────────────────────────────────────────────────
   async function handleRegister() {
     setError("");
     if (newPassword.length < 6) { setError("رمز عبور باید حداقل ۶ کاراکتر باشد"); return; }
@@ -187,11 +179,9 @@ export default function AuthClient() {
     }
   }
 
-  // ── ثبت‌نام بدون رمز (بعداً) ─────────────────────────────────────────────
   async function handleSkipPassword() {
     setLoading(true);
     try {
-      // یک رمز تصادفی می‌سازیم
       const tempPass = Math.random().toString(36).slice(2) + "Aa1";
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -283,7 +273,7 @@ export default function AuthClient() {
           {step === "auth" && (
             <div className="space-y-6">
 
-              {/* تب OTP / رمز — فقط برای کاربر موجود */}
+              {}
               {isExisting && (
                 <div className="flex p-1 bg-gray-100 dark:bg-white/5 rounded-2xl">
                   <button
@@ -363,7 +353,7 @@ export default function AuthClient() {
                 />
               )}
 
-              {/* دکمه نهایی */}
+              {}
               <button
                 onClick={authMode === "otp" ? handleVerifyOtp : handleLoginPassword}
                 disabled={loading || (authMode === "otp" && (!otpSent || !otpComplete)) || (authMode === "password" && !password)}

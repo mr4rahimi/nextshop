@@ -249,7 +249,7 @@ export default function AdminOrderDetailPage() {
         </div>
       </div>
 
-      {/* Timeline وضعیت */}
+      {}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
         <h3 className="font-black text-sm text-gray-900 dark:text-white mb-6">مسیر سفارش</h3>
         <div className="flex items-center gap-0 overflow-x-auto pb-2">
@@ -289,10 +289,10 @@ export default function AdminOrderDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ستون اصلی */}
+        {}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* تغییر وضعیت */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
             <h3 className="font-black text-sm text-gray-900 dark:text-white">تغییر وضعیت سفارش</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -336,7 +336,7 @@ export default function AdminOrderDetailPage() {
             </div>
           </div>
 
-          {/* اقلام سفارش */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
               <h3 className="font-black text-sm text-gray-900 dark:text-white">اقلام سفارش ({toFa(order.items.length)} قلم)</h3>
@@ -365,7 +365,7 @@ export default function AdminOrderDetailPage() {
                 );
               })}
             </div>
-            {/* جمع‌بندی */}
+            {}
             <div className="px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-800 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">جمع اقلام:</span>
@@ -390,7 +390,7 @@ export default function AdminOrderDetailPage() {
             </div>
           </div>
 
-          {/* پرداخت‌ها */}
+          {}
           {order.payments.length > 0 && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
@@ -418,10 +418,10 @@ export default function AdminOrderDetailPage() {
           )}
         </div>
 
-        {/* ستون راست */}
+        {}
         <div className="space-y-6">
 
-          {/* اطلاعات کاربر */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
             <h3 className="font-black text-sm text-gray-900 dark:text-white mb-4">اطلاعات خریدار</h3>
             <div className="flex items-center gap-3 mb-4">
@@ -443,7 +443,7 @@ export default function AdminOrderDetailPage() {
             </Link>
           </div>
 
-          {/* آدرس تحویل */}
+          {}
           {order.address && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-3">
               <h3 className="font-black text-sm text-gray-900 dark:text-white">آدرس تحویل</h3>
@@ -463,7 +463,7 @@ export default function AdminOrderDetailPage() {
             </div>
           )}
 
-          {/* کد رهگیری */}
+          {}
           {order.trackingCode && (
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-800 p-5">
               <h3 className="font-black text-sm text-blue-700 dark:text-blue-400 mb-2">کد رهگیری</h3>
@@ -471,7 +471,7 @@ export default function AdminOrderDetailPage() {
             </div>
           )}
 
-          {/* یادداشت */}
+          {}
           {order.note && (
             <div className="bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-200 dark:border-amber-800 p-5">
               <h3 className="font-black text-sm text-amber-700 dark:text-amber-400 mb-2">یادداشت</h3>

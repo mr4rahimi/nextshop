@@ -60,7 +60,6 @@ export async function POST(req: Request) {
     }),
   ];
 
-  // اگه کامل پرداخت شد، وضعیت سفارش رو آپدیت کن
   if (remaining === 0n) {
     txOperations.push(
       prisma.order.update({

@@ -44,7 +44,6 @@ export function buildBaseMetadata(opts: {
 
 // ── JSON-LD Builders ───────────────────────────────────────────────────────────
 
-/** Organization schema — صفحه اصلی */
 export function buildOrganizationSchema(opts: {
   name: string;
   url: string;
@@ -169,7 +168,6 @@ export function buildProductSchema(opts: {
     },
   };
 
-  // اگه تخفیف داشت، priceSpecification هم اضافه کن
   if (salePrice && salePrice < price) {
     schema.offers.priceSpecification = [
       
@@ -191,7 +189,6 @@ export function buildProductSchema(opts: {
   return schema;
 }
 
-/** Article schema — بلاگ */
 export function buildArticleSchema(opts: {
   title: string;
   description?: string | null;
@@ -227,7 +224,6 @@ export function buildArticleSchema(opts: {
   };
 }
 
-/** ItemList schema — لیست محصولات / دسته‌بندی */
 export function buildItemListSchema(opts: {
   name: string;
   url: string;
@@ -248,7 +244,6 @@ export function buildItemListSchema(opts: {
   };
 }
 
-/** FAQPage schema — سوالات متداول محصول */
 export function buildFAQSchema(faqs: { question: string; answer: string }[]) {
   if (!faqs.length) return null;
   return {
@@ -262,7 +257,6 @@ export function buildFAQSchema(faqs: { question: string; answer: string }[]) {
   };
 }
 
-/** LocalBusiness schema — اگه فروشگاه فیزیکی هم داری */
 export function buildLocalBusinessSchema(opts: {
   name: string;
   url: string;

@@ -27,11 +27,9 @@ export default function AdminMenuPage() {
   const [tab, setTab]                   = useState<"mega" | "links">("mega");
   const [loading, setLoading]           = useState(true);
 
-  // فرم مگامنو
   const [selectedCatId, setSelectedCatId] = useState("");
   const [addingMega, setAddingMega]       = useState(false);
 
-  // فرم لینک
   const [showLinkForm, setShowLinkForm] = useState(false);
   const [editingItem, setEditingItem]   = useState<MenuItem | null>(null);
   const [linkForm, setLinkForm]         = useState({ ...EMPTY_ITEM });
@@ -49,7 +47,6 @@ export default function AdminMenuPage() {
     });
   }, []);
 
-  // دسته‌های اصلی که هنوز در مگامنو نیستند
   const availableCats = allCats.filter(c =>
     c.parentId === null && !megaMenuCats.find(m => m.category.id === c.id)
   );
@@ -157,15 +154,15 @@ export default function AdminMenuPage() {
         ))}
       </div>
 
-      {/* ── مگامنو ── */}
+      {}
       {tab === "mega" && (
         <div className="space-y-6">
-          {/* راهنما */}
+          {}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 text-xs text-blue-700 dark:text-blue-300 font-bold">
             دسته‌بندی‌های اصلی که انتخاب می‌کنید در مگامنو نمایش داده می‌شوند. زیردسته‌های هر کدام به صورت خودکار نمایش داده می‌شوند.
           </div>
 
-          {/* افزودن دسته */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
             <h3 className="font-black text-sm text-gray-900 dark:text-white mb-4">افزودن دسته‌بندی به مگامنو</h3>
             <div className="flex gap-3">
@@ -184,7 +181,7 @@ export default function AdminMenuPage() {
             )}
           </div>
 
-          {/* لیست */}
+          {}
           <div className="space-y-3">
             {megaMenuCats.length === 0 ? (
               <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 text-gray-400">
@@ -193,7 +190,7 @@ export default function AdminMenuPage() {
             ) : megaMenuCats.map((item, i) => (
               <div key={item.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
                 <div className="flex items-center gap-4">
-                  {/* تصویر */}
+                  {}
                   <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex-shrink-0">
                     {item.category.imageUrl
                       ? <img src={item.category.imageUrl} alt={item.category.title} className="w-full h-full object-cover" />
@@ -201,7 +198,7 @@ export default function AdminMenuPage() {
                     }
                   </div>
 
-                  {/* اطلاعات */}
+                  {}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-black text-sm text-gray-900 dark:text-white">{item.category.title}</p>
@@ -221,7 +218,7 @@ export default function AdminMenuPage() {
                     </div>
                   </div>
 
-                  {/* کنترل‌ها */}
+                  {}
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="flex flex-col gap-1">
                       <button onClick={() => moveMega(i, -1)} disabled={i === 0}
@@ -247,7 +244,7 @@ export default function AdminMenuPage() {
         </div>
       )}
 
-      {/* ── لینک‌های منو ── */}
+      {}
       {tab === "links" && (
         <div className="space-y-4">
           <div className="flex justify-end">
@@ -260,7 +257,7 @@ export default function AdminMenuPage() {
             </button>
           </div>
 
-          {/* فرم */}
+          {}
           {showLinkForm && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-blue-200 dark:border-blue-800 p-6 space-y-4">
               <h3 className="font-black text-sm text-gray-900 dark:text-white">
@@ -301,7 +298,7 @@ export default function AdminMenuPage() {
             </div>
           )}
 
-          {/* لیست لینک‌ها */}
+          {}
           <div className="space-y-3">
             {menuItems.length === 0 && !showLinkForm ? (
               <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 text-gray-400">

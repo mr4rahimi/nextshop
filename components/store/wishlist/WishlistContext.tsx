@@ -18,7 +18,6 @@ export function WishlistProvider({ children, isLoggedIn }: { children: React.Rea
   const [ids, setIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
 
-  // بارگذاری اولیه
   useEffect(() => {
     if (!isLoggedIn) return;
     fetch("/api/user/wishlist")

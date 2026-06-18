@@ -41,7 +41,6 @@ export async function POST(req: Request) {
       return sum + unit * BigInt(it.qty);
     }, BigInt(0));
 
-    // MVP: فعلاً هزینه ارسال/تخفیف = 0
     const shippingFee = BigInt(0);
     const discountTotal = BigInt(0);
     const grandTotal = itemsTotal + shippingFee - discountTotal;
@@ -76,7 +75,6 @@ export async function POST(req: Request) {
       }),
     });
 
-    // مصرف موجودی فقط برای assembled
     for (const it of cart.items) {
       const assembled = it.assembled;
       if (!assembled) continue;

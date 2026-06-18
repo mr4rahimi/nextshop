@@ -4,7 +4,6 @@ import { serialize } from "@/lib/serialize";
 
 export const runtime = "nodejs";
 
-// کش ۱۰ دقیقه‌ای — دسته‌بندی‌ها خیلی تغییر نمیکنن
 export const revalidate = 600;
 
 export async function GET() {
@@ -23,7 +22,6 @@ export async function GET() {
     orderBy: { sortOrder: "asc" },
   });
 
-  // فقط دسته‌های اصلی (والد ندارن) با زیردسته‌هاشون
   const roots = categories.filter((c) => !c.parentId);
 
   return NextResponse.json(serialize(roots));

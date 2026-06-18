@@ -9,7 +9,6 @@ export default async function UserDashboardPage() {
   const user = await getAuthUser();
   if (!user) return null;
 
-  // آمار سفارشات
   const [successOrders, processingOrders, canceledOrders, cartItems, recentOrders, walletBalance] =
     await Promise.all([
       prisma.order.count({ where: { userId: user.id, status: "DELIVERED" } }),

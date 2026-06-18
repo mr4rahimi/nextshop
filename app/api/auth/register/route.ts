@@ -27,7 +27,6 @@ export async function POST(req: Request) {
 
   const existing = await prisma.user.findUnique({ where: { phone } });
   if (existing) {
-    // اگه کاربر وجود داشت لاگین کن
     const token = await signToken({ userId: existing.id, phone: existing.phone, role: existing.role });
     await setAuthCookie(token);
     return NextResponse.json({ success: true });

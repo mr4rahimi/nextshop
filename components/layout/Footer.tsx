@@ -43,7 +43,7 @@ export default function Footer() {
 
   if (!data) return null;
   const { columns, settings, categories } = data;
-  const activeColumns = columns.filter(c => c.type !== "LINKS" || true); // همه active از API میان
+  const activeColumns = columns.filter(c => c.type !== "LINKS" || true);
   const colCount = activeColumns.length;
 
   const socials = [
@@ -63,13 +63,13 @@ export default function Footer() {
   return (
     <footer className="relative bg-gray-950 dark:bg-gray-950 text-gray-400 overflow-hidden" dir="rtl">
 
-      {/* خط تزئینی بالا */}
+      {}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary-500/50 to-transparent" />
 
-      {/* glow تزئینی */}
+      {}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary-600/5 rounded-full blur-[100px] pointer-events-none" />
 
-      {/* ── بدنه اصلی ─────────────────────────────────────────────── */}
+      {}
       <div className="container relative z-10 py-16">
         {colCount === 0 ? (
           <p className="text-center text-sm opacity-40 py-8">فوتر پیکربندی نشده</p>
@@ -87,7 +87,7 @@ export default function Footer() {
                 {/* ── BRAND ───────────────────────────────────── */}
                 {col.type === "BRAND" && (
                   <div className="space-y-6">
-                    {/* لوگو */}
+                    {}
                     {settings.storeLogo ? (
                       <Link href="/">
                         <img src={settings.storeLogo} alt={settings.storeName} className="h-10 w-auto brightness-0 invert opacity-90 hover:opacity-100 transition-opacity" />
@@ -95,11 +95,11 @@ export default function Footer() {
                     ) : (
                       <Link href="/" className="text-2xl font-black text-white">{settings.storeName}</Link>
                     )}
-                    {/* توضیحات */}
+                    {}
                     {settings.siteDescription && (
                       <p className="text-sm leading-relaxed text-gray-500 max-w-xs">{settings.siteDescription}</p>
                     )}
-                    {/* شبکه‌های اجتماعی */}
+                    {}
                     {socials.length > 0 && (
                       <div className="flex items-center gap-2 flex-wrap">
                         {socials.map(s => (
@@ -205,7 +205,7 @@ export default function Footer() {
                       )}
                     </div>
 
-                    {/* نمادهای اعتماد */}
+                    {}
                     {trustBadges.length > 0 && (
                       <div className="pt-2">
                         <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-3">نمادهای اعتماد</p>
@@ -233,12 +233,12 @@ export default function Footer() {
         )}
       </div>
 
-      {/* ── خط جداکننده ──────────────────────────────────────────── */}
+      {}
       <div className="relative">
         <div className="absolute inset-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
       </div>
 
-      {/* ── کپی‌رایت ─────────────────────────────────────────────── */}
+      {}
       <div className="container relative z-10 py-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-600">

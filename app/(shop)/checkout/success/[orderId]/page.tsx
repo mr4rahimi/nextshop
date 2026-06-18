@@ -23,7 +23,6 @@ export default async function SuccessPage({ params }: Props) {
 
   if (!order) redirect("/user/orders");
 
-  // آپدیت وضعیت به PAID اگه هنوز PENDING بود
   if (order.status === "PENDING_PAYMENT") {
     await prisma.order.update({ where: { id: orderId }, data: { status: "PAID" } });
     await prisma.payment.updateMany({

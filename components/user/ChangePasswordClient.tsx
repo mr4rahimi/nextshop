@@ -93,7 +93,7 @@ export default function ChangePasswordClient() {
           <PasswordInput label="رمز عبور فعلی" field="current" placeholder="رمز عبور فعلی خود را وارد کنید" />
           <PasswordInput label="رمز عبور جدید" field="new" placeholder="رمز جدید (حداقل ۶ کاراکتر)" />
 
-          {/* نوار قدرت */}
+          {}
           {form.newPassword && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">

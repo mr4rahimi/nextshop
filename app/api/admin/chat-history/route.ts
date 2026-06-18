@@ -4,7 +4,6 @@ import { getAuthUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-// لیست مکالمه‌ها با صفحه‌بندی
 export async function GET(req: NextRequest) {
   const user = await getAuthUser();
   if (!user || user.role !== "ADMIN") {
@@ -37,7 +36,6 @@ export async function GET(req: NextRequest) {
     prisma.chatConversation.count(),
   ]);
 
-  // شماره‌ی کاربرهای لاگین‌کرده را جداگانه می‌گیریم
   const userIds = items.map((i) => i.userId).filter(Boolean) as string[];
   const users = userIds.length
     ? await prisma.user.findMany({

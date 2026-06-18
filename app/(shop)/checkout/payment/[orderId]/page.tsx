@@ -1,5 +1,4 @@
 "use client";
-// صفحه mock درگاه پرداخت — تا اتصال درگاه واقعی
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -10,7 +9,6 @@ export default function MockPaymentPage() {
 
   async function handleSuccess() {
     setProcessing(true);
-    // TODO: در اینجا callback درگاه واقعی پردازش میشه
     await fetch(`/api/checkout/${orderId}/verify`, { method: "POST" }).catch(() => {});
     router.push(`/checkout/success/${orderId}`);
   }

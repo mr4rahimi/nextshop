@@ -47,10 +47,8 @@ export default function ProductsListPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
 
-  // آمار کلی (مستقل از فیلترها)
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, outofstock: 0 });
 
-  // ── دیتای اولیه: دسته‌بندی‌ها، برندها، آمار ──────────────────────────────────
   useEffect(() => {
     fetch("/api/admin/categories").then(r => r.json()).then(setCategories).catch(() => {});
     fetch("/api/admin/brands").then(r => r.json()).then(setBrands).catch(() => {});
@@ -70,13 +68,11 @@ export default function ProductsListPage() {
     }).catch(() => {});
   }, []);
 
-  // ── debounce جستجو ──────────────────────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 400);
     return () => clearTimeout(t);
   }, [search]);
 
-  // ── دریافت گروه‌های ویژگی بر اساس دسته‌بندی انتخاب‌شده ───────────────────────
   useEffect(() => {
     if (!filterCategory) {
       setAttributeGroups([]);
@@ -91,7 +87,6 @@ export default function ProductsListPage() {
       .catch(() => setAttributeGroups([]));
   }, [filterCategory, categories]);
 
-  // ── دریافت محصولات (صفحه‌بندی‌شده) ───────────────────────────────────────────
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
@@ -116,7 +111,6 @@ export default function ProductsListPage() {
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  // وقتی فیلتر/جستجو تغییر کرد، برگرد به صفحه ۱
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, filterCategory, filterBrand, filterStatus, selectedAttributeValues]);
@@ -162,7 +156,7 @@ export default function ProductsListPage() {
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
 
-      {/* مودال حذف */}
+      {}
       {confirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
@@ -187,7 +181,7 @@ export default function ProductsListPage() {
         </div>
       )}
 
-      {/* هدر */}
+      {}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">مدیریت محصولات</h1>
@@ -204,7 +198,7 @@ export default function ProductsListPage() {
         </button>
       </div>
 
-      {/* آمار */}
+      {}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "کل محصولات", value: stats.total, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10" },
@@ -221,10 +215,10 @@ export default function ProductsListPage() {
         ))}
       </div>
 
-      {/* فیلترها */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          {/* جستجو */}
+          {}
           <div className="relative md:col-span-2">
             <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -244,7 +238,7 @@ export default function ProductsListPage() {
             )}
           </div>
 
-          {/* فیلتر دسته‌بندی */}
+          {}
           <select
             value={filterCategory}
             onChange={e => setFilterCategory(e.target.value)}
@@ -254,7 +248,7 @@ export default function ProductsListPage() {
             {categories.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}
           </select>
 
-          {/* فیلتر برند */}
+          {}
           <select
             value={filterBrand}
             onChange={e => setFilterBrand(e.target.value)}
@@ -265,7 +259,7 @@ export default function ProductsListPage() {
           </select>
         </div>
 
-        {/* فیلتر وضعیت */}
+        {}
         <div className="flex gap-2 mt-3 flex-wrap">
           {[
             { value: "", label: "همه" },
@@ -290,7 +284,7 @@ export default function ProductsListPage() {
           )}
         </div>
 
-        {/* فیلتر ویژگی‌ها */}
+        {}
         {attributeGroups.length > 0 && (
           <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/[0.06]">
             <p className="text-xs font-black text-gray-500 mb-2">فیلتر با ویژگی‌ها:</p>
@@ -332,21 +326,21 @@ export default function ProductsListPage() {
         )}
       </div>
 
-      {/* جدول */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
-        {/* هدر جدول */}
+        {}
         <div className="hidden lg:grid grid-cols-[56px_1fr_140px_120px_90px_160px] gap-3 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
           {["", "محصول", "دسته / برند", "قیمت", "وضعیت", "عملیات"].map(h => (
             <div key={h} className="text-[11px] font-black text-gray-400">{h}</div>
           ))}
         </div>
 
-        {/* لودینگ */}
+        {}
         {loading && (
           <div className="py-16 text-center text-sm text-gray-400">در حال بارگذاری...</div>
         )}
 
-        {/* خالی */}
+        {}
         {!loading && products.length === 0 && (
           <div className="py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 mx-auto mb-4 flex items-center justify-center">
@@ -366,14 +360,14 @@ export default function ProductsListPage() {
           </div>
         )}
 
-        {/* ردیف‌ها */}
+        {}
         {!loading && products.map((p, idx) => (
           <div key={p.id}
             className={`group flex lg:grid lg:grid-cols-[56px_1fr_140px_120px_90px_160px] gap-3 px-5 py-3.5 items-center transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02] ${
               idx < products.length - 1 ? "border-b border-gray-50 dark:border-white/[0.04]" : ""
             }`}>
 
-            {/* تصویر */}
+            {}
             <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 border border-gray-100 dark:border-white/[0.06] flex-shrink-0 flex items-center justify-center">
               {p.mainImage ? (
                 <img src={p.mainImage} alt={p.title} className="w-full h-full object-cover" />
@@ -384,7 +378,7 @@ export default function ProductsListPage() {
               )}
             </div>
 
-            {/* عنوان */}
+            {}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-black text-gray-900 dark:text-white truncate">{p.title}</p>
               <p className="text-[11px] text-gray-400 truncate" dir="ltr">/{p.slug}</p>
@@ -393,7 +387,7 @@ export default function ProductsListPage() {
               )}
             </div>
 
-            {/* دسته / برند */}
+            {}
             <div className="hidden lg:block">
               {p.category && (
                 <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 block w-fit mb-1">
@@ -403,7 +397,7 @@ export default function ProductsListPage() {
               {p.brand && <p className="text-[11px] text-gray-400">{p.brand.title}</p>}
             </div>
 
-            {/* قیمت */}
+            {}
             <div className="hidden lg:block">
               <p className="text-sm font-black text-gray-900 dark:text-white" dir="ltr">{toFa(Number(p.price))}</p>
               {p.salePrice && (
@@ -411,7 +405,7 @@ export default function ProductsListPage() {
               )}
             </div>
 
-            {/* وضعیت */}
+            {}
             <div className="hidden lg:block">
               <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border ${
                 p.isActive
@@ -422,9 +416,9 @@ export default function ProductsListPage() {
               </span>
             </div>
 
-            {/* عملیات */}
+            {}
             <div className="flex gap-1.5 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
-              {/* ویرایش */}
+              {}
               <button onClick={() => window.open(`/admin/products/${p.id}`, '_blank')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-xs font-black text-gray-600 dark:text-gray-400 hover:text-blue-600 hover:border-blue-300 dark:hover:border-blue-500/30 transition-all">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -433,7 +427,7 @@ export default function ProductsListPage() {
                 ویرایش
               </button>
 
-              {/* کپی */}
+              {}
               <button onClick={() => handleDuplicate(p.id)} disabled={duplicatingId === p.id}
                 title="کپی محصول"
                 className="w-8 h-8 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-gray-400 hover:text-amber-500 hover:border-amber-300 dark:hover:border-amber-500/30 disabled:opacity-50 transition-all">
@@ -449,7 +443,7 @@ export default function ProductsListPage() {
                 )}
               </button>
 
-              {/* حذف */}
+              {}
               <button onClick={() => setConfirmId(p.id)} disabled={!!deletingId}
                 className="w-8 h-8 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:border-red-300 dark:hover:border-red-500/30 transition-all">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -461,7 +455,7 @@ export default function ProductsListPage() {
         ))}
       </div>
 
-      {/* صفحه‌بندی */}
+      {}
       {!loading && total > 0 && (
         <div className="flex items-center justify-between flex-wrap gap-3">
           <p className="text-xs text-gray-400">

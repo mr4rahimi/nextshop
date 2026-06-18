@@ -32,7 +32,6 @@ export default async function CategoryPage({ params }: Props) {
   const category = await getCategory(slug);
   if (!category) notFound();
 
-  // Schema — جدا از render
   let breadcrumbJson = "";
   let itemListJson = "";
   try {

@@ -37,10 +37,8 @@ export async function GET(_: Request, ctx: { params: Promise<{ slug: string }> }
 
   if (!post || post.status !== "PUBLISHED") return NextResponse.json({ error: "یافت نشد" }, { status: 404 });
 
-  // افزایش viewCount
   await prisma.blogPost.update({ where: { slug }, data: { viewCount: { increment: 1 } } });
 
-  // مطالب مرتبط
   const related = await prisma.blogPost.findMany({
     where: {
       status: "PUBLISHED",
@@ -59,7 +57,6 @@ export async function GET(_: Request, ctx: { params: Promise<{ slug: string }> }
   return NextResponse.json(serialize({ post, related }));
 }
 
-// POST — ارسال نظر
 export async function POST(req: Request, ctx: { params: Promise<{ slug: string }> }) {
   const { slug } = await ctx.params;
   const data = await req.json();

@@ -47,7 +47,7 @@ function TreeNode({ node, level, expanded, onToggle, onEdit, onDelete }: any) {
           </div>
         )}
 
-        {/* تصویر */}
+        {}
         <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-white/5 border border-gray-100 dark:border-white/[0.06] flex items-center justify-center">
           {node.imageUrl ? (
             <img src={node.imageUrl} alt={node.title} className="w-full h-full object-cover" />
@@ -58,7 +58,7 @@ function TreeNode({ node, level, expanded, onToggle, onEdit, onDelete }: any) {
           )}
         </div>
 
-        {/* اطلاعات */}
+        {}
         <div className="flex-1 min-w-0">
           <p className={`font-black text-gray-900 dark:text-white truncate ${level === 0 ? "text-sm" : "text-xs"}`}>
             {node.title}
@@ -66,14 +66,14 @@ function TreeNode({ node, level, expanded, onToggle, onEdit, onDelete }: any) {
           <p className="text-[10px] text-gray-400 truncate">{node.slug}</p>
         </div>
 
-        {/* تعداد زیردسته */}
+        {}
         {hasChildren && (
           <span className="text-[10px] font-bold text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full flex-shrink-0">
             {node.children.length} زیردسته
           </span>
         )}
 
-        {/* وضعیت */}
+        {}
         <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border flex-shrink-0 ${
           node.isActive
             ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20"
@@ -82,7 +82,7 @@ function TreeNode({ node, level, expanded, onToggle, onEdit, onDelete }: any) {
           {node.isActive ? "فعال" : "غیرفعال"}
         </span>
 
-        {/* دکمه‌ها */}
+        {}
         <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
           <button
             onClick={() => onEdit(node)}
@@ -103,7 +103,7 @@ function TreeNode({ node, level, expanded, onToggle, onEdit, onDelete }: any) {
         </div>
       </div>
 
-      {/* فرزندان */}
+      {}
       {hasChildren && isOpen && (
         <div className="border-r border-gray-100 dark:border-white/[0.06] mr-[22px]">
           {node.children.map((child: any) => (
@@ -228,7 +228,6 @@ function CategoryAttributeGroups({ categoryId }: { categoryId: string }) {
   );
 }
 
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
@@ -306,7 +305,7 @@ export default function CategoriesPage() {
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
 
-      {/* هدر */}
+      {}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">دسته‌بندی‌ها</h1>
@@ -323,7 +322,7 @@ export default function CategoriesPage() {
         </button>
       </div>
 
-      {/* فرم */}
+      {}
       {showForm && (
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
@@ -395,7 +394,7 @@ export default function CategoriesPage() {
               />
             </div>
 
-            {/* تصویر */}
+            {}
             <div className="flex items-start gap-4">
               <div className="flex-1">
                 <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">تصویر دسته‌بندی</label>
@@ -435,7 +434,7 @@ export default function CategoriesPage() {
               )}
             </div>
 
-            {/* وضعیت */}
+            {}
             <label className="flex items-center gap-2.5 cursor-pointer w-fit">
               <div
                 onClick={() => handleChange("isActive", !form.isActive)}
@@ -482,7 +481,7 @@ export default function CategoriesPage() {
               )}
             </div>
 
-            {/* گروه‌های ویژگی */}
+            {}
             {editing && (
               <div className="mt-6">
                 <h3 className="text-sm font-black text-gray-700 dark:text-gray-300 mb-3">
@@ -492,9 +491,7 @@ export default function CategoriesPage() {
               </div>
             )}
 
-
-
-            {/* دکمه‌ها */}
+            {}
             <div className="flex gap-3 pt-2 border-t border-gray-100 dark:border-white/[0.06]">
               <button type="submit" disabled={saving}
                 className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-black transition-all">
@@ -509,7 +506,7 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      {/* درخت دسته‌بندی */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-white/[0.06]">
           <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

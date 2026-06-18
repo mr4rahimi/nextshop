@@ -26,7 +26,6 @@ export async function GET(
     return NextResponse.json({ message: "دسته‌بندی یافت نشد" }, { status: 404 });
   }
 
-  // برندهای موجود در این دسته
   const brands = await prisma.brand.findMany({
     where: {
       isActive: true,
@@ -36,14 +35,12 @@ export async function GET(
     orderBy: { title: "asc" },
   });
 
-  // محدوده قیمت
   const priceAgg = await prisma.product.aggregate({
     where: { isActive: true, category: { slug } },
     _min: { price: true },
     _max: { price: true },
   });
 
-  // ویژگی‌های دسته‌بندی
   const attributeGroups = await prisma.categoryAttributeGroup.findMany({
     where: { categoryId: category.id },
     include: {
@@ -55,7 +52,6 @@ export async function GET(
               values: { 
                 orderBy: { sortOrder: "asc" },
                 where: {
-                  // فقط مقادیری که در محصولات این دسته استفاده شده‌اند
                   products: {
                     some: {
                       product: {

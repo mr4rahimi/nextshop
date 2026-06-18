@@ -42,7 +42,7 @@ export default function AdminLoginPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[#080b12] flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-sm">
 
-        {/* لوگو */}
+        {}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -53,7 +53,7 @@ export default function AdminLoginPage() {
           <p className="text-sm text-gray-500 mt-1">اطلاعات ادمین را وارد کنید</p>
         </div>
 
-        {/* فرم */}
+        {}
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-4">
 

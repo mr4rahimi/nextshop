@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 
-// یک مکالمه را پیدا یا ایجاد می‌کند
 export async function getOrCreateConversation(opts: {
   conversationId?: string | null;
   userId?: string | null;
@@ -23,7 +22,6 @@ export async function getOrCreateConversation(opts: {
   return conv.id;
 }
 
-// پیام را ذخیره و زمان آخرین پیام مکالمه را به‌روز می‌کند
 export async function saveMessage(opts: {
   conversationId: string;
   role: "user" | "assistant";

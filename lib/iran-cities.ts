@@ -1,7 +1,5 @@
-// فایل استان/شهر ایران
-// برای دریافت داده کامل:
+
 // https://github.com/shayanypn/iran-province-city/blob/master/src/cities.json
-// فایل JSON رو دانلود کن و محتواش رو جایگزین PROVINCES کن
 
 export interface City { id: number; name: string; }
 export interface Province { id: number; name: string; cities: City[]; }

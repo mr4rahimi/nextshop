@@ -4,7 +4,6 @@ import { serialize } from "@/lib/serialize";
 
 export const runtime = "nodejs";
 
-// نرمال‌سازی JS: حروف کوچک + حذف فاصله/نیم‌فاصله + یکسان‌سازی ی/ک/ا عربی
 function normalize(s: string): string {
   return s
     .toLowerCase()
@@ -16,7 +15,6 @@ function normalize(s: string): string {
     .trim();
 }
 
-// عبارت معادل در SQL — دقیقاً مثل normalize عمل می‌کند
 function normSql(col: string): string {
   return `translate(
             replace(replace(lower(${col}), ' ', ''), chr(8204), ''),

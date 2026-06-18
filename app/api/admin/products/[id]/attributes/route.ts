@@ -20,12 +20,10 @@ export async function PUT(
   const { id } = await params;
   const { attributes } = await req.json();
 
-  // حذف ویژگی‌های قبلی
   await prisma.productAttribute.deleteMany({
     where: { productId: id },
   });
 
-  // اضافه کردن ویژگی‌های جدید
   if (attributes && attributes.length > 0) {
     await prisma.productAttribute.createMany({
       data: attributes.map((a: any) => ({

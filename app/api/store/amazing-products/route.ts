@@ -34,7 +34,6 @@ export async function GET(req: Request) {
     take: 12,
   });
 
-  // ترتیب مطابق productIds ادمین
   const sorted = ids
     .map(id => products.find(p => p.id === id))
     .filter(Boolean) as typeof products;

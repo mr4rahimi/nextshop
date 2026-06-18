@@ -39,7 +39,6 @@ export async function POST(req: Request) {
   const data = await req.json();
   const slug = data.slug || slugify(data.title);
 
-  // محاسبه زمان مطالعه
   const words = (data.content ?? "").replace(/<[^>]+>/g, "").split(/\s+/).length;
   const readingTime = Math.max(1, Math.round(words / 200));
 

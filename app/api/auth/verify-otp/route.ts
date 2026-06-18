@@ -17,15 +17,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "کد وارد شده اشتباه یا منقضی است" }, { status: 400 });
   }
 
-  // بررسی وجود کاربر
   const user = await prisma.user.findUnique({ where: { phone } });
 
   if (!user) {
-    // کاربر جدید — نیاز به ست کردن رمز داره
     return NextResponse.json({ success: true, isNewUser: true });
   }
 
-  // کاربر موجود — لاگین کامل
   const token = await signToken({ userId: user.id, phone: user.phone, role: user.role });
   await setAuthCookie(token);
 

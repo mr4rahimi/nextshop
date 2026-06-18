@@ -20,7 +20,7 @@ function ArticleCard({ article }: { article: Article }) {
     <Link href={`/mag/${article.slug}`}
       className="group flex flex-col bg-white/60 dark:bg-white/[0.03] backdrop-blur-xl border border-white/60 dark:border-white/10 rounded-[2.5rem] overflow-hidden hover:shadow-2xl hover:shadow-black/10 dark:hover:shadow-black/40 hover:-translate-y-2 transition-all duration-500 h-full">
 
-      {/* تصویر */}
+      {}
       <div className="relative aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
         {article.coverImage ? (
           <img src={article.coverImage} alt={article.title}
@@ -36,7 +36,7 @@ function ArticleCard({ article }: { article: Article }) {
         {/* overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-        {/* دسته‌بندی */}
+        {}
         {article.category && (
           <div className="absolute top-4 right-4">
             <span className="px-3 py-1 bg-primary-500/90 backdrop-blur-sm text-white text-[10px] font-black rounded-xl shadow-lg">
@@ -45,7 +45,7 @@ function ArticleCard({ article }: { article: Article }) {
           </div>
         )}
 
-        {/* زمان مطالعه */}
+        {}
         <div className="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <span className="flex items-center gap-1 px-2.5 py-1 bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold rounded-lg">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,7 +56,7 @@ function ArticleCard({ article }: { article: Article }) {
         </div>
       </div>
 
-      {/* محتوا */}
+      {}
       <div className="flex flex-col flex-1 p-6 gap-3">
         <h3 className="font-black text-gray-900 dark:text-white leading-relaxed line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors text-sm">
           {article.title}
@@ -157,7 +157,7 @@ export default function LatestArticlesSection() {
     <section className="py-12 overflow-hidden" dir="rtl">
       <div className="container">
 
-        {/* هدر */}
+        {}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -175,7 +175,7 @@ export default function LatestArticlesSection() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* دکمه‌های nav */}
+            {}
             <div className="hidden md:flex gap-2">
               <button className={`${uid.current}-prev w-10 h-10 rounded-xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all shadow-sm`}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

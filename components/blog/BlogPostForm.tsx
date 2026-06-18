@@ -44,7 +44,6 @@ export default function BlogPostForm({ postId }: Props) {
 
   useEffect(() => {
     fetch("/api/admin/blog/categories").then(r => r.json()).then(setCategories);
-    // تگ‌ها — TODO: یه API اضافه کنیم اگه لازم شد
   }, []);
 
   useEffect(() => {
@@ -71,7 +70,6 @@ export default function BlogPostForm({ postId }: Props) {
     });
   }, [postId]);
 
-  // جستجوی محصول
   useEffect(() => {
     if (productSearch.length < 2) { setProductResults([]); return; }
     const t = setTimeout(() => {
@@ -96,7 +94,6 @@ export default function BlogPostForm({ postId }: Props) {
 
   async function addTag() {
     if (!form.newTag.trim()) return;
-    // TODO: ساخت تگ جدید از API
     set("newTag", "");
   }
 
@@ -161,14 +158,14 @@ export default function BlogPostForm({ postId }: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ستون اصلی */}
+        {}
         <div className="lg:col-span-2 space-y-5">
-          {/* عنوان */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
             <input className={`${inp} text-xl font-black`} placeholder="عنوان مطلب *"
               value={form.title} onChange={e => {
               set("title", e.target.value);
-              if (!isEdit) set("slug", ""); // slug رو خالی بذار تا دستی وارد بشه
+              if (!isEdit) set("slug", "");
             }} />
             <p className="text-[10px] text-amber-500 mt-1">⚠️ slug باید فقط حروف انگلیسی، اعداد و خط تیره باشد</p>
 
@@ -181,7 +178,7 @@ export default function BlogPostForm({ postId }: Props) {
               value={form.excerpt} onChange={e => set("excerpt", e.target.value)} />
           </div>
 
-          {/* تب‌ها */}
+          {}
           <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
             {[{ k: "content", l: "محتوا" }, { k: "seo", l: "سئو" }, { k: "products", l: "محصولات" }].map(t => (
               <button key={t.k} onClick={() => setTab(t.k as any)}
@@ -191,10 +188,10 @@ export default function BlogPostForm({ postId }: Props) {
             ))}
           </div>
 
-          {/* محتوا */}
+          {}
           {tab === "content" && (
             <div className="space-y-4">
-              {/* ویدیو */}
+              {}
               <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
                 <label className="block text-xs font-bold text-gray-500 mb-2">لینک ویدیو (اختیاری — یوتیوب یا آپارات)</label>
                 <input className={inp} dir="ltr" placeholder="https://youtube.com/watch?v=..."
@@ -204,7 +201,7 @@ export default function BlogPostForm({ postId }: Props) {
             </div>
           )}
 
-          {/* سئو */}
+          {}
           {tab === "seo" && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
               <h3 className="font-black text-sm text-gray-900 dark:text-white">تنظیمات سئو</h3>
@@ -223,7 +220,7 @@ export default function BlogPostForm({ postId }: Props) {
                 <label className="block text-xs font-bold text-gray-500 mb-1">کلمات کلیدی</label>
                 <input className={inp} placeholder="بلاگ، آموزش، ..." value={form.seoKeywords} onChange={e => set("seoKeywords", e.target.value)} />
               </div>
-              {/* پیش‌نمایش گوگل */}
+              {}
               <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
                 <p className="text-[10px] text-gray-400 mb-2 uppercase tracking-widest">پیش‌نمایش گوگل</p>
                 <p className="text-blue-700 dark:text-primary-400 text-sm font-medium">{form.seoTitle || form.title || "عنوان مطلب"}</p>
@@ -233,7 +230,7 @@ export default function BlogPostForm({ postId }: Props) {
             </div>
           )}
 
-          {/* محصولات */}
+          {}
           {tab === "products" && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
               <h3 className="font-black text-sm text-gray-900 dark:text-white">محصولات مرتبط با این مطلب</h3>
@@ -279,10 +276,10 @@ export default function BlogPostForm({ postId }: Props) {
           )}
         </div>
 
-        {/* ستون کناری */}
+        {}
         <div className="space-y-5">
 
-          {/* تصویر شاخص */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-3">
             <h3 className="font-black text-sm text-gray-900 dark:text-white">تصویر شاخص</h3>
             {form.coverImage && (
@@ -300,7 +297,7 @@ export default function BlogPostForm({ postId }: Props) {
               value={form.coverImage} onChange={e => set("coverImage", e.target.value)} />
           </div>
 
-          {/* دسته‌بندی */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-3">
             <h3 className="font-black text-sm text-gray-900 dark:text-white">دسته‌بندی</h3>
             <select className={inp} value={form.categoryId} onChange={e => set("categoryId", e.target.value)}>
@@ -309,7 +306,7 @@ export default function BlogPostForm({ postId }: Props) {
             </select>
           </div>
 
-          {/* اطلاعات */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-2">
             <h3 className="font-black text-sm text-gray-900 dark:text-white mb-3">اطلاعات</h3>
             <div className="flex justify-between text-xs">

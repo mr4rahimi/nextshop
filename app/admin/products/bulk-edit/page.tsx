@@ -161,7 +161,7 @@ export default function BulkEditPage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
-      {/* هدر */}
+      {}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">ویرایش گروهی محصولات</h1>
@@ -180,7 +180,7 @@ export default function BulkEditPage() {
         </button>
       </div>
 
-      {/* فیلترها */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4">
         <p className="text-sm font-black text-gray-900 dark:text-white mb-3">فیلتر محصولات</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -203,7 +203,7 @@ export default function BulkEditPage() {
           </select>
         </div>
 
-        {/* فیلتر ویژگی‌ها */}
+        {}
         {attributeGroups.length > 0 && (
           <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/[0.06]">
             <p className="text-xs font-black text-gray-500 mb-2">فیلتر با ویژگی‌ها:</p>
@@ -245,7 +245,7 @@ export default function BulkEditPage() {
         )}
       </div>
 
-      {/* پنل ویرایش */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4">
         <p className="text-sm font-black text-gray-900 dark:text-white mb-3">نوع ویرایش</p>
         
@@ -270,7 +270,7 @@ export default function BulkEditPage() {
           ))}
         </div>
 
-        {/* فرم قیمت */}
+        {}
         {editMode === "price" && (
           <div className="space-y-3 p-4 bg-gray-50 dark:bg-white/[0.02] rounded-xl">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -307,7 +307,7 @@ export default function BulkEditPage() {
           </div>
         )}
 
-        {/* فرم موجودی */}
+        {}
         {editMode === "stock" && (
           <div className="space-y-3 p-4 bg-gray-50 dark:bg-white/[0.02] rounded-xl">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -332,7 +332,7 @@ export default function BulkEditPage() {
           </div>
         )}
 
-        {/* فرم وضعیت */}
+        {}
         {editMode === "status" && (
           <div className="p-4 bg-gray-50 dark:bg-white/[0.02] rounded-xl">
             <div className="flex gap-3">
@@ -365,7 +365,7 @@ export default function BulkEditPage() {
         </button>
       </div>
 
-      {/* لیست محصولات */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
           <input

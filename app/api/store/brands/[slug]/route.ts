@@ -18,14 +18,12 @@ export async function GET(
     return NextResponse.json({ message: "برند یافت نشد" }, { status: 404 });
   }
 
-  // محدوده قیمت محصولات این برند
   const priceAgg = await prisma.product.aggregate({
     where: { isActive: true, brand: { slug } },
     _min: { price: true },
     _max: { price: true },
   });
 
-  // دسته‌بندی‌های موجود در این برند
   const categories = await prisma.category.findMany({
     where: {
       isActive: true,

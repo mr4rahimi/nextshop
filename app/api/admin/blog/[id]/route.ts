@@ -29,7 +29,6 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const words = (data.content ?? "").replace(/<[^>]+>/g, "").split(/\s+/).length;
   const readingTime = Math.max(1, Math.round(words / 200));
 
-  // حذف و بازسازی tags و products
   await prisma.blogPostTag.deleteMany({ where: { postId: id } });
   await prisma.blogPostProduct.deleteMany({ where: { postId: id } });
 

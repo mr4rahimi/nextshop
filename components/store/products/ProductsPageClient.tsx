@@ -453,7 +453,7 @@ export default function ProductsPageClient() {
                     </div>
                   )}
 
-                  {/* Pagination صفحه ۱۱ به بعد */}
+                  {}
                   {!useInfiniteScroll && totalPages > 1 && (
                     <div className="mt-16 flex items-center justify-center">
                       <div className="flex items-center gap-2 bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/40 dark:border-white/10 p-2 rounded-[2rem] shadow-xl">

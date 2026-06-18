@@ -1,26 +1,23 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// ساختار داده‌ی درخت دکمه‌های چت (flow)
-// این فایل بین ادمین، route چت و ویجت مشترک استفاده می‌شود
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type FlowActionType = "categories" | "connect_context" | "reply" | "free_text";
 
 export interface FlowAction {
   type: FlowActionType;
-  contextTopic?: string; // فقط برای connect_context
-  replyText?: string;    // فقط برای reply
+  contextTopic?: string;
+  replyText?: string;
 }
 
 export interface FlowNode {
   id: string;
-  label: string;            // متن روی دکمه
-  message?: string;         // پیامی که موقع کلیک به کاربر نشان داده می‌شود (اختیاری)
-  showOther?: boolean;      // نمایش دکمه‌ی «سایر» در این مرحله
-  action?: FlowAction;      // فقط وقتی برگ است (children خالی) معنی دارد
-  children: FlowNode[];     // اگر پر باشد → این node یک منوست
+  label: string;
+  message?: string;
+  showOther?: boolean;
+  action?: FlowAction;
+  children: FlowNode[];
 }
 
-// ─── موضوعات قابل اتصال (ثابت، هم‌خوان با فیلدهای chatSettings) ────────────────
 export const CONTEXT_TOPICS = [
   { value: "warranty", label: "گارانتی", desc: "از اطلاعات گارانتی پاسخ می‌دهد" },
   { value: "shipping", label: "ارسال و هزینه‌ها", desc: "روش‌ها و هزینه‌های ارسال" },
@@ -29,7 +26,6 @@ export const CONTEXT_TOPICS = [
   { value: "about", label: "درباره فروشگاه", desc: "اطلاعات کلی کسب‌وکار" },
 ] as const;
 
-// ─── انواع رفتار برگ ──────────────────────────────────────────────────────────
 export const ACTION_TYPES: {
   value: FlowActionType;
   label: string;
@@ -57,7 +53,6 @@ export const ACTION_TYPES: {
   },
 ];
 
-// ─── تولید شناسه‌ی یکتا ────────────────────────────────────────────────────────
 let idCounter = 0;
 export function newNodeId(): string {
   idCounter += 1;
@@ -75,8 +70,6 @@ export function createNode(partial?: Partial<FlowNode>): FlowNode {
     ...partial,
   };
 }
-
-// ─── helper های immutable برای ویرایش درخت بر اساس id ─────────────────────────
 
 export function updateNodeById(
   nodes: FlowNode[],
@@ -113,7 +106,6 @@ export function addChildToNode(
   }));
 }
 
-// جابجایی یک node بین خواهر-برادرها (بالا/پایین)
 export function moveNodeInSiblings(
   nodes: FlowNode[],
   id: string,
@@ -127,7 +119,6 @@ export function moveNodeInSiblings(
     [copy[idx], copy[target]] = [copy[target], copy[idx]];
     return copy;
   }
-  // جستجو در سطوح پایین‌تر
   return nodes.map((node) =>
     node.children.length
       ? { ...node, children: moveNodeInSiblings(node.children, id, direction) }
@@ -135,7 +126,6 @@ export function moveNodeInSiblings(
   );
 }
 
-// ─── اعتبارسنجی: هر node یا منوست یا برگ با action معتبر ──────────────────────
 export function getNodeIssues(node: FlowNode): string[] {
   const issues: string[] = [];
   if (!node.label.trim()) issues.push("متن دکمه خالی است");

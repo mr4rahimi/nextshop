@@ -5,7 +5,6 @@ import { serialize } from "@/lib/serialize";
 
 export const runtime = "nodejs";
 
-// GET — دریافت سبد خرید کاربر
 export async function GET() {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ items: [] });
@@ -31,7 +30,6 @@ export async function GET() {
   return NextResponse.json(serialize(cart?.items ?? []));
 }
 
-// POST — افزودن یا بروزرسانی آیتم
 export async function POST(req: Request) {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "لاگین نشده" }, { status: 401 });
@@ -39,11 +37,9 @@ export async function POST(req: Request) {
   const { productId, qty } = await req.json();
   if (!productId || qty < 1) return NextResponse.json({ error: "اطلاعات نامعتبر" }, { status: 400 });
 
-  // پیدا یا ایجاد سبد خرید
   let cart = await prisma.cart.findUnique({ where: { userId: user.id } });
   if (!cart) cart = await prisma.cart.create({ data: { userId: user.id } });
 
-  // upsert آیتم
   await prisma.cartItem.upsert({
     where: { cartId_productId: { cartId: cart.id, productId } },
     update: { qty },
@@ -53,7 +49,6 @@ export async function POST(req: Request) {
   return NextResponse.json({ success: true });
 }
 
-// DELETE — خالی کردن کل سبد
 export async function DELETE() {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "لاگین نشده" }, { status: 401 });

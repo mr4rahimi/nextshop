@@ -67,7 +67,6 @@ export default function AdminWalletPage() {
       setAmount("");
       setReason("");
       setTimeout(() => setSaveSuccess(false), 3000);
-      // رفرش تراکنش‌ها
       const refresh = await fetch(`/api/admin/wallet?phone=${encodeURIComponent(phone.trim())}`);
       const refreshData = await refresh.json();
       if (refresh.ok) setUser(refreshData);
@@ -85,7 +84,7 @@ export default function AdminWalletPage() {
         <p className="text-xs text-gray-500 mt-0.5">افزایش یا کاهش موجودی کیف پول کاربران</p>
       </div>
 
-      {/* جستجوی کاربر */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
         <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">جستجوی کاربر</h2>
         <div className="flex gap-3">
@@ -104,7 +103,7 @@ export default function AdminWalletPage() {
 
       {user && (
         <>
-          {/* اطلاعات کاربر */}
+          {}
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
@@ -123,7 +122,7 @@ export default function AdminWalletPage() {
             </div>
           </div>
 
-          {/* فرم تغییر موجودی */}
+          {}
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">تغییر موجودی</h2>
 
@@ -176,7 +175,7 @@ export default function AdminWalletPage() {
             </form>
           </div>
 
-          {/* تاریخچه تراکنش‌ها */}
+          {}
           {user.walletTx.length > 0 && (
             <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">

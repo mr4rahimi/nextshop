@@ -32,7 +32,7 @@ export default function AmazingCard({ title, slug, image, price, salePrice }: Pr
 
       <div className="relative p-8 flex flex-col h-full z-10 transition-transform duration-500 group-hover:-translate-y-4">
 
-        {/* badge تخفیف */}
+        {}
         {discount && (
           <div className="absolute -top-4 -right-2 z-20">
             <div className="bg-gradient-to-br from-secondary-400 to-secondary-600 text-white text-[11px] font-black w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg rotate-12 group-hover:rotate-0 transition-transform">
@@ -41,7 +41,7 @@ export default function AmazingCard({ title, slug, image, price, salePrice }: Pr
           </div>
         )}
 
-        {/* تصویر */}
+        {}
         <div className="relative mb-8 flex items-center justify-center">
           <div className="absolute w-32 h-32 bg-secondary-500/20 blur-[50px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
           {image ? (
@@ -55,12 +55,12 @@ export default function AmazingCard({ title, slug, image, price, salePrice }: Pr
           )}
         </div>
 
-        {/* عنوان */}
+        {}
         <h3 className="text-sm font-bold text-gray-800 dark:text-white mb-6 line-clamp-2 h-14 group-hover:text-secondary-600 transition-colors">
           {title}
         </h3>
 
-        {/* قیمت */}
+        {}
         <div className="flex items-center justify-between mt-auto pt-6 border-t border-black/5 dark:border-white/5">
           <div className="flex flex-col">
             {salePrice && (

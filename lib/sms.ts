@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 
-// ── دریافت تنظیمات پیامک از دیتابیس ──────────────────────────────────────────
 async function getSmsConfig() {
   const settings = await prisma.storeSettings.findUnique({ where: { id: "singleton" } });
   return {
@@ -22,7 +21,6 @@ async function getSmsConfig() {
   };
 }
 
-// ── ارسال پیامک با پترن ────────────────────────────────────────────────────────
 export async function sendPatternSms(
   phone: string,
   patternCode: string,
@@ -64,7 +62,6 @@ export async function sendPatternSms(
   console.log(`[SMS] ارسال شد به ${phone}:`, data);
 }
 
-// ── پیامک OTP ─────────────────────────────────────────────────────────────────
 export async function sendOtpSms(phone: string, code: string) {
   const { patterns } = await getSmsConfig();
   if (!patterns.otp) {
@@ -74,7 +71,6 @@ export async function sendOtpSms(phone: string, code: string) {
   await sendPatternSms(phone, patterns.otp, { code });
 }
 
-// ── پیامک وضعیت سفارش ────────────────────────────────────────────────────────
 export type OrderSmsEvent =
   | "orderNew" | "orderPaid" | "orderConfirm" | "orderPrepare"
   | "orderPack" | "orderSent" | "orderDelivered" | "orderDone" | "orderCancel";

@@ -6,7 +6,6 @@ import { SITE_URL } from "@/lib/seo";
 import type { Metadata } from "next";
 import AiChat from "@/components/AiChat";
 
-// ── تبدیل themeConfig به CSS variables ────────────────────────────────────────
 function buildCssVars(theme: Record<string, string>): string {
   if (!theme || Object.keys(theme).length === 0) return "";
   const vars = Object.entries(theme)
@@ -38,7 +37,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // لود تم از دیتابیس
   let cssVars = "";
   try {
     const s = await prisma.storeSettings.findUnique({

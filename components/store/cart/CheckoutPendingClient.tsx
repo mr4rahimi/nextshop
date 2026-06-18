@@ -35,7 +35,7 @@ export default function CheckoutPendingClient({ order, cardInfo }: Props) {
     <section className="relative py-16 min-h-screen transition-colors duration-700" dir="rtl">
       <div className="max-w-2xl mx-auto px-4">
 
-        {/* آیکون انتظار */}
+        {}
         <div className="flex flex-col items-center text-center mb-12">
           <div className="relative mb-8">
             <div className="absolute inset-0 scale-150 border border-amber-500/10 rounded-full animate-[ping_2s_linear_infinite]" />
@@ -60,7 +60,7 @@ export default function CheckoutPendingClient({ order, cardInfo }: Props) {
 
         <div className="space-y-6">
 
-          {/* مبلغ قابل پرداخت */}
+          {}
           <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-[2.5rem] p-8 text-center text-white shadow-2xl shadow-primary-500/30">
             <p className="text-sm font-black text-primary-100/80 uppercase tracking-widest mb-2">مبلغ قابل پرداخت</p>
             <div className="flex items-baseline justify-center gap-2">
@@ -69,13 +69,13 @@ export default function CheckoutPendingClient({ order, cardInfo }: Props) {
             </div>
           </div>
 
-          {/* اطلاعات کارت */}
+          {}
           {cardInfo.cardNumber && (
             <div className="bg-white/40 dark:bg-white/[0.02] backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2.5rem] p-8 space-y-5">
               <h3 className="text-lg font-black text-gray-900 dark:text-white">اطلاعات کارت بانکی</h3>
 
               <div className="space-y-4">
-                {/* شماره کارت */}
+                {}
                 <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">شماره کارت</p>
@@ -103,7 +103,7 @@ export default function CheckoutPendingClient({ order, cardInfo }: Props) {
                   </button>
                 </div>
 
-                {/* صاحب کارت و بانک */}
+                {}
                 <div className="grid grid-cols-2 gap-4">
                   {cardInfo.cardHolder && (
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
@@ -122,7 +122,7 @@ export default function CheckoutPendingClient({ order, cardInfo }: Props) {
             </div>
           )}
 
-          {/* راهنمای ارسال رسید */}
+          {}
           <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-[2.5rem] p-8 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-600 flex-shrink-0">
@@ -150,7 +150,7 @@ export default function CheckoutPendingClient({ order, cardInfo }: Props) {
             </ul>
           </div>
 
-          {/* دکمه‌ها */}
+          {}
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/user/orders"
               className="flex-1 py-4 bg-primary-600 text-white rounded-2xl font-black text-sm text-center shadow-lg shadow-primary-500/20 hover:bg-primary-700 transition-all hover:scale-[1.01] active:scale-95">

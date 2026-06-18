@@ -33,7 +33,6 @@ function StatusBadge({ endDate }: { endDate: string }) {
   return <span className="text-xs font-black px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">{toFa(days)} روز تا پایان گارانتی</span>;
 }
 
-// ── فرم ثبت درخواست برای هر گارانتی ──────────────────────────────────────────
 function RequestForm({ guaranty }: { guaranty: GuarantyItem }) {
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
@@ -114,7 +113,6 @@ function RequestForm({ guaranty }: { guaranty: GuarantyItem }) {
   );
 }
 
-// ── صفحه اصلی ──────────────────────────────────────────────────────────────────
 export default function WarrantyPage() {
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<GuarantyItem[] | null>(null);
@@ -146,7 +144,7 @@ export default function WarrantyPage() {
     <div className="bg-gray-100 dark:bg-[#050505] min-h-screen py-12" dir="rtl">
       <div className="container max-w-2xl mx-auto px-4">
 
-        {/* هدر */}
+        {}
         <div className="text-center mb-10">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary-50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-500/20 flex items-center justify-center">
             <svg className="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,7 +155,7 @@ export default function WarrantyPage() {
           <p className="text-sm text-gray-500 mt-2">شماره ستومان محصول یا شماره موبایل خود را وارد کنید</p>
         </div>
 
-        {/* فرم جستجو */}
+        {}
         <form onSubmit={search} className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 flex flex-col sm:flex-row gap-3">
           <input dir="ltr" value={query} onChange={e => setQuery(e.target.value)}
             placeholder="شماره ستومان یا شماره موبایل..."
@@ -168,7 +166,7 @@ export default function WarrantyPage() {
           </button>
         </form>
 
-        {/* نتیجه */}
+        {}
         {error && (
           <div className="mt-6 p-5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl text-sm text-amber-700 dark:text-amber-400 font-bold text-center">
             {error}

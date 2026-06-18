@@ -80,7 +80,7 @@ export default function BrandsPage() {
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
 
-      {/* هدر */}
+      {}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">مدیریت برندها</h1>
@@ -97,7 +97,7 @@ export default function BrandsPage() {
         </button>
       </div>
 
-      {/* فرم */}
+      {}
       {showForm && (
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
@@ -136,7 +136,7 @@ export default function BrandsPage() {
               </div>
             </div>
 
-            {/* لوگو */}
+            {}
             <div>
               <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">لوگوی برند</label>
               <div className="flex items-center gap-4">
@@ -180,7 +180,7 @@ export default function BrandsPage() {
               </div>
             </div>
 
-            {/* توضیحات */}
+            {}
             <div>
               <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">توضیحات برند</label>
               <textarea
@@ -192,7 +192,7 @@ export default function BrandsPage() {
               />
             </div>
 
-            {/* وضعیت */}
+            {}
             <label className="flex items-center gap-2.5 cursor-pointer w-fit">
               <div
                 onClick={() => handleChange("isActive", !form.isActive)}
@@ -239,7 +239,7 @@ export default function BrandsPage() {
               )}
             </div>
 
-            {/* دکمه‌ها */}
+            {}
             <div className="flex gap-3 pt-2 border-t border-gray-100 dark:border-white/[0.06]">
               <button type="submit" disabled={saving}
                 className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-black transition-all">
@@ -254,7 +254,7 @@ export default function BrandsPage() {
         </div>
       )}
 
-      {/* جستجو + لیست */}
+      {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-white/[0.06] flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
@@ -289,7 +289,7 @@ export default function BrandsPage() {
             {filtered.map(b => (
               <div key={b.id} className="group flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
 
-                {/* لوگو */}
+                {}
                 <div className="w-12 h-12 rounded-xl border border-gray-100 dark:border-white/[0.06] bg-white dark:bg-white/5 flex items-center justify-center overflow-hidden p-1.5 flex-shrink-0">
                   {b.logoUrl ? (
                     <img src={b.logoUrl} alt={b.title} className="max-w-full max-h-full object-contain" />
@@ -300,7 +300,7 @@ export default function BrandsPage() {
                   )}
                 </div>
 
-                {/* اطلاعات */}
+                {}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-black text-gray-900 dark:text-white truncate">{b.title}</p>
                   <p className="text-[11px] text-gray-400 truncate" dir="ltr">{b.slug}</p>
@@ -309,7 +309,7 @@ export default function BrandsPage() {
                   )}
                 </div>
 
-                {/* وضعیت */}
+                {}
                 <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border flex-shrink-0 ${
                   b.isActive
                     ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20"
@@ -318,7 +318,7 @@ export default function BrandsPage() {
                   {b.isActive ? "فعال" : "غیرفعال"}
                 </span>
 
-                {/* دکمه‌ها */}
+                {}
                 <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                   <button onClick={() => handleEdit(b)}
                     className="w-8 h-8 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:border-blue-300 dark:hover:border-blue-500/30 transition-all">

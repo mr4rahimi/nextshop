@@ -282,7 +282,7 @@ function ProductsByBrandEditor({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* لیست برندها */}
+        {}
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="p-4 border-b border-gray-100 dark:border-gray-800">
             <h3 className="font-black text-sm text-gray-900 dark:text-white mb-3">انتخاب برند</h3>
@@ -319,9 +319,9 @@ function ProductsByBrandEditor({
           </ul>
         </div>
 
-        {/* تنظیمات */}
+        {}
         <div className="space-y-4">
-          {/* برند انتخاب‌شده */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
             <h3 className="font-black text-sm text-gray-900 dark:text-white mb-3">برند انتخاب‌شده</h3>
             {selectedBrand ? (
@@ -343,7 +343,7 @@ function ProductsByBrandEditor({
             ) : <p className="text-sm text-gray-400">هیچ برندی انتخاب نشده</p>}
           </div>
 
-          {/* تعداد */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
             <h3 className="font-black text-sm text-gray-900 dark:text-white mb-4">تعداد محصولات نمایشی</h3>
             <div className="flex items-center gap-3 flex-wrap">
@@ -568,7 +568,6 @@ export default function WidgetEditPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // state مشترک CATEGORIES / NEWEST_PRODUCTS
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [perCategory, setPerCategory] = useState(3);
 
@@ -754,7 +753,7 @@ export default function WidgetEditPage() {
 
       {widget.type === "FULL_BANNER" && (
         <div className="space-y-6">
-          {/* آپلود تصویر */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="p-4 border-b border-gray-100 dark:border-gray-800">
               <h3 className="font-black text-sm text-gray-900 dark:text-white">تصویر بنر *</h3>
@@ -804,7 +803,7 @@ export default function WidgetEditPage() {
             </div>
           </div>
       
-          {/* لینک و alt */}
+          {}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
               <label className="block font-black text-sm text-gray-900 dark:text-white mb-3">لینک (اختیاری)</label>
@@ -847,7 +846,7 @@ export default function WidgetEditPage() {
                  <h3 className="font-black text-sm text-gray-900 dark:text-white">بنر {i === 0 ? "اول" : "دوم"}</h3>
                </div>
                <div className="p-4 space-y-3">
-                 {/* آپلود */}
+                 {}
                  {db[i].imageUrl ? (
                    <div className="relative rounded-xl overflow-hidden">
                      <img src={db[i].imageUrl} alt="" className="w-full h-32 object-cover" />
@@ -888,7 +887,7 @@ export default function WidgetEditPage() {
                      }} />
                    </label>
                  )}
-                 {/* لینک */}
+                 {}
                  <input
                    type="text"
                    placeholder="لینک (اختیاری)"
@@ -940,7 +939,6 @@ export default function WidgetEditPage() {
         </div>
       )}
      
-
 
     </div>
   );

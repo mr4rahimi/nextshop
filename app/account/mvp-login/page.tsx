@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { getMvpUserId, setMvpUserId } from "@/lib/mvpUser";
 
 function makeLocalUserId(phone: string) {
-  // برای MVP: یک شناسه پایدار از روی شماره
-  // (بعداً با auth واقعی عوض میشه)
   return "mvp_" + phone.replace(/\D/g, "");
 }
 

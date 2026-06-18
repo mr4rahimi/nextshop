@@ -35,7 +35,6 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   if (!user) return NextResponse.json({ error: "کاربر یافت نشد" }, { status: 404 });
 
-  // موجودی کیف پول
   const walletBalance = await prisma.walletTransaction.aggregate({
     where: { userId: id },
     _sum: { amount: true },

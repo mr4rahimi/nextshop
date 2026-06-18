@@ -31,7 +31,6 @@ interface StoreSettings {
   storeLogo: string | null;
 }
 
-
 const EMPTY_METHOD: Omit<ShippingMethod, "id"> = {
   title: "", type: "STANDARD", isActive: true,
   cities: [], fee: "0", description: null, sortOrder: 0,
@@ -145,7 +144,7 @@ export default function AdminShippingPage() {
         
       </div>
 
-      {/* ── روش‌های ارسال ─────────────────────────────────────────── */}
+      {}
       {tab === "shipping" && (
         <div className="space-y-4">
           <div className="flex justify-end">
@@ -158,7 +157,7 @@ export default function AdminShippingPage() {
             </button>
           </div>
 
-          {/* لیست */}
+          {}
           <div className="space-y-3">
             {methods.length === 0 && !showForm && (
               <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 text-gray-400">
@@ -216,7 +215,7 @@ export default function AdminShippingPage() {
             ))}
           </div>
 
-          {/* فرم افزودن/ویرایش */}
+          {}
           {showForm && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-blue-200 dark:border-blue-800 p-6 space-y-5">
               <h3 className="font-black text-sm text-gray-900 dark:text-white">
@@ -260,7 +259,7 @@ export default function AdminShippingPage() {
                 </div>
               </div>
 
-              {/* انتخاب شهرها */}
+              {}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-gray-500">
@@ -275,7 +274,7 @@ export default function AdminShippingPage() {
                   )}
                 </div>
 
-                {/* شهرهای انتخاب‌شده */}
+                {}
                 {form.cities.length > 0 && (
                   <div className="flex flex-wrap gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800">
                     {form.cities.map(c => (
@@ -287,7 +286,7 @@ export default function AdminShippingPage() {
                   </div>
                 )}
 
-                {/* جستجوی شهر */}
+                {}
                 <div className="relative">
                   <input className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white outline-none focus:border-blue-500"
                     placeholder="جستجوی شهر برای افزودن..."
@@ -329,11 +328,11 @@ export default function AdminShippingPage() {
         </div>
       )}
 
-      {/* ── روش‌های پرداخت ────────────────────────────────────────── */}
+      {}
       {tab === "payment" && (
         <div className="space-y-6">
 
-          {/* کارت به کارت */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5">
             <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-800">
               <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600">
@@ -374,7 +373,7 @@ export default function AdminShippingPage() {
             </div>
           </div>
 
-          {/* پرداخت آنلاین */}
+          {}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
             <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-800">
               <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">

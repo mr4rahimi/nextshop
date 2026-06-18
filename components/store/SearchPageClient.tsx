@@ -52,7 +52,6 @@ export default function SearchPageClient({ initialQ, initialPage, initialData }:
     }
   }, []);
 
-  // وقتی q یا page عوض میشه (نه بار اول)
   useEffect(() => {
     if (!initialized) { doSearch(q, page); }
     else setInitialized(false);
@@ -71,7 +70,7 @@ export default function SearchPageClient({ initialQ, initialPage, initialData }:
 
   return (
     <div className="min-h-screen" dir="rtl">
-      {/* هدر جستجو */}
+      {}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-white/5 sticky top-[80px] z-30">
         <div className="container py-4">
           <form onSubmit={handleSearch} className="flex gap-3 max-w-2xl">
@@ -119,7 +118,7 @@ export default function SearchPageClient({ initialQ, initialPage, initialData }:
           </div>
         )}
 
-        {/* بدون نتیجه */}
+        {}
         {!loading && q && products.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400 text-center">
             <svg className="w-20 h-20 opacity-20 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +132,7 @@ export default function SearchPageClient({ initialQ, initialPage, initialData }:
           </div>
         )}
 
-        {/* نتایج */}
+        {}
         {!loading && products.length > 0 && (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">

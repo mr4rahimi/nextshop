@@ -20,15 +20,12 @@ export async function POST(req: Request) {
   if (!addressId || !shippingMethodId || !items?.length)
     return NextResponse.json({ error: "اطلاعات ناقص است" }, { status: 400 });
 
-  // بررسی آدرس
   const address = await prisma.address.findFirst({ where: { id: addressId, userId: user.id } });
   if (!address) return NextResponse.json({ error: "آدرس نامعتبر است" }, { status: 400 });
 
-  // بررسی روش ارسال
   const shipping = await prisma.shippingMethod.findUnique({ where: { id: shippingMethodId } });
   if (!shipping || !shipping.isActive) return NextResponse.json({ error: "روش ارسال نامعتبر است" }, { status: 400 });
 
-  // گرفتن محصولات از DB
   const productIds = items.map((i: any) => i.productId);
   const products = await prisma.product.findMany({
     where: { id: { in: productIds }, isActive: true },
@@ -38,7 +35,6 @@ export async function POST(req: Request) {
   if (products.length !== productIds.length)
     return NextResponse.json({ error: "یک یا چند محصول در دسترس نیست" }, { status: 400 });
 
-  // محاسبه مبالغ
   let itemsTotal = BigInt(0);
   const orderItems = items.map((i: any) => {
     const p = products.find(pr => pr.id === i.productId)!;
@@ -57,7 +53,6 @@ export async function POST(req: Request) {
 
   const shippingFee = shipping.fee;
   const grandTotal = itemsTotal + shippingFee;
-
 
   let walletDiscount = BigInt(0);
   let finalGrandTotal = grandTotal;
@@ -131,11 +126,9 @@ export async function POST(req: Request) {
     ]);
   }
 
-  // خالی کردن سبد خرید
   const cart = await prisma.cart.findUnique({ where: { userId: user.id } });
   if (cart) await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-     // کسر موجودی محصولات
    await Promise.all(
      orderItems.map((item: { productId: string; qty: number }) =>
        prisma.product.updateMany({

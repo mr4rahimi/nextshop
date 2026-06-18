@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 
-// ─── انواع ───────────────────────────────────────────────────────────────────
 interface ConvListItem {
   id: string;
   createdAt: string;
@@ -29,7 +28,6 @@ interface ConvDetail {
   messages: ConvMessage[];
 }
 
-// برچسب فارسی برای context
 function contextLabel(ctx: string | null): string {
   if (!ctx) return "";
   if (ctx.startsWith("topic:")) {
@@ -122,7 +120,7 @@ export default function ChatHistoryPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-        {/* لیست مکالمه‌ها */}
+        {}
         <div className="lg:col-span-2 space-y-2">
           {loadingList ? (
             Array.from({ length: 6 }).map((_, i) => (
@@ -159,7 +157,7 @@ export default function ChatHistoryPage() {
             ))
           )}
 
-          {/* صفحه‌بندی */}
+          {}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 pt-2">
               <button
@@ -183,7 +181,7 @@ export default function ChatHistoryPage() {
           )}
         </div>
 
-        {/* جزئیات مکالمه */}
+        {}
         <div className="lg:col-span-3">
           <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 sticky top-8 min-h-[400px]">
             {!selectedId ? (
@@ -198,7 +196,7 @@ export default function ChatHistoryPage() {
               </div>
             ) : detail ? (
               <>
-                {/* سرتیتر */}
+                {}
                 <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-100 dark:border-white/[0.06]">
                   <div>
                     <p className="text-sm font-black text-gray-900 dark:text-white">
@@ -221,7 +219,7 @@ export default function ChatHistoryPage() {
                   </button>
                 </div>
 
-                {/* پیام‌ها */}
+                {}
                 <div className="space-y-3 max-h-[440px] overflow-y-auto">
                   {detail.messages.map((m) => (
                     <div

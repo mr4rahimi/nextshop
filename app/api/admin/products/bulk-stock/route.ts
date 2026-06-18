@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-// آپدیت موجودی تک محصول
 export async function PATCH(req: Request) {
   const { id, stock, trackStock, lowStockThreshold } = await req.json();
   await prisma.product.update({
@@ -17,7 +16,6 @@ export async function PATCH(req: Request) {
   return NextResponse.json({ success: true });
 }
 
-// آپدیت گروهی موجودی
 export async function POST(req: Request) {
   const { ids, type, value } = await req.json();
   // type: "set" | "increase" | "decrease"
