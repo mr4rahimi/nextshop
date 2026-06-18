@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     if (!user || user.role !== "ADMIN") {
       return NextResponse.json({ error: "دسترسی غیرمجاز" }, { status: 403 });
     }
-    const valid = await verifyPassword(password, user.passwordHash);
+    const valid = await verifyPassword(password, user.passwordHash, user.id);
     if (!valid) {
       return NextResponse.json({ error: "رمز عبور اشتباه است" }, { status: 401 });
     }

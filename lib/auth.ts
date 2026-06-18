@@ -1,10 +1,12 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 const SECRET = process.env.JWT_SECRET;
 if (!SECRET) throw new Error("JWT_SECRET env variable is not set");
 const COOKIE_NAME = "auth_token";
 const EXPIRES_IN = 60 * 60 * 24 * 30;
+const BCRYPT_ROUNDS = 12;
 
 function base64UrlEncode(data: Uint8Array): string {
   return Buffer.from(data).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
@@ -78,13 +80,37 @@ export async function clearAuthCookie() {
 }
 
 export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
+}
+
+function isLegacyHash(hash: string): boolean {
+  return /^[0-9a-f]{64}$/.test(hash);
+}
+
+async function sha256Hash(password: string): Promise<string> {
   const salt = process.env.PASSWORD_SALT;
   if (!salt) throw new Error("PASSWORD_SALT env variable is not set");
   const data = new TextEncoder().encode(password + salt);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return (await hashPassword(password)) === hash;
+export async function verifyPassword(
+  password: string,
+  hash: string | null,
+  userId?: string
+): Promise<boolean> {
+  if (!hash) return false;
+
+  if (isLegacyHash(hash)) {
+    const legacy = await sha256Hash(password);
+    if (legacy !== hash) return false;
+    if (userId) {
+      const newHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      await prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
+    }
+    return true;
+  }
+
+  return bcrypt.compare(password, hash);
 }

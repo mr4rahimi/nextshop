@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "حساب کاربری شما غیرفعال است" }, { status: 403 });
   }
 
-  const valid = await verifyPassword(password, user.passwordHash);
+  const valid = await verifyPassword(password, user.passwordHash, user.id);
   if (!valid) {
     return NextResponse.json({ error: "شماره موبایل یا رمز عبور اشتباه است" }, { status: 401 });
   }
