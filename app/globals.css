@@ -1042,6 +1042,10 @@ body {
   @apply bg-white text-gray-900;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 #stories-container {
     display: flex;
     gap: 15px;

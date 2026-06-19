@@ -3,6 +3,39 @@
 const VERSIONS = [
 
   {
+    version: "1.8.6",
+    date: "۱۴۰۵/۰۳/۲۹",
+    tag: "patch",
+    title: "رفع اسکرول افقی در موبایل",
+    description: "جلوگیری از اسکرول افقی صفحه در تمام گوشی‌ها با اصلاح overflow سراسری و بازنویسی ساختار منوی موبایل",
+    changes: [
+      { type: "fix", text: "رفع اسکرول افقی در موبایل با اعمال overflow-x: hidden روی html" },
+      { type: "fix", text: "بازنویسی ساختار MobileMenuPortal — panel و overlay از position:fixed به absolute داخل یک wrapper کلیپ‌شده" },
+      { type: "improvement", text: "جلوگیری از تأثیر translateX انیمیشن منو بر عرض صفحه در مرورگرهای اندروید" },
+    ],
+  },
+
+  {
+    version: "1.8.5",
+    date: "۱۴۰۴/۰۳/۲۹",
+    tag: "minor",
+    title: "امنیت، لوگو داینامیک و رفع باگ پیامک",
+    description: "اعمال بررسی امنیتی کامل بر اساس OWASP Top 10، محافظت از تمام مسیرهای ادمین، ارتقای هش پسورد به bcrypt، rate limiting برای OTP و خواندن لوگو و اطلاعات سایت از تنظیمات",
+    changes: [
+      { type: "security", text: "محافظت از تمام مسیرهای /api/admin/* با JWT " },
+      { type: "security", text: "اعتبارسنجی امضای HMAC توکن در middleware — جلوگیری از جعل توکن" },
+      { type: "security", text: "ارتقای هش پسورد از SHA-256 به bcrypt (cost factor 12) با migration خودکار" },
+      { type: "security", text: "محدودیت ارسال OTP: حداکثر ۳ بار در ۱۰ دقیقه برای هر شماره" },
+      { type: "security", text: "محدودیت تلاش OTP: بعد از ۵ بار کد اشتباه، کد باطل می‌شود" },
+      { type: "security", text: "حذف secret های hardcode شده (JWT_SECRET و PASSWORD_SALT) از سورس کد" },
+      { type: "security", text: "محدودیت نوع فایل در آپلود: فقط تصاویر تا ۱۰MB مجاز" },
+      { type: "fix", text: "رفع باگ عدم ارسال پیامک OTP — smsEnabled" },
+      { type: "fix", text: "رفع باگ رشته‌های خالی تنظیمات SMS — تبدیل به NULL برای استفاده صحیح از env" },
+      { type: "improvement", text: "لوگو، آیکن و نام سایت از تنظیمات ادمین خوانده می‌شود — اگر تنظیم نشده باشد چیزی نمایش داده نمی‌شود" },
+    ],
+  },
+
+  {
     version: "1.8.0",
     date: "۱۴۰۴/۰۳/۲۸",
     tag: "minor",

@@ -44,12 +44,19 @@ export default function MobileMenuPortal({ logoUrl, siteName }: { logoUrl?: stri
   function close() { setOpen(false); }
 
   return (
-    <div className="lg:hidden">
+    <div
+      className="lg:hidden"
+      style={{
+        position: "fixed", inset: 0, zIndex: 9000,
+        pointerEvents: open ? "auto" : "none",
+        overflow: "hidden",
+      }}
+    >
       {/* ── Overlay ─────────────────────────────── */}
       <div
         onClick={close}
         style={{
-          position: "fixed", inset: 0, zIndex: 9000,
+          position: "absolute", inset: 0,
           background: "rgba(0,0,0,0.5)",
           backdropFilter: "blur(4px)",
           WebkitBackdropFilter: "blur(4px)",
@@ -62,9 +69,8 @@ export default function MobileMenuPortal({ logoUrl, siteName }: { logoUrl?: stri
       {/* ── Panel ───────────────────────────────── */}
       <div
         style={{
-          position: "fixed",
+          position: "absolute",
           top: 0, right: 0, bottom: 0,
-          zIndex: 9001,
           width: "min(85vw, 340px)",
           transform: open ? "translateX(0)" : "translateX(110%)",
           transition: "transform 0.4s cubic-bezier(0.32,0.72,0,1)",
