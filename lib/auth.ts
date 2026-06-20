@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-const SECRET = process.env.JWT_SECRET;
+const SECRET = process.env.JWT_SECRET as string;
 if (!SECRET) throw new Error("JWT_SECRET env variable is not set");
 const COOKIE_NAME = "auth_token";
 const EXPIRES_IN = 60 * 60 * 24 * 30;

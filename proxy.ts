@@ -28,7 +28,7 @@ async function verifyAdminToken(token: string): Promise<boolean> {
     const valid = await crypto.subtle.verify(
       "HMAC",
       key,
-      b64urlDecode(sig),
+      b64urlDecode(sig) as BufferSource,
       enc.encode(`${header}.${body}`)
     );
 
