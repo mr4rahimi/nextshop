@@ -1397,6 +1397,10 @@ export default function WidgetEditPage() {
   const [fbAlt, setFbAlt] = useState("");
   const [fbUploading, setFbUploading] = useState(false);
 
+  // LAST_VISITED
+  const [lvHeading, setLvHeading] = useState("آخرین بازدیدهای شما");
+  const [lvAccentColor, setLvAccentColor] = useState("#4f46e5");
+
   // IMAGE_CONTENT_DOUBLE
   const [icdImageUrl, setIcdImageUrl] = useState("");
   const [icdImageAlt, setIcdImageAlt] = useState("");
@@ -1428,7 +1432,7 @@ export default function WidgetEditPage() {
   ]);
   const [dbUploading, setDbUploading] = useState([false, false]);
 
-  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION"];
+  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION"];
   useEffect(() => {
     fetch("/api/admin/widgets")
       .then(r => r.json())
@@ -1457,6 +1461,9 @@ export default function WidgetEditPage() {
           setPbbBrandSlug(w.config.brandSlug ?? "");
           setPbbBrandLogo(w.config.brandLogoUrl ?? null);
           setPbbCount(w.config.count ?? 8);
+        } else if (w.type === "LAST_VISITED") {
+          setLvHeading(w.config.heading ?? "آخرین بازدیدهای شما");
+          setLvAccentColor(w.config.accentColor ?? "#4f46e5");
         } else if (w.type === "IMAGE_CONTENT_DOUBLE") {
           setIcdImageUrl(w.config.imageUrl ?? "");
           setIcdImageAlt(w.config.imageAlt ?? "");
@@ -1520,7 +1527,9 @@ export default function WidgetEditPage() {
     setSaving(true);
 
     let config: Record<string, any>;
-    if (widget.type === "IMAGE_CONTENT_DOUBLE") {
+    if (widget.type === "LAST_VISITED") {
+      config = { heading: lvHeading, accentColor: lvAccentColor };
+    } else if (widget.type === "IMAGE_CONTENT_DOUBLE") {
       config = { imageUrl: icdImageUrl, imageAlt: icdImageAlt, bgColor: icdBgColor, accentColor: icdAccentColor, boxes: icdBoxes };
     } else if (widget.type === "IMAGE_CONTENT") {
       config = { ...icConfig };
@@ -1575,6 +1584,7 @@ export default function WidgetEditPage() {
     NEWEST_PRODUCTS:      "دسته‌بندی‌هایی که می‌خواهید جدیدترین محصولاتشان نمایش داده شود را انتخاب کنید",
     IMAGE_CONTENT:        "یک تصویر و یک محتوا کنار هم با چیدمان و رنگ‌بندی قابل تنظیم",
     IMAGE_CONTENT_DOUBLE: "تصویر تمام‌عرض بالا و دو باکس محتوا با افکت شناور",
+    LAST_VISITED:         "آخرین محصولات بازدیدشده توسط کاربر — داده‌ها از مرورگر کاربر خوانده می‌شود",
     CALL_TO_ACTION:       "متن، دکمه و رنگ‌بندی بنر دعوت به اقدام را تنظیم کنید",
     FULL_BANNER:          "یک تصویر بنر با لینک اختیاری آپلود کنید",
     DOUBLE_BANNER:        "دو تصویر بنر کنار هم آپلود کنید",
@@ -1830,6 +1840,37 @@ export default function WidgetEditPage() {
 
       {widget.type === "CALL_TO_ACTION" && (
         <CallToActionEditor config={ctaConfig} setConfig={setCtaConfig} />
+      )}
+
+      {widget.type === "LAST_VISITED" && (
+        <div className="space-y-5">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-5">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-black text-sm text-blue-800 dark:text-blue-200 mb-1">نیازی به تنظیم دستی نیست</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">
+                  این ویجت به‌صورت خودکار آخرین محصولاتی که کاربر بازدید کرده را از مرورگر او می‌خواند.
+                  برای کاربرانی که هنوز بازدیدی نداشتند، ویجت نمایش داده نمی‌شود.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+            <h3 className="font-black text-sm text-gray-900 dark:text-white">تنظیمات اختیاری</h3>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">عنوان ویجت</label>
+              <input type="text" placeholder="آخرین بازدیدهای شما"
+                value={lvHeading} onChange={e => setLvHeading(e.target.value)}
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+            </div>
+            <ColorField label="رنگ تاکیدی" value={lvAccentColor} onChange={setLvAccentColor} />
+          </div>
+        </div>
       )}
 
      {(widget.type === "HERO_SLIDER" || widget.type === "STORY" || widget.type === "LATEST_ARTICLES") && (

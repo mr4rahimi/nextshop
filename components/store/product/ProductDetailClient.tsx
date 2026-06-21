@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AddToCartButton from "@/components/store/cart/AddToCartButton";
 import { useWishlist } from "@/components/store/wishlist/WishlistContext";
+import { addToLastVisited } from "@/lib/lastVisited";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SpecItem {
@@ -197,6 +198,8 @@ function RelatedSection({ title, products }: { title: string; products: RelatedP
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function ProductDetailClient({ product, categoryRelated = [], brandRelated = [], manualRelated = [] }: Props) {
+  useEffect(() => { addToLastVisited(product.id); }, [product.id]);
+
   const [activeTab, setActiveTab] = useState<"overview" | "expert" | "specs" | "reviews" | "faq">("specs");
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(null);
