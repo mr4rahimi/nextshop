@@ -558,6 +558,158 @@ function AmazingDealsEditor({
   );
 }
 
+// ─── CallToActionEditor ───────────────────────────────────────────────────────
+interface CTAConfig {
+  heading: string; subheading: string;
+  btnText: string; btnUrl: string;
+  bgType: "solid" | "gradient";
+  bgColor: string;
+  bgGradientFrom: string; bgGradientTo: string; bgGradientDir: string;
+  btnBg: string; btnColor: string; textColor: string;
+}
+
+const GRAD_DIRS = [
+  { value: "90deg",  label: "← چپ به راست →" },
+  { value: "270deg", label: "→ راست به چپ ←" },
+  { value: "180deg", label: "↓ بالا به پایین" },
+  { value: "0deg",   label: "↑ پایین به بالا" },
+  { value: "135deg", label: "↘ قطری" },
+  { value: "45deg",  label: "↗ قطری معکوس" },
+];
+
+function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex items-center gap-3">
+      <label className="text-xs font-bold text-gray-700 dark:text-gray-300 w-32 flex-shrink-0">{label}</label>
+      <div className="flex items-center gap-2 flex-1">
+        <input type="color" value={value} onChange={e => onChange(e.target.value)}
+          className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer p-0.5 bg-white dark:bg-gray-800" />
+        <input type="text" value={value} onChange={e => onChange(e.target.value)}
+          className="flex-1 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-mono bg-white dark:bg-gray-800 dark:text-white uppercase" />
+      </div>
+    </div>
+  );
+}
+
+function CallToActionEditor({ config, setConfig }: { config: CTAConfig; setConfig: (c: CTAConfig) => void }) {
+  const set = (key: keyof CTAConfig, value: string) => setConfig({ ...config, [key]: value });
+
+  const bgStyle: React.CSSProperties = config.bgType === "gradient"
+    ? { background: `linear-gradient(${config.bgGradientDir}, ${config.bgGradientFrom}, ${config.bgGradientTo})` }
+    : { backgroundColor: config.bgColor };
+
+  return (
+    <div className="space-y-5">
+
+      {/* ── Content ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">محتوا</h3>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">عنوان اصلی *</label>
+          <input type="text" placeholder="مثال: با ما تماس بگیرید" value={config.heading}
+            onChange={e => set("heading", e.target.value)}
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">زیرعنوان (اختیاری)</label>
+          <textarea rows={2} placeholder="مثال: پشتیبانی ما ۲۴ ساعته آماده پاسخگویی است" value={config.subheading}
+            onChange={e => set("subheading", e.target.value)}
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white resize-none" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">متن دکمه *</label>
+            <input type="text" placeholder="مثال: تماس بگیرید" value={config.btnText}
+              onChange={e => set("btnText", e.target.value)}
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">لینک دکمه</label>
+            <input type="text" placeholder="/contact یا https://..." value={config.btnUrl}
+              onChange={e => set("btnUrl", e.target.value)}
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Background ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">پس‌زمینه</h3>
+        <div className="flex gap-2">
+          {(["solid", "gradient"] as const).map(t => (
+            <button key={t} onClick={() => setConfig({ ...config, bgType: t })}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                config.bgType === t
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+              }`}>
+              {t === "solid" ? "رنگ ساده" : "گرادینت"}
+            </button>
+          ))}
+        </div>
+
+        {config.bgType === "solid" ? (
+          <ColorField label="رنگ پس‌زمینه" value={config.bgColor} onChange={v => set("bgColor", v)} />
+        ) : (
+          <div className="space-y-3">
+            <ColorField label="رنگ شروع" value={config.bgGradientFrom} onChange={v => set("bgGradientFrom", v)} />
+            <ColorField label="رنگ پایان" value={config.bgGradientTo} onChange={v => set("bgGradientTo", v)} />
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 w-32 flex-shrink-0">جهت گرادینت</label>
+              <select value={config.bgGradientDir} onChange={e => set("bgGradientDir", e.target.value)}
+                className="flex-1 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs bg-white dark:bg-gray-800 dark:text-white">
+                {GRAD_DIRS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Colors ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">رنگ‌بندی متن و دکمه</h3>
+        <ColorField label="رنگ متن" value={config.textColor} onChange={v => set("textColor", v)} />
+        <ColorField label="پس‌زمینه دکمه" value={config.btnBg} onChange={v => set("btnBg", v)} />
+        <ColorField label="رنگ نوشته دکمه" value={config.btnColor} onChange={v => set("btnColor", v)} />
+      </div>
+
+      {/* ── Live preview ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="font-black text-sm text-gray-900 dark:text-white">پیش‌نمایش</h3>
+        </div>
+        <div className="p-4">
+          <div className="relative overflow-hidden rounded-2xl px-6 py-12 text-center" style={bgStyle}>
+            <div className="pointer-events-none absolute -top-16 -right-16 w-48 h-48 rounded-full"
+              style={{ background: "rgba(255,255,255,0.08)" }} />
+            <div className="pointer-events-none absolute -bottom-20 -left-20 w-64 h-64 rounded-full"
+              style={{ background: "rgba(255,255,255,0.06)" }} />
+            <div className="relative z-10">
+              {config.heading && (
+                <h2 className="text-xl font-black mb-2" style={{ color: config.textColor }}>
+                  {config.heading}
+                </h2>
+              )}
+              {config.subheading && (
+                <p className="text-xs mb-5 opacity-80" style={{ color: config.textColor }}>
+                  {config.subheading}
+                </p>
+              )}
+              {config.btnText && (
+                <span className="inline-block px-6 py-2.5 rounded-xl font-black text-sm shadow-lg"
+                  style={{ background: config.btnBg, color: config.btnColor }}>
+                  {config.btnText}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function WidgetEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -594,6 +746,14 @@ export default function WidgetEditPage() {
   const [fbAlt, setFbAlt] = useState("");
   const [fbUploading, setFbUploading] = useState(false);
 
+  // CALL_TO_ACTION
+  const [ctaConfig, setCtaConfig] = useState<CTAConfig>({
+    heading: "", subheading: "", btnText: "شروع کنید", btnUrl: "",
+    bgType: "gradient", bgColor: "#4f46e5",
+    bgGradientFrom: "#4f46e5", bgGradientTo: "#7c3aed", bgGradientDir: "135deg",
+    btnBg: "#ffffff", btnColor: "#4f46e5", textColor: "#ffffff",
+  });
+
   // DOUBLE_BANNER
   const [db, setDb] = useState([
   { imageUrl: "", linkUrl: "", alt: "" },
@@ -601,7 +761,7 @@ export default function WidgetEditPage() {
   ]);
   const [dbUploading, setDbUploading] = useState([false, false]);
 
-  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "HERO_SLIDER", "STORY", "LATEST_ARTICLES"];
+  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION"];
   useEffect(() => {
     fetch("/api/admin/widgets")
       .then(r => r.json())
@@ -623,6 +783,21 @@ export default function WidgetEditPage() {
           setPbbBrandSlug(w.config.brandSlug ?? "");
           setPbbBrandLogo(w.config.brandLogoUrl ?? null);
           setPbbCount(w.config.count ?? 8);
+        } else if (w.type === "CALL_TO_ACTION") {
+          setCtaConfig({
+            heading:         w.config.heading         ?? "",
+            subheading:      w.config.subheading      ?? "",
+            btnText:         w.config.btnText         ?? "شروع کنید",
+            btnUrl:          w.config.btnUrl          ?? "",
+            bgType:          w.config.bgType          ?? "gradient",
+            bgColor:         w.config.bgColor         ?? "#4f46e5",
+            bgGradientFrom:  w.config.bgGradientFrom  ?? "#4f46e5",
+            bgGradientTo:    w.config.bgGradientTo    ?? "#7c3aed",
+            bgGradientDir:   w.config.bgGradientDir   ?? "135deg",
+            btnBg:           w.config.btnBg           ?? "#ffffff",
+            btnColor:        w.config.btnColor        ?? "#4f46e5",
+            textColor:       w.config.textColor       ?? "#ffffff",
+          });
         } else if (w.type === "FULL_BANNER") {
           setFbImageUrl(w.config.imageUrl ?? "");
           setFbLinkUrl(w.config.linkUrl ?? "");
@@ -648,7 +823,9 @@ export default function WidgetEditPage() {
     setSaving(true);
 
     let config: Record<string, any>;
-    if (widget.type === "AMAZING_DEALS") {
+    if (widget.type === "CALL_TO_ACTION") {
+      config = { ...ctaConfig };
+    } else if (widget.type === "AMAZING_DEALS") {
       config = { productIds: amazingIds, endsAt: endsAt || null };
     } else if (widget.type === "NEWEST_PRODUCTS") {
       config = { categoryIds: selectedIds, perCategory };
@@ -692,6 +869,7 @@ export default function WidgetEditPage() {
     PRODUCTS_BY_BRAND:    "یک برند انتخاب کنید تا محصولاتش در اسلایدر نمایش داده شود",
     CATEGORIES:           "دسته‌بندی‌هایی که می‌خواهید در این ویجت نمایش داده شوند را انتخاب کنید",
     NEWEST_PRODUCTS:      "دسته‌بندی‌هایی که می‌خواهید جدیدترین محصولاتشان نمایش داده شود را انتخاب کنید",
+    CALL_TO_ACTION:       "متن، دکمه و رنگ‌بندی بنر دعوت به اقدام را تنظیم کنید",
     FULL_BANNER:          "یک تصویر بنر با لینک اختیاری آپلود کنید",
     DOUBLE_BANNER:        "دو تصویر بنر کنار هم آپلود کنید",
     HERO_SLIDER:          "اسلایدهای این بخش از صفحه مدیریت اسلایدر Hero قابل تنظیم هستند",
@@ -917,6 +1095,10 @@ export default function WidgetEditPage() {
          )}
        </div>
      )}
+
+      {widget.type === "CALL_TO_ACTION" && (
+        <CallToActionEditor config={ctaConfig} setConfig={setCtaConfig} />
+      )}
 
      {(widget.type === "HERO_SLIDER" || widget.type === "STORY" || widget.type === "LATEST_ARTICLES") && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-5">
