@@ -3,6 +3,97 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { FlowNode } from "@/lib/chat-flow";
 
+// ── Markdown inline parser ─────────────────────────────────────────────────
+
+function parseInline(text: string): React.ReactNode[] {
+  const result: React.ReactNode[] = [];
+  const re = /\*\*(.+?)\*\*|\[([^\]]+)\]\(([^)]+)\)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) result.push(text.slice(last, m.index));
+
+    if (m[1] !== undefined) {
+      result.push(
+        <strong key={m.index} style={{ fontWeight: 800, color: "inherit" }}>
+          {m[1]}
+        </strong>
+      );
+    } else {
+      const label = m[2];
+      const href = m[3];
+      if (href.startsWith("/products/")) {
+        result.push(
+          <a key={m.index} href={href} style={{
+            display: "inline-flex", alignItems: "center", gap: "6px",
+            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+            color: "#fff", padding: "6px 16px", borderRadius: "22px",
+            fontSize: "12px", fontWeight: 700, textDecoration: "none",
+            margin: "4px 0", verticalAlign: "middle",
+            boxShadow: "0 2px 10px rgba(99,102,241,0.35)",
+          }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2.5" style={{ flexShrink: 0 }}>
+              <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+            </svg>
+            {label}
+          </a>
+        );
+      } else {
+        result.push(
+          <a key={m.index} href={href} target="_blank" rel="noopener noreferrer"
+            style={{ color: "#6366f1", textDecoration: "underline", fontWeight: 600 }}>
+            {label}
+          </a>
+        );
+      }
+    }
+    last = re.lastIndex;
+  }
+
+  if (last < text.length) result.push(text.slice(last));
+  return result.length ? result : [text];
+}
+
+function MarkdownBubble({ text }: { text: string }) {
+  const lines = text.split("\n");
+  const nodes: React.ReactNode[] = [];
+  let listBuffer: string[] = [];
+  let k = 0;
+
+  function flushList() {
+    if (!listBuffer.length) return;
+    nodes.push(
+      <ul key={k++} style={{
+        margin: "6px 0", paddingRight: "20px", paddingLeft: 0,
+        listStyleType: "disc", display: "flex", flexDirection: "column", gap: "3px",
+      }}>
+        {listBuffer.map((item, j) => (
+          <li key={j} style={{ lineHeight: "1.75" }}>{parseInline(item)}</li>
+        ))}
+      </ul>
+    );
+    listBuffer = [];
+  }
+
+  for (const line of lines) {
+    const listMatch = line.match(/^[\*\-]\s+(.+)/);
+    if (listMatch) { listBuffer.push(listMatch[1]); continue; }
+    flushList();
+    if (line.trim() === "") {
+      if (nodes.length > 0) nodes.push(<div key={k++} style={{ height: "7px" }} />);
+    } else {
+      nodes.push(
+        <div key={k++} style={{ lineHeight: "1.85" }}>{parseInline(line)}</div>
+      );
+    }
+  }
+  flushList();
+  return <>{nodes}</>;
+}
+
 type Bubble = { role: "user" | "assistant"; content: string };
 
 type ChatContext =
@@ -409,9 +500,9 @@ export default function AiChat() {
 
           {}
           <div style={{
-            flex: 1, overflowY: "auto", padding: "16px",
-            display: "flex", flexDirection: "column", gap: "10px",
-            background: "#f9fafb",
+            flex: 1, overflowY: "auto", padding: "16px 14px",
+            display: "flex", flexDirection: "column", gap: "12px",
+            background: "linear-gradient(180deg,#f5f3ff 0%,#f9fafb 60%)",
           }}>
             {!config && (
               <div style={{ textAlign: "center", color: "#9ca3af", fontSize: "12px", marginTop: "40px" }}>
@@ -419,26 +510,59 @@ export default function AiChat() {
               </div>
             )}
 
-            {bubbles.map((b, i) => (
-              <div key={i} style={{
-                alignSelf: b.role === "user" ? "flex-start" : "flex-end",
-                maxWidth: "85%",
-                background: b.role === "user"
-                  ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "#fff",
-                color: b.role === "user" ? "#fff" : "#1f2937",
-                borderRadius: b.role === "user"
-                  ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                padding: "10px 14px", fontSize: "13.5px", lineHeight: "1.8",
-                whiteSpace: "pre-wrap", wordBreak: "break-word",
-                boxShadow: b.role === "assistant" ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
-              }}>
-                {b.content || (
-                  <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                    <span className="td" /><span className="td" /><span className="td" />
-                  </span>
-                )}
-              </div>
-            ))}
+            {bubbles.map((b, i) => {
+              const isUser = b.role === "user";
+              return (
+                <div key={i} style={{
+                  alignSelf: isUser ? "flex-start" : "flex-end",
+                  maxWidth: "90%",
+                  display: "flex",
+                  flexDirection: isUser ? "row" : "row-reverse",
+                  alignItems: "flex-end",
+                  gap: "7px",
+                }}>
+                  {!isUser && (
+                    <div style={{
+                      width: "28px", height: "28px", flexShrink: 0,
+                      background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                      borderRadius: "50%",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      boxShadow: "0 2px 6px rgba(99,102,241,0.3)",
+                    }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                        stroke="white" strokeWidth="2">
+                        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1H1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73A2 2 0 0 1 12 2zM9 14a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm6 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+                      </svg>
+                    </div>
+                  )}
+                  <div style={{
+                    background: isUser
+                      ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "#fff",
+                    color: isUser ? "#fff" : "#1f2937",
+                    borderRadius: isUser
+                      ? "18px 18px 4px 18px" : "4px 18px 18px 18px",
+                    padding: isUser ? "10px 15px" : "12px 16px",
+                    fontSize: "13.5px",
+                    wordBreak: "break-word",
+                    boxShadow: isUser
+                      ? "0 3px 10px rgba(99,102,241,0.25)"
+                      : "0 2px 10px rgba(0,0,0,0.08)",
+                    ...(isUser ? { whiteSpace: "pre-wrap" as const, lineHeight: "1.75" } : {}),
+                  }}>
+                    {b.content
+                      ? (isUser
+                          ? b.content
+                          : <MarkdownBubble text={b.content} />)
+                      : (
+                        <span style={{ display: "flex", gap: "4px", alignItems: "center", padding: "2px 0" }}>
+                          <span className="td" /><span className="td" /><span className="td" />
+                        </span>
+                      )
+                    }
+                  </div>
+                </div>
+              );
+            })}
 
             {}
             {buttons.length > 0 && !loading && (
