@@ -4,22 +4,20 @@ import { serialize } from "@/lib/serialize";
 
 export const runtime = "nodejs";
 
-// specValues format: "specItemId1__value1,specItemId2__value2"
-// Multiple values for same specItem = OR within that item's group
-// Different specItems = AND
+// attr param: multiple ?attr=attributeValueId (same as /api/products)
+// Matches the filtering behavior of the category/products listing pages
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const categoryId = url.searchParams.get("categoryId");
   const brandId = url.searchParams.get("brandId");
-  const specValuesRaw = url.searchParams.get("specValues") ?? "";
+  const attrValues = url.searchParams.getAll("attr");
   const pageSize = Math.min(48, Math.max(1, Number(url.searchParams.get("pageSize") ?? "4")));
   const page = Math.max(1, Number(url.searchParams.get("page") ?? "1"));
 
   const where: any = { isActive: true };
 
   if (categoryId) {
-    // include subcategories
     const cat = await prisma.category.findUnique({
       where: { id: categoryId },
       select: { id: true, children: { select: { id: true } } },
@@ -31,39 +29,15 @@ export async function GET(req: Request) {
 
   if (brandId) where.brandId = brandId;
 
-  // Parse spec values: group by specItemId, apply AND across different specItems
-  if (specValuesRaw) {
-    const pairs = specValuesRaw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((s) => {
-        const idx = s.indexOf("__");
-        if (idx < 0) return null;
-        return { specItemId: s.slice(0, idx), value: s.slice(idx + 2) };
-      })
-      .filter(Boolean) as { specItemId: string; value: string }[];
-
-    // Group by specItemId → OR within same spec item, AND across different
-    const byItem = new Map<string, string[]>();
-    for (const p of pairs) {
-      if (!byItem.has(p.specItemId)) byItem.set(p.specItemId, []);
-      byItem.get(p.specItemId)!.push(p.value);
-    }
-
-    if (byItem.size > 0) {
-      where.AND = where.AND ?? [];
-      for (const [specItemId, values] of byItem) {
-        where.AND.push({
-          specs: {
-            some: {
-              specItemId,
-              value: { in: values },
-            },
-          },
-        });
-      }
-    }
+  if (attrValues.length > 0) {
+    where.AND = where.AND ?? [];
+    where.AND.push({
+      attributes: {
+        some: {
+          attributeValueId: { in: attrValues },
+        },
+      },
+    });
   }
 
   const [total, items] = await Promise.all([
