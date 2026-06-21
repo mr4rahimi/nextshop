@@ -15,6 +15,7 @@ const DoubleBanner       = dynamic(() => import("@/components/store/DoubleBanner
 const LatestArticles     = dynamic(() => import("@/components/store/LatestArticlesSection"));
 const CallToAction       = dynamic(() => import("@/components/store/CallToActionSection"));
 const SpecialOffers      = dynamic(() => import("@/components/store/SpecialOffersSection"));
+const ImageContent       = dynamic(() => import("@/components/store/ImageContentSection"));
 
 type WidgetType = string;
 
@@ -44,6 +45,8 @@ function renderWidget(type: WidgetType, config: Record<string, any>, key: string
       return <CallToAction key={key} config={config} />;
     case "SPECIAL_OFFERS":
       return <SpecialOffers key={key} config={config} />;
+    case "IMAGE_CONTENT":
+      return <ImageContent key={key} config={config} />;
     default:
       return null;
   }

@@ -803,6 +803,208 @@ function SpecialOffersEditor({
   );
 }
 
+// ─── ImageContentEditor ───────────────────────────────────────────────────────
+interface ICConfig {
+  imageUrl: string; imageAlt: string;
+  heading: string; content: string; badge: string;
+  btnText: string; btnUrl: string;
+  imagePosition: "right" | "left";
+  bgColor: string; accentColor: string;
+}
+
+function ImageContentEditor({
+  config, setConfig, uploading, setUploading,
+}: {
+  config: ICConfig;
+  setConfig: (c: ICConfig) => void;
+  uploading: boolean;
+  setUploading: (v: boolean) => void;
+}) {
+  const set = <K extends keyof ICConfig>(key: K, value: ICConfig[K]) =>
+    setConfig({ ...config, [key]: value });
+
+  async function uploadImage(file: File) {
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    set("imageUrl", data.url);
+    setUploading(false);
+  }
+
+  return (
+    <div className="space-y-5">
+
+      {/* ── تصویر ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="font-black text-sm text-gray-900 dark:text-white">تصویر</h3>
+          <p className="text-xs text-gray-400 mt-0.5">توصیه: تصویر مربعی یا ۴:۳ — حداقل ۸۰۰ پیکسل عرض</p>
+        </div>
+        <div className="p-4">
+          {config.imageUrl ? (
+            <div className="relative rounded-2xl overflow-hidden">
+              <img src={config.imageUrl} alt="" className="w-full h-52 object-cover" />
+              <button
+                onClick={() => set("imageUrl", "")}
+                className="absolute top-2 left-2 w-8 h-8 bg-red-500 text-white rounded-lg flex items-center justify-center hover:bg-red-600 transition-all text-sm"
+              >×</button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center h-36 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+              {uploading ? (
+                <div className="flex items-center gap-2 text-gray-400">
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  <span className="text-sm">آپلود...</span>
+                </div>
+              ) : (
+                <>
+                  <svg className="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                  <span className="text-xs text-gray-400 font-bold">کلیک کنید برای آپلود</span>
+                </>
+              )}
+              <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} />
+            </label>
+          )}
+          {config.imageUrl && (
+            <input
+              type="text" placeholder="متن جایگزین (alt) برای سئو" value={config.imageAlt}
+              onChange={e => set("imageAlt", e.target.value)}
+              className="mt-3 w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white"
+            />
+          )}
+        </div>
+      </div>
+
+      {/* ── محتوا ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">محتوا</h3>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">برچسب کوچک (اختیاری)</label>
+          <input type="text" placeholder="مثال: درباره ما" value={config.badge}
+            onChange={e => set("badge", e.target.value)}
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">عنوان اصلی *</label>
+          <input type="text" placeholder="عنوان جذاب بنویسید" value={config.heading}
+            onChange={e => set("heading", e.target.value)}
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">متن اصلی</label>
+          <textarea rows={4} placeholder="توضیحات کامل را اینجا بنویسید..." value={config.content}
+            onChange={e => set("content", e.target.value)}
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white resize-none leading-relaxed" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">متن دکمه (اختیاری)</label>
+            <input type="text" placeholder="بیشتر بدانید" value={config.btnText}
+              onChange={e => set("btnText", e.target.value)}
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">لینک دکمه</label>
+            <input type="text" placeholder="/about یا https://..." value={config.btnUrl}
+              onChange={e => set("btnUrl", e.target.value)}
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+          </div>
+        </div>
+      </div>
+
+      {/* ── چیدمان ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white mb-4">جایگاه تصویر (دسکتاپ)</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {([
+            { value: "right", label: "تصویر سمت راست", desc: "محتوا چپ، تصویر راست" },
+            { value: "left",  label: "تصویر سمت چپ",   desc: "تصویر چپ، محتوا راست" },
+          ] as const).map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => set("imagePosition", opt.value)}
+              className={`p-4 rounded-2xl border-2 text-right transition-all ${
+                config.imagePosition === opt.value
+                  ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
+                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+              }`}
+            >
+              {/* mini layout preview */}
+              <div className="flex gap-1.5 mb-3" dir={opt.value === "right" ? "rtl" : "ltr"}>
+                <div className="flex-1 h-6 rounded bg-indigo-200 dark:bg-indigo-800" />
+                <div className="flex-1 h-6 rounded bg-gray-200 dark:bg-gray-700" />
+              </div>
+              <p className={`text-xs font-black ${config.imagePosition === opt.value ? "text-indigo-700 dark:text-indigo-300" : "text-gray-700 dark:text-gray-300"}`}>
+                {opt.label}
+              </p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{opt.desc}</p>
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] text-gray-400 mt-3">در موبایل: تصویر همیشه بالا، محتوا پایین نمایش داده می‌شود</p>
+      </div>
+
+      {/* ── رنگ‌بندی ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">رنگ‌بندی</h3>
+        <ColorField label="رنگ پس‌زمینه" value={config.bgColor} onChange={v => set("bgColor", v)} />
+        <ColorField label="رنگ تاکیدی" value={config.accentColor} onChange={v => set("accentColor", v)} />
+      </div>
+
+      {/* ── پیش‌نمایش ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="font-black text-sm text-gray-900 dark:text-white">پیش‌نمایش</h3>
+        </div>
+        <div className="p-4" style={{ background: config.bgColor }}>
+          <div className="grid grid-cols-2 gap-3" style={{ direction: config.imagePosition === "right" ? "rtl" : "ltr" }}>
+            {/* image box preview */}
+            <div className="rounded-2xl overflow-hidden h-40 relative" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.1)" }}>
+              {config.imageUrl
+                ? <img src={config.imageUrl} alt="" className="w-full h-full object-cover" />
+                : <div className="w-full h-full flex items-center justify-center text-3xl" style={{ background: `${config.accentColor}15` }}>🖼</div>
+              }
+            </div>
+            {/* content box preview */}
+            <div className="rounded-2xl p-4 bg-white dark:bg-gray-800 h-40 flex flex-col justify-center relative overflow-hidden" dir="rtl">
+              <div className="absolute top-0 right-0 w-16 h-16 rounded-full -translate-y-8 translate-x-8" style={{ background: `${config.accentColor}12` }} />
+              <div className="absolute right-0 top-4 bottom-4 w-0.5 rounded-full" style={{ background: `${config.accentColor}60` }} />
+              {config.badge && (
+                <span className="text-[9px] font-black px-2 py-0.5 rounded-full mb-1.5 inline-block" style={{ background: `${config.accentColor}15`, color: config.accentColor }}>
+                  {config.badge}
+                </span>
+              )}
+              {config.heading && (
+                <p className="text-sm font-black text-gray-900 dark:text-white line-clamp-2 leading-snug">{config.heading}</p>
+              )}
+              <div className="flex gap-1 mt-1.5">
+                <div className="h-0.5 w-6 rounded-full" style={{ background: config.accentColor }} />
+                <div className="h-0.5 w-3 rounded-full" style={{ background: `${config.accentColor}50` }} />
+              </div>
+              {config.content && (
+                <p className="text-[10px] text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">{config.content}</p>
+              )}
+              {config.btnText && (
+                <span className="mt-2 inline-block text-[10px] font-black px-3 py-1 rounded-lg text-white" style={{ background: config.accentColor }}>
+                  {config.btnText}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 // ─── CallToActionEditor ───────────────────────────────────────────────────────
 interface CTAConfig {
   heading: string; subheading: string;
@@ -999,6 +1201,14 @@ export default function WidgetEditPage() {
   const [fbAlt, setFbAlt] = useState("");
   const [fbUploading, setFbUploading] = useState(false);
 
+  // IMAGE_CONTENT
+  const [icConfig, setIcConfig] = useState<ICConfig>({
+    imageUrl: "", imageAlt: "", heading: "", content: "", badge: "",
+    btnText: "", btnUrl: "", imagePosition: "right",
+    bgColor: "#f8fafc", accentColor: "#4f46e5",
+  });
+  const [icUploading, setIcUploading] = useState(false);
+
   // CALL_TO_ACTION
   const [ctaConfig, setCtaConfig] = useState<CTAConfig>({
     heading: "", subheading: "", btnText: "شروع کنید", btnUrl: "",
@@ -1014,7 +1224,7 @@ export default function WidgetEditPage() {
   ]);
   const [dbUploading, setDbUploading] = useState([false, false]);
 
-  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION"];
+  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION"];
   useEffect(() => {
     fetch("/api/admin/widgets")
       .then(r => r.json())
@@ -1043,6 +1253,19 @@ export default function WidgetEditPage() {
           setPbbBrandSlug(w.config.brandSlug ?? "");
           setPbbBrandLogo(w.config.brandLogoUrl ?? null);
           setPbbCount(w.config.count ?? 8);
+        } else if (w.type === "IMAGE_CONTENT") {
+          setIcConfig({
+            imageUrl:      w.config.imageUrl      ?? "",
+            imageAlt:      w.config.imageAlt      ?? "",
+            heading:       w.config.heading       ?? "",
+            content:       w.config.content       ?? "",
+            badge:         w.config.badge         ?? "",
+            btnText:       w.config.btnText       ?? "",
+            btnUrl:        w.config.btnUrl        ?? "",
+            imagePosition: w.config.imagePosition ?? "right",
+            bgColor:       w.config.bgColor       ?? "#f8fafc",
+            accentColor:   w.config.accentColor   ?? "#4f46e5",
+          });
         } else if (w.type === "CALL_TO_ACTION") {
           setCtaConfig({
             heading:         w.config.heading         ?? "",
@@ -1083,7 +1306,9 @@ export default function WidgetEditPage() {
     setSaving(true);
 
     let config: Record<string, any>;
-    if (widget.type === "CALL_TO_ACTION") {
+    if (widget.type === "IMAGE_CONTENT") {
+      config = { ...icConfig };
+    } else if (widget.type === "CALL_TO_ACTION") {
       config = { ...ctaConfig };
     } else if (widget.type === "SPECIAL_OFFERS") {
       config = { productIds: soIds, endsAt: soEndsAt || null, heading: soHeading, subheading: soSubheading, bgColor: soBgColor, accentColor: soAccentColor };
@@ -1132,6 +1357,7 @@ export default function WidgetEditPage() {
     PRODUCTS_BY_BRAND:    "یک برند انتخاب کنید تا محصولاتش در اسلایدر نمایش داده شود",
     CATEGORIES:           "دسته‌بندی‌هایی که می‌خواهید در این ویجت نمایش داده شوند را انتخاب کنید",
     NEWEST_PRODUCTS:      "دسته‌بندی‌هایی که می‌خواهید جدیدترین محصولاتشان نمایش داده شود را انتخاب کنید",
+    IMAGE_CONTENT:        "یک تصویر و یک محتوا کنار هم با چیدمان و رنگ‌بندی قابل تنظیم",
     CALL_TO_ACTION:       "متن، دکمه و رنگ‌بندی بنر دعوت به اقدام را تنظیم کنید",
     FULL_BANNER:          "یک تصویر بنر با لینک اختیاری آپلود کنید",
     DOUBLE_BANNER:        "دو تصویر بنر کنار هم آپلود کنید",
@@ -1369,6 +1595,10 @@ export default function WidgetEditPage() {
          )}
        </div>
      )}
+
+      {widget.type === "IMAGE_CONTENT" && (
+        <ImageContentEditor config={icConfig} setConfig={setIcConfig} uploading={icUploading} setUploading={setIcUploading} />
+      )}
 
       {widget.type === "CALL_TO_ACTION" && (
         <CallToActionEditor config={ctaConfig} setConfig={setCtaConfig} />
