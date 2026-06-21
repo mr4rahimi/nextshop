@@ -1417,6 +1417,12 @@ export default function WidgetEditPage() {
   });
   const [icUploading, setIcUploading] = useState(false);
 
+  // ADVANCED_SEARCH
+  const [asHeading, setAsHeading] = useState("جستجوی پیشرفته");
+  const [asSubheading, setAsSubheading] = useState("محصول مورد نظر خود را سریع‌تر پیدا کنید");
+  const [asAccentColor, setAsAccentColor] = useState("#4f46e5");
+  const [asCategoryIds, setAsCategoryIds] = useState<string[]>([]);
+
   // CALL_TO_ACTION
   const [ctaConfig, setCtaConfig] = useState<CTAConfig>({
     heading: "", subheading: "", btnText: "شروع کنید", btnUrl: "",
@@ -1432,7 +1438,7 @@ export default function WidgetEditPage() {
   ]);
   const [dbUploading, setDbUploading] = useState([false, false]);
 
-  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION"];
+  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION", "ADVANCED_SEARCH"];
   useEffect(() => {
     fetch("/api/admin/widgets")
       .then(r => r.json())
@@ -1512,6 +1518,11 @@ export default function WidgetEditPage() {
             { imageUrl: b[0]?.imageUrl ?? "", linkUrl: b[0]?.linkUrl ?? "", alt: b[0]?.alt ?? "" },
             { imageUrl: b[1]?.imageUrl ?? "", linkUrl: b[1]?.linkUrl ?? "", alt: b[1]?.alt ?? "" },
           ]);
+        } else if (w.type === "ADVANCED_SEARCH") {
+          setAsHeading(w.config.heading ?? "جستجوی پیشرفته");
+          setAsSubheading(w.config.subheading ?? "محصول مورد نظر خود را سریع‌تر پیدا کنید");
+          setAsAccentColor(w.config.accentColor ?? "#4f46e5");
+          setAsCategoryIds(w.config.categoryIds ?? []);
         } else {
           setSelectedIds(w.config.categoryIds ?? []);
           setPerCategory(w.config.perCategory ?? 3);
@@ -1527,7 +1538,9 @@ export default function WidgetEditPage() {
     setSaving(true);
 
     let config: Record<string, any>;
-    if (widget.type === "LAST_VISITED") {
+    if (widget.type === "ADVANCED_SEARCH") {
+      config = { heading: asHeading, subheading: asSubheading, accentColor: asAccentColor, categoryIds: asCategoryIds };
+    } else if (widget.type === "LAST_VISITED") {
       config = { heading: lvHeading, accentColor: lvAccentColor };
     } else if (widget.type === "IMAGE_CONTENT_DOUBLE") {
       config = { imageUrl: icdImageUrl, imageAlt: icdImageAlt, bgColor: icdBgColor, accentColor: icdAccentColor, boxes: icdBoxes };
@@ -1585,6 +1598,7 @@ export default function WidgetEditPage() {
     IMAGE_CONTENT:        "یک تصویر و یک محتوا کنار هم با چیدمان و رنگ‌بندی قابل تنظیم",
     IMAGE_CONTENT_DOUBLE: "تصویر تمام‌عرض بالا و دو باکس محتوا با افکت شناور",
     LAST_VISITED:         "آخرین محصولات بازدیدشده توسط کاربر — داده‌ها از مرورگر کاربر خوانده می‌شود",
+    ADVANCED_SEARCH:      "جستجوی پیشرفته با فیلتر دسته‌بندی، زیردسته، برند و ویژگی‌های فنی — نتایج همانجا نمایش داده می‌شود",
     CALL_TO_ACTION:       "متن، دکمه و رنگ‌بندی بنر دعوت به اقدام را تنظیم کنید",
     FULL_BANNER:          "یک تصویر بنر با لینک اختیاری آپلود کنید",
     DOUBLE_BANNER:        "دو تصویر بنر کنار هم آپلود کنید",
@@ -1869,6 +1883,75 @@ export default function WidgetEditPage() {
                 className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
             </div>
             <ColorField label="رنگ تاکیدی" value={lvAccentColor} onChange={setLvAccentColor} />
+          </div>
+        </div>
+      )}
+
+      {widget.type === "ADVANCED_SEARCH" && (
+        <div className="space-y-5">
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-5">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
+                  <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-black text-sm text-indigo-800 dark:text-indigo-200 mb-1">جستجوی پیشرفته با فیلترهای هوشمند</p>
+                <p className="text-xs text-indigo-600 dark:text-indigo-400 leading-relaxed">
+                  کاربر دسته‌بندی، زیردسته، برند و ویژگی‌های فنی را انتخاب می‌کند و نتایج همانجا نمایش داده می‌شود.
+                  دکمه «مشاهده همه» او را به صفحه محصولات با همان فیلترها هدایت می‌کند.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+            <h3 className="font-black text-sm text-gray-900 dark:text-white">تنظیمات</h3>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">عنوان ویجت</label>
+              <input type="text" placeholder="جستجوی پیشرفته"
+                value={asHeading} onChange={e => setAsHeading(e.target.value)}
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">زیرعنوان</label>
+              <input type="text" placeholder="محصول مورد نظر خود را سریع‌تر پیدا کنید"
+                value={asSubheading} onChange={e => setAsSubheading(e.target.value)}
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+            </div>
+            <ColorField label="رنگ تاکیدی" value={asAccentColor} onChange={setAsAccentColor} />
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-black text-sm text-gray-900 dark:text-white">دسته‌بندی‌های ریشه</h3>
+                <p className="text-xs text-gray-400 mt-0.5">خالی = همه دسته‌های اصلی نمایش داده می‌شوند</p>
+              </div>
+              {asCategoryIds.length > 0 && (
+                <button onClick={() => setAsCategoryIds([])} className="text-xs text-red-500 hover:text-red-700">پاک کردن</button>
+              )}
+            </div>
+            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1" style={{ scrollbarWidth: "thin" }}>
+              {categories.filter(c => !c.parentId).map(cat => {
+                const sel = asCategoryIds.includes(cat.id);
+                return (
+                  <label key={cat.id} className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={sel}
+                      onChange={() => setAsCategoryIds(sel ? asCategoryIds.filter(x => x !== cat.id) : [...asCategoryIds, cat.id])}
+                      className="rounded"
+                      style={{ accentColor: asAccentColor }}
+                    />
+                    {cat.imageUrl && <img src={cat.imageUrl} alt={cat.title} className="w-7 h-7 object-cover rounded-lg" />}
+                    <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{cat.title}</span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

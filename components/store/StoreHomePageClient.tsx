@@ -18,6 +18,7 @@ const SpecialOffers      = dynamic(() => import("@/components/store/SpecialOffer
 const ImageContent       = dynamic(() => import("@/components/store/ImageContentSection"));
 const ImageContentDouble = dynamic(() => import("@/components/store/ImageContentDoubleSection"));
 const LastVisited        = dynamic(() => import("@/components/store/LastVisitedSection"));
+const AdvancedSearch     = dynamic(() => import("@/components/store/AdvancedSearchSection"));
 
 type WidgetType = string;
 
@@ -53,6 +54,8 @@ function renderWidget(type: WidgetType, config: Record<string, any>, key: string
       return <ImageContentDouble key={key} config={config} />;
     case "LAST_VISITED":
       return <LastVisited key={key} config={config} />;
+    case "ADVANCED_SEARCH":
+      return <AdvancedSearch key={key} config={config} />;
     default:
       return null;
   }
