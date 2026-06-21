@@ -48,6 +48,8 @@ export async function GET(req: Request) {
     stock: p.stock,
     trackStock: p.trackStock,
     lowStockThreshold: p.lowStockThreshold,
+    ratingAvg: p.ratingAvg,
+    ratingCount: p.ratingCount,
   }));
 
   return NextResponse.json(serialize(result));

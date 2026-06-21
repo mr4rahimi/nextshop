@@ -558,6 +558,251 @@ function AmazingDealsEditor({
   );
 }
 
+// ─── SpecialOffersEditor ──────────────────────────────────────────────────────
+function SpecialOffersEditor({
+  productIds, setProductIds,
+  endsAt, setEndsAt,
+  heading, setHeading,
+  subheading, setSubheading,
+  bgColor, setBgColor,
+  accentColor, setAccentColor,
+}: {
+  productIds: string[]; setProductIds: (ids: string[]) => void;
+  endsAt: string; setEndsAt: (v: string) => void;
+  heading: string; setHeading: (v: string) => void;
+  subheading: string; setSubheading: (v: string) => void;
+  bgColor: string; setBgColor: (v: string) => void;
+  accentColor: string; setAccentColor: (v: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [loadingSelected, setLoadingSelected] = useState(false);
+
+  useEffect(() => {
+    if (productIds.length === 0) { setSelectedProducts([]); return; }
+    setLoadingSelected(true);
+    fetch(`/api/admin/products-search?ids=${productIds.join(",")}`)
+      .then(r => r.json())
+      .then((data: Product[]) => {
+        const sorted = productIds.map(id => data.find(p => p.id === id)).filter(Boolean) as Product[];
+        setSelectedProducts(sorted);
+      })
+      .finally(() => setLoadingSelected(false));
+  }, []);
+
+  useEffect(() => {
+    if (!search.trim()) { setSearchResults([]); return; }
+    const timer = setTimeout(() => {
+      setSearching(true);
+      fetch(`/api/admin/products-search?q=${encodeURIComponent(search)}`)
+        .then(r => r.json()).then(setSearchResults).finally(() => setSearching(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  function toggleProduct(product: Product) {
+    if (productIds.includes(product.id)) {
+      setProductIds(productIds.filter(id => id !== product.id));
+      setSelectedProducts(prev => prev.filter(p => p.id !== product.id));
+    } else {
+      setProductIds([...productIds, product.id]);
+      setSelectedProducts(prev => [...prev, product]);
+    }
+  }
+  function moveUp(i: number) {
+    if (i === 0) return;
+    const a = [...selectedProducts]; [a[i - 1], a[i]] = [a[i], a[i - 1]];
+    setSelectedProducts(a); setProductIds(a.map(p => p.id));
+  }
+  function moveDown(i: number) {
+    if (i === selectedProducts.length - 1) return;
+    const a = [...selectedProducts]; [a[i], a[i + 1]] = [a[i + 1], a[i]];
+    setSelectedProducts(a); setProductIds(a.map(p => p.id));
+  }
+  function remove(id: string) {
+    setProductIds(productIds.filter(x => x !== id));
+    setSelectedProducts(prev => prev.filter(p => p.id !== id));
+  }
+  function toLocal(iso: string) { try { return iso ? new Date(iso).toISOString().slice(0, 16) : ""; } catch { return ""; } }
+  function fromLocal(val: string) { return val ? new Date(val).toISOString() : ""; }
+
+  return (
+    <div className="space-y-5">
+
+      {/* ── متن و رنگ ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">متن و رنگ‌بندی</h3>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">عنوان</label>
+          <input type="text" placeholder="تخفیف‌های شگفت‌انگیز" value={heading}
+            onChange={e => setHeading(e.target.value)}
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">زیرعنوان</label>
+          <input type="text" placeholder="پیشنهادهای ویژه، فقط تا پایان امروز" value={subheading}
+            onChange={e => setSubheading(e.target.value)}
+            className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+        </div>
+        <div className="grid grid-cols-2 gap-4 pt-1">
+          <ColorField label="رنگ پس‌زمینه" value={bgColor} onChange={setBgColor} />
+          <ColorField label="رنگ تاکیدی" value={accentColor} onChange={setAccentColor} />
+        </div>
+        {/* mini preview */}
+        <div className="rounded-2xl overflow-hidden mt-1" style={{ background: bgColor }}>
+          <div className="px-5 py-4 flex items-center gap-4">
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: accentColor, boxShadow: `0 8px 24px ${accentColor}55` }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M13 2 4.5 13.5h6L9 22l9.5-12.5h-6L13 2Z" fill="#fff" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-black text-white text-[15px]">{heading || "عنوان ویجت"}</p>
+              <p className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>{subheading || "زیرعنوان"}</p>
+            </div>
+          </div>
+          <div className="flex gap-2 px-5 pb-4 overflow-hidden">
+            {[1,2,3].map(i => (
+              <div key={i} className="flex-shrink-0 w-[140px] bg-white rounded-2xl overflow-hidden opacity-90">
+                <div className="h-28 bg-gray-100 flex items-center justify-center text-gray-300 text-3xl">📦</div>
+                <div className="p-2.5">
+                  <div className="h-2 bg-gray-200 rounded mb-2 w-4/5" />
+                  <div className="flex justify-between items-center">
+                    <div className="h-3 bg-gray-900 rounded w-2/3 font-black" />
+                    <div className="w-7 h-7 rounded-lg" style={{ background: accentColor }} />
+                  </div>
+                  <div className="mt-2 h-1 rounded-full bg-gray-100 overflow-hidden">
+                    <div className="h-full w-2/5 rounded-full" style={{ background: accentColor }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── زمان پایان ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white mb-4">زمان پایان پیشنهاد</h3>
+        <div className="flex items-center gap-4">
+          <input type="datetime-local"
+            className="border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white flex-1 max-w-xs"
+            value={toLocal(endsAt)} onChange={e => setEndsAt(fromLocal(e.target.value))} />
+          {endsAt && (
+            <button onClick={() => setEndsAt("")}
+              className="text-xs text-red-500 hover:text-red-700 font-bold px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all">
+              پاک کردن
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-gray-400 mt-2">اگر تعیین نشود، تایمر ۸ ساعته از لحظه بارگذاری صفحه خواهد بود</p>
+      </div>
+
+      {/* ── انتخاب محصولات ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+            <h3 className="font-black text-sm text-gray-900 dark:text-white mb-3">جستجوی محصول</h3>
+            <div className="relative">
+              <input type="text" placeholder="نام محصول را تایپ کنید..."
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white pr-8"
+                value={search} onChange={e => setSearch(e.target.value)} />
+              {searching && <div className="absolute left-3 top-2.5 w-4 h-4 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />}
+            </div>
+          </div>
+          <div className="min-h-[200px] max-h-96 overflow-y-auto">
+            {!search.trim() ? (
+              <div className="p-8 text-center text-sm text-gray-400">نام محصول را برای جستجو وارد کنید</div>
+            ) : searchResults.length === 0 && !searching ? (
+              <div className="p-8 text-center text-sm text-gray-400">محصولی یافت نشد</div>
+            ) : (
+              <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+                {searchResults.map(product => {
+                  const sel = productIds.includes(product.id);
+                  const disc = discountPercent(product.price, product.salePrice);
+                  return (
+                    <li key={product.id}>
+                      <label className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${sel ? "bg-rose-50 dark:bg-rose-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                        {product.image ? <img src={product.image} alt={product.title} className="w-12 h-12 rounded-xl object-contain flex-shrink-0 bg-gray-50" /> : <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 flex-shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{product.title}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {disc && <span className="text-[10px] font-black text-white bg-rose-500 px-1.5 py-0.5 rounded-lg">{disc}٪</span>}
+                            <span className="text-[11px] text-gray-500">{formatPrice(product.salePrice ?? product.price)} تومان</span>
+                          </div>
+                        </div>
+                        <div className="relative flex-shrink-0">
+                          <input type="checkbox"
+                            className="peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300 dark:border-gray-600 checked:bg-rose-500 checked:border-rose-500 transition-all cursor-pointer"
+                            checked={sel} onChange={() => toggleProduct(product)} />
+                          <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 top-1 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M5 13l4 4L19 7" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+            <h3 className="font-black text-sm text-gray-900 dark:text-white">
+              محصولات انتخاب‌شده
+              <span className="mr-2 text-[10px] font-bold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-full">{productIds.length} محصول</span>
+            </h3>
+            <p className="text-xs text-gray-400 mt-1">با دکمه‌های ↑↓ ترتیب نمایش را تغییر دهید</p>
+          </div>
+          {loadingSelected ? (
+            <div className="p-8 text-center text-sm text-gray-400">در حال بارگذاری...</div>
+          ) : selectedProducts.length === 0 ? (
+            <div className="p-8 text-center text-sm text-gray-400">هیچ محصولی انتخاب نشده</div>
+          ) : (
+            <ul className="divide-y divide-gray-100 dark:divide-gray-800 max-h-96 overflow-y-auto">
+              {selectedProducts.map((product, i) => {
+                const disc = discountPercent(product.price, product.salePrice);
+                return (
+                  <li key={product.id} className="flex items-center gap-3 px-4 py-3">
+                    <span className="w-6 h-6 rounded-lg bg-rose-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                    {product.image ? <img src={product.image} alt={product.title} className="w-10 h-10 rounded-xl object-contain flex-shrink-0 bg-gray-50" /> : <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex-shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{product.title}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {disc && <span className="text-[10px] font-black text-white bg-rose-500 px-1.5 py-0.5 rounded">{disc}٪</span>}
+                        <span className="text-[11px] text-gray-500">{formatPrice(product.salePrice ?? product.price)} تومان</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button onClick={() => moveUp(i)} disabled={i === 0} className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-rose-100 dark:hover:bg-rose-900/30 disabled:opacity-30 flex items-center justify-center text-gray-500 transition-all text-xs">↑</button>
+                      <button onClick={() => moveDown(i)} disabled={i === selectedProducts.length - 1} className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-rose-100 dark:hover:bg-rose-900/30 disabled:opacity-30 flex items-center justify-center text-gray-500 transition-all text-xs">↓</button>
+                      <button onClick={() => remove(product.id)} className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center justify-center text-gray-400 hover:text-red-500 transition-all text-xs">×</button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {productIds.length > 0 && (
+        <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-2xl p-4">
+          <p className="text-xs text-rose-700 dark:text-rose-300 font-bold">
+            {productIds.length} محصول در اسلایدر شگفت‌انگیز نمایش داده می‌شود
+            {endsAt ? ` — پیشنهاد تا ${new Date(endsAt).toLocaleString("fa-IR")} ادامه دارد` : ""}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── CallToActionEditor ───────────────────────────────────────────────────────
 interface CTAConfig {
   heading: string; subheading: string;
@@ -727,6 +972,14 @@ export default function WidgetEditPage() {
   const [endsAt, setEndsAt] = useState("");
   const [amazingIds, setAmazingIds] = useState<string[]>([]);
 
+  // state SPECIAL_OFFERS
+  const [soIds, setSoIds] = useState<string[]>([]);
+  const [soEndsAt, setSoEndsAt] = useState("");
+  const [soHeading, setSoHeading] = useState("تخفیف‌های شگفت‌انگیز");
+  const [soSubheading, setSoSubheading] = useState("پیشنهادهای ویژه، فقط تا پایان امروز");
+  const [soBgColor, setSoBgColor] = useState("#0e0f12");
+  const [soAccentColor, setSoAccentColor] = useState("#ff3b4e");
+
   // state PRODUCTS_BY_CATEGORY
   const [pbcCategoryId, setPbcCategoryId] = useState("");
   const [pbcCategoryTitle, setPbcCategoryTitle] = useState("");
@@ -761,7 +1014,7 @@ export default function WidgetEditPage() {
   ]);
   const [dbUploading, setDbUploading] = useState([false, false]);
 
-  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION"];
+  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION"];
   useEffect(() => {
     fetch("/api/admin/widgets")
       .then(r => r.json())
@@ -769,7 +1022,14 @@ export default function WidgetEditPage() {
         const w = widgets.find(x => x.id === id);
         if (!w) return;
         setWidget(w);
-        if (w.type === "AMAZING_DEALS") {
+        if (w.type === "SPECIAL_OFFERS") {
+          setSoIds(w.config.productIds ?? []);
+          setSoEndsAt(w.config.endsAt ?? "");
+          setSoHeading(w.config.heading ?? "تخفیف‌های شگفت‌انگیز");
+          setSoSubheading(w.config.subheading ?? "پیشنهادهای ویژه، فقط تا پایان امروز");
+          setSoBgColor(w.config.bgColor ?? "#0e0f12");
+          setSoAccentColor(w.config.accentColor ?? "#ff3b4e");
+        } else if (w.type === "AMAZING_DEALS") {
           setAmazingIds(w.config.productIds ?? []);
           setEndsAt(w.config.endsAt ?? "");
         } else if (w.type === "PRODUCTS_BY_CATEGORY") {
@@ -825,6 +1085,8 @@ export default function WidgetEditPage() {
     let config: Record<string, any>;
     if (widget.type === "CALL_TO_ACTION") {
       config = { ...ctaConfig };
+    } else if (widget.type === "SPECIAL_OFFERS") {
+      config = { productIds: soIds, endsAt: soEndsAt || null, heading: soHeading, subheading: soSubheading, bgColor: soBgColor, accentColor: soAccentColor };
     } else if (widget.type === "AMAZING_DEALS") {
       config = { productIds: amazingIds, endsAt: endsAt || null };
     } else if (widget.type === "NEWEST_PRODUCTS") {
@@ -864,6 +1126,7 @@ export default function WidgetEditPage() {
   }
 
   const pageDesc: Record<string, string> = {
+    SPECIAL_OFFERS:       "محصولات اسلایدر پیشنهاد شگفت‌انگیز را با عنوان، تایمر و رنگ‌بندی تنظیم کنید",
     AMAZING_DEALS:        "محصولاتی که با تخفیف ویژه در بخش شگفت‌انگیز نمایش داده می‌شوند را انتخاب کنید",
     PRODUCTS_BY_CATEGORY: "یک دسته‌بندی انتخاب کنید تا محصولاتش در اسلایدر نمایش داده شود",
     PRODUCTS_BY_BRAND:    "یک برند انتخاب کنید تا محصولاتش در اسلایدر نمایش داده شود",
@@ -893,6 +1156,17 @@ export default function WidgetEditPage() {
           {saving ? "ذخیره..." : "ذخیره تغییرات"}
         </button>
       </div>
+
+      {widget.type === "SPECIAL_OFFERS" && (
+        <SpecialOffersEditor
+          productIds={soIds} setProductIds={setSoIds}
+          endsAt={soEndsAt} setEndsAt={setSoEndsAt}
+          heading={soHeading} setHeading={setSoHeading}
+          subheading={soSubheading} setSubheading={setSoSubheading}
+          bgColor={soBgColor} setBgColor={setSoBgColor}
+          accentColor={soAccentColor} setAccentColor={setSoAccentColor}
+        />
+      )}
 
       {widget.type === "AMAZING_DEALS" && (
         <AmazingDealsEditor selectedIds={amazingIds} setSelectedIds={setAmazingIds} endsAt={endsAt} setEndsAt={setEndsAt} />
