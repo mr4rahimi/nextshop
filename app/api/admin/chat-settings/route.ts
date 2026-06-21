@@ -20,7 +20,8 @@ const DEFAULT_CHAT_SETTINGS = {
   aboutBusiness: "",
   welcomeMessage: "سلام! من دستیار خرید این فروشگاه هستم. چطور می‌تونم کمکت کنم؟",
   isEnabled: true,
-  historyLimit: 4,  
+  historyLimit: 4,
+  gapgptApiKey: "",
   faq: [] as { question: string; answer: string }[],
 };
 

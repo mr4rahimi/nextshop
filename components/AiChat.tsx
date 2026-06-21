@@ -50,7 +50,15 @@ export default function AiChat() {
         .then((r) => r.json())
         .then((cfg: ChatConfig) => {
           setConfig(cfg);
-          if (cfg.isEnabled && !restoredRef.current) initRoot(cfg);
+          if (!cfg.isEnabled) return;
+          if (restoredRef.current) {
+            // conversation restored from localStorage: refresh buttons from DB, keep bubbles
+            setButtons(flowToButtons(cfg.flow, false));
+            setInputMode(false);
+            setActiveContext(null);
+          } else {
+            initRoot(cfg);
+          }
         })
         .catch(() => setConfig({ isEnabled: true, welcomeMessage: "سلام!", flow: [] }));
     }
@@ -63,9 +71,6 @@ export default function AiChat() {
         const s = JSON.parse(saved);
         if (s.bubbles?.length) {
           setBubbles(s.bubbles);
-          setButtons(s.buttons ?? []);
-          setInputMode(s.inputMode ?? false);
-          setActiveContext(s.activeContext ?? null);
           setApiMessages(s.apiMessages ?? []);
           conversationIdRef.current = s.conversationId ?? null;
           restoredRef.current = true;
@@ -82,15 +87,12 @@ export default function AiChat() {
         "chat_state",
         JSON.stringify({
           bubbles,
-          buttons,
-          inputMode,
-          activeContext,
           apiMessages,
           conversationId: conversationIdRef.current,
         })
       );
     } catch {}
-  }, [bubbles, buttons, inputMode, activeContext, apiMessages]);
+  }, [bubbles, apiMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

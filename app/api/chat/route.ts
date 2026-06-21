@@ -6,12 +6,12 @@ import { getAuthUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-const client = new OpenAI({
-  apiKey: process.env.GAPGPT_API_KEY!,
-  baseURL: "https://api.gapgpt.app/v1",
-});
+const DEFAULT_MODEL = "gapgpt-qwen-3.6";
+const GAPGPT_BASE_URL = "https://api.gapgpt.app/v1";
 
-const MODEL = "gapgpt-qwen-3.6";
+function createChatClient(apiKey: string): OpenAI {
+  return new OpenAI({ apiKey, baseURL: GAPGPT_BASE_URL });
+}
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -60,6 +60,7 @@ interface BusinessInfo {
   warrantyInfo?: string;
   aboutBusiness?: string;
   faq?: { question: string; answer: string }[];
+  gapgptApiKey?: string;
 }
 
 let categoriesCache: { data: Category[]; ts: number } | null = null;
@@ -150,7 +151,9 @@ function buildFaqText(s: BusinessInfo): string {
 
 async function detectIntent(
   messages: Message[],
-  categoriesText: string
+  categoriesText: string,
+  client: OpenAI,
+  model: string
 ): Promise<Intent> {
   const lastUserMsg =
     [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
@@ -176,7 +179,7 @@ ${categoriesText}
 
   try {
     const res = await client.chat.completions.create({
-      model: MODEL,
+      model,
       max_tokens: 256,
       temperature: 0.1,
       messages: [
@@ -245,6 +248,8 @@ function buildProductsContext(products: Product[]): string {
 function streamFromSystemPrompt(
   systemPrompt: string,
   messages: Message[],
+  client: OpenAI,
+  model: string,
   onComplete?: (fullText: string) => void
 ): ReadableStream {
   const encoder = new TextEncoder();
@@ -254,7 +259,7 @@ function streamFromSystemPrompt(
       let fullText = "";
       try {
         const stream = await client.chat.completions.create({
-          model: MODEL,
+          model,
           max_tokens: 512,
           stream: true,
           messages: [
@@ -306,13 +311,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No messages provided" }, { status: 400 });
   }
 
-  const settingsForLimit = await getBusinessInfo();
+  const business = await getBusinessInfo();
   const historyLimit = Number(
-    (settingsForLimit as { historyLimit?: number }).historyLimit ?? 4
+    (business as { historyLimit?: number }).historyLimit ?? 4
   );
   if (historyLimit > 0 && messages.length > historyLimit) {
     messages = messages.slice(-historyLimit);
   }
+
+  const apiKey = business.gapgptApiKey?.trim() || process.env.GAPGPT_API_KEY || "";
+  const model = DEFAULT_MODEL;
+  const client = createChatClient(apiKey);
 
   const user = await getAuthUser();
   const conversationId = await getOrCreateConversation({
@@ -357,7 +366,6 @@ export async function POST(req: NextRequest) {
   // ════════════════════════════════════════════════════════════════════════
   // ════════════════════════════════════════════════════════════════════════
   if (context?.kind === "topic") {
-    const business = await getBusinessInfo();
     const topicContext = buildTopicContext(context.topic, business);
 
     const systemPrompt = `تو دستیار پشتیبانی این فروشگاه آنلاین هستی.
@@ -367,7 +375,7 @@ export async function POST(req: NextRequest) {
 
 ${topicContext}${buildFaqText(business)}`;
 
-    const stream = streamFromSystemPrompt(systemPrompt, messages, saveAssistant);
+    const stream = streamFromSystemPrompt(systemPrompt, messages, client, model, saveAssistant);
     return respond(stream);
   }
 
@@ -390,7 +398,7 @@ ${topicContext}${buildFaqText(business)}`;
 محصولات این دسته‌بندی:
 ${productsContext}`;
 
-    const stream = streamFromSystemPrompt(systemPrompt, messages, saveAssistant);
+    const stream = streamFromSystemPrompt(systemPrompt, messages, client, model, saveAssistant);
     return respond(stream);
   }
 
@@ -399,7 +407,7 @@ ${productsContext}`;
   const categories = await getCategories();
   const categoriesText = buildCategoriesText(categories);
 
-  const intent = await detectIntent(messages, categoriesText);
+  const intent = await detectIntent(messages, categoriesText, client, model);
 
   if (intent.needs_clarification && intent.clarification_question) {
     const text = intent.clarification_question;
@@ -444,6 +452,6 @@ ${productsContext}`;
 ${categoriesText}
 ${productSection}`;
 
-  const stream = streamFromSystemPrompt(systemPrompt, messages, saveAssistant);
+  const stream = streamFromSystemPrompt(systemPrompt, messages, client, model, saveAssistant);
     return respond(stream);
 }

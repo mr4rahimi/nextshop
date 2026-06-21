@@ -26,6 +26,7 @@ interface ChatSettings {
   welcomeMessage: string;
   isEnabled: boolean;
   historyLimit: number;
+  gapgptApiKey: string;
   faq: FaqItem[];
   flow: FlowNode[];
 }
@@ -43,6 +44,7 @@ const DEFAULTS: ChatSettings = {
   welcomeMessage: "سلام! من دستیار خرید این فروشگاه هستم. چطور می‌تونم کمکت کنم؟",
   isEnabled: true,
   historyLimit: 4,
+  gapgptApiKey: "",
   faq: [],
   flow: [],
 };
@@ -75,6 +77,7 @@ export default function ChatSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/chat-settings")
@@ -167,6 +170,39 @@ export default function ChatSettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        {}
+        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 xl:col-span-2">
+          <h2 className="text-sm font-black text-gray-900 dark:text-white mb-1">تنظیمات API</h2>
+          <p className="text-[11px] text-gray-400 mb-4">
+            کلید API از پنل GapGPT دریافت می‌شود. هر سایت کلید مجزای خود را دارد.
+          </p>
+          <Field label="کلید API GapGPT" hint="این کلید فقط روی سرور استفاده می‌شود و برای کاربران نمایش داده نمی‌شود">
+            <div className="flex gap-2">
+              <input
+                type={showApiKey ? "text" : "password"}
+                value={settings.gapgptApiKey}
+                onChange={(e) => setSettings((p) => ({ ...p, gapgptApiKey: e.target.value }))}
+                className={inputClass + " flex-1 font-mono text-xs"}
+                dir="ltr"
+                placeholder="sk-..."
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey((v) => !v)}
+                className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-all"
+              >
+                {showApiKey ? "پنهان" : "نمایش"}
+              </button>
+            </div>
+          </Field>
+          {!settings.gapgptApiKey && (
+            <div className="mt-3 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-[11px] font-bold leading-6">
+              کلید API تنظیم نشده — چت هوشمند برای این سایت فعال نخواهد بود.
+            </div>
+          )}
+        </div>
+
         {}
         <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
           <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">پیام خوش‌آمدگویی</h2>
