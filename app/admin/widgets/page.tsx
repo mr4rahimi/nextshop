@@ -220,7 +220,7 @@ export default function WidgetsPage() {
       ) : (
         <div className="space-y-3">
           {widgets.map((w, index) => {
-            const meta = WIDGET_META[w.type];
+            const meta = WIDGET_META[w.type] ?? { label: w.type, icon: "📦", color: "bg-gray-50 border-gray-200 dark:bg-gray-900/20 dark:border-gray-800", desc: "" };
             return (
               <div
                 key={w.id}
