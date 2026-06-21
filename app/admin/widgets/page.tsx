@@ -8,7 +8,8 @@ type WidgetType =
   | "BEST_SELLERS" | "PRODUCTS_BY_CATEGORY" | "PRODUCTS_BY_BRAND"
   | "NEWEST_PRODUCTS" | "SPECIAL_OFFERS" | "LAST_VISITED"
   | "FULL_BANNER" | "DOUBLE_BANNER" | "CALL_TO_ACTION"
-  | "IMAGE_CONTENT" | "IMAGE_CONTENT_DOUBLE" | "LATEST_ARTICLES";
+  | "IMAGE_CONTENT" | "IMAGE_CONTENT_DOUBLE" | "LATEST_ARTICLES"
+  | "ADVANCED_SEARCH";
 
 interface Widget {
   id: string;
@@ -37,6 +38,7 @@ const WIDGET_META: Record<WidgetType, { label: string; icon: string; color: stri
   IMAGE_CONTENT:        { label: "عکس و محتوا",             icon: "📝", color: "bg-lime-50 border-lime-200 dark:bg-lime-900/20 dark:border-lime-800",     desc: "عکس + عنوان + توضیحات + دکمه" },
   IMAGE_CONTENT_DOUBLE: { label: "عکس و محتوا دوتایی",     icon: "📋", color: "bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800", desc: "دو آیتم عکس + محتوا" },
   LATEST_ARTICLES:      { label: "آخرین مقالات",            icon: "📰", color: "bg-sky-50 border-sky-200 dark:bg-sky-900/20 dark:border-sky-800",        desc: "آخرین پست‌های وبلاگ" },
+  ADVANCED_SEARCH:      { label: "جستجوی پیشرفته",          icon: "🔍", color: "bg-violet-50 border-violet-200 dark:bg-violet-900/20 dark:border-violet-800", desc: "جستجو با فیلتر دسته، برند و ویژگی‌ها" },
 };
 
 const ALL_TYPES = Object.keys(WIDGET_META) as WidgetType[];
