@@ -3,6 +3,28 @@
 const VERSIONS = [
 
   {
+    version: "1.9.0",
+    date: "۱۴۰۵/۰۳/۳۱",
+    tag: "minor",
+    title: "بازطراحی کامل داشبورد ادمین با داده‌های واقعی",
+    description: "داشبورد پنل ادمین از صفر بازطراحی شد — نمودارهای SVG تعاملی، داده‌های زنده از دیتابیس، layout جدید و پوشش کامل بخش‌های فروشگاه",
+    changes: [
+      { type: "feature", text: "نمودار فروش روزانه تمام‌عرض با toggle ۷/۳۰/۹۰ روز و tooltip hover تعاملی" },
+      { type: "feature", text: "نمودار سفارشات تکمیل‌شده و کاربران ثبت‌نام‌شده — سری زمانی ۹۰ روزه با raw SQL" },
+      { type: "feature", text: "بخش موجودی کالاها — بیشترین و کمترین موجودی با progress bar رنگ‌بندی‌شده" },
+      { type: "feature", text: "بخش کاربران با بیشترین خرید — top buyers از groupBy سفارشات" },
+      { type: "feature", text: "آخرین گفتگوها با زمان نسبی و آخرین پیام کاربر" },
+      { type: "feature", text: "sparkline در ۴ کارت اصلی — روند ۱۴ روز گذشته" },
+      { type: "improvement", text: "۴ کارت اصلی آمار به صورت ۲ ستونه (۲ کارت در هر ردیف)" },
+      { type: "improvement", text: "۶ باکس ثانویه (بلاگ، دسته‌بندی، برند، گفتگو، موجودی کل، میانگین سبد) در ۳ ستون" },
+      { type: "improvement", text: "نمودار وضعیت سفارشات با فیلتر چیپ تعاملی برای هایلایت هر وضعیت" },
+      { type: "improvement", text: "جدول آخرین سفارشات با badge رنگ‌بندی‌شده برای ۱۰ وضعیت مختلف سفارش" },
+      { type: "improvement", text: "لینک‌های سریع دسترسی به بخش‌های پرکاربرد ادمین" },
+      { type: "improvement", text: "نمودارهای SVG با Catmull-Rom smoothing و gradient fill" },
+    ],
+  },
+
+  {
     version: "1.8.9",
     date: "۱۴۰۵/۰۳/۳۱",
     tag: "minor",
