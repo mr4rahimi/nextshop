@@ -3,6 +3,48 @@
 const VERSIONS = [
 
   {
+    version: "1.8.9",
+    date: "۱۴۰۵/۰۳/۳۱",
+    tag: "minor",
+    title: "رابط کاربری چت — Markdown و دکمه محصول",
+    description: "پیام‌های دستیار هوشمند اکنون با قالب‌بندی کامل Markdown نمایش داده می‌شوند؛ لینک‌های محصول به دکمه‌های خرید تبدیل می‌شوند و متون bold و لیست‌ها به‌درستی رندر می‌شوند",
+    changes: [
+      { type: "feature", text: "رندر Markdown در پیام‌های دستیار — **bold**، لیست‌های آیتم‌دار و فاصله بین پاراگراف‌ها" },
+      { type: "feature", text: "لینک‌های /products/* به دکمه بنفش «مشاهده محصول» با آیکون سبد خرید تبدیل می‌شوند" },
+      { type: "improvement", text: "آواتار کوچک AI بنفش کنار هر پیام دستیار" },
+      { type: "improvement", text: "سایه‌های bubble بهتر و padding بهینه‌تر برای خوانایی بالاتر" },
+      { type: "improvement", text: "background پنجره چت: gradient ملایم لاوندری به‌جای خاکستری ساده" },
+    ],
+  },
+
+  {
+    version: "1.8.8",
+    date: "۱۴۰۵/۰۳/۳۱",
+    tag: "patch",
+    title: "رفع دکمه‌های چت در multi-site + کلید API per-site",
+    description: "در سرورهای production با چند سایت، دکمه‌های چت همیشه مقادیر تازه از دیتابیس همان سایت می‌خوانند نه مقادیر کش‌شده. کلید API GapGPT اکنون در دیتابیس هر سایت جداگانه ذخیره می‌شود",
+    changes: [
+      { type: "fix", text: "دکمه‌های quick-reply چت دیگر از localStorage کش نمی‌شوند — همیشه از DB سایت مربوطه می‌آیند" },
+      { type: "fix", text: "حذف revalidate=60 از /api/store/chat-config — جایگزینی با force-dynamic برای دریافت تازه از DB" },
+      { type: "feature", text: "کلید API GapGPT در دیتابیس هر سایت — هر سایت کلید مستقل خود را دارد" },
+      { type: "feature", text: "فیلد «کلید API GapGPT» در صفحه تنظیمات چت ادمین با نمایش/پنهان و هشدار خالی بودن" },
+      { type: "security", text: "کلید API هرگز از /api/store/chat-config به client ارسال نمی‌شود" },
+    ],
+  },
+
+  {
+    version: "1.8.7",
+    date: "۱۴۰۵/۰۳/۳۰",
+    tag: "patch",
+    title: "رفع خطاهای TypeScript در احراز هویت",
+    description: "رفع خطاهای نوع TypeScript مربوط به JWT_SECRET در فایل‌های auth.ts و proxy.ts",
+    changes: [
+      { type: "fix", text: "رفع خطای TypeScript: نوع JWT_SECRET از string | undefined به string با assertion تبدیل شد" },
+      { type: "fix", text: "رفع خطا در proxy.ts برای پارامترهای JWT" },
+    ],
+  },
+
+  {
     version: "1.8.6",
     date: "۱۴۰۵/۰۳/۲۹",
     tag: "patch",
