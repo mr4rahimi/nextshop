@@ -36,6 +36,15 @@ interface Product {
   image: string | null;
 }
 
+interface ICDBox {
+  badge: string;
+  heading: string;
+  content: string;
+  btnText: string;
+  btnUrl: string;
+}
+const EMPTY_ICD_BOX: ICDBox = { badge: "", heading: "", content: "", btnText: "", btnUrl: "" };
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatPrice(val: string | null | undefined): string {
   if (!val) return "۰";
@@ -803,6 +812,193 @@ function SpecialOffersEditor({
   );
 }
 
+// ─── ImageContentDoubleEditor ─────────────────────────────────────────────────
+function ImageContentDoubleEditor({
+  imageUrl, setImageUrl, imageAlt, setImageAlt,
+  bgColor, setBgColor, accentColor, setAccentColor,
+  boxes, setBoxes, uploading, setUploading,
+}: {
+  imageUrl: string; setImageUrl: (v: string) => void;
+  imageAlt: string; setImageAlt: (v: string) => void;
+  bgColor: string; setBgColor: (v: string) => void;
+  accentColor: string; setAccentColor: (v: string) => void;
+  boxes: [ICDBox, ICDBox]; setBoxes: (b: [ICDBox, ICDBox]) => void;
+  uploading: boolean; setUploading: (v: boolean) => void;
+}) {
+  function setBox(i: 0 | 1, key: keyof ICDBox, val: string) {
+    const next: [ICDBox, ICDBox] = [{ ...boxes[0] }, { ...boxes[1] }];
+    next[i] = { ...next[i], [key]: val };
+    setBoxes(next);
+  }
+
+  async function uploadImage(file: File) {
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    setImageUrl(data.url);
+    setUploading(false);
+  }
+
+  const fa = (n: number) => String(n).replace(/[0-9]/g, d => "۰۱۲۳۴۵۶۷۸۹"[+d]);
+
+  return (
+    <div className="space-y-5">
+
+      {/* ── تصویر اصلی ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="font-black text-sm text-gray-900 dark:text-white">تصویر اصلی (تمام‌عرض)</h3>
+          <p className="text-xs text-gray-400 mt-0.5">توصیه: عرض حداقل ۱۴۰۰ پیکسل، نسبت ۱۶:۵ یا ۱۶:۷</p>
+        </div>
+        <div className="p-4">
+          {imageUrl ? (
+            <div className="relative rounded-2xl overflow-hidden">
+              <img src={imageUrl} alt="" className="w-full h-48 object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+              <button onClick={() => setImageUrl("")}
+                className="absolute top-2 left-2 w-8 h-8 bg-red-500 text-white rounded-lg flex items-center justify-center hover:bg-red-600 transition-all text-sm">×</button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center h-36 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+              {uploading ? (
+                <div className="flex items-center gap-2 text-gray-400">
+                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  <span className="text-sm">آپلود...</span>
+                </div>
+              ) : (
+                <>
+                  <svg className="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                  <span className="text-xs text-gray-400 font-bold">کلیک کنید برای آپلود</span>
+                </>
+              )}
+              <input type="file" accept="image/*" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} />
+            </label>
+          )}
+          {imageUrl && (
+            <input type="text" placeholder="متن جایگزین (alt)" value={imageAlt}
+              onChange={e => setImageAlt(e.target.value)}
+              className="mt-3 w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+          )}
+        </div>
+      </div>
+
+      {/* ── دو باکس محتوا ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {([0, 1] as const).map(i => (
+          <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-black flex-shrink-0"
+                style={{ background: accentColor }}>
+                {fa(i + 1)}
+              </div>
+              <h3 className="font-black text-sm text-gray-900 dark:text-white">باکس {i === 0 ? "اول" : "دوم"}</h3>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">برچسب (اختیاری)</label>
+                <input type="text" placeholder="مثال: مزیت ما" value={boxes[i].badge}
+                  onChange={e => setBox(i, "badge", e.target.value)}
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">عنوان</label>
+                <input type="text" placeholder="عنوان باکس" value={boxes[i].heading}
+                  onChange={e => setBox(i, "heading", e.target.value)}
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">متن</label>
+                <textarea rows={3} placeholder="توضیحات..." value={boxes[i].content}
+                  onChange={e => setBox(i, "content", e.target.value)}
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">متن دکمه</label>
+                  <input type="text" placeholder="بیشتر بدانید" value={boxes[i].btnText}
+                    onChange={e => setBox(i, "btnText", e.target.value)}
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">لینک</label>
+                  <input type="text" placeholder="/..." value={boxes[i].btnUrl}
+                    onChange={e => setBox(i, "btnUrl", e.target.value)}
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── رنگ‌بندی ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">رنگ‌بندی</h3>
+        <ColorField label="رنگ پس‌زمینه" value={bgColor} onChange={setBgColor} />
+        <ColorField label="رنگ تاکیدی" value={accentColor} onChange={setAccentColor} />
+      </div>
+
+      {/* ── پیش‌نمایش ── */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="font-black text-sm text-gray-900 dark:text-white">پیش‌نمایش</h3>
+        </div>
+        <div className="p-4" style={{ background: bgColor }}>
+          {/* image */}
+          <div className="relative rounded-2xl overflow-hidden mb-[-32px]" style={{ height: 120 }}>
+            {imageUrl
+              ? <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+              : <div className="w-full h-full flex items-center justify-center text-4xl" style={{ background: `${accentColor}15` }}>🖼</div>
+            }
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          </div>
+          {/* boxes */}
+          <div className="relative z-10 grid grid-cols-2 gap-3 px-3">
+            {([0, 1] as const).map(i => (
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-3 relative overflow-hidden"
+                style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.10)" }}>
+                <div className="absolute top-0 left-0 right-0 h-[2px] rounded-t-xl"
+                  style={{ background: accentColor }} />
+                <div className="absolute top-2.5 left-2.5 w-5 h-5 rounded-lg flex items-center justify-center text-white text-[9px] font-black"
+                  style={{ background: accentColor }}>
+                  {fa(i + 1)}
+                </div>
+                <div className="pt-1">
+                  {boxes[i].badge && (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full block w-fit mb-1"
+                      style={{ background: `${accentColor}15`, color: accentColor }}>
+                      {boxes[i].badge}
+                    </span>
+                  )}
+                  {boxes[i].heading && (
+                    <p className="text-[11px] font-black text-gray-900 dark:text-white leading-tight">
+                      {boxes[i].heading}
+                    </p>
+                  )}
+                  {boxes[i].content && (
+                    <p className="text-[9px] text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+                      {boxes[i].content}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 // ─── ImageContentEditor ───────────────────────────────────────────────────────
 interface ICConfig {
   imageUrl: string; imageAlt: string;
@@ -1201,6 +1397,14 @@ export default function WidgetEditPage() {
   const [fbAlt, setFbAlt] = useState("");
   const [fbUploading, setFbUploading] = useState(false);
 
+  // IMAGE_CONTENT_DOUBLE
+  const [icdImageUrl, setIcdImageUrl] = useState("");
+  const [icdImageAlt, setIcdImageAlt] = useState("");
+  const [icdBgColor, setIcdBgColor] = useState("#f8fafc");
+  const [icdAccentColor, setIcdAccentColor] = useState("#4f46e5");
+  const [icdBoxes, setIcdBoxes] = useState<[ICDBox, ICDBox]>([{ ...EMPTY_ICD_BOX }, { ...EMPTY_ICD_BOX }]);
+  const [icdUploading, setIcdUploading] = useState(false);
+
   // IMAGE_CONTENT
   const [icConfig, setIcConfig] = useState<ICConfig>({
     imageUrl: "", imageAlt: "", heading: "", content: "", badge: "",
@@ -1224,7 +1428,7 @@ export default function WidgetEditPage() {
   ]);
   const [dbUploading, setDbUploading] = useState([false, false]);
 
-  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION"];
+  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION"];
   useEffect(() => {
     fetch("/api/admin/widgets")
       .then(r => r.json())
@@ -1253,6 +1457,16 @@ export default function WidgetEditPage() {
           setPbbBrandSlug(w.config.brandSlug ?? "");
           setPbbBrandLogo(w.config.brandLogoUrl ?? null);
           setPbbCount(w.config.count ?? 8);
+        } else if (w.type === "IMAGE_CONTENT_DOUBLE") {
+          setIcdImageUrl(w.config.imageUrl ?? "");
+          setIcdImageAlt(w.config.imageAlt ?? "");
+          setIcdBgColor(w.config.bgColor ?? "#f8fafc");
+          setIcdAccentColor(w.config.accentColor ?? "#4f46e5");
+          const b = w.config.boxes ?? [];
+          setIcdBoxes([
+            { badge: b[0]?.badge ?? "", heading: b[0]?.heading ?? "", content: b[0]?.content ?? "", btnText: b[0]?.btnText ?? "", btnUrl: b[0]?.btnUrl ?? "" },
+            { badge: b[1]?.badge ?? "", heading: b[1]?.heading ?? "", content: b[1]?.content ?? "", btnText: b[1]?.btnText ?? "", btnUrl: b[1]?.btnUrl ?? "" },
+          ]);
         } else if (w.type === "IMAGE_CONTENT") {
           setIcConfig({
             imageUrl:      w.config.imageUrl      ?? "",
@@ -1306,7 +1520,9 @@ export default function WidgetEditPage() {
     setSaving(true);
 
     let config: Record<string, any>;
-    if (widget.type === "IMAGE_CONTENT") {
+    if (widget.type === "IMAGE_CONTENT_DOUBLE") {
+      config = { imageUrl: icdImageUrl, imageAlt: icdImageAlt, bgColor: icdBgColor, accentColor: icdAccentColor, boxes: icdBoxes };
+    } else if (widget.type === "IMAGE_CONTENT") {
       config = { ...icConfig };
     } else if (widget.type === "CALL_TO_ACTION") {
       config = { ...ctaConfig };
@@ -1358,6 +1574,7 @@ export default function WidgetEditPage() {
     CATEGORIES:           "دسته‌بندی‌هایی که می‌خواهید در این ویجت نمایش داده شوند را انتخاب کنید",
     NEWEST_PRODUCTS:      "دسته‌بندی‌هایی که می‌خواهید جدیدترین محصولاتشان نمایش داده شود را انتخاب کنید",
     IMAGE_CONTENT:        "یک تصویر و یک محتوا کنار هم با چیدمان و رنگ‌بندی قابل تنظیم",
+    IMAGE_CONTENT_DOUBLE: "تصویر تمام‌عرض بالا و دو باکس محتوا با افکت شناور",
     CALL_TO_ACTION:       "متن، دکمه و رنگ‌بندی بنر دعوت به اقدام را تنظیم کنید",
     FULL_BANNER:          "یک تصویر بنر با لینک اختیاری آپلود کنید",
     DOUBLE_BANNER:        "دو تصویر بنر کنار هم آپلود کنید",
@@ -1595,6 +1812,17 @@ export default function WidgetEditPage() {
          )}
        </div>
      )}
+
+      {widget.type === "IMAGE_CONTENT_DOUBLE" && (
+        <ImageContentDoubleEditor
+          imageUrl={icdImageUrl} setImageUrl={setIcdImageUrl}
+          imageAlt={icdImageAlt} setImageAlt={setIcdImageAlt}
+          bgColor={icdBgColor} setBgColor={setIcdBgColor}
+          accentColor={icdAccentColor} setAccentColor={setIcdAccentColor}
+          boxes={icdBoxes} setBoxes={setIcdBoxes}
+          uploading={icdUploading} setUploading={setIcdUploading}
+        />
+      )}
 
       {widget.type === "IMAGE_CONTENT" && (
         <ImageContentEditor config={icConfig} setConfig={setIcConfig} uploading={icUploading} setUploading={setIcUploading} />
