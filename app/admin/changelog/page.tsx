@@ -3,6 +3,57 @@
 const VERSIONS = [
 
   {
+    version: "2.4.0",
+    date: "۱۴۰۵/۰۴/۰۱",
+    tag: "minor",
+    title: "بهینه‌سازی جامع SEO",
+    description: "پیاده‌سازی کامل استانداردهای SEO فنی: اسکیماهای Schema.org، متادیتای صفحات، بهینه‌سازی تصاویر با Next.js Image، Cache-Control هوشمند، sitemap و robots کامل و مدیریت لوکال بیزینس از ادمین",
+    changes: [
+      // ── Structured Data ───────────────────────────────────────────────
+      { type: "feature", text: "اسکیمای Organization کامل در صفحه اصلی — آدرس، کدپستی، شهر، استان، شبکه‌های اجتماعی و ایمیل" },
+      { type: "feature", text: "اسکیمای LocalBusiness (Store) در صفحه اصلی — ساعت کاری، لینک نقشه گوگل، اطلاعات تماس و sameAs" },
+      { type: "feature", text: "اسکیمای WebSite با SearchAction — امکان جستجو مستقیم از نتایج گوگل (Sitelinks Searchbox)" },
+      { type: "feature", text: "اسکیمای Product کامل در صفحه محصول — Offer، قیمت، موجودی، برند، SKU، شرایط ارسال و بازگشت کالا" },
+      { type: "feature", text: "اسکیمای BreadcrumbList در صفحات محصول، دسته‌بندی، برند و مقاله" },
+      { type: "feature", text: "اسکیمای FAQPage در صفحه محصول — پرسش و پاسخ‌های محصول نمایش داده می‌شوند" },
+      { type: "feature", text: "اسکیمای Article در صفحات مقاله بلاگ — publishedAt، updatedAt، author، publisher" },
+      { type: "feature", text: "اسکیمای ItemList در صفحات دسته‌بندی و برند — فهرست محصولات به Google ارسال می‌شود" },
+      // ── Metadata ─────────────────────────────────────────────────────
+      { type: "feature", text: "تابع buildBaseMetadata در lib/seo.ts — canonical، og:image، og:type، og:siteName، twitter:card برای همه صفحات" },
+      { type: "feature", text: "title template در root layout — نام فروشگاه به‌صورت خودکار به عنوان همه صفحات اضافه می‌شود" },
+      { type: "feature", text: "og:image برای صفحات دسته‌بندی و برند — تصویر دسته/لوگو برند، fallback به لوگو فروشگاه" },
+      { type: "feature", text: "og:siteName در همه صفحات — خوانده‌شده از DB یا env var NEXT_PUBLIC_STORE_NAME" },
+      { type: "feature", text: "noindex برای صفحات جستجو — متادیتای robots: index:false, follow:true" },
+      { type: "feature", text: "تگ تأیید Google Search Console — از env var NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION" },
+      { type: "feature", text: "متادیتا کامل برای صفحات محصول، دسته‌بندی، برند، جستجو، مجله و مقالات" },
+      { type: "improvement", text: "metadataBase در root layout — تبدیل خودکار URL‌های نسبی به absolute برای og:image" },
+      { type: "improvement", text: "viewport export در root layout — جایگزین meta viewport دستی" },
+      // ── Admin Site Settings ───────────────────────────────────────────
+      { type: "feature", text: "فیلدهای جدید در تنظیمات سایت ادمین: شهر، استان، کدپستی و ساعت کاری (فرمت schema.org)" },
+      { type: "improvement", text: "اسکیماهای LocalBusiness و Organization اطلاعات را از تنظیمات سایت ادمین می‌خوانند" },
+      // ── Image Optimization ────────────────────────────────────────────
+      { type: "improvement", text: "فرمت‌های AVIF/WebP در next.config.ts — کاهش حجم تصاویر تا ۵۰٪" },
+      { type: "improvement", text: "بهینه‌سازی تصاویر کارت محصول، صفحه جزئیات محصول، گالری و تامبنیل‌ها با Next.js Image" },
+      { type: "improvement", text: "بهینه‌سازی تصاویر ویجت‌های صفحه اصلی — Hero، Newest، ProductsByCategory، ProductsByBrand" },
+      { type: "improvement", text: "بهینه‌سازی تصاویر layout — لوگو Header، لوگو Footer، منو موبایل، منوی مگا" },
+      { type: "improvement", text: "بهینه‌سازی تصاویر بلاگ — MagHomeClient، MagPostClient (cover، related articles)" },
+      { type: "improvement", text: "بهینه‌سازی تصاویر Cart و Checkout — تامبنیل محصولات در سبد و خلاصه سفارش" },
+      { type: "improvement", text: "priority روی تصاویر above-the-fold — hero slide اول، لوگو header، تصویر اصلی محصول" },
+      { type: "improvement", text: "sizes hint مناسب روی همه Image‌ها — تولید srcset بهینه برای هر breakpoint" },
+      // ── Performance ───────────────────────────────────────────────────
+      { type: "improvement", text: "فعال‌سازی gzip compression — حذف compress:false از next.config.ts" },
+      { type: "feature", text: "Cache-Control هوشمند برای همه API routes — ۵ سطح: config ثابت (۱h)، کاتالوگ (۵m)، محصولات (۱m)، private و no-store" },
+      { type: "improvement", text: "API‌های layout (header-menu، footer، theme) کش ۱ ساعته — کاهش چشمگیر TTFB" },
+      // ── Sitemap & Robots ──────────────────────────────────────────────
+      { type: "improvement", text: "sitemap.xml کامل — محصولات، دسته‌بندی‌ها، برندها، مقالات، صفحات listing؛ revalidate هر ۱ ساعت" },
+      { type: "improvement", text: "robots.txt — مسدود کردن admin، api، user، cart، checkout، auth؛ اجازه Googlebot به صفحه جستجو" },
+      { type: "fix",         text: "اضافه شدن /categories و /brands به sitemap؛ حذف /cart از sitemap" },
+      // ── 404 ──────────────────────────────────────────────────────────
+      { type: "feature", text: "صفحه ۴۰۴ سفارشی فارسی — noindex، لینک به خانه و همه محصولات، سازگار با dark mode" },
+    ],
+  },
+
+  {
     version: "2.3.0",
     date: "۱۴۰۵/۰۴/۰۱",
     tag: "minor",
