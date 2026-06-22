@@ -13,9 +13,12 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
   const pageSize = 20;
+  const siteId = url.searchParams.get("siteId") || null;
+  const where = siteId ? { siteId } : {};
 
   const [items, total] = await Promise.all([
     prisma.chatConversation.findMany({
+      where,
       orderBy: { lastMessageAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -33,7 +36,7 @@ export async function GET(req: NextRequest) {
         },
       },
     }),
-    prisma.chatConversation.count(),
+    prisma.chatConversation.count({ where }),
   ]);
 
   const userIds = items.map((i) => i.userId).filter(Boolean) as string[];

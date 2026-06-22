@@ -72,7 +72,8 @@ export default function ChatHistoryPage() {
 
   const loadList = useCallback((p: number) => {
     setLoadingList(true);
-    fetch(`/api/admin/chat-history?page=${p}`)
+    const siteId = typeof window !== "undefined" ? window.location.host : "";
+    fetch(`/api/admin/chat-history?page=${p}&siteId=${encodeURIComponent(siteId)}`)
       .then((r) => r.json())
       .then((data) => {
         setList(data.items ?? []);

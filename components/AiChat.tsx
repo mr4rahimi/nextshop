@@ -116,6 +116,55 @@ interface ChatConfig {
   flow: FlowNode[];
 }
 
+// ── Per-site localStorage helpers ──────────────────────────────────────────
+
+function getSiteKey(base: string): string {
+  const host = typeof window !== "undefined" ? window.location.host : "unknown";
+  return `${base}_${host}`;
+}
+
+function readLocalState(): { bubbles: Bubble[]; apiMessages: Bubble[]; conversationId: string | null } | null {
+  try {
+    const saved = localStorage.getItem(getSiteKey("chat_state"));
+    if (!saved) return null;
+    const s = JSON.parse(saved);
+    if (!s.bubbles?.length) return null;
+    return {
+      bubbles: s.bubbles,
+      apiMessages: s.apiMessages ?? [],
+      conversationId: s.conversationId ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalState(bubbles: Bubble[], apiMessages: Bubble[], conversationId: string | null) {
+  try {
+    localStorage.setItem(getSiteKey("chat_state"), JSON.stringify({ bubbles, apiMessages, conversationId }));
+  } catch {}
+}
+
+function clearLocalState() {
+  try { localStorage.removeItem(getSiteKey("chat_state")); } catch {}
+}
+
+function getSessionId(): string {
+  try {
+    const key = getSiteKey("chat_session_id");
+    let sid = localStorage.getItem(key);
+    if (!sid) {
+      sid = `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      localStorage.setItem(key, sid);
+    }
+    return sid;
+  } catch {
+    return "anon";
+  }
+}
+
+// ── Main component ─────────────────────────────────────────────────────────
+
 export default function AiChat() {
   const [open, setOpen] = useState(false);
   const [config, setConfig] = useState<ChatConfig | null>(null);
@@ -124,84 +173,90 @@ export default function AiChat() {
   const [buttons, setButtons] = useState<ButtonItem[]>([]);
   const [inputMode, setInputMode] = useState(false);
   const [activeContext, setActiveContext] = useState<ChatContext>(null);
-
   const [apiMessages, setApiMessages] = useState<Bubble[]>([]);
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // "idle" = not determined yet, "guest" = no auth, "member" = logged in
+  const [sessionMode, setSessionMode] = useState<"idle" | "guest" | "member">("idle");
+
   const conversationIdRef = useRef<string | null>(null);
-  const restoredRef = useRef(false);
+  const initDoneRef = useRef(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // ── On first open: load config + check auth in parallel ──────────────────
   useEffect(() => {
-    if (open && !config) {
-      fetch("/api/store/chat-config")
-        .then((r) => r.json())
-        .then((cfg: ChatConfig) => {
-          setConfig(cfg);
-          if (!cfg.isEnabled) return;
-          if (restoredRef.current) {
-            // conversation restored from localStorage: refresh buttons from DB, keep bubbles
+    if (!open || initDoneRef.current) return;
+    initDoneRef.current = true;
+
+    const siteId = typeof window !== "undefined" ? window.location.host : "";
+
+    Promise.all([
+      fetch("/api/store/chat-config").then((r) => r.json()),
+      fetch(`/api/store/my-chat?siteId=${encodeURIComponent(siteId)}`).then((r) => r.json()),
+    ])
+      .then(([cfg, myChat]: [ChatConfig, { isLoggedIn: boolean; conversationId?: string | null; messages?: { role: string; content: string }[] }]) => {
+        setConfig(cfg);
+        if (!cfg.isEnabled) return;
+
+        if (myChat.isLoggedIn) {
+          // Logged-in user: restore from server
+          setSessionMode("member");
+          const msgs = myChat.messages ?? [];
+          if (myChat.conversationId && msgs.length > 0) {
+            const serverBubbles = msgs.map((m) => ({
+              role: m.role as "user" | "assistant",
+              content: m.content,
+            }));
+            setBubbles(serverBubbles);
+            setApiMessages(serverBubbles);
+            conversationIdRef.current = myChat.conversationId;
+            setActiveContext({ kind: "free" });
+            setButtons([{ type: "home" }]);
+            setInputMode(true);
+          } else {
+            initRoot(cfg);
+          }
+        } else {
+          // Guest: restore from site-namespaced localStorage
+          setSessionMode("guest");
+          const local = readLocalState();
+          if (local) {
+            setBubbles(local.bubbles);
+            setApiMessages(local.apiMessages);
+            conversationIdRef.current = local.conversationId;
             setButtons(flowToButtons(cfg.flow, false));
             setInputMode(false);
             setActiveContext(null);
           } else {
             initRoot(cfg);
           }
-        })
-        .catch(() => setConfig({ isEnabled: true, welcomeMessage: "سلام!", flow: [] }));
-    }
-  }, [open, config]);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("chat_state");
-      if (saved) {
-        const s = JSON.parse(saved);
-        if (s.bubbles?.length) {
-          setBubbles(s.bubbles);
-          setApiMessages(s.apiMessages ?? []);
-          conversationIdRef.current = s.conversationId ?? null;
-          restoredRef.current = true;
         }
-      }
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      })
+      .catch(() => {
+        setConfig({ isEnabled: true, welcomeMessage: "سلام!", flow: [] });
+        setSessionMode("guest");
+        initRoot({ isEnabled: true, welcomeMessage: "سلام!", flow: [] });
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
+  // ── Persist guest state to site-namespaced localStorage ──────────────────
   useEffect(() => {
+    if (sessionMode !== "guest") return;
     if (bubbles.length === 0) return;
-    try {
-      localStorage.setItem(
-        "chat_state",
-        JSON.stringify({
-          bubbles,
-          apiMessages,
-          conversationId: conversationIdRef.current,
-        })
-      );
-    } catch {}
-  }, [bubbles, apiMessages]);
+    writeLocalState(bubbles, apiMessages, conversationIdRef.current);
+  }, [bubbles, apiMessages, sessionMode]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     if (inputMode) setTimeout(() => inputRef.current?.focus(), 100);
   }, [bubbles, buttons, inputMode]);
 
-  function getSessionId(): string {
-    try {
-      let sid = localStorage.getItem("chat_session_id");
-      if (!sid) {
-        sid = `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-        localStorage.setItem("chat_session_id", sid);
-      }
-      return sid;
-    } catch {
-      return "anon";
-    }
-  }
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   function initRoot(cfg: ChatConfig) {
     setBubbles([{ role: "assistant", content: cfg.welcomeMessage }]);
@@ -219,9 +274,11 @@ export default function AiChat() {
 
   function goHome() {
     conversationIdRef.current = null;
-    try { localStorage.removeItem("chat_state"); } catch {}
+    if (sessionMode === "guest") clearLocalState();
     if (config) initRoot(config);
   }
+
+  // ── Node / category / other handlers ─────────────────────────────────────
 
   async function handleNode(node: FlowNode) {
     setBubbles((b) => [...b, { role: "user", content: node.label }]);
@@ -335,6 +392,8 @@ export default function AiChat() {
     }
   }
 
+  // ── Send message ──────────────────────────────────────────────────────────
+
   const sendMessage = useCallback(async () => {
     const text = input.trim();
     if (!text || loading) return;
@@ -347,6 +406,8 @@ export default function AiChat() {
     setInput("");
     setLoading(true);
 
+    const siteId = typeof window !== "undefined" ? window.location.host : "";
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -354,8 +415,9 @@ export default function AiChat() {
         body: JSON.stringify({
           messages: nextApi,
           context: activeContext,
-          sessionId: getSessionId(),
+          sessionId: sessionMode === "guest" ? getSessionId() : null,
           conversationId: conversationIdRef.current,
+          siteId,
         }),
       });
       if (!res.ok) throw new Error("server");
@@ -409,7 +471,7 @@ export default function AiChat() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, apiMessages, activeContext]);
+  }, [input, loading, apiMessages, activeContext, sessionMode]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -427,7 +489,7 @@ export default function AiChat() {
         onClick={() => setOpen((v) => !v)}
         aria-label="دستیار خرید"
         style={{
-          position: "fixed", bottom: "24px", right: "24px", zIndex: 9999,
+          position: "fixed", bottom: "99px", right: "24px", zIndex: 9999,
           width: "56px", height: "56px", borderRadius: "50%",
           background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
           border: "none", cursor: "pointer",

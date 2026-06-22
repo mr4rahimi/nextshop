@@ -306,6 +306,7 @@ export async function POST(req: NextRequest) {
   const context: ChatContext = body.context ?? null;
   const sessionId: string | null = body.sessionId ?? null;
   const incomingConvId: string | null = body.conversationId ?? null;
+  const siteId: string | null = body.siteId ?? null;
 
   if (!messages?.length) {
     return NextResponse.json({ error: "No messages provided" }, { status: 400 });
@@ -328,6 +329,7 @@ export async function POST(req: NextRequest) {
     conversationId: incomingConvId,
     userId: user?.id ?? null,
     sessionId,
+    siteId,
   });
 
   const ctxLabel =
