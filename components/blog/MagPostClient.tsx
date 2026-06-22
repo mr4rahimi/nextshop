@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Product {
   id: string; title: string; slug: string; mainImage: string | null;
@@ -150,7 +151,8 @@ export default function MagPostClient({ post, related }: { post: Post; related: 
       {/* ── تصویر شاخص ─────────────────────────────────────── */}
       {post.coverImage && (
         <div className="relative h-[50vh] overflow-hidden bg-gray-900">
-          <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover opacity-80" />
+          <Image src={post.coverImage} alt={post.title} fill priority
+            className="object-cover opacity-80" sizes="100vw" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
       )}
@@ -262,8 +264,8 @@ export default function MagPostClient({ post, related }: { post: Post; related: 
                     return (
                       <Link key={p.id} href={`/products/${p.slug}`}
                         className="flex items-center gap-4 p-4 rounded-2xl border border-gray-100 dark:border-white/5 hover:border-primary-500/30 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-all group">
-                        <div className="w-16 h-16 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
-                          {img ? <img src={img} alt={p.title} className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform" /> : <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg" />}
+                        <div className="relative w-16 h-16 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {img ? <Image src={img} alt={p.title} fill className="object-contain p-1 group-hover:scale-105 transition-transform" sizes="64px" /> : <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-black text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary-600 transition-colors">{p.title}</p>
@@ -368,9 +370,9 @@ export default function MagPostClient({ post, related }: { post: Post; related: 
                   {related.map(r => (
                     <Link key={r.id} href={`/mag/${r.slug}`}
                       className="group flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-2xl p-2 -mx-2 transition-all">
-                      <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
+                      <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
                         {r.coverImage
-                          ? <img src={r.coverImage} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                          ? <Image src={r.coverImage} alt={r.title} fill className="object-cover group-hover:scale-105 transition-transform" sizes="64px" />
                           : <div className="w-full h-full bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-primary-900/10" />
                         }
                       </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Post {
   id: string; title: string; slug: string; excerpt: string | null;
@@ -28,8 +29,9 @@ function PostCard({ post, featured = false }: { post: Post; featured?: boolean }
       <Link href={`/mag/${post.slug}`}
         className="group relative overflow-hidden rounded-[2.5rem] aspect-[16/9] block bg-gray-900">
         {post.coverImage ? (
-          <img src={post.coverImage} alt={post.title}
-            className="w-full h-full object-cover opacity-80 group-hover:opacity-60 group-hover:scale-105 transition-all duration-700" />
+          <Image src={post.coverImage} alt={post.title} fill
+            className="object-cover opacity-80 group-hover:opacity-60 group-hover:scale-105 transition-all duration-700"
+            sizes="(max-width: 768px) 100vw, 65vw" priority />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary-900 to-gray-900" />
         )}
@@ -68,8 +70,9 @@ function PostCard({ post, featured = false }: { post: Post; featured?: boolean }
       {}
       <div className="relative aspect-[16/9] bg-gray-100 dark:bg-gray-800 overflow-hidden">
         {post.coverImage ? (
-          <img src={post.coverImage} alt={post.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <Image src={post.coverImage} alt={post.title} fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <svg className="w-12 h-12 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
