@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/store/cart/CartContext";
 
@@ -139,7 +140,7 @@ export default function CartPageClient() {
                       <Link href={`/products/${item.product.slug}`}
                         className="relative w-40 h-40 flex-shrink-0 bg-gradient-to-br from-white to-gray-100 dark:from-white/10 dark:to-transparent rounded-[2.2rem] p-4 border border-white dark:border-white/5 shadow-inner overflow-hidden flex items-center justify-center">
                         {img
-                          ? <img src={img} alt={item.product.title} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700" />
+                          ? <Image src={img} alt={item.product.title} fill className="object-contain group-hover:scale-110 transition-transform duration-700" sizes="160px" />
                           : <div className="w-full h-full bg-gray-100 dark:bg-gray-800 rounded-2xl" />
                         }
                       </Link>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -86,7 +87,7 @@ function ProductCard({ p, accent }: { p: Product; accent: string }) {
     >
       <div className="relative aspect-square bg-gray-50 dark:bg-gray-800 overflow-hidden">
         {p.image ? (
-          <img src={p.image} alt={p.title} className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105" />
+          <Image src={p.image} alt={p.title} fill className="object-contain p-3 transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 640px) 50vw, 25vw" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-300 text-4xl">📦</div>
         )}
@@ -140,10 +141,10 @@ function CategoryCard({ cat, selected, accent, onClick }: {
         background: selected ? `${accent}12` : "rgba(0,0,0,0.03)",
       }}
     >
-      <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden flex items-center justify-center text-2xl"
+      <div className="relative w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden flex items-center justify-center text-2xl"
         style={{ background: selected ? `${accent}20` : "#f3f4f6" }}>
         {cat.imageUrl
-          ? <img src={cat.imageUrl} alt={cat.title} className="w-full h-full object-cover" />
+          ? <Image src={cat.imageUrl} alt={cat.title} fill className="object-cover" sizes="56px" />
           : <span>🗂️</span>}
       </div>
       <span className="text-[11px] md:text-xs font-bold text-center leading-tight" style={{ color: selected ? accent : undefined }}>
@@ -437,7 +438,7 @@ export default function AdvancedSearchSection({ config }: { config: Config }) {
                           borderColor: selectedBrand?.id === b.id ? accentColor : "#d1d5db",
                           color: selectedBrand?.id === b.id ? "#fff" : undefined,
                         }}>
-                        {b.logoUrl && <img src={b.logoUrl} alt={b.title} className="w-4 h-4 object-contain" />}
+                        {b.logoUrl && <Image src={b.logoUrl} alt={b.title} width={16} height={16} className="object-contain" />}
                         {b.title}
                       </button>
                     ))}

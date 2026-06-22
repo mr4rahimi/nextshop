@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface OrderItem {
   qty: number;
@@ -187,8 +188,8 @@ export default function CheckoutConfirmClient({ order, paymentMethod, cardInfo }
                 const img = item.product.mainImage ?? item.product.images[0]?.url ?? null;
                 return (
                   <div key={i} className="relative flex items-center gap-3 bg-white/50 dark:bg-white/5 rounded-2xl p-3 border border-gray-100 dark:border-white/5">
-                    <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {img ? <img src={img} alt={item.titleSnapshot} className="w-full h-full object-contain" /> : <div className="w-full h-full bg-gray-100 dark:bg-gray-700" />}
+                    <div className="relative w-12 h-12 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {img ? <Image src={img} alt={item.titleSnapshot} fill className="object-contain" sizes="48px" /> : <div className="w-full h-full bg-gray-100 dark:bg-gray-700" />}
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-black text-gray-800 dark:text-gray-200 line-clamp-1">{item.titleSnapshot}</p>
