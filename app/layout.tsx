@@ -3,7 +3,7 @@ import { myFont } from "@/app/fonts";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { prisma } from "@/lib/prisma";
 import { SITE_URL } from "@/lib/seo";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import AiChat from "@/components/AiChat";
 
 function buildCssVars(theme: Record<string, string>): string {
@@ -13,6 +13,11 @@ function buildCssVars(theme: Record<string, string>): string {
     .join("\n");
   return `:root {\n${vars}\n}`;
 }
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
