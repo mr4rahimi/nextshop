@@ -17,12 +17,16 @@ async function getCategory(slug: string) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const category = await getCategory(slug);
+  const [category, settings] = await Promise.all([
+    getCategory(slug),
+    prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { storeLogo: true, storeName: true } }),
+  ]);
   if (!category) return { title: "دسته‌بندی یافت نشد" };
+  const storeName = settings?.storeName ?? "فروشگاه";
   return buildBaseMetadata({
-    title:       category.seoTitle       || `خرید ${category.title} | فروشگاه`,
+    title:       category.seoTitle       || `خرید ${category.title}`,
     description: category.seoDescription || category.description || `بهترین محصولات در دسته ${category.title}`,
-    image:       category.imageUrl       || null,
+    image:       category.imageUrl       || settings?.storeLogo || null,
     path:        `/categories/${slug}`,
   });
 }

@@ -17,12 +17,16 @@ async function getBrand(slug: string) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const brand = await getBrand(slug);
+  const [brand, settings] = await Promise.all([
+    getBrand(slug),
+    prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { storeLogo: true, storeName: true } }),
+  ]);
   if (!brand) return { title: "برند یافت نشد" };
+  const storeName = settings?.storeName ?? "فروشگاه";
   return buildBaseMetadata({
-    title:       brand.seoTitle       || `محصولات ${brand.title} | فروشگاه`,
+    title:       brand.seoTitle       || `محصولات ${brand.title}`,
     description: brand.seoDescription || brand.description || `خرید محصولات اصل ${brand.title}`,
-    image:       brand.logoUrl        || null,
+    image:       brand.logoUrl        || settings?.storeLogo || null,
     path:        `/brands/${slug}`,
   });
 }

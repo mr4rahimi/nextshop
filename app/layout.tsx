@@ -22,9 +22,10 @@ export const viewport: Viewport = {
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const s = await prisma.storeSettings.findUnique({ where: { id: "singleton" } });
+    const name = s?.storeName ?? "مانا شاپ";
     return {
       metadataBase: new URL(SITE_URL),
-      title:       s?.storeName       ? `${s.storeName}` : "مانا شاپ",
+      title: { default: name, template: `%s | ${name}` },
       description: s?.siteDescription ?? "فروشگاه اینترنتی",
       keywords:    s?.siteKeywords    ?? undefined,
       icons: s?.siteFavicon

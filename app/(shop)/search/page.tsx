@@ -5,14 +5,12 @@ import type { Metadata } from "next";
 
 interface Props { searchParams: Promise<{ q?: string; page?: string }> }
 
-const storeName = process.env.NEXT_PUBLIC_STORE_NAME ?? "فروشگاه";
-
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   return {
-    title: q ? `جستجو: ${q} | ${storeName}` : `جستجو | ${storeName}`,
-    description: q ? `نتایج جستجو برای "${q}" در ${storeName}` : `جستجو در محصولات ${storeName}`,
+    title: q ? `جستجو: ${q}` : "جستجو",
+    description: q ? `نتایج جستجو برای "${q}" در فروشگاه` : "جستجو در محصولات فروشگاه",
     robots: { index: false, follow: true },
   };
 }

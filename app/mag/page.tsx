@@ -2,10 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import MagHomeClient from "@/components/blog/MagHomeClient";
 
-export async function generateMetadata() {
-  const s = await prisma.storeSettings.findUnique({ where: { id: "singleton" } }).catch(() => null);
-  return { title: `مجله | ${s?.storeName ?? "مانا شاپ"}` };
-}
+export const metadata = { title: "مجله" };
 
 export default async function MagPage() {
   const [posts, categories] = await Promise.all([
