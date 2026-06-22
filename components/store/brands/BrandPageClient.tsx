@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ManaProductCard, { ProductCardItem } from "@/components/store/product/ManaProductCard";
@@ -302,8 +303,8 @@ export default function BrandPageClient({
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
             <div className="flex items-center gap-6">
               {brand.logoUrl && (
-                <div className="w-20 h-20 bg-white dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/10 p-3 shadow-xl flex items-center justify-center flex-shrink-0">
-                  <img src={brand.logoUrl} alt={brand.title} className="w-full h-full object-contain" />
+                <div className="relative w-20 h-20 bg-white dark:bg-white/5 rounded-[2rem] border border-gray-100 dark:border-white/10 p-3 shadow-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <Image src={brand.logoUrl} alt={brand.title} fill className="object-contain p-3" sizes="80px" />
                 </div>
               )}
               <div className="relative">
@@ -353,7 +354,7 @@ export default function BrandPageClient({
                   href={`/categories/${cat.slug}`}
                   className="flex items-center gap-2 px-5 py-2.5 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-300 hover:border-primary-500 hover:text-primary-600 transition-all"
                 >
-                  {cat.imageUrl && <img src={cat.imageUrl} alt={cat.title} className="w-5 h-5 object-contain" />}
+                  {cat.imageUrl && <Image src={cat.imageUrl} alt={cat.title} width={20} height={20} className="object-contain" />}
                   {cat.title}
                 </Link>
               ))}
@@ -550,7 +551,7 @@ export default function BrandPageClient({
             <div className="mt-16 bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[3rem] p-10 shadow-xl">
               <div className="flex items-center gap-3 mb-6">
                 {brand.logoUrl && (
-                  <img src={brand.logoUrl} alt={brand.title} className="w-10 h-10 object-contain" />
+                  <Image src={brand.logoUrl} alt={brand.title} width={40} height={40} className="object-contain" />
                 )}
                 <span className="w-2 h-8 bg-primary-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.6)]" />
                 <h2 className="text-2xl font-black text-gray-900 dark:text-white">

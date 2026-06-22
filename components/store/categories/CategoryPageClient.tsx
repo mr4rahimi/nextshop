@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ManaProductCard, { ProductCardItem } from "@/components/store/product/ManaProductCard";
@@ -559,7 +560,7 @@ export default function CategoryPageClient({
                   className="flex items-center gap-2 px-5 py-2.5 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-300 hover:border-primary-500 hover:text-primary-600 transition-all"
                 >
                   {child.imageUrl && (
-                    <img src={child.imageUrl} alt={child.title} className="w-6 h-6 object-contain" />
+                    <Image src={child.imageUrl} alt={child.title} width={24} height={24} className="object-contain" />
                   )}
                   {child.title}
                 </Link>
