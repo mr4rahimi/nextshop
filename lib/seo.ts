@@ -17,6 +17,7 @@ export function buildBaseMetadata(opts: {
   image?: string | null;
   path: string;
   noIndex?: boolean;
+  ogType?: "website" | "article";
 }): Metadata {
   const url = canonicalUrl(opts.path);
   return {
@@ -30,7 +31,7 @@ export function buildBaseMetadata(opts: {
       description: opts.description,
       url,
       locale:      "fa_IR",
-      type:        "website",
+      type:        opts.ogType ?? "website",
       images:      opts.image ? [{ url: opts.image, width: 1200, height: 630 }] : [],
     },
     twitter: {

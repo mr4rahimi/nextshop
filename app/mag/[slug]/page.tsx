@@ -20,6 +20,7 @@ export async function generateMetadata({ params }: Props) {
       keywords:    post.seoKeywords    ?? undefined,
       image:       post.coverImage,
       path:        `/mag/${slug}`,
+      ogType:      "article",
     });
   } catch { return { title: "مجله" }; }
 }
