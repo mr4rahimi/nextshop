@@ -34,6 +34,9 @@ export async function generateMetadata(): Promise<Metadata> {
         title:       s?.storeName       ?? "مانا شاپ",
         description: s?.siteDescription ?? "",
         siteName:    s?.storeName       ?? "مانا شاپ",
+        url:         SITE_URL,
+        locale:      "fa_IR",
+        type:        "website",
       },
     };
   } catch {

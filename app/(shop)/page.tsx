@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: s?.siteDescription ?? undefined,
       keywords:    s?.siteKeywords    ?? undefined,
       alternates:  { canonical: SITE_URL },
-      openGraph:   { title: s?.storeName ?? "فروشگاه", description: s?.siteDescription ?? undefined, url: SITE_URL, images: s?.storeLogo ? [s.storeLogo] : [] },
+      openGraph:   { title: s?.storeName ?? "فروشگاه", description: s?.siteDescription ?? undefined, url: SITE_URL, siteName: s?.storeName ?? "فروشگاه", locale: "fa_IR", type: "website", images: s?.storeLogo ? [{ url: s.storeLogo, width: 1200, height: 630 }] : [] },
     };
   } catch { return { title: "فروشگاه" }; }
 }
