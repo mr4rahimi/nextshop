@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import AddToCartButton from "@/components/store/cart/AddToCartButton";
 
 import { useEffect, useState } from "react";
@@ -59,8 +60,8 @@ function NewestProductCard({ product }: { product: Product }) {
         {/* Image side */}
         <div className="w-2/5 relative bg-gradient-to-br from-gray-100 to-transparent dark:from-white/5 dark:to-transparent rounded-[2rem] overflow-hidden flex items-center justify-center m-1 transition-all duration-500 group-hover:scale-[0.98]">
           {product.image ? (
-            <img src={product.image} alt={product.title}
-              className="w-32 h-32 object-contain drop-shadow-2xl transition-transform duration-700 group-hover:scale-110 group-hover:-rotate-3" />
+            <Image src={product.image} alt={product.title} width={128} height={128}
+              className="object-contain drop-shadow-2xl transition-transform duration-700 group-hover:scale-110 group-hover:-rotate-3" />
           ) : (
             <div className="w-32 h-32 flex items-center justify-center">
               <svg className="w-16 h-16 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
