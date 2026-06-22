@@ -30,6 +30,8 @@ export interface FormState {
   isActive: boolean;
   images: string[]; specs: SpecRow[];
   relatedSettings: RelatedSettings;
+  downloadTitle: string;
+  downloadUrl: string;
 }
 
 export const EMPTY_FORM: FormState = {
@@ -40,6 +42,7 @@ export const EMPTY_FORM: FormState = {
   videoUrl: "", mainImage: "",
   features: [], colors: [],
   price: "", salePrice: "", warranty: "",
+  downloadTitle: "", downloadUrl: "",
   stock: "", trackStock: false, lowStockThreshold: "3",
   faq: [],
   seoTitle: "", seoDescription: "", seoKeywords: "", seoSchema: "",
@@ -650,6 +653,77 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
               </div>
             </div>
           </Field>
+        </Section>
+
+        {}
+        <Section title="پیوست فایل دانلودی" icon="📎" defaultOpen={false}>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            اگر فایلی (کاتالوگ، درایور، راهنما، ...) همراه این محصول قرار می‌گیرد اینجا آپلود کنید.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="عنوان دکمه دانلود">
+              <input
+                value={form.downloadTitle} className={inp}
+                onChange={e => set("downloadTitle", e.target.value)}
+                placeholder="مثلاً: دانلود کاتالوگ، دانلود درایور، دانلود راهنما" />
+            </Field>
+            <Field label="فایل دانلودی">
+              <div className="flex items-center gap-3">
+                {form.downloadUrl ? (
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl px-3 py-2">
+                      <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-xs text-emerald-700 dark:text-emerald-300 font-bold truncate">
+                        {form.downloadUrl.split("/").pop()}
+                      </span>
+                    </div>
+                    <button type="button" onClick={() => { set("downloadUrl", ""); set("downloadTitle", ""); }}
+                      className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-white/10 text-gray-400 hover:text-red-500 hover:border-red-300 transition-all">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <label className={`flex-1 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed cursor-pointer transition-all ${uploadingKey === "download" ? "border-blue-400 bg-blue-50 dark:bg-blue-500/10" : "border-gray-200 dark:border-white/10 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/5"}`}>
+                    {uploadingKey === "download" ? (
+                      <div className="flex items-center gap-2 text-blue-500">
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        <span className="text-sm font-bold">در حال آپلود...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        <span className="text-sm font-bold">انتخاب فایل</span>
+                        <span className="text-xs text-gray-400">(PDF، ZIP، RAR، ...)</span>
+                      </div>
+                    )}
+                    <input type="file" className="hidden"
+                      accept=".pdf,.zip,.rar,.doc,.docx,.xls,.xlsx,.txt,.7z,.tar,.gz"
+                      onChange={async e => {
+                        if (!e.target.files?.[0]) return;
+                        const fd = new FormData();
+                        fd.append("file", e.target.files[0]);
+                        fd.append("type", "download");
+                        setUploadingKey("download");
+                        try {
+                          const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+                          const data = await res.json();
+                          if (data.url) set("downloadUrl", data.url);
+                        } finally { setUploadingKey(null); }
+                      }} />
+                  </label>
+                )}
+              </div>
+            </Field>
+          </div>
         </Section>
 
         {}

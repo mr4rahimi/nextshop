@@ -65,7 +65,9 @@ export async function PUT(
       price:     BigInt(body.price || 0),
       salePrice: body.salePrice ? BigInt(body.salePrice) : null,
 
-      warranty: body.warranty,
+      warranty:      body.warranty,
+      downloadTitle: body.downloadTitle || null,
+      downloadUrl:   body.downloadUrl   || null,
       stock:      body.stock      ? parseInt(body.stock) : 0,
       trackStock: body.trackStock ?? false,
       lowStockThreshold: body.lowStockThreshold ? parseInt(body.lowStockThreshold) : 3,

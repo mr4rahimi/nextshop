@@ -66,6 +66,9 @@ export async function GET(
       expertTitle: product.expertTitle,
       expertDescription: product.expertDescription,
       expertImage: product.expertImage,
+      // Download
+      downloadTitle: product.downloadTitle,
+      downloadUrl: product.downloadUrl,
       // FAQ
       faq: product.faq,
       // SEO

@@ -132,6 +132,8 @@ model Product {
   summaryTitle       String?
   videoUrl           String?
   relatedSettings    Json               @default("{}")
+  downloadTitle      String?
+  downloadUrl        String?
   blogPosts BlogPostProduct[]
   cartItems          CartItem[]
   orderItems         OrderItem[]
