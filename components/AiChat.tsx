@@ -187,59 +187,61 @@ export default function AiChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // ── On first open: load config + check auth in parallel ──────────────────
+  // ── On first open: two-stage init ────────────────────────────────────────
+  // Stage 1: fetch config → show buttons immediately (never blocked by auth)
+  // Stage 2: fetch my-chat → if logged in with history, overlay server history
   useEffect(() => {
     if (!open || initDoneRef.current) return;
     initDoneRef.current = true;
 
     const siteId = typeof window !== "undefined" ? window.location.host : "";
 
-    Promise.all([
-      fetch("/api/store/chat-config").then((r) => r.json()),
-      fetch(`/api/store/my-chat?siteId=${encodeURIComponent(siteId)}`).then((r) => r.json()),
-    ])
-      .then(([cfg, myChat]: [ChatConfig, { isLoggedIn: boolean; conversationId?: string | null; messages?: { role: string; content: string }[] }]) => {
+    fetch("/api/store/chat-config")
+      .then((r) => r.json())
+      .then((cfg: ChatConfig) => {
         setConfig(cfg);
         if (!cfg.isEnabled) return;
 
-        if (myChat.isLoggedIn) {
-          // Logged-in user: restore from server
-          setSessionMode("member");
-          const msgs = myChat.messages ?? [];
-          if (myChat.conversationId && msgs.length > 0) {
-            const serverBubbles = msgs.map((m) => ({
-              role: m.role as "user" | "assistant",
-              content: m.content,
-            }));
-            setBubbles(serverBubbles);
-            setApiMessages(serverBubbles);
-            conversationIdRef.current = myChat.conversationId;
-            setActiveContext({ kind: "free" });
-            setButtons([{ type: "home" }]);
-            setInputMode(true);
-          } else {
-            initRoot(cfg);
-          }
+        // Always initialize from localStorage first (guest mode default)
+        setSessionMode("guest");
+        const local = readLocalState();
+        if (local) {
+          setBubbles(local.bubbles);
+          setApiMessages(local.apiMessages);
+          conversationIdRef.current = local.conversationId;
+          setButtons(flowToButtons(cfg.flow, false));
+          setInputMode(false);
+          setActiveContext(null);
         } else {
-          // Guest: restore from site-namespaced localStorage
-          setSessionMode("guest");
-          const local = readLocalState();
-          if (local) {
-            setBubbles(local.bubbles);
-            setApiMessages(local.apiMessages);
-            conversationIdRef.current = local.conversationId;
-            setButtons(flowToButtons(cfg.flow, false));
-            setInputMode(false);
-            setActiveContext(null);
-          } else {
-            initRoot(cfg);
-          }
+          initRoot(cfg);
         }
+
+        // Stage 2: auth check — non-blocking, failure is safe to ignore
+        fetch(`/api/store/my-chat?siteId=${encodeURIComponent(siteId)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((myChat: { isLoggedIn: boolean; conversationId?: string | null; messages?: { role: string; content: string }[] } | null) => {
+            if (!myChat?.isLoggedIn) return; // confirmed guest
+            setSessionMode("member");
+            const msgs = myChat.messages ?? [];
+            if (myChat.conversationId && msgs.length > 0) {
+              const serverBubbles = msgs.map((m) => ({
+                role: m.role as "user" | "assistant",
+                content: m.content,
+              }));
+              setBubbles(serverBubbles);
+              setApiMessages(serverBubbles);
+              conversationIdRef.current = myChat.conversationId;
+              setActiveContext({ kind: "free" });
+              setButtons([{ type: "home" }]);
+              setInputMode(true);
+            }
+            // logged in but no history → flow buttons already showing from stage 1
+          })
+          .catch(() => {}); // my-chat failure never breaks the chat
       })
       .catch(() => {
         setConfig({ isEnabled: true, welcomeMessage: "سلام!", flow: [] });
         setSessionMode("guest");
-        initRoot({ isEnabled: true, welcomeMessage: "سلام!", flow: [] });
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -489,7 +491,7 @@ export default function AiChat() {
         onClick={() => setOpen((v) => !v)}
         aria-label="دستیار خرید"
         style={{
-          position: "fixed", bottom: "99px", right: "24px", zIndex: 9999,
+          position: "fixed", bottom: "24px", right: "24px", zIndex: 9999,
           width: "56px", height: "56px", borderRadius: "50%",
           background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
           border: "none", cursor: "pointer",
