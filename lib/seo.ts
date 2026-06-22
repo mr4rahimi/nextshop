@@ -53,9 +53,22 @@ export function buildOrganizationSchema(opts: {
   email?: string | null;
   phone?: string | null;
   address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  postalCode?: string | null;
   socialInstagram?: string | null;
   socialTelegram?: string | null;
+  socialWhatsapp?: string | null;
+  socialTwitter?: string | null;
 }) {
+  const waNumber = opts.socialWhatsapp?.replace(/\D/g, "") ?? "";
+  const sameAs = [
+    opts.socialInstagram,
+    opts.socialTelegram,
+    waNumber.length > 5 ? `https://wa.me/${waNumber}` : null,
+    opts.socialTwitter,
+  ].filter((v): v is string => typeof v === "string" && v.startsWith("http"));
+
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -65,8 +78,15 @@ export function buildOrganizationSchema(opts: {
     description: opts.description ?? undefined,
     email:       opts.email    ?? undefined,
     telephone:   opts.phone    ?? undefined,
-    address:     opts.address  ? { "@type": "PostalAddress", streetAddress: opts.address } : undefined,
-    sameAs: [opts.socialInstagram, opts.socialTelegram].filter(Boolean),
+    address: opts.address ? {
+      "@type":          "PostalAddress",
+      streetAddress:    opts.address,
+      addressLocality:  opts.city       ?? undefined,
+      addressRegion:    opts.province   ?? undefined,
+      postalCode:       opts.postalCode ?? undefined,
+      addressCountry:   "IR",
+    } : undefined,
+    sameAs: sameAs.length ? sameAs : undefined,
   };
 }
 
@@ -262,18 +282,47 @@ export function buildLocalBusinessSchema(opts: {
   name: string;
   url: string;
   logo?: string | null;
+  description?: string | null;
   phone?: string | null;
-  address?: string | null;
   email?: string | null;
+  address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  postalCode?: string | null;
+  openingHours?: string | null;
+  socialInstagram?: string | null;
+  socialTelegram?: string | null;
+  socialWhatsapp?: string | null;
+  socialTwitter?: string | null;
 }) {
+  const waNum = opts.socialWhatsapp?.replace(/\D/g, "") ?? "";
+  const sameAs = [
+    opts.socialInstagram,
+    opts.socialTelegram,
+    waNum.length > 5 ? `https://wa.me/${waNum}` : null,
+    opts.socialTwitter,
+  ].filter((v): v is string => typeof v === "string" && v.startsWith("http"));
+
   return {
     "@context": "https://schema.org",
     "@type": "Store",
-    name:      opts.name,
-    url:       opts.url,
-    logo:      opts.logo ?? undefined,
-    telephone: opts.phone   ?? undefined,
-    email:     opts.email   ?? undefined,
-    address:   opts.address ? { "@type": "PostalAddress", streetAddress: opts.address, addressCountry: "IR" } : undefined,
+    name:        opts.name,
+    url:         opts.url,
+    logo:        opts.logo ? { "@type": "ImageObject", url: opts.logo } : undefined,
+    image:       opts.logo ?? undefined,
+    description: opts.description ?? undefined,
+    telephone:   opts.phone ?? undefined,
+    email:       opts.email ?? undefined,
+    address: opts.address ? {
+      "@type":         "PostalAddress",
+      streetAddress:   opts.address,
+      addressLocality: opts.city       ?? undefined,
+      addressRegion:   opts.province   ?? undefined,
+      postalCode:      opts.postalCode ?? undefined,
+      addressCountry:  "IR",
+    } : undefined,
+    openingHours:  opts.openingHours ?? undefined,
+    sameAs:        sameAs.length ? sameAs : undefined,
+    hasMap:        opts.address ? `https://maps.google.com/?q=${encodeURIComponent(opts.address + (opts.city ? " " + opts.city : ""))}` : undefined,
   };
 }

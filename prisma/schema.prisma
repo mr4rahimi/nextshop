@@ -575,6 +575,10 @@ model StoreSettings {
   siteEmail        String?
   sitePhone        String?
   siteAddress      String?
+  siteCity         String?
+  siteProvince     String?
+  sitePostalCode   String?
+  openingHours     String?   // schema.org format: "Sa-Th 09:00-17:00"
   socialInstagram  String?
   socialTelegram   String?
   socialWhatsapp   String?

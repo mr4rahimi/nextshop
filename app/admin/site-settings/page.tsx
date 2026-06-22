@@ -6,6 +6,8 @@ interface SiteSettings {
   storeName: string; storeLogo: string; siteFavicon: string;
   siteDescription: string; siteKeywords: string;
   siteEmail: string; sitePhone: string; siteAddress: string;
+  siteCity: string; siteProvince: string; sitePostalCode: string;
+  openingHours: string;
   socialInstagram: string; socialTelegram: string;
   socialWhatsapp: string; socialTwitter: string;
   footerText: string; maintenanceMode: boolean;
@@ -31,6 +33,8 @@ const EMPTY: SiteSettings = {
   storeName: "", storeLogo: "", siteFavicon: "",
   siteDescription: "", siteKeywords: "",
   siteEmail: "", sitePhone: "", siteAddress: "",
+  siteCity: "", siteProvince: "", sitePostalCode: "",
+  openingHours: "",
   socialInstagram: "", socialTelegram: "", socialWhatsapp: "", socialTwitter: "",
   footerText: "", maintenanceMode: false,
   enamadCode: "", samanCode: "", trustBadge3: "", trustBadge4: "",
@@ -64,6 +68,10 @@ export default function AdminSiteSettingsPage() {
         siteEmail:       d.siteEmail       ?? "",
         sitePhone:       d.sitePhone       ?? "",
         siteAddress:     d.siteAddress     ?? "",
+        siteCity:        d.siteCity        ?? "",
+        siteProvince:    d.siteProvince    ?? "",
+        sitePostalCode:  d.sitePostalCode  ?? "",
+        openingHours:    d.openingHours    ?? "",
         socialInstagram: d.socialInstagram ?? "",
         socialTelegram:  d.socialTelegram  ?? "",
         socialWhatsapp:  d.socialWhatsapp  ?? "",
@@ -241,8 +249,32 @@ export default function AdminSiteSettingsPage() {
               </div>
               <div>
                 <label className={lbl}>آدرس فیزیکی</label>
-                <input className={inp} placeholder="تهران، ..."
+                <input className={inp} placeholder="تهران، خیابان ولیعصر، پلاک ..."
                   value={settings.siteAddress} onChange={e => set("siteAddress", e.target.value)} />
+              </div>
+              <div>
+                <label className={lbl}>شهر</label>
+                <input className={inp} placeholder="تهران"
+                  value={settings.siteCity} onChange={e => set("siteCity", e.target.value)} />
+              </div>
+              <div>
+                <label className={lbl}>استان</label>
+                <input className={inp} placeholder="تهران"
+                  value={settings.siteProvince} onChange={e => set("siteProvince", e.target.value)} />
+              </div>
+              <div>
+                <label className={lbl}>کد پستی</label>
+                <input className={inp} dir="ltr" placeholder="1234567890"
+                  value={settings.sitePostalCode} onChange={e => set("sitePostalCode", e.target.value)} />
+              </div>
+              <div>
+                <label className={lbl}>ساعت کاری (برای SEO)</label>
+                <input className={inp} dir="ltr" placeholder="Sa-Th 09:00-17:00"
+                  value={settings.openingHours} onChange={e => set("openingHours", e.target.value)} />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  فرمت schema.org — روزها: Sa=شنبه Mo=دوشنبه Tu=سه‌شنبه We=چهارشنبه Th=پنجشنبه Fr=جمعه Su=یکشنبه
+                  <br />مثال: <span dir="ltr">Sa-Th 09:00-17:00</span> یا چند مورد با کاما: <span dir="ltr">Sa-Th 09:00-17:00, Fr 10:00-14:00</span>
+                </p>
               </div>
             </div>
             <div>
