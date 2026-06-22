@@ -3,6 +3,93 @@
 const VERSIONS = [
 
   {
+    version: "2.3.0",
+    date: "۱۴۰۵/۰۴/۰۱",
+    tag: "minor",
+    title: "پیوست فایل دانلودی به محصولات",
+    description: "ادمین می‌تواند برای هر محصول یک فایل دانلودی (کاتالوگ، درایور، راهنما و ...) با عنوان دلخواه آپلود کند؛ دکمه دانلود به‌صورت حرفه‌ای در صفحه جزئیات محصول نمایش داده می‌شود",
+    changes: [
+      { type: "feature", text: "فیلدهای downloadTitle و downloadUrl به مدل محصول اضافه شد" },
+      { type: "feature", text: "بخش «پیوست فایل دانلودی» در فرم ساخت و ویرایش محصول — عنوان دکمه + آپلود فایل" },
+      { type: "feature", text: "پشتیبانی آپلود از انواع فایل غیر تصویری: PDF، ZIP، RAR، DOC، XLS و TXT (حداکثر ۱۰۰MB)" },
+      { type: "feature", text: "نمایش کارت دانلود آبی‌رنگ در صفحه جزئیات محصول — عنوان، پسوند فایل و دکمه دانلود" },
+      { type: "improvement", text: "نمایش نام فایل آپلودشده با آیکون سبز در فرم ادمین و دکمه حذف" },
+      { type: "improvement", text: "جلوگیری از آپلود فایل‌های اجرایی (.exe, .bat, .sh و ...) به‌عنوان فایل دانلودی" },
+    ],
+  },
+
+  {
+    version: "2.2.0",
+    date: "۱۴۰۵/۰۴/۰۱",
+    tag: "minor",
+    title: "درخواست تماس کارشناس در چت",
+    description: "کاربران می‌توانند مستقیماً از پنجره چت درخواست تماس ثبت کنند؛ ادمین با صفحه اختصاصی می‌تواند درخواست‌ها را مدیریت، وضعیت‌بندی و یادداشت‌گذاری کند",
+    changes: [
+      { type: "feature", text: "مدل CallbackRequest در دیتابیس — phone، status، siteId، conversationId، یادداشت داخلی" },
+      { type: "feature", text: "باکس درخواست تماس زیر پیام‌های چت — برای مهمان: ورود شماره، برای عضو: شماره از پروفایل pre-fill" },
+      { type: "feature", text: "صفحه ادمین /admin/callback-requests با تب‌های فیلتر (جدید / تماس گرفته شد / تکمیل شد)" },
+      { type: "feature", text: "پنل جزئیات در ادمین — تغییر وضعیت، یادداشت داخلی، لینک به مکالمه، حذف" },
+      { type: "feature", text: "نمایش تعداد درخواست‌های جدید با نشانگر پالس‌زن در منوی ادمین" },
+      { type: "feature", text: "API اختصاصی POST /api/store/callback-request با اعتبارسنجی شماره ایرانی" },
+      { type: "improvement", text: "API my-chat اکنون شماره تلفن کاربر لاگین‌شده را برمی‌گرداند" },
+    ],
+  },
+
+  {
+    version: "2.1.0",
+    date: "۱۴۰۵/۰۴/۰۱",
+    tag: "minor",
+    title: "چت هوشمند: جداسازی multi-site و مشاوره دقیق محصولات",
+    description: "هر سایت روی دامنه مستقل تاریخچه چت جداگانه دارد؛ پاسخ‌های هوش مصنوعی درباره محصولات اکنون از داده‌های واقعی دیتابیس (مشخصات فنی، قیمت دقیق، برند) استفاده می‌کند",
+    changes: [
+      { type: "feature", text: "جداسازی کامل تاریخچه چت بین سایت‌های مختلف — فیلد siteId روی ChatConversation" },
+      { type: "feature", text: "localStorage چت کاربر مهمان با namespace مجزا به ازای هر دامنه (chat_state_${host})" },
+      { type: "feature", text: "راه‌اندازی دو مرحله‌ای چت — دکمه‌ها فوری نمایش داده می‌شوند، احراز هویت غیرمسدودکننده است" },
+      { type: "feature", text: "مشاوره محصول با query مستقیم Prisma — ۳۰ محصول با مشخصات فنی کامل به AI ارسال می‌شود" },
+      { type: "feature", text: "تشخیص هدف جستجو از کلمات کلیدی: ارزان‌ترین، گران‌ترین، جدیدترین" },
+      { type: "feature", text: "API جدید GET /api/store/my-chat — بازیابی آخرین مکالمه کاربر لاگین‌شده به تفکیک سایت" },
+      { type: "improvement", text: "ادمین تاریخچه چت اکنون فقط مکالمات همان سایت را نمایش می‌دهد" },
+      { type: "fix", text: "رفع race condition دکمه‌های چت هنگام load همزمان config و احراز هویت" },
+    ],
+  },
+
+  {
+    version: "2.0.1",
+    date: "۱۴۰۵/۰۴/۰۱",
+    tag: "patch",
+    title: "رفع باگ‌های Story، موبایل چت و مسیر API",
+    description: "رفع سه باگ: خطای null در StoryPlayer هنگام navigate، موقعیت دکمه چت روی موبایل زیر منوی پایین، و مسیر اشتباه API فیلترهای صفحه محصولات",
+    changes: [
+      { type: "fix", text: "رفع TypeError: this.container is null در Story — اضافه کردن cancelled flag و بررسی DOM قبل از init" },
+      { type: "fix", text: "دکمه چت روی موبایل اکنون ۹۹px از پایین قرار می‌گیرد — بالاتر از MobileBottomNav" },
+      { type: "fix", text: "رفع خطای ۴۰۴ برای /api/products-meta — مسیر صحیح /api/store/products-meta" },
+      { type: "improvement", text: "انتقال style رسپانسیو چت به بیرون از شرط open — همیشه در DOM حضور دارد" },
+    ],
+  },
+
+  {
+    version: "2.0.0",
+    date: "۱۴۰۵/۰۳/۳۱",
+    tag: "minor",
+    title: "شش ویجت حرفه‌ای صفحه اصلی",
+    description: "افزودن پنج ویجت محتوایی و یک ویجت جستجوی پیشرفته برای صفحه اصلی فروشگاه — همه قابل تنظیم از پنل ادمین",
+    changes: [
+      { type: "feature", text: "ویجت CALL_TO_ACTION — بنر دعوت به اقدام با رنگ‌بندی کاملاً قابل تنظیم (رنگ یکدست یا گرادیان، رنگ دکمه، رنگ متن)" },
+      { type: "feature", text: "ویجت SPECIAL_OFFERS — اسلایدر افقی دارک‌مود با تایمر شمارش معکوس فارسی، ستاره‌بندی، نوار موجودی و دکمه سبد" },
+      { type: "feature", text: "ویجت IMAGE_CONTENT — عکس و محتوا در کنار هم با قابلیت معکوس کردن جایگاه در دسکتاپ، badge، دکمه CTA و تزئینات blob" },
+      { type: "feature", text: "ویجت IMAGE_CONTENT_DOUBLE — تصویر تمام‌عرض بالا و دو باکس محتوای شناور با badge فارسی شماره‌دار" },
+      { type: "feature", text: "ویجت LAST_VISITED — آخرین محصولات بازدیدشده کاربر از localStorage با Skeleton loader و nav buttons" },
+      { type: "feature", text: "ردیاب بازدید در صفحه محصول — هر بازدید به localStorage کاربر اضافه می‌شود (حداکثر ۱۲ محصول، بدون تکرار)" },
+      { type: "feature", text: "ویجت ADVANCED_SEARCH — جستجوی پیشرفته با انتخاب دسته اصلی (کارت تصویردار)، زیردسته، برند با لوگو و ویژگی‌های قابل فیلتر دسته‌بندی" },
+      { type: "feature", text: "ویجت ADVANCED_SEARCH — نتایج inline (حداکثر ۴ محصول) + دکمه «مشاهده همه» با URL کامل فیلترها" },
+      { type: "feature", text: "API جدید /api/store/search-meta — دسته‌ها، برندها و گروه‌های ویژگی قابل فیلتر بر اساس CategoryAttributeGroup" },
+      { type: "feature", text: "API جدید /api/store/search-results — فیلتر محصولات با categoryId، brandId و attributeValueId (سازگار با صفحه محصولات)" },
+      { type: "improvement", text: "ادمین ویجت‌ها — ویرایشگر اختصاصی برای هر ویجت جدید با ColorField، آپلود عکس و انتخاب محصول" },
+      { type: "fix", text: "Fallback defensive برای widget های ناشناخته در لیست ادمین — جلوگیری از crash کل لیست" },
+    ],
+  },
+
+  {
     version: "1.9.0",
     date: "۱۴۰۵/۰۳/۳۱",
     tag: "minor",
