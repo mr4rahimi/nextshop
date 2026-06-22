@@ -513,6 +513,16 @@ export default function AiChat() {
 
   return (
     <>
+      <style>{`
+        @keyframes tb { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
+        .td{display:inline-block;width:6px;height:6px;background:#9ca3af;border-radius:50%;animation:tb 1.2s infinite}
+        .td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+        @media (max-width: 768px) {
+          .ai-chat-fab { bottom: 99px !important; }
+          .ai-chat-panel { bottom: 167px !important; max-height: calc(100vh - 191px) !important; right: 16px !important; }
+        }
+      `}</style>
+
       {}
       <button
         onClick={() => setOpen((v) => !v)}
@@ -549,15 +559,6 @@ export default function AiChat() {
           display: "flex", flexDirection: "column", overflow: "hidden",
           fontFamily: "Tahoma, IRANSans, sans-serif",
         }}>
-          <style>{`
-            @keyframes tb { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
-            .td{display:inline-block;width:6px;height:6px;background:#9ca3af;border-radius:50%;animation:tb 1.2s infinite}
-            .td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
-            @media (max-width: 640px) {
-              .ai-chat-fab { bottom: 140px !important; }
-              .ai-chat-panel { bottom: 212px !important; max-height: calc(100vh - 236px) !important; right: 16px !important; }
-            }
-          `}</style>
 
           {}
           <div style={{
