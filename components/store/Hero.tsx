@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Script from "next/script";
 import Link from "next/link";
 import { useWishlist } from "@/components/store/wishlist/WishlistContext";
@@ -57,7 +58,7 @@ function SuggestionCard({ product }: { product: SuggestProduct }) {
         {}
         <div className="relative w-24 h-24 bg-white dark:bg-white/5 rounded-[2rem] flex-shrink-0 p-2 transition-transform duration-500 group-hover/card:scale-105">
           {product.mainImage
-            ? <img src={product.mainImage} alt={product.title} className="w-full h-full object-contain drop-shadow-lg" />
+            ? <Image src={product.mainImage} alt={product.title} fill className="object-contain drop-shadow-lg" sizes="96px" />
             : <div className="w-full h-full flex items-center justify-center text-gray-300 text-2xl">📦</div>}
         </div>
 
@@ -199,9 +200,9 @@ export default function HeroSection() {
                 <div className="grid grid-cols-5 gap-2">
                   {suggestions.slice(0, 4).map(p => (
                     <Link key={p.id} href={`/products/${p.slug}`}
-                      className="aspect-square bg-gray-50 dark:bg-white/5 rounded-2xl p-2 border border-gray-100 dark:border-white/5 hover:border-primary-500/30 transition-all group overflow-hidden">
+                      className="relative aspect-square bg-gray-50 dark:bg-white/5 rounded-2xl p-2 border border-gray-100 dark:border-white/5 hover:border-primary-500/30 transition-all group overflow-hidden">
                       {p.mainImage
-                        ? <img src={p.mainImage} alt={p.title} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" />
+                        ? <Image src={p.mainImage} alt={p.title} fill className="object-contain group-hover:scale-110 transition-transform duration-300" sizes="60px" />
                         : <div className="w-full h-full flex items-center justify-center text-gray-300">📦</div>}
                     </Link>
                   ))}
@@ -221,16 +222,20 @@ export default function HeroSection() {
           <div className="lg:col-span-8 relative overflow-hidden rounded-[2.5rem] min-h-[400px]">
             <div className="swiper mainHeroSwiper h-full min-h-[400px]">
               <div className="swiper-wrapper">
-                {displaySlides.map(slide => (
+                {displaySlides.map((slide, idx) => (
                   <div key={slide.id} className="swiper-slide relative">
                     {slide.linkUrl ? (
                       <Link href={slide.linkUrl}>
-                        <img src={slide.imageUrl} alt={slide.title || ""}
-                          className="w-full h-full object-cover min-h-[400px]" />
+                        <div className="relative min-h-[400px]">
+                          <Image src={slide.imageUrl} alt={slide.title || ""} fill
+                            className="object-cover" sizes="100vw" priority={idx === 0} />
+                        </div>
                       </Link>
                     ) : (
-                      <img src={slide.imageUrl} alt={slide.title || ""}
-                        className="w-full h-full object-cover min-h-[400px]" />
+                      <div className="relative min-h-[400px]">
+                        <Image src={slide.imageUrl} alt={slide.title || ""} fill
+                          className="object-cover" sizes="100vw" priority={idx === 0} />
+                      </div>
                     )}
                     {slide.title && (
                       <div className="absolute bottom-20 right-8 bg-black/50 backdrop-blur-sm text-white px-5 py-2.5 rounded-2xl">

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -97,7 +98,7 @@ export default function CategoriesSection({ categoryIds }: Props) {
                 <div className="relative z-10 p-6 flex flex-col items-center transition-transform duration-700 group-hover:scale-110">
                   <div className="absolute inset-0 bg-primary-500/20 blur-[30px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                   {cat.imageUrl ? (
-                    <img src={cat.imageUrl} alt={cat.title} className="relative z-10 w-16 h-16 object-contain drop-shadow-2xl" />
+                    <Image src={cat.imageUrl} alt={cat.title} width={64} height={64} className="relative z-10 object-contain drop-shadow-2xl" />
                   ) : (
                     <div className="relative z-10 w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-2xl flex items-center justify-center">
                       <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

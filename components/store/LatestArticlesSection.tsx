@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
@@ -23,8 +24,9 @@ function ArticleCard({ article }: { article: Article }) {
       {}
       <div className="relative aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
         {article.coverImage ? (
-          <img src={article.coverImage} alt={article.title}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+          <Image src={article.coverImage} alt={article.title} fill
+            className="object-cover group-hover:scale-110 transition-transform duration-700"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-gray-900 flex items-center justify-center">
             <svg className="w-12 h-12 text-primary-300 dark:text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
