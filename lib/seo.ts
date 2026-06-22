@@ -18,8 +18,10 @@ export function buildBaseMetadata(opts: {
   path: string;
   noIndex?: boolean;
   ogType?: "website" | "article";
+  siteName?: string;
 }): Metadata {
-  const url = canonicalUrl(opts.path);
+  const url      = canonicalUrl(opts.path);
+  const siteName = opts.siteName ?? process.env.NEXT_PUBLIC_STORE_NAME;
   return {
     title:       opts.title,
     description: opts.description,
@@ -30,6 +32,7 @@ export function buildBaseMetadata(opts: {
       title:       opts.title,
       description: opts.description,
       url,
+      siteName,
       locale:      "fa_IR",
       type:        opts.ogType ?? "website",
       images:      opts.image ? [{ url: opts.image, width: 1200, height: 630 }] : [],

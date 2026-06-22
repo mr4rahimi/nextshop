@@ -27,6 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title:       brand.seoTitle       || `محصولات ${brand.title}`,
     description: brand.seoDescription || brand.description || `خرید محصولات اصل ${brand.title}`,
     image:       brand.logoUrl        || settings?.storeLogo || null,
+    siteName:    settings?.storeName  || undefined,
     path:        `/brands/${slug}`,
   });
 }

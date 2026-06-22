@@ -27,6 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title:       category.seoTitle       || `خرید ${category.title}`,
     description: category.seoDescription || category.description || `بهترین محصولات در دسته ${category.title}`,
     image:       category.imageUrl       || settings?.storeLogo || null,
+    siteName:    settings?.storeName     || undefined,
     path:        `/categories/${slug}`,
   });
 }
