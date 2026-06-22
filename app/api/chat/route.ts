@@ -32,15 +32,19 @@ interface Intent {
   search_query: string | null;
 }
 
-interface Product {
-  id: string;
+interface ProductRich {
   title: string;
   slug: string;
-  price: number;
-  salePrice?: number | null;
+  price: bigint;
+  salePrice: bigint | null;
   stock: number;
   trackStock: boolean;
-  brand?: { title: string; slug: string } | null;
+  shortDescription: string | null;
+  features: unknown;
+  warranty: string | null;
+  ratingAvg: number;
+  brand: { title: string } | null;
+  specs: { value: string; specItem: { title: string; group: { title: string } } }[];
 }
 
 interface Category {
@@ -202,47 +206,125 @@ ${categoriesText}
   }
 }
 
-async function fetchProducts(opts: {
-  category_slug?: string | null;
-  search_query?: string | null;
-}): Promise<Product[]> {
-  const params = new URLSearchParams({ pageSize: "8", sort: "popular" });
-  if (opts.category_slug) params.set("category", opts.category_slug);
-  if (opts.search_query) params.set("q", opts.search_query);
+// ─── کلیدواژه‌های تشخیص مرتب‌سازی از پیام کاربر ─────────────────────────────
+function detectSortIntent(query: string): "price_asc" | "price_desc" | "newest" | "popular" {
+  if (/ارزان|کمترین قیمت|کم‌قیمت|بودجه|مقرون|اقتصادی|cheap/.test(query)) return "price_asc";
+  if (/گران‌ترین|بهترین|باکیفیت‌ترین|پیشرفته‌ترین|برترین|high.end/.test(query))   return "price_desc";
+  if (/جدید|تازه|آخرین|نو/.test(query)) return "newest";
+  return "popular";
+}
+
+// ─── واکشی مستقیم از دیتابیس با اطلاعات کامل ────────────────────────────────
+async function fetchProductsRich(opts: {
+  categorySlug?: string | null;
+  searchQuery?: string | null;
+  userQuery?: string;
+  limit?: number;
+}): Promise<ProductRich[]> {
+  const limit = opts.limit ?? 30;
+
+  const where: {
+    isActive: boolean;
+    category?: { slug: string };
+    OR?: { title?: { contains: string; mode: "insensitive" }; shortDescription?: { contains: string; mode: "insensitive" } }[];
+  } = { isActive: true };
+
+  if (opts.categorySlug) {
+    where.category = { slug: opts.categorySlug };
+  }
+
+  if (opts.searchQuery) {
+    where.OR = [
+      { title: { contains: opts.searchQuery, mode: "insensitive" } },
+      { shortDescription: { contains: opts.searchQuery, mode: "insensitive" } },
+    ];
+  }
+
+  const sortIntent = opts.userQuery ? detectSortIntent(opts.userQuery) : "popular";
+  const orderBy =
+    sortIntent === "price_asc"  ? [{ price: "asc" as const }] :
+    sortIntent === "price_desc" ? [{ price: "desc" as const }] :
+    sortIntent === "newest"     ? [{ createdAt: "desc" as const }] :
+    [{ ratingCount: "desc" as const }, { ratingAvg: "desc" as const }];
 
   try {
-    const res = await fetch(`${BASE_URL}/api/products?${params.toString()}`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data.items ?? []) as Product[];
+    return await prisma.product.findMany({
+      where,
+      orderBy,
+      take: limit,
+      select: {
+        title: true,
+        slug: true,
+        price: true,
+        salePrice: true,
+        stock: true,
+        trackStock: true,
+        shortDescription: true,
+        features: true,
+        warranty: true,
+        ratingAvg: true,
+        brand: { select: { title: true } },
+        specs: {
+          select: {
+            value: true,
+            specItem: { select: { title: true, group: { select: { title: true } } } },
+          },
+        },
+      },
+    });
   } catch {
     return [];
   }
 }
 
-function buildProductsContext(products: Product[]): string {
+// ─── ساخت متن context غنی برای AI ───────────────────────────────────────────
+function buildRichContext(products: ProductRich[]): string {
   if (!products.length) return "محصولی یافت نشد.";
 
   return products
-    .map((p) => {
-      const price = p.salePrice ?? p.price;
-      const priceText = Number(price).toLocaleString("fa-IR");
-      const hasDiscount = p.salePrice && p.salePrice < p.price;
+    .map((p, idx) => {
+      const finalPrice = p.salePrice ?? p.price;
+      const priceText = Number(finalPrice).toLocaleString("fa-IR");
+      const hasDiscount = p.salePrice !== null && p.salePrice < p.price;
+      const origPriceText = hasDiscount
+        ? ` (قیمت اصلی: ${Number(p.price).toLocaleString("fa-IR")})`
+        : "";
       const stockText =
         !p.trackStock ? "موجود" :
         p.stock > 5   ? "موجود" :
         p.stock > 0   ? `فقط ${p.stock} عدد` : "ناموجود";
 
-      const parts = [
-        `📦 ${p.title}`,
-        `قیمت: ${priceText} تومان${hasDiscount ? " (تخفیف‌دار)" : ""}`,
-        `وضعیت: ${stockText}`,
+      const lines: string[] = [
+        `── محصول ${idx + 1}: ${p.title}`,
+        `   قیمت: ${priceText} تومان${origPriceText} | وضعیت: ${stockText}`,
       ];
-      if (p.brand) parts.push(`برند: ${p.brand.title}`);
-      parts.push(`لینک: /products/${p.slug}`);
-      return parts.join(" | ");
+
+      if (p.brand)    lines.push(`   برند: ${p.brand.title}`);
+      if (p.warranty) lines.push(`   گارانتی: ${p.warranty}`);
+      if (p.shortDescription?.trim())
+        lines.push(`   توضیح: ${p.shortDescription.trim()}`);
+
+      // features (JSON → string[])
+      const feats = Array.isArray(p.features)
+        ? (p.features as unknown[])
+            .map((f) => (typeof f === "string" ? f : typeof f === "object" && f && "text" in f ? String((f as { text: unknown }).text) : null))
+            .filter(Boolean)
+        : [];
+      if (feats.length)
+        lines.push(`   ویژگی‌ها: ${feats.slice(0, 6).join("، ")}`);
+
+      // specs grouped
+      if (p.specs.length) {
+        lines.push("   مشخصات فنی:");
+        p.specs.forEach((s) => {
+          lines.push(`     • ${s.specItem.title}: ${s.value}`);
+        });
+      }
+
+      lines.push(`   لینک: /products/${p.slug}`);
+      return lines.join("\n");
     })
-    .join("\n");
+    .join("\n\n");
 }
 
 function streamFromSystemPrompt(
@@ -384,20 +466,25 @@ ${topicContext}${buildFaqText(business)}`;
   // ════════════════════════════════════════════════════════════════════════
   // ════════════════════════════════════════════════════════════════════════
   if (context?.kind === "category") {
-    const products = await fetchProducts({ category_slug: context.slug });
-    const productsContext = buildProductsContext(products);
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+    const products = await fetchProductsRich({
+      categorySlug: context.slug,
+      userQuery: lastUserMsg,
+      limit: 30,
+    });
+    const productsContext = buildRichContext(products);
 
-    const systemPrompt = `تو دستیار خرید هوشمند این فروشگاه آنلاین هستی.
-کاربر در حال بررسی محصولات یک دسته‌بندی مشخص است.
-فقط از محصولات زیر برای مشاوره استفاده کن.
+    const systemPrompt = `تو یک متخصص محصولات این فروشگاه هستی و وظیفه‌ات مشاوره خرید دقیق است.
 
-قوانین:
-- قیمت‌ها را دقیق بگو
-- اگه محصول مناسب نبود صادقانه بگو
-- برای سوالات پرداخت/ارسال/گارانتی بگو با پشتیبانی تماس بگیرند
-- کوتاه، واضح و دوستانه باشی
+قوانین سخت:
+۱. فقط و فقط از اطلاعات ${products.length} محصول زیر استفاده کن — چیزی از خودت اضافه نکن
+۲. مقایسه قیمت: دقیقاً از اعداد لیست استفاده کن، ارزان‌ترین را با قیمت دقیق بگو
+۳. سوالات spec: مستقیماً از «مشخصات فنی» ذکرشده جواب بده
+۴. اگر مشخصه‌ای در لیست نیست، بگو «این اطلاعات در سیستم ثبت نشده»
+۵. سوالات پرداخت/ارسال/گارانتی را به پشتیبانی ارجاع بده
+۶. پاسخ کوتاه، دقیق، دوستانه و فارسی
 
-محصولات این دسته‌بندی:
+محصولات موجود (${products.length} محصول):
 ${productsContext}`;
 
     const stream = streamFromSystemPrompt(systemPrompt, messages, client, model, saveAssistant);
@@ -424,31 +511,36 @@ ${productsContext}`;
     return respond(stream);
   }
 
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
   let productsContext = "";
+  let fetchedCount = 0;
   if (intent.intent === "search" && (intent.category_slug || intent.search_query)) {
-    const products = await fetchProducts({
-      category_slug: intent.category_slug,
-      search_query: intent.search_query,
+    const products = await fetchProductsRich({
+      categorySlug: intent.category_slug,
+      searchQuery: intent.search_query,
+      userQuery: lastUserMsg,
+      limit: 20,
     });
-    productsContext = buildProductsContext(products);
+    fetchedCount = products.length;
+    productsContext = buildRichContext(products);
   }
 
   const productSection =
     intent.intent === "search"
-      ? productsContext !== "محصولی یافت نشد."
-        ? `\nمحصولات مرتبط:\n${productsContext}`
-        : "\nمحصولی در این دسته‌بندی یافت نشد."
+      ? fetchedCount > 0
+        ? `\nمحصولات مرتبط (${fetchedCount} محصول):\n${productsContext}`
+        : "\nمحصولی یافت نشد."
       : "";
 
-  const systemPrompt = `تو دستیار خرید هوشمند این فروشگاه آنلاین هستی.
-وظیفه‌ات مشاوره خرید دقیق و مفید به مشتریان است.
+  const systemPrompt = `تو یک متخصص محصولات این فروشگاه هستی و وظیفه‌ات مشاوره خرید دقیق است.
 
-قوانین:
-- فقط از اطلاعات محصولات زیر استفاده کن
-- قیمت‌ها را دقیق بگو
-- اگه محصول ناموجود بود صادقانه بگو و محصول مشابه پیشنهاد بده
-- برای سوالات پرداخت/ارسال/گارانتی بگو با پشتیبانی تماس بگیرند
-- کوتاه، واضح و دوستانه باشی
+قوانین سخت:
+۱. فقط از اطلاعات محصولات لیست‌شده استفاده کن — چیزی از خودت اضافه نکن
+۲. مقایسه قیمت: دقیقاً از اعداد لیست استفاده کن
+۳. سوالات spec: مستقیماً از «مشخصات فنی» ذکرشده جواب بده
+۴. اگر مشخصه‌ای در لیست نیست، بگو «این اطلاعات در سیستم ثبت نشده»
+۵. سوالات پرداخت/ارسال/گارانتی را به پشتیبانی ارجاع بده
+۶. پاسخ کوتاه، دقیق و دوستانه
 
 دسته‌بندی‌های فروشگاه:
 ${categoriesText}
