@@ -210,7 +210,7 @@ export default function ProductsPageClient() {
 
   // ── Load meta ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    fetch("/api/products-meta")
+    fetch("/api/store/products-meta")
       .then(r => r.json())
       .then(setMeta);
   }, []);
