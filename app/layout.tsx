@@ -23,6 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
   try {
     const s = await prisma.storeSettings.findUnique({ where: { id: "singleton" } });
     const name = s?.storeName ?? "مانا شاپ";
+    const googleVerify = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
     return {
       metadataBase: new URL(SITE_URL),
       title: { default: name, template: `%s | ${name}` },
@@ -31,6 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
       icons: s?.siteFavicon
         ? { icon: s.siteFavicon, shortcut: s.siteFavicon }
         : { icon: "/favicon.ico" },
+      verification: googleVerify ? { google: googleVerify } : undefined,
       openGraph: {
         title:       s?.storeName       ?? "مانا شاپ",
         description: s?.siteDescription ?? "",
