@@ -22,19 +22,23 @@ export default function StorySection() {
  
   useEffect(() => {
     if (!ready || stories.length === 0) return;
+    let cancelled = false;
 
     const interval = setInterval(() => {
       const StoryPlayerClass = (window as any).StoryPlayer;
-      if (StoryPlayerClass) {
-   
-        const container = document.getElementById("stories-container");
-        if (container) container.innerHTML = "";
-        new StoryPlayerClass("stories-container", stories);
-        clearInterval(interval);
-      }
+      if (!StoryPlayerClass) return;
+      clearInterval(interval);
+      if (cancelled) return;
+      const container = document.getElementById("stories-container");
+      if (!container) return;
+      container.innerHTML = "";
+      new StoryPlayerClass("stories-container", stories);
     }, 100);
 
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [ready, stories]);
 
   if (stories.length === 0) return null;

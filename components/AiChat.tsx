@@ -517,6 +517,7 @@ export default function AiChat() {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="دستیار خرید"
+        className="ai-chat-fab"
         style={{
           position: "fixed", bottom: "24px", right: "24px", zIndex: 9999,
           width: "56px", height: "56px", borderRadius: "50%",
@@ -539,7 +540,7 @@ export default function AiChat() {
 
       {}
       {open && (
-        <div dir="rtl" style={{
+        <div dir="rtl" className="ai-chat-panel" style={{
           position: "fixed", bottom: "92px", right: "24px", zIndex: 9998,
           width: "370px", maxWidth: "calc(100vw - 48px)",
           height: "520px", maxHeight: "calc(100vh - 120px)",
@@ -552,6 +553,10 @@ export default function AiChat() {
             @keyframes tb { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
             .td{display:inline-block;width:6px;height:6px;background:#9ca3af;border-radius:50%;animation:tb 1.2s infinite}
             .td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
+            @media (max-width: 640px) {
+              .ai-chat-fab { bottom: 140px !important; }
+              .ai-chat-panel { bottom: 212px !important; max-height: calc(100vh - 236px) !important; right: 16px !important; }
+            }
           `}</style>
 
           {}
