@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import AddToCartButton from "@/components/store/cart/AddToCartButton";
 import { useWishlist } from "@/components/store/wishlist/WishlistContext";
@@ -159,7 +160,7 @@ function RelatedSection({ title, products }: { title: string; products: RelatedP
               className={`group bg-white dark:bg-white/[0.03] border border-gray-100 dark:border-white/[0.06] rounded-2xl overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col ${outOfStock ? "opacity-60" : ""}`}>
               <div className="relative aspect-square bg-gray-50 dark:bg-white/5 overflow-hidden">
                 {(p.mainImage) ? (
-                  <img src={p.mainImage} alt={p.title} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500" />
+                  <Image src={p.mainImage} alt={p.title} fill className="object-contain p-2 group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 768px) 50vw, 16vw" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <svg className="w-8 h-8 text-gray-200 dark:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -277,7 +278,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
             {/* ── Gallery ── */}
             <div className="lg:col-span-5 space-y-6 flex flex-col items-center justify-center">
               <div className="relative group bg-white/40 dark:bg-black/20 backdrop-blur-2xl rounded-[3rem] border border-white/60 dark:border-white/5 shadow-2xl p-6 overflow-hidden w-full">
-                <div className="flex items-center justify-center h-[380px] md:h-[450px]">
+                <div className="relative flex items-center justify-center h-[380px] md:h-[450px]">
                   {currentMedia?.type === "video" ? (
                     <video
                       src={currentMedia.url}
@@ -285,10 +286,13 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                       className="max-h-full w-auto object-contain rounded-2xl"
                     />
                   ) : currentMedia ? (
-                    <img
+                    <Image
                       src={currentMedia.url}
                       alt={product.title}
-                      className="max-h-full w-auto object-contain transition-transform duration-700"
+                      fill
+                      priority
+                      className="object-contain transition-transform duration-700"
+                      sizes="(max-width: 1024px) 100vw, 42vw"
                     />
                   ) : (
                     <div className="w-40 h-40 bg-gray-100 dark:bg-gray-800 rounded-3xl flex items-center justify-center text-gray-300">
@@ -321,7 +325,9 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                             </svg>
                           </div>
                         ) : (
-                          <img src={item.url} alt="" className="w-full h-full object-contain p-1" />
+                          <div className="relative w-full h-full">
+                            <Image src={item.url} alt={`${product.title} - تصویر ${i + 1}`} fill className="object-contain p-1" sizes="64px" />
+                          </div>
                         )}
                       </button>
                     ))}
