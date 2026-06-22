@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Sub { id: string; title: string; slug: string; imageUrl: string | null; }
 interface MegaCat {
@@ -84,7 +85,7 @@ export default function MobileMenuPortal({ logoUrl, siteName }: { logoUrl?: stri
         {}
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/40 dark:border-gray-800 bg-white/30 dark:bg-gray-900/30 flex-shrink-0">
           <Link href="/" onClick={close}>
-            {logoUrl && <img src={logoUrl} className="h-8 w-auto max-w-[120px] object-contain" alt={siteName ?? ""} />}
+            {logoUrl && <Image src={logoUrl} width={120} height={32} className="h-8 w-auto max-w-[120px] object-contain" alt={siteName ?? ""} />}
           </Link>
           <button onClick={close}
             className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-secondary-500 rounded-xl transition-all border border-transparent hover:border-red-100">
@@ -146,7 +147,7 @@ export default function MobileMenuPortal({ logoUrl, siteName }: { logoUrl?: stri
                         className="w-full flex items-center justify-between p-4 rounded-2xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 shadow-sm hover:bg-white/60 dark:hover:bg-white/8 transition-all">
                         <div className="flex items-center gap-3 text-gray-800 dark:text-gray-200">
                           {m.category.imageUrl
-                            ? <img src={m.category.imageUrl} alt={m.category.title} className="w-6 h-6 rounded-lg object-cover" />
+                            ? <Image src={m.category.imageUrl} alt={m.category.title} width={24} height={24} className="rounded-lg object-cover" />
                             : <div className="w-6 h-6 rounded-lg bg-primary-500/20 flex items-center justify-center text-[10px] font-black text-primary-600">{m.category.title.charAt(0)}</div>
                           }
                           <span className="font-black text-sm">{m.category.title}</span>

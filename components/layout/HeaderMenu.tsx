@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Sub { id: string; title: string; slug: string; imageUrl: string | null; }
 interface MegaCat {
@@ -59,9 +60,9 @@ export default function HeaderMenu() {
                       {megaCats.map(m => (
                         <button key={m.category.id} onMouseEnter={() => megaEnter(m.category.id)}
                           className={`w-full flex items-center gap-3 px-4 py-3 text-right transition-all ${activeMega === m.category.id ? "bg-white dark:bg-gray-900 text-primary-600 dark:text-primary-400" : "text-gray-700 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-900/60"}`}>
-                          <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 bg-primary-500/10 flex items-center justify-center">
+                          <div className="relative w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 bg-primary-500/10 flex items-center justify-center">
                             {m.category.imageUrl
-                              ? <img src={m.category.imageUrl} alt="" className="w-full h-full object-cover" />
+                              ? <Image src={m.category.imageUrl} alt={m.category.title} fill className="object-cover" sizes="28px" />
                               : <span className="text-[10px] font-black text-primary-600">{m.category.title.charAt(0)}</span>
                             }
                           </div>
@@ -99,7 +100,7 @@ export default function HeaderMenu() {
                           <Link href={`/categories/${activeCat.slug}`}
                             className="block relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-square group shadow-md">
                             {activeCat.imageUrl
-                              ? <img src={activeCat.imageUrl} alt={activeCat.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                              ? <Image src={activeCat.imageUrl} alt={activeCat.title} fill className="object-cover group-hover:scale-110 transition-transform duration-500" sizes="144px" />
                               : <div className="w-full h-full flex items-center justify-center">
                                   <svg className="w-14 h-14 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useTheme } from "@/components/layout/ThemeProvider";
 import CartIcon from "@/components/store/cart/CartIcon";
 import SearchBox from "@/components/store/SearchBox";
@@ -29,7 +30,7 @@ export default function HeaderTop({ logoUrl, siteName }: { logoUrl: string | nul
             </button>
  
             <Link href="/" className="flex items-center gap-2">
-              {logoUrl && <img src={logoUrl} className="w-28 h-auto" alt={siteName ?? ""} />}
+              {logoUrl && <Image src={logoUrl} width={112} height={40} className="h-10 w-auto object-contain" alt={siteName ?? ""} priority />}
             </Link>
           </div>
 

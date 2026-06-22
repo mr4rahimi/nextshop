@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface FooterItem { id: string; label: string; url: string | null; }
 interface FooterColumn {
@@ -90,7 +91,7 @@ export default function Footer() {
                     {}
                     {settings.storeLogo ? (
                       <Link href="/">
-                        <img src={settings.storeLogo} alt={settings.storeName} className="h-10 w-auto brightness-0 invert opacity-90 hover:opacity-100 transition-opacity" />
+                        <Image src={settings.storeLogo} alt={settings.storeName ?? ""} width={160} height={40} className="h-10 w-auto brightness-0 invert opacity-90 hover:opacity-100 transition-opacity" />
                       </Link>
                     ) : (
                       <Link href="/" className="text-2xl font-black text-white">{settings.storeName}</Link>
@@ -214,6 +215,7 @@ export default function Footer() {
                             <div key={i} className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden hover:border-white/20 transition-all cursor-pointer"
                               title={badge.label}>
                               {badge.type === "img" ? (
+                                // eslint-disable-next-line @next/next/no-img-element
                                 <img src={badge.code!} alt={badge.label} className="w-full h-full object-contain p-1" />
                               ) : (
                                 <div className="text-center p-1"
