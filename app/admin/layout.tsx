@@ -114,6 +114,7 @@ const MENU_GROUPS = [
           { href: "/admin/admins", label: "مدیریت ادمین‌ها", icon: "🔐" },
           { href: "/admin/chat-settings", label: "تنظیمات چت", icon: "💬" },
           { href: "/admin/chat-history", label: "تاریخچه چت", icon: "💬" },
+          { href: "/admin/callback-requests", label: "درخواست‌های تماس", icon: "💬" },
           { href: "/admin/changelog", label: "نسخه برنامه", icon: "🚀" }
         ],
       },
@@ -355,7 +356,7 @@ function Breadcrumb() {
     "spec-groups": "مشخصات", blog: "بلاگ", widgets: "ویجت‌ها",
     stories: "استوری‌ها", "hero-slides": "اسلایدر", shipping: "ارسال",
     "site-settings": "تنظیمات", footer: "فوتر", menu: "منو",
-    create: "جدید", comments: "نظرات", media: "کتابخانه رسانه", guaranty: "گارانتی", requests: "درخواست‌ها", wallet: "کیف پول", appearance: "ظاهر سایت", "chat-settings": "تنظیمات چت", changelog: "نسخه برنامه", "chat-history": "تاریخچه چت",
+    create: "جدید", comments: "نظرات", media: "کتابخانه رسانه", guaranty: "گارانتی", requests: "درخواست‌ها", wallet: "کیف پول", appearance: "ظاهر سایت", "chat-settings": "تنظیمات چت", changelog: "نسخه برنامه", "chat-history": "تاریخچه چت", "callback-requests": "درخواست‌های تماس",
   };
 
   return (

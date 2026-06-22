@@ -181,6 +181,13 @@ export default function AiChat() {
   // "idle" = not determined yet, "guest" = no auth, "member" = logged in
   const [sessionMode, setSessionMode] = useState<"idle" | "guest" | "member">("idle");
 
+  // callback request panel
+  const [callbackOpen, setCallbackOpen] = useState(false);
+  const [callbackPhone, setCallbackPhone] = useState("");
+  const [callbackDone, setCallbackDone] = useState(false);
+  const [callbackLoading, setCallbackLoading] = useState(false);
+  const [userPhone, setUserPhone] = useState<string | null>(null);
+
   const conversationIdRef = useRef<string | null>(null);
   const initDoneRef = useRef(false);
 
@@ -219,9 +226,10 @@ export default function AiChat() {
         // Stage 2: auth check — non-blocking, failure is safe to ignore
         fetch(`/api/store/my-chat?siteId=${encodeURIComponent(siteId)}`)
           .then((r) => (r.ok ? r.json() : null))
-          .then((myChat: { isLoggedIn: boolean; conversationId?: string | null; messages?: { role: string; content: string }[] } | null) => {
+          .then((myChat: { isLoggedIn: boolean; phone?: string | null; conversationId?: string | null; messages?: { role: string; content: string }[] } | null) => {
             if (!myChat?.isLoggedIn) return; // confirmed guest
             setSessionMode("member");
+            if (myChat.phone) setUserPhone(myChat.phone);
             const msgs = myChat.messages ?? [];
             if (myChat.conversationId && msgs.length > 0) {
               const serverBubbles = msgs.map((m) => ({
@@ -278,6 +286,25 @@ export default function AiChat() {
     conversationIdRef.current = null;
     if (sessionMode === "guest") clearLocalState();
     if (config) initRoot(config);
+    setCallbackOpen(false);
+    setCallbackDone(false);
+    setCallbackPhone("");
+  }
+
+  async function submitCallback() {
+    const phone = (sessionMode === "member" && userPhone ? userPhone : callbackPhone).trim();
+    if (!phone) return;
+    setCallbackLoading(true);
+    try {
+      const siteId = typeof window !== "undefined" ? window.location.host : "";
+      const res = await fetch("/api/store/callback-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, conversationId: conversationIdRef.current, siteId }),
+      });
+      if (res.ok) setCallbackDone(true);
+    } catch { /* ignore */ }
+    setCallbackLoading(false);
   }
 
   // ── Node / category / other handlers ─────────────────────────────────────
@@ -677,10 +704,133 @@ export default function AiChat() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* ── Callback request section ──────────────────────────────────── */}
+          {config && config.isEnabled && sessionMode !== "idle" && (
+            <div style={{
+              borderTop: "1px solid #f3f4f6", background: "#fff",
+              padding: callbackOpen && !callbackDone ? "12px 14px" : "8px 14px",
+              transition: "padding 0.2s",
+            }}>
+              {callbackDone ? (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: "8px",
+                  background: "#f0fdf4", borderRadius: "10px", padding: "10px 12px",
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" style={{ flexShrink: 0 }}>
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span style={{ fontSize: "12px", color: "#15803d", fontWeight: 700 }}>
+                    درخواست ثبت شد. به زودی با شما تماس می‌گیریم.
+                  </span>
+                </div>
+              ) : !callbackOpen ? (
+                <button
+                  onClick={() => setCallbackOpen(true)}
+                  style={{
+                    width: "100%", textAlign: "right", background: "none", border: "1.5px dashed #d1d5db",
+                    borderRadius: "10px", padding: "8px 12px", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: "8px", fontFamily: "inherit",
+                    color: "#6b7280", fontSize: "12px", fontWeight: 700,
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#6366f1"; e.currentTarget.style.color = "#6366f1"; e.currentTarget.style.background = "#eef2ff"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#d1d5db"; e.currentTarget.style.color = "#6b7280"; e.currentTarget.style.background = "none"; }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.12 3.18 2 2 0 012.1 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.09a16 16 0 006 6l.55-.55a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+                  </svg>
+                  درخواست تماس کارشناس
+                </button>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" style={{ flexShrink: 0 }}>
+                      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.12 3.18 2 2 0 012.1 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.09a16 16 0 006 6l.55-.55a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+                    </svg>
+                    <span style={{ fontSize: "12px", fontWeight: 800, color: "#374151" }}>
+                      {sessionMode === "member" && userPhone
+                        ? "شماره تماس شما:"
+                        : "شماره تماس خود را وارد کنید:"}
+                    </span>
+                  </div>
+
+                  {sessionMode === "member" && userPhone ? (
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <div style={{
+                        flex: 1, background: "#f3f4f6", borderRadius: "8px",
+                        padding: "9px 12px", fontSize: "13px", direction: "ltr",
+                        color: "#374151", fontWeight: 700,
+                      }}>
+                        {userPhone}
+                      </div>
+                      <button
+                        onClick={submitCallback} disabled={callbackLoading}
+                        style={{
+                          padding: "9px 16px", borderRadius: "8px", border: "none",
+                          background: callbackLoading ? "#c7d2fe" : "#6366f1", color: "#fff",
+                          fontSize: "12px", fontWeight: 800, cursor: callbackLoading ? "default" : "pointer",
+                          fontFamily: "inherit", flexShrink: 0,
+                        }}
+                      >
+                        {callbackLoading ? "..." : "ثبت درخواست"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <input
+                        type="tel" value={callbackPhone}
+                        onChange={(e) => setCallbackPhone(e.target.value)}
+                        placeholder="مثال: ۰۹۱۲۳۴۵۶۷۸۹"
+                        onKeyDown={(e) => e.key === "Enter" && submitCallback()}
+                        style={{
+                          flex: 1, border: "1.5px solid #e5e7eb", borderRadius: "8px",
+                          padding: "9px 12px", fontSize: "13px", fontFamily: "inherit",
+                          direction: "ltr", outline: "none",
+                        }}
+                        onFocus={(e) => { e.target.style.borderColor = "#6366f1"; }}
+                        onBlur={(e) => { e.target.style.borderColor = "#e5e7eb"; }}
+                      />
+                      <button
+                        onClick={submitCallback}
+                        disabled={callbackLoading || !callbackPhone.trim()}
+                        style={{
+                          padding: "9px 14px", borderRadius: "8px", border: "none",
+                          background: callbackLoading || !callbackPhone.trim() ? "#c7d2fe" : "#6366f1",
+                          color: "#fff", fontSize: "12px", fontWeight: 800,
+                          cursor: callbackLoading || !callbackPhone.trim() ? "default" : "pointer",
+                          fontFamily: "inherit", flexShrink: 0,
+                        }}
+                      >
+                        {callbackLoading ? "..." : "ثبت"}
+                      </button>
+                    </div>
+                  )}
+
+                  {!(sessionMode === "member" && userPhone) && (
+                    <p style={{ fontSize: "11px", color: "#9ca3af", margin: 0 }}>
+                      در سریع‌ترین زمان کارشناسان ما با شما تماس می‌گیرند
+                    </p>
+                  )}
+
+                  <button
+                    onClick={() => setCallbackOpen(false)}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      fontSize: "11px", color: "#9ca3af", textAlign: "right",
+                      padding: 0, fontFamily: "inherit",
+                    }}
+                  >
+                    انصراف
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {}
           {inputMode && (
             <div style={{
-              padding: "12px", borderTop: "1px solid #f3f4f6",
+              padding: "12px", borderTop: callbackOpen || callbackDone ? "none" : "1px solid #f3f4f6",
               display: "flex", gap: "8px", alignItems: "flex-end", background: "#fff",
             }}>
               <textarea

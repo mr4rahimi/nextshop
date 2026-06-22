@@ -22,11 +22,12 @@ export async function GET(req: NextRequest) {
   const conv = await getLastConversation({ userId: user.id, siteId });
 
   if (!conv) {
-    return NextResponse.json({ isLoggedIn: true, conversationId: null, messages: [] });
+    return NextResponse.json({ isLoggedIn: true, phone: user.phone, conversationId: null, messages: [] });
   }
 
   return NextResponse.json({
     isLoggedIn: true,
+    phone: user.phone,
     conversationId: conv.id,
     messages: conv.messages,
   });

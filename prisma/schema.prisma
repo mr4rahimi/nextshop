@@ -992,3 +992,20 @@ model ChatMessage {
 
   @@index([conversationId])
 }
+
+model CallbackRequest {
+  id             String    @id @default(cuid())
+  siteId         String?
+  conversationId String?
+  userId         String?
+  phone          String
+  status         String    @default("pending") // pending | contacted | done
+  note           String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([siteId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([siteId, status])
+}
