@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  .pk-scroller::-webkit-scrollbar { display: none; }
+  @keyframes pk-glow { 0%,100% { opacity:.45 } 50% { opacity:.75 } }
+  @keyframes pk-tick { 0% { transform: translateY(-3px); opacity:.3 } 100% { transform: translateY(0); opacity:1 } }
+</style>
+<script src="image-slot.js"></script>
+</helmet>
+
+<section dir="rtl" style="font-family:'Vazirmatn',sans-serif; background:#0e0f12; position:relative; overflow:hidden; padding:64px 0 80px; color:#fff;">
+
+  <div style="position:absolute; top:-180px; left:-120px; width:480px; height:480px; border-radius:50%; background:radial-gradient(circle, rgba(255,59,78,.18), transparent 70%); filter:blur(20px); animation:pk-glow 6s ease-in-out infinite; pointer-events:none;"></div>
+  <div style="position:absolute; bottom:-160px; right:-100px; width:420px; height:420px; border-radius:50%; background:radial-gradient(circle, rgba(255,59,78,.10), transparent 70%); filter:blur(20px); pointer-events:none;"></div>
+
+  <div style="max-width:1340px; margin:0 auto; padding:0 32px; position:relative;">
+
+    <!-- Header -->
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:36px;">
+      <div style="display:flex; align-items:center; gap:18px;">
+        <div style="display:flex; align-items:center; justify-content:center; width:52px; height:52px; border-radius:16px; background:linear-gradient(135deg,#ff3b4e,#c81e3a); box-shadow:0 10px 30px rgba(255,59,78,.35);">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M13 2 4.5 13.5h6L9 22l9.5-12.5h-6L13 2Z" fill="#fff"/></svg>
+        </div>
+        <div>
+          <h2 style="margin:0; font-size:28px; font-weight:800; letter-spacing:-.5px; line-height:1.2;">تخفیف‌های شگفت‌انگیز</h2>
+          <p style="margin:6px 0 0; font-size:14px; color:#9aa0aa; font-weight:500;">پیشنهادهای ویژه پارس کالا، فقط تا پایان امروز</p>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:20px;">
+        <!-- Countdown -->
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:13px; color:#9aa0aa; font-weight:600;">پایان فروش تا</span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div data-tick style="min-width:46px; text-align:center; background:#1a1c22; border:1px solid #2a2d36; border-radius:12px; padding:9px 8px; font-size:19px; font-weight:700; font-variant-numeric:tabular-nums;">{{ cdH }}</div>
+            <span style="color:#ff3b4e; font-weight:700;">:</span>
+            <div data-tick style="min-width:46px; text-align:center; background:#1a1c22; border:1px solid #2a2d36; border-radius:12px; padding:9px 8px; font-size:19px; font-weight:700; font-variant-numeric:tabular-nums;">{{ cdM }}</div>
+            <span style="color:#ff3b4e; font-weight:700;">:</span>
+            <div data-tick style="min-width:46px; text-align:center; background:#ff3b4e; border:1px solid #ff3b4e; border-radius:12px; padding:9px 8px; font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; box-shadow:0 8px 20px rgba(255,59,78,.3);">{{ cdS }}</div>
+          </div>
+        </div>
+        <a href="#" style="display:none; align-items:center; gap:6px; color:#fff; text-decoration:none; font-size:14px; font-weight:600; padding:10px 16px; border:1px solid #2a2d36; border-radius:12px;">مشاهده همه</a>
+      </div>
+    </div>
+
+    <!-- Carousel -->
+    <div style="position:relative;">
+
+      <button onClick="{{ onPrev }}" aria-label="قبلی" style="position:absolute; right:-14px; top:140px; z-index:5; width:48px; height:48px; border-radius:50%; border:none; cursor:pointer; background:#fff; color:#16181d; display:flex; align-items:center; justify-content:center; box-shadow:0 12px 30px rgba(0,0,0,.45); transition:transform .2s ease, background .2s ease;" style-hover="background:#ff3b4e; color:#fff; transform:scale(1.08);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button onClick="{{ onNext }}" aria-label="بعدی" style="position:absolute; left:-14px; top:140px; z-index:5; width:48px; height:48px; border-radius:50%; border:none; cursor:pointer; background:#fff; color:#16181d; display:flex; align-items:center; justify-content:center; box-shadow:0 12px 30px rgba(0,0,0,.45); transition:transform .2s ease, background .2s ease;" style-hover="background:#ff3b4e; color:#fff; transform:scale(1.08);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+
+      <div class="pk-scroller" ref="{{ scrollerRef }}" style="display:flex; gap:20px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; padding:6px 2px 12px; scroll-padding:0 6px;">
+        <sc-for list="{{ products }}" as="p" hint-placeholder-count="6">
+          <div data-card style="scroll-snap-align:start; flex:0 0 240px; background:#fff; border-radius:20px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,.25); transition:transform .28s cubic-bezier(.22,1,.36,1), box-shadow .28s ease; display:flex; flex-direction:column;" style-hover="transform:translateY(-8px); box-shadow:0 22px 48px rgba(0,0,0,.4);">
+
+            <!-- Image area -->
+            <div style="position:relative; padding:18px; background:linear-gradient(160deg,#f7f8fa,#eef0f3); height:228px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+              <span style="position:absolute; top:14px; right:14px; z-index:2; background:linear-gradient(135deg,#ff3b4e,#d61f3a); color:#fff; font-size:13px; font-weight:800; padding:5px 11px; border-radius:0 12px 0 14px; box-shadow:0 6px 16px rgba(255,59,78,.35);">{{ p.discountFa }}٪</span>
+              <button aria-label="علاقه‌مندی" style="position:absolute; top:12px; left:12px; z-index:2; width:34px; height:34px; border-radius:50%; border:none; cursor:pointer; background:rgba(255,255,255,.9); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,.1); color:#8a9099; transition:color .2s ease, transform .2s ease;" style-hover="color:#ff3b4e; transform:scale(1.1);">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 20s-7-4.5-9.3-9.2C1.2 7.8 2.8 5 5.7 5c1.8 0 3.1 1 4.3 2.6C11.2 6 12.5 5 14.3 5c2.9 0 4.5 2.8 3 5.8C15 15.5 12 20 12 20Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              </button>
+              <image-slot id="{{ p.slotId }}" shape="rounded" radius="12" placeholder="عکس محصول" style="width:100%; height:100%;"></image-slot>
+            </div>
+
+            <!-- Body -->
+            <div style="padding:16px 18px 18px; display:flex; flex-direction:column; gap:11px; flex:1;">
+              <h3 style="margin:0; font-size:15px; font-weight:700; color:#1a1c22; line-height:1.6; min-height:48px; text-wrap:pretty;">{{ p.name }}</h3>
+
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="color:#ffb400; font-size:14px; letter-spacing:1px;">{{ p.stars }}</span>
+                <span style="color:#9aa0aa; font-size:12px; font-weight:500;">({{ p.ratingFa }})</span>
+              </div>
+
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:8px; margin-top:auto;">
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                  <span style="color:#b7bcc4; font-size:12px; font-weight:500; text-decoration:line-through;">{{ p.oldFa }}</span>
+                  <span style="color:#16181d; font-size:17px; font-weight:800;">{{ p.newFa }} <span style="font-size:12px; font-weight:600; color:#8a9099;">تومان</span></span>
+                </div>
+                <button aria-label="افزودن به سبد خرید" style="flex:0 0 auto; width:44px; height:44px; border-radius:14px; border:none; cursor:pointer; background:#16181d; color:#fff; display:flex; align-items:center; justify-content:center; transition:background .2s ease, transform .2s ease;" style-hover="background:#ff3b4e; transform:translateY(-2px);">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 4h2l2.2 11.2a1.5 1.5 0 0 0 1.5 1.2h8.1a1.5 1.5 0 0 0 1.5-1.2L21 7H6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="20" r="1.4" fill="currentColor"/><circle cx="17.5" cy="20" r="1.4" fill="currentColor"/></svg>
+                </button>
+              </div>
+
+              <!-- Stock bar -->
+              <div style="margin-top:4px;">
+                <div style="height:6px; border-radius:6px; background:#eef0f3; overflow:hidden;">
+                  <div style="height:100%; width:{{ p.stockPct }}; border-radius:6px; background:linear-gradient(90deg,#ff3b4e,#ff7a4d);"></div>
+                </div>
+                <p style="margin:6px 0 0; font-size:11px; color:#9aa0aa; font-weight:500;">باقیمانده: {{ p.stockFa }} عدد</p>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- Progress -->
+      <div style="margin-top:22px; height:4px; border-radius:4px; background:#23262e; overflow:hidden;">
+        <div style="height:100%; border-radius:4px; background:linear-gradient(90deg,#ff3b4e,#ff7a4d); width:{{ progressPct }}; transition:width .25s ease;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1340,&quot;height&quot;:640}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.scroller = React.createRef();
+    const deadline = Date.now() + (5 * 3600 + 42 * 60 + 18) * 1000;
+    this.state = { now: Date.now(), deadline, progress: 0 };
+    this._onScroll = this._onScroll.bind(this);
+  }
+
+  componentDidMount() {
+    this._timer = setInterval(() => this.setState({ now: Date.now() }), 1000);
+    const el = this.scroller.current;
+    if (el) {
+      el.addEventListener('scroll', this._onScroll, { passive: true });
+      this._onScroll();
+    }
+  }
+  componentWillUnmount() {
+    clearInterval(this._timer);
+    const el = this.scroller.current;
+    if (el) el.removeEventListener('scroll', this._onScroll);
+  }
+
+  _onScroll() {
+    const el = this.scroller.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    const pct = max > 0 ? Math.min(100, Math.abs(el.scrollLeft) / max * 100) : 0;
+    this.setState({ progress: pct });
+  }
+
+  _scroll(dir) {
+    const el = this.scroller.current;
+    if (!el) return;
+    const card = el.querySelector('[data-card]');
+    const gap = 20;
+    const amount = card ? (card.offsetWidth + gap) * 2 : 480;
+    el.scrollBy({ left: dir * amount, behavior: 'smooth' });
+  }
+
+  _fa(n) { return Number(n).toLocaleString('fa-IR'); }
+  _stars(r) {
+    const full = Math.round(r);
+    return '★★★★★'.slice(0, full) + '☆☆☆☆☆'.slice(0, 5 - full);
+  }
+
+  renderVals() {
+    const raw = [
+      { name: 'کاپشن برند مراکش مدل ۴۹۱', old: 450000, now: 265000, rating: 5, ratings: 128, stock: 4 },
+      { name: 'کت چرم مردانه مدل ۵۰۰۳', old: 680000, now: 550000, rating: 4, ratings: 96, stock: 7 },
+      { name: 'کیف دستی زنانه مدل M520', old: 800000, now: 750000, rating: 5, ratings: 214, stock: 12 },
+      { name: 'ساک ورزشی اسپورت مدل ۵۰۰۱', old: 550000, now: 495000, rating: 4, ratings: 73, stock: 9 },
+      { name: 'کیف زنانه چرمی مدل E500', old: 1180000, now: 979000, rating: 5, ratings: 187, stock: 3 },
+      { name: 'کیف دوشی زنانه مدل Ep006', old: 159000, now: 119000, rating: 4, ratings: 64, stock: 15 },
+      { name: 'کوله ورزشی نایک مدل R125', old: 890000, now: 745000, rating: 5, ratings: 142, stock: 6 },
+      { name: 'کوله پشتی آبی مدل L901', old: 445000, now: 382000, rating: 4, ratings: 88, stock: 11 },
+      { name: 'کفش کتانی آدیداس مشکی', old: 980000, now: 850000, rating: 5, ratings: 305, stock: 5 },
+    ];
+
+    const products = raw.map((p, i) => {
+      const discount = Math.round((1 - p.now / p.old) * 100);
+      return {
+        ...p,
+        slotId: 'pk-prod-' + i,
+        discountFa: this._fa(discount),
+        oldFa: this._fa(p.old),
+        newFa: this._fa(p.now),
+        ratingFa: this._fa(p.ratings),
+        stars: this._stars(p.rating),
+        stockFa: this._fa(p.stock),
+        stockPct: Math.max(8, Math.min(100, p.stock * 7)) + '%',
+      };
+    });
+
+    const left = Math.max(0, Math.floor((this.state.deadline - this.state.now) / 1000));
+    const faDigits = (s) => String(s).replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
+    const pad = (n) => faDigits(String(n).padStart(2, '0'));
+
+    return {
+      products,
+      onPrev: () => this._scroll(1),
+      onNext: () => this._scroll(-1),
+      scrollerRef: this.scroller,
+      cdH: pad(Math.floor(left / 3600)),
+      cdM: pad(Math.floor((left % 3600) / 60)),
+      cdS: pad(left % 60),
+      progressPct: this.state.progress + '%',
+    };
+  }
+}
+</script>
+</body>
+</html>
