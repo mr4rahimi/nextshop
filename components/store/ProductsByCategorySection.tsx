@@ -26,6 +26,8 @@ interface Props {
   categoryTitle?: string;
   categorySlug?: string;
   count?: number;
+  sortMode?: string;
+  productIds?: string[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -161,6 +163,8 @@ export default function ProductsByCategorySection({
   categoryTitle = "محصولات",
   categorySlug,
   count = 8,
+  sortMode = "newest",
+  productIds = [],
 }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,13 +173,23 @@ export default function ProductsByCategorySection({
   const uid = useRef(`pbc-${Math.random().toString(36).slice(2, 7)}`);
 
   useEffect(() => {
-    if (!categoryId) { setLoading(false); return; }
-    setLoading(true);
-    fetch(`/api/store/products-by-category?categoryId=${categoryId}&count=${count}`)
-      .then(r => r.json())
-      .then(data => { setProducts(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [categoryId, count]);
+    if (sortMode === "manual") {
+      if (productIds.length === 0) { setLoading(false); return; }
+      setLoading(true);
+      fetch(`/api/store/products-by-category?productIds=${productIds.join(",")}`)
+        .then(r => r.json())
+        .then(data => { setProducts(data); setLoading(false); })
+        .catch(() => setLoading(false));
+    } else {
+      if (!categoryId) { setLoading(false); return; }
+      setLoading(true);
+      const sort = sortMode === "best_sellers" ? "best_sellers" : "newest";
+      fetch(`/api/store/products-by-category?categoryId=${categoryId}&count=${count}&sort=${sort}`)
+        .then(r => r.json())
+        .then(data => { setProducts(data); setLoading(false); })
+        .catch(() => setLoading(false));
+    }
+  }, [categoryId, count, sortMode, JSON.stringify(productIds)]);
 
   // init swiper
   useEffect(() => {

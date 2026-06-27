@@ -10,19 +10,24 @@ export async function GET(req: Request) {
   const q = url.searchParams.get("q")?.trim() ?? "";
   const ids = url.searchParams.get("ids")?.split(",").filter(Boolean) ?? [];
 
+  const categoryId = url.searchParams.get("categoryId") ?? "";
+  const brandId = url.searchParams.get("brandId") ?? "";
+
   const products = await prisma.product.findMany({
     where: {
       isActive: true,
       ...(ids.length > 0
         ? { id: { in: ids } }
-        : q
-        ? {
-            OR: [
-              { title: { contains: q, mode: "insensitive" } },
-              { slug: { contains: q, mode: "insensitive" } },
-            ],
-          }
-        : {}),
+        : {
+            ...(q ? {
+              OR: [
+                { title: { contains: q, mode: "insensitive" } },
+                { slug: { contains: q, mode: "insensitive" } },
+              ],
+            } : {}),
+            ...(categoryId ? { categoryId } : {}),
+            ...(brandId ? { brandId } : {}),
+          }),
     },
     select: {
       id: true,

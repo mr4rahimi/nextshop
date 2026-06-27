@@ -182,15 +182,252 @@ function CategoryEditor({
   );
 }
 
+// ─── ProductPicker ────────────────────────────────────────────────────────────
+type PickerAccent = "teal" | "indigo";
+
+const PICKER_COLORS: Record<PickerAccent, { badge: string; sel: string; check: string; upHover: string; spin: string }> = {
+  teal:  { badge: "bg-teal-500",  sel: "bg-teal-50 dark:bg-teal-900/20",  check: "checked:bg-teal-500 checked:border-teal-500",  upHover: "hover:bg-teal-100 dark:hover:bg-teal-900/30",  spin: "border-teal-500"  },
+  indigo:{ badge: "bg-indigo-500",sel: "bg-indigo-50 dark:bg-indigo-900/20",check:"checked:bg-indigo-500 checked:border-indigo-500",upHover:"hover:bg-indigo-100 dark:hover:bg-indigo-900/30",spin:"border-indigo-500"},
+};
+
+function ProductPicker({
+  selectedIds, setSelectedIds,
+  filterCategoryId, filterBrandId,
+  accent,
+}: {
+  selectedIds: string[];
+  setSelectedIds: (ids: string[]) => void;
+  filterCategoryId?: string;
+  filterBrandId?: string;
+  accent: PickerAccent;
+}) {
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [loadingSelected, setLoadingSelected] = useState(false);
+  const [filterOnly, setFilterOnly] = useState(true);
+  const c = PICKER_COLORS[accent];
+
+  useEffect(() => {
+    if (selectedIds.length === 0) { setSelectedProducts([]); return; }
+    setLoadingSelected(true);
+    fetch(`/api/admin/products-search?ids=${selectedIds.join(",")}`)
+      .then(r => r.json())
+      .then((data: Product[]) => {
+        const sorted = selectedIds.map(id => data.find(p => p.id === id)).filter(Boolean) as Product[];
+        setSelectedProducts(sorted);
+      })
+      .finally(() => setLoadingSelected(false));
+  }, []);
+
+  useEffect(() => {
+    if (!search.trim()) { setSearchResults([]); return; }
+    const timer = setTimeout(() => {
+      setSearching(true);
+      const params = new URLSearchParams({ q: search });
+      if (filterOnly && filterCategoryId) params.set("categoryId", filterCategoryId);
+      if (filterOnly && filterBrandId) params.set("brandId", filterBrandId);
+      fetch(`/api/admin/products-search?${params}`)
+        .then(r => r.json()).then(setSearchResults).finally(() => setSearching(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, filterOnly, filterCategoryId, filterBrandId]);
+
+  function toggleProduct(product: Product) {
+    if (selectedIds.includes(product.id)) {
+      setSelectedIds(selectedIds.filter(id => id !== product.id));
+      setSelectedProducts(prev => prev.filter(p => p.id !== product.id));
+    } else {
+      setSelectedIds([...selectedIds, product.id]);
+      setSelectedProducts(prev => [...prev, product]);
+    }
+  }
+  function moveUp(i: number) {
+    if (i === 0) return;
+    const a = [...selectedProducts]; [a[i - 1], a[i]] = [a[i], a[i - 1]];
+    setSelectedProducts(a); setSelectedIds(a.map(p => p.id));
+  }
+  function moveDown(i: number) {
+    if (i === selectedProducts.length - 1) return;
+    const a = [...selectedProducts]; [a[i], a[i + 1]] = [a[i + 1], a[i]];
+    setSelectedProducts(a); setSelectedIds(a.map(p => p.id));
+  }
+  function remove(id: string) {
+    setSelectedIds(selectedIds.filter(x => x !== id));
+    setSelectedProducts(prev => prev.filter(p => p.id !== id));
+  }
+
+  const hasFilter = !!(filterCategoryId || filterBrandId);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="font-black text-sm text-gray-900 dark:text-white mb-3">جستجوی محصول</h3>
+          {hasFilter && (
+            <label className="flex items-center gap-2 mb-3 cursor-pointer select-none">
+              <div className="relative flex-shrink-0">
+                <input type="checkbox" className="peer sr-only" checked={filterOnly} onChange={() => setFilterOnly(v => !v)} />
+                <div className="w-9 h-5 bg-gray-300 dark:bg-gray-600 peer-checked:bg-blue-500 rounded-full transition-all" />
+                <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-all peer-checked:translate-x-4" />
+              </div>
+              <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
+                فقط {filterCategoryId ? "از این دسته‌بندی" : "از این برند"}
+              </span>
+            </label>
+          )}
+          <div className="relative">
+            <input type="text" placeholder="نام محصول را تایپ کنید..."
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white"
+              value={search} onChange={e => setSearch(e.target.value)} />
+            {searching && <div className={`absolute left-3 top-2.5 w-4 h-4 border-2 ${c.spin} border-t-transparent rounded-full animate-spin`} />}
+          </div>
+        </div>
+        <div className="min-h-[200px] max-h-96 overflow-y-auto">
+          {!search.trim() ? (
+            <div className="p-8 text-center">
+              <svg className="w-10 h-10 text-gray-200 dark:text-gray-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8" strokeWidth={1.5} /><path d="m21 21-4.35-4.35" strokeWidth={1.5} strokeLinecap="round" />
+              </svg>
+              <p className="text-sm text-gray-400">نام محصول را برای جستجو تایپ کنید</p>
+            </div>
+          ) : searchResults.length === 0 && !searching ? (
+            <div className="p-8 text-center text-sm text-gray-400">محصولی یافت نشد</div>
+          ) : (
+            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+              {searchResults.map(product => {
+                const sel = selectedIds.includes(product.id);
+                const discount = discountPercent(product.price, product.salePrice);
+                return (
+                  <li key={product.id}>
+                    <label className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${sel ? c.sel : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                      {product.image ? <img src={product.image} alt={product.title} className="w-11 h-11 rounded-xl object-contain flex-shrink-0 bg-gray-50 dark:bg-gray-800" /> : <div className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-gray-700 flex-shrink-0" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{product.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {discount && <span className={`text-[10px] font-black text-white ${c.badge} px-1.5 py-0.5 rounded-lg`}>{discount}٪</span>}
+                          <span className="text-[11px] text-gray-500">{formatPrice(product.salePrice ?? product.price)} تومان</span>
+                          {product.salePrice && <span className="text-[10px] text-gray-400 line-through">{formatPrice(product.price)}</span>}
+                        </div>
+                      </div>
+                      <div className="relative flex-shrink-0">
+                        <input type="checkbox"
+                          className={`peer appearance-none w-5 h-5 rounded-lg border-2 border-gray-300 dark:border-gray-600 ${c.check} transition-all cursor-pointer`}
+                          checked={sel} onChange={() => toggleProduct(product)} />
+                        <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 top-1 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M5 13l4 4L19 7" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center gap-2">
+            <h3 className="font-black text-sm text-gray-900 dark:text-white">محصولات انتخاب‌شده</h3>
+            <span className={`text-[10px] font-bold text-white ${c.badge} px-2 py-0.5 rounded-full`}>{selectedIds.length}</span>
+          </div>
+          <p className="text-xs text-gray-400 mt-1">با دکمه‌های ↑↓ ترتیب نمایش را تغییر دهید</p>
+        </div>
+        {loadingSelected ? (
+          <div className="p-8 text-center text-sm text-gray-400">در حال بارگذاری...</div>
+        ) : selectedProducts.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <p className="text-sm text-gray-400">محصولی انتخاب نشده</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-gray-100 dark:divide-gray-800 max-h-96 overflow-y-auto">
+            {selectedProducts.map((product, i) => {
+              const discount = discountPercent(product.price, product.salePrice);
+              return (
+                <li key={product.id} className="flex items-center gap-3 px-4 py-3">
+                  <span className={`w-6 h-6 rounded-lg ${c.badge} text-white text-[10px] font-black flex items-center justify-center flex-shrink-0`}>{i + 1}</span>
+                  {product.image ? <img src={product.image} alt={product.title} className="w-10 h-10 rounded-xl object-contain flex-shrink-0 bg-gray-50 dark:bg-gray-800" /> : <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex-shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-1">{product.title}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {discount && <span className={`text-[10px] font-black text-white ${c.badge} px-1.5 py-0.5 rounded`}>{discount}٪</span>}
+                      <span className="text-[11px] text-gray-500">{formatPrice(product.salePrice ?? product.price)} تومان</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button onClick={() => moveUp(i)} disabled={i === 0} className={`w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 ${c.upHover} disabled:opacity-30 flex items-center justify-center text-gray-500 transition-all text-xs`}>↑</button>
+                    <button onClick={() => moveDown(i)} disabled={i === selectedProducts.length - 1} className={`w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 ${c.upHover} disabled:opacity-30 flex items-center justify-center text-gray-500 transition-all text-xs`}>↓</button>
+                    <button onClick={() => remove(product.id)} className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center justify-center text-gray-400 hover:text-red-500 transition-all text-xs">×</button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── SortModeSelector ─────────────────────────────────────────────────────────
+type SortMode = "newest" | "best_sellers" | "manual";
+
+function SortModeSelector({
+  value, onChange, accent,
+}: {
+  value: SortMode;
+  onChange: (v: SortMode) => void;
+  accent: PickerAccent;
+}) {
+  const options: { mode: SortMode; icon: string; label: string; desc: string }[] = [
+    { mode: "newest",      icon: "🆕", label: "جدیدترین",       desc: "جدیدترین محصولات به صورت خودکار" },
+    { mode: "best_sellers",icon: "🏆", label: "پرفروش‌ترین",    desc: "پرفروش‌ترین محصولات به صورت خودکار" },
+    { mode: "manual",      icon: "✋", label: "انتخاب دستی",    desc: "محصولات را خودتان انتخاب کنید" },
+  ];
+  const activeColor = accent === "indigo"
+    ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
+    : "border-teal-500 bg-teal-50 dark:bg-teal-900/20";
+  const activeText = accent === "indigo" ? "text-indigo-700 dark:text-indigo-300" : "text-teal-700 dark:text-teal-300";
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+      <h3 className="font-black text-sm text-gray-900 dark:text-white mb-4">نحوه نمایش محصولات</h3>
+      <div className="grid grid-cols-3 gap-3">
+        {options.map(opt => (
+          <button key={opt.mode} onClick={() => onChange(opt.mode)}
+            className={`p-4 rounded-2xl border-2 text-right transition-all ${value === opt.mode ? activeColor : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}>
+            <div className="text-2xl mb-2">{opt.icon}</div>
+            <p className={`text-xs font-black ${value === opt.mode ? activeText : "text-gray-700 dark:text-gray-300"}`}>{opt.label}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5 leading-relaxed">{opt.desc}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── ProductsByCategoryEditor ─────────────────────────────────────────────────
 function ProductsByCategoryEditor({
   categories, categoryId, setCategoryId, count, setCount,
+  sortMode, setSortMode, productIds, setProductIds,
 }: {
   categories: Category[];
   categoryId: string;
   setCategoryId: (id: string, title: string, slug: string) => void;
   count: number;
   setCount: (n: number) => void;
+  sortMode: SortMode;
+  setSortMode: (m: SortMode) => void;
+  productIds: string[];
+  setProductIds: (ids: string[]) => void;
 }) {
   const [search, setSearch] = useState("");
   const filtered = categories.filter(c => c.title.toLowerCase().includes(search.toLowerCase()));
@@ -198,25 +435,27 @@ function ProductsByCategoryEditor({
 
   return (
     <div className="space-y-6">
+      {/* Category selector */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="p-4 border-b border-gray-100 dark:border-gray-800">
             <h3 className="font-black text-sm text-gray-900 dark:text-white mb-3">انتخاب دسته‌بندی</h3>
-            <input type="text" placeholder="جستجو..." className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white"
+            <input type="text" placeholder="جستجو..."
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <ul className="divide-y divide-gray-100 dark:divide-gray-800 max-h-96 overflow-y-auto">
+          <ul className="divide-y divide-gray-100 dark:divide-gray-800 max-h-72 overflow-y-auto">
             {filtered.map(cat => {
               const sel = categoryId === cat.id;
               return (
                 <li key={cat.id}>
-                  <label className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${sel ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+                  <label className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${sel ? "bg-teal-50 dark:bg-teal-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                     {cat.imageUrl ? <img src={cat.imageUrl} alt={cat.title} className="w-9 h-9 rounded-xl object-cover flex-shrink-0" /> : <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 flex-shrink-0" />}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{cat.title}</p>
                       <p className="text-[10px] text-gray-400">{cat.slug}</p>
                     </div>
-                    <input type="radio" name="pbcCat" className="w-4 h-4 accent-blue-600"
+                    <input type="radio" name="pbcCat" className="w-4 h-4 accent-teal-600"
                       checked={sel} onChange={() => setCategoryId(cat.id, cat.title, cat.slug)} />
                   </label>
                 </li>
@@ -226,47 +465,90 @@ function ProductsByCategoryEditor({
           </ul>
         </div>
 
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
-            <h3 className="font-black text-sm text-gray-900 dark:text-white mb-3">دسته انتخاب‌شده</h3>
-            {selectedCat ? (
-              <div className="flex items-center gap-3">
-                {selectedCat.imageUrl ? <img src={selectedCat.imageUrl} alt={selectedCat.title} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" /> : (
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex-shrink-0 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                  </div>
-                )}
-                <div>
-                  <p className="font-black text-sm text-gray-900 dark:text-white">{selectedCat.title}</p>
-                  <p className="text-[10px] text-gray-400">{selectedCat.slug}</p>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+          <h3 className="font-black text-sm text-gray-900 dark:text-white mb-3">دسته انتخاب‌شده</h3>
+          {selectedCat ? (
+            <div className="flex items-center gap-3">
+              {selectedCat.imageUrl ? (
+                <img src={selectedCat.imageUrl} alt={selectedCat.title} className="w-14 h-14 rounded-2xl object-cover flex-shrink-0 border border-gray-100 dark:border-gray-700" />
+              ) : (
+                <div className="w-14 h-14 rounded-2xl bg-teal-100 dark:bg-teal-900/30 flex-shrink-0 flex items-center justify-center">
+                  <svg className="w-7 h-7 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
                 </div>
+              )}
+              <div>
+                <p className="font-black text-sm text-gray-900 dark:text-white">{selectedCat.title}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{selectedCat.slug}</p>
+                <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold text-teal-600 bg-teal-500/10 px-2 py-0.5 rounded-full">
+                  ✓ انتخاب شده
+                </span>
               </div>
-            ) : <p className="text-sm text-gray-400">هیچ دسته‌ای انتخاب نشده</p>}
-          </div>
-
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
-            <h3 className="font-black text-sm text-gray-900 dark:text-white mb-4">تعداد محصولات نمایشی</h3>
-            <div className="flex items-center gap-3 flex-wrap">
-              {[4, 6, 8, 10, 12].map(n => (
-                <button key={n} onClick={() => setCount(n)}
-                  className={`w-12 h-12 rounded-xl font-black text-sm transition-all ${count === n ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"}`}>
-                  {n}
-                </button>
-              ))}
             </div>
-            <p className="text-xs text-gray-400 mt-3">
-              {selectedCat ? `${count} محصول از دسته «${selectedCat.title}» در اسلایدر نمایش داده می‌شود` : "ابتدا دسته‌بندی انتخاب کنید"}
-            </p>
-          </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <div className="w-10 h-10 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-2">
+                <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <p className="text-sm text-gray-400">دسته‌ای انتخاب نشده</p>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Sort/display mode */}
+      <SortModeSelector value={sortMode} onChange={setSortMode} accent="teal" />
+
+      {/* Count (auto mode only) */}
+      {sortMode !== "manual" && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+          <h3 className="font-black text-sm text-gray-900 dark:text-white mb-4">تعداد محصولات نمایشی</h3>
+          <div className="flex items-center gap-3 flex-wrap">
+            {[4, 6, 8, 10, 12].map(n => (
+              <button key={n} onClick={() => setCount(n)}
+                className={`w-12 h-12 rounded-xl font-black text-sm transition-all ${count === n ? "bg-teal-600 text-white shadow-lg shadow-teal-500/30" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-teal-50 dark:hover:bg-teal-900/20"}`}>
+                {n}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-3">
+            {selectedCat
+              ? `${count} محصول ${sortMode === "best_sellers" ? "پرفروش" : "جدید"} از دسته «${selectedCat.title}»`
+              : "ابتدا دسته‌بندی انتخاب کنید"}
+          </p>
+        </div>
+      )}
+
+      {/* Manual product picker */}
+      {sortMode === "manual" && (
+        <div className="space-y-3">
+          <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <svg className="w-4 h-4 text-teal-600 dark:text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-xs text-teal-700 dark:text-teal-300 font-bold">
+              محصولات را جستجو و انتخاب کنید — ترتیب نمایش همین ترتیب انتخاب خواهد بود
+            </p>
+          </div>
+          <ProductPicker
+            selectedIds={productIds}
+            setSelectedIds={setProductIds}
+            filterCategoryId={categoryId || undefined}
+            accent="teal"
+          />
+        </div>
+      )}
+
+      {/* Summary */}
       {selectedCat && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4">
-          <p className="text-xs text-blue-700 dark:text-blue-300 font-bold">
-            💡 {count} محصول از دسته «{selectedCat.title}» در قالب اسلایدر نمایش داده می‌شود
+        <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-2xl p-4">
+          <p className="text-xs text-teal-700 dark:text-teal-300 font-bold">
+            {sortMode === "manual"
+              ? `✋ ${productIds.length} محصول به صورت دستی از دسته «${selectedCat.title}» انتخاب شده`
+              : `${sortMode === "best_sellers" ? "🏆 پرفروش‌ترین" : "🆕 جدیدترین"} — ${count} محصول از دسته «${selectedCat.title}» به صورت خودکار نمایش داده می‌شود`}
           </p>
         </div>
       )}
@@ -277,12 +559,17 @@ function ProductsByCategoryEditor({
 // ─── ProductsByBrandEditor ────────────────────────────────────────────────────
 function ProductsByBrandEditor({
   brands, brandId, onSelect, count, setCount,
+  sortMode, setSortMode, productIds, setProductIds,
 }: {
   brands: Brand[];
   brandId: string;
   onSelect: (id: string, title: string, slug: string, logoUrl: string | null) => void;
   count: number;
   setCount: (n: number) => void;
+  sortMode: SortMode;
+  setSortMode: (m: SortMode) => void;
+  productIds: string[];
+  setProductIds: (ids: string[]) => void;
 }) {
   const [search, setSearch] = useState("");
   const filtered = brands.filter(b => b.title.toLowerCase().includes(search.toLowerCase()));
@@ -290,8 +577,8 @@ function ProductsByBrandEditor({
 
   return (
     <div className="space-y-6">
+      {/* Brand selector */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {}
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="p-4 border-b border-gray-100 dark:border-gray-800">
             <h3 className="font-black text-sm text-gray-900 dark:text-white mb-3">انتخاب برند</h3>
@@ -299,7 +586,7 @@ function ProductsByBrandEditor({
               className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <ul className="divide-y divide-gray-100 dark:divide-gray-800 max-h-96 overflow-y-auto">
+          <ul className="divide-y divide-gray-100 dark:divide-gray-800 max-h-72 overflow-y-auto">
             {filtered.map(brand => {
               const sel = brandId === brand.id;
               return (
@@ -328,52 +615,90 @@ function ProductsByBrandEditor({
           </ul>
         </div>
 
-        {}
-        <div className="space-y-4">
-          {}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
-            <h3 className="font-black text-sm text-gray-900 dark:text-white mb-3">برند انتخاب‌شده</h3>
-            {selectedBrand ? (
-              <div className="flex items-center gap-3">
-                {selectedBrand.logoUrl ? (
-                  <img src={selectedBrand.logoUrl} alt={selectedBrand.title} className="w-14 h-14 rounded-xl object-contain flex-shrink-0 bg-gray-50 dark:bg-gray-800 p-2 border border-gray-100 dark:border-gray-700" />
-                ) : (
-                  <div className="w-14 h-14 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex-shrink-0 flex items-center justify-center">
-                    <svg className="w-7 h-7 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                  </div>
-                )}
-                <div>
-                  <p className="font-black text-sm text-gray-900 dark:text-white">{selectedBrand.title}</p>
-                  <p className="text-[10px] text-gray-400">{selectedBrand.slug}</p>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+          <h3 className="font-black text-sm text-gray-900 dark:text-white mb-3">برند انتخاب‌شده</h3>
+          {selectedBrand ? (
+            <div className="flex items-center gap-3">
+              {selectedBrand.logoUrl ? (
+                <img src={selectedBrand.logoUrl} alt={selectedBrand.title} className="w-16 h-16 rounded-2xl object-contain flex-shrink-0 bg-gray-50 dark:bg-gray-800 p-2 border border-gray-100 dark:border-gray-700" />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 flex-shrink-0 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
                 </div>
+              )}
+              <div>
+                <p className="font-black text-sm text-gray-900 dark:text-white">{selectedBrand.title}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{selectedBrand.slug}</p>
+                <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold text-indigo-600 bg-indigo-500/10 px-2 py-0.5 rounded-full">
+                  ✓ انتخاب شده
+                </span>
               </div>
-            ) : <p className="text-sm text-gray-400">هیچ برندی انتخاب نشده</p>}
-          </div>
-
-          {}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
-            <h3 className="font-black text-sm text-gray-900 dark:text-white mb-4">تعداد محصولات نمایشی</h3>
-            <div className="flex items-center gap-3 flex-wrap">
-              {[4, 6, 8, 10, 12].map(n => (
-                <button key={n} onClick={() => setCount(n)}
-                  className={`w-12 h-12 rounded-xl font-black text-sm transition-all ${count === n ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"}`}>
-                  {n}
-                </button>
-              ))}
             </div>
-            <p className="text-xs text-gray-400 mt-3">
-              {selectedBrand ? `${count} محصول از برند «${selectedBrand.title}» در اسلایدر نمایش داده می‌شود` : "ابتدا برند انتخاب کنید"}
-            </p>
-          </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <div className="w-10 h-10 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-2">
+                <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+              </div>
+              <p className="text-sm text-gray-400">برندی انتخاب نشده</p>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Sort/display mode */}
+      <SortModeSelector value={sortMode} onChange={setSortMode} accent="indigo" />
+
+      {/* Count (auto mode only) */}
+      {sortMode !== "manual" && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+          <h3 className="font-black text-sm text-gray-900 dark:text-white mb-4">تعداد محصولات نمایشی</h3>
+          <div className="flex items-center gap-3 flex-wrap">
+            {[4, 6, 8, 10, 12].map(n => (
+              <button key={n} onClick={() => setCount(n)}
+                className={`w-12 h-12 rounded-xl font-black text-sm transition-all ${count === n ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"}`}>
+                {n}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-3">
+            {selectedBrand
+              ? `${count} محصول ${sortMode === "best_sellers" ? "پرفروش" : "جدید"} از برند «${selectedBrand.title}»`
+              : "ابتدا برند انتخاب کنید"}
+          </p>
+        </div>
+      )}
+
+      {/* Manual product picker */}
+      {sortMode === "manual" && (
+        <div className="space-y-3">
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-xs text-indigo-700 dark:text-indigo-300 font-bold">
+              محصولات را جستجو و انتخاب کنید — ترتیب نمایش همین ترتیب انتخاب خواهد بود
+            </p>
+          </div>
+          <ProductPicker
+            selectedIds={productIds}
+            setSelectedIds={setProductIds}
+            filterBrandId={brandId || undefined}
+            accent="indigo"
+          />
+        </div>
+      )}
+
+      {/* Summary */}
       {selectedBrand && (
         <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-4">
           <p className="text-xs text-indigo-700 dark:text-indigo-300 font-bold">
-            💡 {count} محصول از برند «{selectedBrand.title}» در قالب اسلایدر نمایش داده می‌شود
+            {sortMode === "manual"
+              ? `✋ ${productIds.length} محصول به صورت دستی از برند «${selectedBrand.title}» انتخاب شده`
+              : `${sortMode === "best_sellers" ? "🏆 پرفروش‌ترین" : "🆕 جدیدترین"} — ${count} محصول از برند «${selectedBrand.title}» به صورت خودکار نمایش داده می‌شود`}
           </p>
         </div>
       )}
@@ -1383,6 +1708,8 @@ export default function WidgetEditPage() {
   const [pbcCategoryTitle, setPbcCategoryTitle] = useState("");
   const [pbcCategorySlug, setPbcCategorySlug] = useState("");
   const [pbcCount, setPbcCount] = useState(8);
+  const [pbcSortMode, setPbcSortMode] = useState<SortMode>("newest");
+  const [pbcProductIds, setPbcProductIds] = useState<string[]>([]);
 
   // state PRODUCTS_BY_BRAND
   const [pbbBrandId, setPbbBrandId] = useState("");
@@ -1390,6 +1717,8 @@ export default function WidgetEditPage() {
   const [pbbBrandSlug, setPbbBrandSlug] = useState("");
   const [pbbBrandLogo, setPbbBrandLogo] = useState<string | null>(null);
   const [pbbCount, setPbbCount] = useState(8);
+  const [pbbSortMode, setPbbSortMode] = useState<SortMode>("newest");
+  const [pbbProductIds, setPbbProductIds] = useState<string[]>([]);
 
    // FULL_BANNER
   const [fbImageUrl, setFbImageUrl] = useState("");
@@ -1461,12 +1790,16 @@ export default function WidgetEditPage() {
           setPbcCategoryTitle(w.config.categoryTitle ?? "");
           setPbcCategorySlug(w.config.categorySlug ?? "");
           setPbcCount(w.config.count ?? 8);
+          setPbcSortMode((w.config.sortMode as SortMode) ?? "newest");
+          setPbcProductIds(w.config.productIds ?? []);
         } else if (w.type === "PRODUCTS_BY_BRAND") {
           setPbbBrandId(w.config.brandId ?? "");
           setPbbBrandTitle(w.config.brandTitle ?? "");
           setPbbBrandSlug(w.config.brandSlug ?? "");
           setPbbBrandLogo(w.config.brandLogoUrl ?? null);
           setPbbCount(w.config.count ?? 8);
+          setPbbSortMode((w.config.sortMode as SortMode) ?? "newest");
+          setPbbProductIds(w.config.productIds ?? []);
         } else if (w.type === "LAST_VISITED") {
           setLvHeading(w.config.heading ?? "آخرین بازدیدهای شما");
           setLvAccentColor(w.config.accentColor ?? "#4f46e5");
@@ -1555,9 +1888,19 @@ export default function WidgetEditPage() {
     } else if (widget.type === "NEWEST_PRODUCTS") {
       config = { categoryIds: selectedIds, perCategory };
     } else if (widget.type === "PRODUCTS_BY_CATEGORY") {
-      config = { categoryId: pbcCategoryId, categoryTitle: pbcCategoryTitle, categorySlug: pbcCategorySlug, count: pbcCount };
+      config = {
+        categoryId: pbcCategoryId, categoryTitle: pbcCategoryTitle,
+        categorySlug: pbcCategorySlug, count: pbcCount,
+        sortMode: pbcSortMode,
+        productIds: pbcSortMode === "manual" ? pbcProductIds : [],
+      };
     } else if (widget.type === "PRODUCTS_BY_BRAND") {
-      config = { brandId: pbbBrandId, brandTitle: pbbBrandTitle, brandSlug: pbbBrandSlug, brandLogoUrl: pbbBrandLogo, count: pbbCount };
+      config = {
+        brandId: pbbBrandId, brandTitle: pbbBrandTitle,
+        brandSlug: pbbBrandSlug, brandLogoUrl: pbbBrandLogo, count: pbbCount,
+        sortMode: pbbSortMode,
+        productIds: pbbSortMode === "manual" ? pbbProductIds : [],
+      };
     } else if (widget.type === "FULL_BANNER") {
       config = { imageUrl: fbImageUrl, linkUrl: fbLinkUrl || null, alt: fbAlt || null };
     } else if (widget.type === "DOUBLE_BANNER") {
@@ -1646,6 +1989,10 @@ export default function WidgetEditPage() {
           setCategoryId={(id, title, slug) => { setPbcCategoryId(id); setPbcCategoryTitle(title); setPbcCategorySlug(slug); }}
           count={pbcCount}
           setCount={setPbcCount}
+          sortMode={pbcSortMode}
+          setSortMode={setPbcSortMode}
+          productIds={pbcProductIds}
+          setProductIds={setPbcProductIds}
         />
       )}
 
@@ -1656,6 +2003,10 @@ export default function WidgetEditPage() {
           onSelect={(id, title, slug, logo) => { setPbbBrandId(id); setPbbBrandTitle(title); setPbbBrandSlug(slug); setPbbBrandLogo(logo); }}
           count={pbbCount}
           setCount={setPbbCount}
+          sortMode={pbbSortMode}
+          setSortMode={setPbbSortMode}
+          productIds={pbbProductIds}
+          setProductIds={setPbbProductIds}
         />
       )}
 

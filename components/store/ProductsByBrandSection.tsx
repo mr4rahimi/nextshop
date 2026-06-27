@@ -26,6 +26,8 @@ interface Props {
   brandSlug?: string;
   brandLogoUrl?: string;
   count?: number;
+  sortMode?: string;
+  productIds?: string[];
 }
 
 function formatPrice(val: string | null | undefined): string {
@@ -156,6 +158,8 @@ export default function ProductsByBrandSection({
   brandSlug,
   brandLogoUrl,
   count = 8,
+  sortMode = "newest",
+  productIds = [],
 }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,13 +168,23 @@ export default function ProductsByBrandSection({
   const uid = useRef(`pbb-${Math.random().toString(36).slice(2, 7)}`);
 
   useEffect(() => {
-    if (!brandId) { setLoading(false); return; }
-    setLoading(true);
-    fetch(`/api/store/products-by-brand?brandId=${brandId}&count=${count}`)
-      .then(r => r.json())
-      .then(data => { setProducts(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [brandId, count]);
+    if (sortMode === "manual") {
+      if (productIds.length === 0) { setLoading(false); return; }
+      setLoading(true);
+      fetch(`/api/store/products-by-brand?productIds=${productIds.join(",")}`)
+        .then(r => r.json())
+        .then(data => { setProducts(data); setLoading(false); })
+        .catch(() => setLoading(false));
+    } else {
+      if (!brandId) { setLoading(false); return; }
+      setLoading(true);
+      const sort = sortMode === "best_sellers" ? "best_sellers" : "newest";
+      fetch(`/api/store/products-by-brand?brandId=${brandId}&count=${count}&sort=${sort}`)
+        .then(r => r.json())
+        .then(data => { setProducts(data); setLoading(false); })
+        .catch(() => setLoading(false));
+    }
+  }, [brandId, count, sortMode, JSON.stringify(productIds)]);
 
   useEffect(() => {
     if (!swiperReady || loading || products.length === 0) return;

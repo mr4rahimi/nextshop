@@ -35,9 +35,9 @@ function renderWidget(type: WidgetType, config: Record<string, any>, key: string
     case "NEWEST_PRODUCTS":
       return <NewestProducts key={key} categoryIds={config.categoryIds ?? []} perCategory={config.perCategory ?? 3} />;
     case "PRODUCTS_BY_CATEGORY":
-      return <ProductsByCategory key={key} categoryId={config.categoryId} categoryTitle={config.categoryTitle} categorySlug={config.categorySlug} count={config.count ?? 8} />;
+      return <ProductsByCategory key={key} categoryId={config.categoryId} categoryTitle={config.categoryTitle} categorySlug={config.categorySlug} count={config.count ?? 8} sortMode={config.sortMode ?? "newest"} productIds={config.productIds ?? []} />;
     case "PRODUCTS_BY_BRAND":
-      return <ProductsByBrand key={key} brandId={config.brandId} brandTitle={config.brandTitle} brandSlug={config.brandSlug} brandLogoUrl={config.brandLogoUrl} count={config.count ?? 8} />;
+      return <ProductsByBrand key={key} brandId={config.brandId} brandTitle={config.brandTitle} brandSlug={config.brandSlug} brandLogoUrl={config.brandLogoUrl} count={config.count ?? 8} sortMode={config.sortMode ?? "newest"} productIds={config.productIds ?? []} />;
     case "FULL_BANNER":
       return <FullBanner key={key} imageUrl={config.imageUrl} linkUrl={config.linkUrl} alt={config.alt} />;
     case "DOUBLE_BANNER":
