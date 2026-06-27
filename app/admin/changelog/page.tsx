@@ -3,6 +3,25 @@
 const VERSIONS = [
 
   {
+    version: "2.5.0",
+    date: "1404/04/06",
+    tag: "minor",
+    title: "انتخاب حالت نمایش محصولات در ویجت‌های دسته و برند",
+    description: "ویجت‌های PRODUCTS_BY_CATEGORY و PRODUCTS_BY_BRAND اکنون سه حالت نمایش دارند: جدیدترین محصولات (خودکار)، پرفروش‌ترین (خودکار بر اساس تعداد سفارش) و انتخاب دستی توسط ادمین با جستجو و مرتب‌سازی",
+    changes: [
+      { type: "feature", text: "سه حالت نمایش در ویجت محصولات بر اساس دسته: جدیدترین، پرفروش‌ترین و انتخاب دستی" },
+      { type: "feature", text: "سه حالت نمایش در ویجت محصولات بر اساس برند: جدیدترین، پرفروش‌ترین و انتخاب دستی" },
+      { type: "feature", text: "کامپوننت ProductPicker — جستجوی محصول با debounce، toggle فیلتر دسته/برند، انتخاب چندگانه" },
+      { type: "feature", text: "کامپوننت SortModeSelector — انتخاب بصری حالت نمایش با سه کارت آیکن‌دار" },
+      { type: "feature", text: "مرتب‌سازی محصولات انتخاب‌شده با دکمه‌های ↑↓ و حذف تکی" },
+      { type: "improvement", text: "API /api/store/products-by-category: پشتیبانی از sort=newest|best_sellers و productIds برای حالت دستی" },
+      { type: "improvement", text: "API /api/store/products-by-brand: پشتیبانی از sort و productIds" },
+      { type: "improvement", text: "API /api/admin/products-search: فیلتر اختیاری با categoryId و brandId" },
+      { type: "improvement", text: "سازگاری کامل با داده‌های قبلی — ویجت‌های موجود بدون تغییر به حالت newest fallback می‌کنند" },
+    ],
+  },
+
+  {
     version: "2.4.0",
     date: "1405/04/01",
     tag: "minor",
