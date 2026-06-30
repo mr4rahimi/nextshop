@@ -61,21 +61,21 @@ export default function AmazingCard({ title, slug, image, price, salePrice }: Pr
         </h3>
 
         {}
-        <div className="flex items-center justify-between mt-auto pt-6 border-t border-black/5 dark:border-white/5">
-          <div className="flex flex-col">
+        <div className="flex items-end justify-between gap-3 mt-auto pt-6 border-t border-black/5 dark:border-white/5">
+          <div className="flex flex-col min-w-0">
             {salePrice && (
-              <span className="text-[10px] text-gray-400 line-through">
+              <span className="text-[10px] text-gray-400 line-through truncate">
                 {formatPrice(price)} تومان
               </span>
             )}
-            <div className="flex items-center gap-1">
-              <span className="text-xl font-black text-gray-900 dark:text-white">
+            <div className="flex items-baseline gap-1 flex-wrap">
+              <span className="text-base font-black text-gray-900 dark:text-white tabular-nums leading-tight">
                 {formatPrice(displayPrice)}
               </span>
-              <span className="text-[10px] text-gray-500 font-bold">تومان</span>
+              <span className="text-[10px] text-gray-500 font-bold flex-shrink-0">تومان</span>
             </div>
           </div>
-          <div className="w-14 h-14 bg-secondary-600 text-white rounded-[1.2rem] flex items-center justify-center shadow-xl hover:scale-110 transition-all text-xl font-black">
+          <div className="flex-shrink-0 w-11 h-11 bg-secondary-600 text-white rounded-[1.2rem] flex items-center justify-center shadow-xl hover:scale-110 transition-all text-xl font-black">
             +
           </div>
         </div>
