@@ -134,7 +134,8 @@ model Product {
   relatedSettings    Json               @default("{}")
   downloadTitle      String?
   downloadUrl        String?
-  blogPosts BlogPostProduct[]
+  blogPosts          BlogPostProduct[]
+  integMappings      IntegProductMapping[]
   cartItems          CartItem[]
   orderItems         OrderItem[]
   assembledProduct   AssembledProduct?  @relation(fields: [assembledProductId], references: [id])
@@ -1016,4 +1017,232 @@ model CallbackRequest {
   @@index([status])
   @@index([createdAt])
   @@index([siteId, status])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INTEGRATION HUB
+// ═══════════════════════════════════════════════════════════════════
+
+// ── پلتفرم‌های تعریف‌شده (seeded) ───────────────────────────────────
+
+model IntegPlatform {
+  code     String            @id
+  name     String
+  type     IntegPlatformType
+  logoUrl  String?
+  isActive Boolean           @default(true)
+
+  connections IntegConnection[]
+  mappings    IntegProductMapping[]
+  suggestions IntegMappingSuggestion[]
+  jobs        IntegJob[]
+  logs        IntegLog[]
+}
+
+enum IntegPlatformType {
+  ACCOUNTING
+  MARKETPLACE
+}
+
+// ── اتصال به هر پلتفرم ──────────────────────────────────────────────
+
+model IntegConnection {
+  id               String          @id @default(cuid())
+  platformCode     String
+  siteId           String?
+  credentials      String          // JSON رمزنگاری‌شده AES-256-GCM
+  status           IntegConnStatus @default(DISCONNECTED)
+  lastSyncAt       DateTime?
+  lastErrorAt      DateTime?
+  lastError        String?
+  config           Json            @default("{}")
+  syncStockEnabled Boolean         @default(true)
+  syncPriceEnabled Boolean         @default(false)
+  syncIntervalMin  Int             @default(60)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  platform IntegPlatform @relation(fields: [platformCode], references: [code])
+
+  @@unique([platformCode, siteId])
+  @@index([status])
+  @@index([platformCode])
+}
+
+enum IntegConnStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+  SYNCING
+}
+
+// ── Mapping محصولات ──────────────────────────────────────────────────
+
+model IntegProductMapping {
+  id                String   @id @default(cuid())
+  shopProductId     String
+  platformCode      String
+  platformProductId String
+  platformSku       String?
+  platformTitle     String?
+  isActive          Boolean  @default(true)
+  meta              Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  shopProduct Product       @relation(fields: [shopProductId], references: [id], onDelete: Cascade)
+  platform    IntegPlatform @relation(fields: [platformCode], references: [code])
+
+  @@unique([shopProductId, platformCode])
+  @@unique([platformCode, platformProductId])
+  @@index([shopProductId])
+  @@index([platformCode])
+  @@index([isActive])
+}
+
+// ── پیشنهادهای auto-match ────────────────────────────────────────────
+
+model IntegMappingSuggestion {
+  id                String                @id @default(cuid())
+  shopProductId     String
+  platformCode      String
+  platformProductId String
+  platformTitle     String?
+  confidence        Float
+  matchReason       String?
+  status            IntegSuggestionStatus @default(PENDING)
+  reviewedAt        DateTime?
+  createdAt         DateTime              @default(now())
+
+  platform IntegPlatform @relation(fields: [platformCode], references: [code])
+
+  @@index([shopProductId])
+  @@index([platformCode, status])
+  @@index([confidence])
+}
+
+enum IntegSuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+// ── Queue ────────────────────────────────────────────────────────────
+
+model IntegJob {
+  id           String         @id @default(cuid())
+  type         IntegJobType
+  platformCode String
+  payload      Json
+  status       IntegJobStatus @default(PENDING)
+  priority     Int            @default(5)
+  attempts     Int            @default(0)
+  maxAttempts  Int            @default(3)
+  lastError    String?
+  scheduledAt  DateTime       @default(now())
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime       @default(now())
+
+  platform IntegPlatform @relation(fields: [platformCode], references: [code])
+  logs     IntegLog[]
+
+  @@index([status, scheduledAt])
+  @@index([platformCode, status])
+  @@index([priority, scheduledAt])
+  @@index([type])
+}
+
+enum IntegJobType {
+  SYNC_STOCK
+  SYNC_PRICE
+  SYNC_ALL_STOCK
+  SYNC_ALL_PRICE
+  FETCH_PRODUCTS
+  CREATE_PRODUCT
+  TEST_CONNECTION
+}
+
+enum IntegJobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+  RETRYING
+  CANCELLED
+}
+
+// ── Log ──────────────────────────────────────────────────────────────
+
+model IntegLog {
+  id            String            @id @default(cuid())
+  jobId         String?
+  platformCode  String
+  operationType IntegJobType
+  direction     IntegLogDirection
+  entityType    IntegEntityType
+  entityId      String?
+  requestData   Json?
+  responseData  Json?
+  status        IntegLogStatus
+  errorMessage  String?
+  durationMs    Int?
+  createdAt     DateTime          @default(now())
+
+  job      IntegJob?     @relation(fields: [jobId], references: [id])
+  platform IntegPlatform @relation(fields: [platformCode], references: [code])
+
+  @@index([platformCode, createdAt])
+  @@index([entityType, entityId])
+  @@index([status])
+  @@index([jobId])
+  @@index([createdAt])
+}
+
+enum IntegLogDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum IntegEntityType {
+  PRODUCT
+  STOCK
+  PRICE
+  CONNECTION
+}
+
+enum IntegLogStatus {
+  SUCCESS
+  ERROR
+  PARTIAL
+}
+
+// ── قوانین قیمت‌گذاری ────────────────────────────────────────────────
+
+model IntegPriceRule {
+  id               String   @id @default(cuid())
+  name             String
+  description      String?
+  isActive         Boolean  @default(true)
+  priority         Int      @default(100)
+  scopeCategoryIds String[] @default([])
+  scopeBrandIds    String[] @default([])
+  targetPlatforms  String[] @default([])
+  formula          Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([isActive, priority])
+}
+
+// ── تنظیمات کلی ──────────────────────────────────────────────────────
+
+model IntegSettings {
+  id                String   @id @default("singleton")
+  workerEnabled     Boolean  @default(true)
+  workerIntervalSec Int      @default(30)
+  maxConcurrentJobs Int      @default(5)
+  logRetentionDays  Int      @default(30)
+  updatedAt         DateTime @updatedAt
 }
