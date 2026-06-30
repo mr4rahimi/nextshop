@@ -13,14 +13,15 @@ function h(value: string) {
 
 const nextConfig: NextConfig = {
   images: {
+    // Sharp requires x86-64-v2 CPU (SSE4.2) which the production server lacks.
+    // unoptimized:true makes next/image render direct <img> tags, bypassing
+    // the /_next/image endpoint and never loading sharp at runtime.
+    unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "**" },
       { protocol: "http",  hostname: "**" },
     ],
-    formats: ["image/avif", "image/webp"],
     dangerouslyAllowSVG: true,
-    contentDispositionType: "attachment",
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
   async headers() {
