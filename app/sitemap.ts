@@ -2,7 +2,9 @@ import { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { SITE_URL } from "@/lib/seo";
 
-export const revalidate = 3600;
+// force-dynamic: SITE_URL must come from the running process env, not build-time static output.
+// Each of the 4 deployments has a different SITE_URL in its ecosystem.config.js.
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
