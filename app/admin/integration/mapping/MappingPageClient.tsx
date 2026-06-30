@@ -20,6 +20,11 @@ interface Mapping {
   platform: { name: string };
 }
 
+const PLATFORM_LABELS: Record<string, string> = {
+  hesaban: "وب‌حسابان",
+  basalam: "باسلام",
+};
+
 interface Props {
   initialMappings: Mapping[];
   total: number;
@@ -27,6 +32,7 @@ interface Props {
 }
 
 export default function MappingPageClient({ initialMappings, total, platform }: Props) {
+  const platformLabel = PLATFORM_LABELS[platform] ?? platform;
   const [mappings, setMappings] = useState<Mapping[]>(initialMappings);
   const [fetching, setFetching] = useState(false);
   const [fetchMsg, setFetchMsg] = useState<string | null>(null);
@@ -82,7 +88,7 @@ export default function MappingPageClient({ initialMappings, total, platform }: 
             disabled={fetching}
             className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {fetching ? "در حال ارسال..." : "دریافت محصولات از حسابان"}
+            {fetching ? "در حال ارسال..." : `دریافت محصولات از ${platformLabel}`}
           </button>
         </div>
       </div>

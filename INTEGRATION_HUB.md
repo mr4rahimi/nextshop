@@ -2,7 +2,7 @@
 
 > **این فایل سند زنده پروژه Integration Hub است.**
 > هر بار که کار روی این پروژه شروع می‌شود، این فایل اول خوانده شود.
-> آخرین به‌روزرسانی: ۱۴۰۵/۰۴/۱۰
+> آخرین به‌روزرسانی: ۱۴۰۵/۰۴/۱۱
 
 ---
 
@@ -743,13 +743,17 @@ export function startWorkerIfNeeded() {
 - [x] API: `/api/integration/mapping` (GET/POST/DELETE)
 - [x] API: `/api/integration/mapping/suggestions` (GET/PATCH)
 
-### فاز ۳ — باسلام (نیاز به مستندات API)
-**تخمین: ۳-۵ روز**
-- [ ] `BasalamAdapter` (testConnection + fetchProducts + updateStock + updatePrice)
-- [ ] صفحه تنظیمات `/admin/integration/connections/basalam`
-- [ ] Mapping: فروشگاه ↔ باسلام
-- [ ] Sync موجودی: فروشگاه → باسلام
-- [ ] Sync قیمت: فروشگاه → باسلام (اختیاری — اگه باسلام allow کند)
+### فاز ۳ — باسلام ✅ تکمیل شد (۱۴۰۵/۰۴/۱۱)
+- [x] `BasalamAdapter` در `lib/integration/adapters/marketplace/basalam.adapter.ts`
+  - testConnection → `GET /v1/users/me` + auto-extract vendorId
+  - fetchProducts → `GET /v1/vendors/{vendorId}/products?page=&per_page=`
+  - updateStock → `PATCH core.basalam.com/v3/vendors/{vendorId}/products` (batch 50)
+  - updatePrice → همان endpoint با `primary_price`
+- [x] ثبت در `adapter-registry.ts`
+- [x] صفحه تنظیمات `/admin/integration/connections/basalam` با auto-fill vendorId
+- [x] Mapping: صفحه `/admin/integration/mapping` حالا چند-پلتفرمی با تب‌ها
+- [x] Sync موجودی: فروشگاه → باسلام (PUSH — worker.ts از قبل پشتیبانی می‌کند)
+- [x] Sync قیمت: فروشگاه → باسلام با `primary_price`
 
 ### فاز ۴ — Rule Engine قیمت
 **تخمین: ۴-۶ روز**

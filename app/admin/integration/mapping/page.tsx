@@ -5,12 +5,27 @@ import MappingPageClient from "./MappingPageClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function MappingPage() {
-  const [mappingCount, suggestionCount, recentMappings] = await Promise.all([
-    prisma.integProductMapping.count({ where: { isActive: true } }),
+const PLATFORM_LABELS: Record<string, string> = {
+  hesaban: "وب‌حسابان",
+  basalam: "باسلام",
+};
+
+interface Props {
+  searchParams: Promise<{ platform?: string }>;
+}
+
+export default async function MappingPage({ searchParams }: Props) {
+  const { platform: platformFilter } = await searchParams;
+
+  const whereMapping = platformFilter
+    ? { isActive: true, platformCode: platformFilter }
+    : { isActive: true };
+
+  const [mappingCount, suggestionCount, recentMappings, platforms] = await Promise.all([
+    prisma.integProductMapping.count({ where: whereMapping }),
     prisma.integMappingSuggestion.count({ where: { status: "PENDING" } }),
     prisma.integProductMapping.findMany({
-      where:   { isActive: true },
+      where:   whereMapping,
       orderBy: { createdAt: "desc" },
       take:    50,
       include: {
@@ -20,9 +35,11 @@ export default async function MappingPage() {
         platform: { select: { name: true } },
       },
     }),
+    prisma.integPlatform.findMany({ where: { isActive: true }, select: { code: true, name: true } }),
   ]);
 
   const mappings = JSON.parse(JSON.stringify(serialize(recentMappings)));
+  const currentPlatform = platformFilter ?? "hesaban";
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6" dir="rtl">
@@ -46,7 +63,9 @@ export default async function MappingPage() {
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5">
           <p className="text-3xl font-black text-gray-900 dark:text-white">{mappingCount}</p>
-          <p className="text-sm text-gray-500 mt-1">نگاشت فعال</p>
+          <p className="text-sm text-gray-500 mt-1">
+            نگاشت فعال{platformFilter ? ` — ${PLATFORM_LABELS[platformFilter] ?? platformFilter}` : ""}
+          </p>
         </div>
         <Link href="/admin/integration/mapping/suggestions"
           className="bg-white dark:bg-[#0f1117] rounded-2xl border border-amber-200 dark:border-amber-500/20 p-5 hover:border-amber-400 dark:hover:border-amber-500/40 transition-colors">
@@ -58,10 +77,39 @@ export default async function MappingPage() {
         </Link>
       </div>
 
+      {/* تب پلتفرم‌ها */}
+      {platforms.length > 1 && (
+        <div className="flex gap-2">
+          <Link
+            href="/admin/integration/mapping"
+            className={`px-4 py-1.5 rounded-xl text-sm font-bold transition-colors ${
+              !platformFilter
+                ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                : "bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
+            }`}
+          >
+            همه
+          </Link>
+          {platforms.map(p => (
+            <Link
+              key={p.code}
+              href={`/admin/integration/mapping?platform=${p.code}`}
+              className={`px-4 py-1.5 rounded-xl text-sm font-bold transition-colors ${
+                platformFilter === p.code
+                  ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                  : "bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
+              }`}
+            >
+              {p.name}
+            </Link>
+          ))}
+        </div>
+      )}
+
       <MappingPageClient
         initialMappings={mappings}
         total={mappingCount}
-        platform="hesaban"
+        platform={currentPlatform}
       />
     </div>
   );
