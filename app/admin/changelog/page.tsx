@@ -3,6 +3,26 @@
 const VERSIONS = [
 
   {
+    version: "2.6.0",
+    date: "1405/04/09",
+    tag: "minor",
+    title: "یکپارچه‌سازی ایمالز، رفع باگ‌های Hero و نمایش قیمت",
+    description: "افزودن API فید محصولات برای ایمالز، رفع عکس‌های ثابت و نسبت ابعاد اسلایدر Hero، اصلاح layout قیمت در کارت شگفت‌انگیز، بهبود پردازش تصاویر با sharp و SVG، و جایگزینی لیست ناقص شهرها با داده‌های کامل",
+    changes: [
+      { type: "feature", text: "API فید محصولات ایمالز: GET /api/imalz/list?page=1&item_per_page=50 با فرمت کامل ایمالز (title, price, price_old, category, image, available_is, url, guarantee, color)" },
+      { type: "fix",     text: "حذف سه عکس ثابت hardcode شده (defaultSlides) از ویجت Hero — حالا فقط اسلایدهای ادمین نمایش داده می‌شوند" },
+      { type: "fix",     text: "اصلاح نسبت ابعاد Hero Slider از min-h ثابت به aspect-[1400/500] — عکس‌های ۱۴۰۰×۵۰۰ کامل نمایش داده می‌شوند" },
+      { type: "fix",     text: "یکسان‌سازی ارتفاع Hero Slider و باکس پیشنهادات لحظه‌ای با lg:h-[420px] روی grid" },
+      { type: "fix",     text: "اضافه شدن loading state به Hero — نمایش skeleton هنگام fetch و پیام خالی اگر اسلایدی تنظیم نشده باشد" },
+      { type: "fix",     text: "اصلاح layout قیمت در کارت Amazing Deals — min-w-0 روی بخش قیمت، flex-shrink-0 روی دکمه + و tabular-nums برای ارقام پهن" },
+      { type: "improvement", text: "نصب sharp برای بهینه‌سازی صحیح AVIF/WebP در production" },
+      { type: "improvement", text: "فعال‌سازی dangerouslyAllowSVG در next.config — فایل‌های SVG آپلودشده (مثل لوگو) از طریق Next.js Image صحیح نمایش داده می‌شوند" },
+      { type: "improvement", text: "افزودن پروتکل http به remotePatterns — تصاویر با آدرس http:// هم بارگذاری می‌شوند" },
+      { type: "improvement", text: "جایگزینی لیست ناقص شهرها با داده‌های کامل: ۳۱ استان و ۱۱۹۵ شهر از مخزن رسمی" },
+    ],
+  },
+
+  {
     version: "2.5.0",
     date: "1404/04/06",
     tag: "minor",
