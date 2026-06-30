@@ -3,6 +3,20 @@
 const VERSIONS = [
 
   {
+    version: "2.7.1",
+    date: "1405/04/10",
+    tag: "patch",
+    title: "سازگاری با CPU قدیمی و رفع sitemap چند-دامنه‌ای",
+    description: "رفع خطای «Unsupported CPU» برای سرورهای قدیمی (بدون SSE4.2/AVX2) با غیرفعال کردن بهینه‌سازی تصاویر توسط sharp، و رفع باگ هاردکد شدن SITE_URL در sitemap/robots هنگام build لوکال برای استقرار چند-دامنه‌ای",
+    changes: [
+      { type: "fix", text: "رفع خطای 'Unsupported CPU: Prebuilt binaries require v2 microarchitecture' در سرورهای با CPU قدیمی — images.unoptimized:true در next.config.ts تنظیم شد تا endpoint /_next/image و sharp هرگز در runtime لود نشوند" },
+      { type: "fix", text: "sharp از dependencies به optionalDependencies منتقل شد — نبود sharp روی سرور باعث fail شدن npm install یا crash startup نمی‌شود" },
+      { type: "fix", text: "رفع باگ SITE_URL اشتباه در sitemap.xml سایت‌های با دامنه متفاوت — sitemap.ts با force-dynamic در هر request از process.env سرور جاری می‌خواند، نه از فایل static زمان build" },
+      { type: "fix", text: "رفع باگ مشابه در robots.txt — force-dynamic اضافه شد تا host و آدرس sitemap با دامنه صحیح همان deployment نمایش داده شود" },
+    ],
+  },
+
+  {
     version: "2.7.0",
     date: "1405/04/09",
     tag: "minor",
