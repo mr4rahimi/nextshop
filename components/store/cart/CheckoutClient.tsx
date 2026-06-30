@@ -100,7 +100,9 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
   const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
   const [selectedShipping, setSelectedShipping] = useState<ShippingMethod | null>(null);
 
-  const [paymentMethod, setPaymentMethod] = useState<"online" | "card">("online");
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "card">(
+    storeSettings.paymentGatewayActive ? "online" : "card"
+  );
   const [useWallet, setUseWallet] = useState(false);
   const walletBalanceNum = Number(walletBalance ?? "0");
   const [submitting, setSubmitting] = useState(false);
@@ -369,6 +371,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {}
+                {storeSettings.paymentGatewayActive && (
                 <div onClick={() => setPaymentMethod("online")}
                   className={`cursor-pointer flex items-center p-6 border-2 rounded-[2rem] transition-all ${paymentMethod === "online" ? "border-primary-600 bg-white dark:bg-white/5 shadow-sm" : "border-gray-100 dark:border-white/5 bg-white/50 dark:bg-white/[0.02] hover:border-primary-300"}`}>
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ml-4 transition-all ${paymentMethod === "online" ? "bg-primary-600 text-white shadow-lg shadow-primary-500/20" : "bg-gray-100 dark:bg-white/5 text-gray-400"}`}>
@@ -384,6 +387,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
                     {paymentMethod === "online" && <div className="w-2 h-2 bg-white rounded-full" />}
                   </div>
                 </div>
+                )}
 
                 {}
                 <div onClick={() => setPaymentMethod("card")}

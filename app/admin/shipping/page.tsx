@@ -20,6 +20,7 @@ interface StoreSettings {
   cardBank: string | null;
   cardReceiptInfo: string | null;
   paymentGatewayActive: boolean;
+  paymentGatewayProvider: string | null;
   paymentGatewayMerchant: string | null;
   senderName: string | null;
   senderPhone: string | null;
@@ -42,7 +43,7 @@ export default function AdminShippingPage() {
   const [methods, setMethods] = useState<ShippingMethod[]>([]);
   const [settings, setSettings] = useState<StoreSettings>({
   cardNumber: "", cardHolder: "", cardBank: "", cardReceiptInfo: "",
-  paymentGatewayActive: false, paymentGatewayMerchant: "",
+  paymentGatewayActive: false, paymentGatewayProvider: null, paymentGatewayMerchant: null,
   senderName: null, senderPhone: null, senderProvince: null,
   senderCity: null, senderAddress: null, senderPostalCode: null,
   storeName: null, storeLogo: null,
@@ -383,7 +384,7 @@ export default function AdminShippingPage() {
               </div>
               <div>
                 <h3 className="font-black text-sm text-gray-900 dark:text-white">درگاه پرداخت آنلاین</h3>
-                <p className="text-xs text-gray-400">اطلاعات درگاه بانکی (بعداً تکمیل می‌شود)</p>
+                <p className="text-xs text-gray-400">فعال‌سازی پرداخت اینترنتی برای مشتریان</p>
               </div>
               <label className="flex items-center gap-2 cursor-pointer mr-auto">
                 <div className="relative">
@@ -394,12 +395,35 @@ export default function AdminShippingPage() {
                 <span className="text-xs font-bold text-gray-600 dark:text-gray-400">فعال</span>
               </label>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500">Merchant ID (بعداً تکمیل کنید)</label>
-              <input dir="ltr" className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white outline-none focus:border-blue-500"
-                placeholder="merchant id"
-                value={settings.paymentGatewayMerchant ?? ""} onChange={e => setSettings(s => ({ ...s, paymentGatewayMerchant: e.target.value }))} />
-            </div>
+
+            {settings.paymentGatewayProvider ? (
+              <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-800/50 flex items-center justify-center text-blue-600 text-xs font-black flex-shrink-0">
+                  {settings.paymentGatewayProvider === "AGHAYEPARDAKHT" ? "AP" : "??"}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-gray-800 dark:text-gray-200">
+                    {settings.paymentGatewayProvider === "AGHAYEPARDAKHT" ? "آقای پرداخت" : settings.paymentGatewayProvider}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    {settings.paymentGatewayMerchant
+                      ? `کد پین: ${settings.paymentGatewayMerchant.slice(0, 6)}...`
+                      : "کد پین وارد نشده"}
+                  </p>
+                </div>
+                <span className={`text-[10px] font-black px-2 py-1 rounded-lg mr-auto ${settings.paymentGatewayActive ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}>
+                  {settings.paymentGatewayActive ? "فعال" : "غیرفعال"}
+                </span>
+              </div>
+            ) : (
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-800/50">
+                <p className="text-xs text-amber-700 dark:text-amber-300 font-bold">
+                  درگاهی تنظیم نشده — برای تنظیم کد پین به
+                  <a href="/admin/site-settings" className="text-blue-600 underline mx-1">تنظیمات سایت → درگاه پرداخت</a>
+                  مراجعه کنید.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end">

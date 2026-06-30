@@ -560,7 +560,9 @@ model StoreSettings {
   cardBank      String?
   cardReceiptInfo String? 
   paymentGatewayActive Boolean @default(false)
+  paymentGatewayProvider String?
   paymentGatewayMerchant String?
+  paymentGatewaySandbox Boolean @default(false)
   senderName       String?
   senderPhone      String?
   senderProvince   String?

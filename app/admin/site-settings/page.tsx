@@ -27,6 +27,10 @@ interface SiteSettings {
   smsPatternOrderDone: string;
   smsPatternOrderCancel: string;
   walletEnabled: boolean;
+  paymentGatewayProvider: string;
+  paymentGatewayMerchant: string;
+  paymentGatewayActive: boolean;
+  paymentGatewaySandbox: boolean;
 }
 
 const EMPTY: SiteSettings = {
@@ -44,9 +48,10 @@ const EMPTY: SiteSettings = {
   smsPatternOrderSent: "", smsPatternOrderDelivered: "", smsPatternOrderDone: "",
   smsPatternOrderCancel: "",
   walletEnabled: false,
+  paymentGatewayProvider: "", paymentGatewayMerchant: "", paymentGatewayActive: false, paymentGatewaySandbox: false,
 };
 
-type Tab = "general" | "social" | "advanced" | "sms" | "wallet";
+type Tab = "general" | "social" | "advanced" | "sms" | "wallet" | "gateway";
 
 export default function AdminSiteSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings>({ ...EMPTY });
@@ -96,6 +101,10 @@ export default function AdminSiteSettingsPage() {
         smsPatternOrderDone:   d.smsPatternOrderDone   ?? "",
         smsPatternOrderCancel: d.smsPatternOrderCancel ?? "",
         walletEnabled: d.walletEnabled ?? false,
+        paymentGatewayProvider: d.paymentGatewayProvider ?? "",
+        paymentGatewayMerchant: d.paymentGatewayMerchant ?? "",
+        paymentGatewayActive:   d.paymentGatewayActive   ?? false,
+        paymentGatewaySandbox:  d.paymentGatewaySandbox  ?? false,
       });
       setLoading(false);
     });
@@ -156,13 +165,14 @@ export default function AdminSiteSettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
+      <div className="flex flex-wrap gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
         {[
           { key: "general", label: "عمومی و برندینگ" },
           { key: "social",  label: "شبکه‌های اجتماعی" },
           { key: "advanced", label: "تنظیمات پیشرفته" },
           { key: "sms", label: "پیامک" },
-          { key: "wallet", label: "کیف پول" }
+          { key: "wallet", label: "کیف پول" },
+          { key: "gateway", label: "درگاه پرداخت" },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as Tab)}
             className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all ${tab === t.key ? "bg-white dark:bg-gray-900 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
@@ -513,6 +523,106 @@ export default function AdminSiteSettingsPage() {
               <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${settings.walletEnabled ? "translate-x-6" : "translate-x-1"}`} />
             </button>
           </div>
+        </div>
+      )}
+
+      {tab === "gateway" && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 space-y-6">
+            <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-800">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-black text-sm text-gray-900 dark:text-white">تنظیمات درگاه پرداخت</h3>
+                <p className="text-xs text-gray-400 mt-0.5">اطلاعات درگاه پرداخت آنلاین فروشگاه را وارد کنید</p>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer mr-auto">
+                <span className="text-xs font-bold text-gray-500">فعال</span>
+                <div className="relative">
+                  <input type="checkbox" className="sr-only peer"
+                    checked={settings.paymentGatewayActive}
+                    onChange={e => set("paymentGatewayActive", e.target.checked)} />
+                  <div className="w-11 h-6 bg-gray-200 peer-checked:bg-emerald-500 rounded-full transition-all" />
+                  <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all peer-checked:translate-x-5" />
+                </div>
+              </label>
+            </div>
+
+            <div className="space-y-5">
+              <div className="space-y-1.5">
+                <label className={lbl}>درگاه پرداخت</label>
+                <select
+                  className={inp}
+                  value={settings.paymentGatewayProvider}
+                  onChange={e => set("paymentGatewayProvider", e.target.value)}
+                >
+                  <option value="">انتخاب درگاه...</option>
+                  <option value="AGHAYEPARDAKHT">آقای پرداخت</option>
+                </select>
+              </div>
+
+              {settings.paymentGatewayProvider === "AGHAYEPARDAKHT" && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50 rounded-2xl space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-800/50 flex items-center justify-center text-blue-600 text-xs font-black">AP</div>
+                    <div>
+                      <p className="text-xs font-black text-blue-800 dark:text-blue-200">آقای پرداخت</p>
+                      <p className="text-[10px] text-blue-500">panel.aqayepardakht.ir</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-400">
+                      کد پین درگاه (PIN)
+                      <span className="text-gray-400 font-normal mr-1">— از پنل آقای پرداخت دریافت کنید</span>
+                    </label>
+                    <input
+                      dir="ltr"
+                      className={`${inp} font-mono tracking-widest`}
+                      placeholder="مثال: CA24C73BD1F5F64D6549"
+                      value={settings.paymentGatewayMerchant}
+                      onChange={e => set("paymentGatewayMerchant", e.target.value.trim())}
+                    />
+                    <p className="text-[10px] text-gray-400 leading-relaxed">
+                      این کد را پس از تکمیل ثبت‌نام در پنل آقای پرداخت دریافت می‌کنید.
+                      آدرس بازگشت باید با دامنه تأیید شده در پنل یکسان باشد.
+                    </p>
+                  </div>
+
+                  <div className={`flex items-center justify-between p-3 rounded-xl border-2 transition-all ${settings.paymentGatewaySandbox ? "border-amber-400 bg-amber-50 dark:bg-amber-900/10" : "border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5"}`}>
+                    <div>
+                      <p className={`text-xs font-black ${settings.paymentGatewaySandbox ? "text-amber-700 dark:text-amber-400" : "text-gray-700 dark:text-gray-300"}`}>
+                        حالت آزمایشی (Sandbox)
+                      </p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {settings.paymentGatewaySandbox
+                          ? "⚠️ فعال — از PIN واقعی استفاده نمی‌شود. برای تست روی localhost مناسب است."
+                          : "برای تست قبل از راه‌اندازی روی هاست واقعی فعال کنید"}
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => set("paymentGatewaySandbox", !settings.paymentGatewaySandbox)}
+                      className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 mr-4 ${settings.paymentGatewaySandbox ? "bg-amber-500" : "bg-gray-200 dark:bg-white/10"}`}>
+                      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${settings.paymentGatewaySandbox ? "translate-x-5" : "translate-x-1"}`} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {settings.paymentGatewayActive && !settings.paymentGatewayMerchant && (
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-start gap-3">
+              <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p className="text-xs font-bold text-amber-700 dark:text-amber-300">
+                درگاه فعال است اما کد پین وارد نشده. بدون کد پین، پرداخت آنلاین کار نخواهد کرد.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

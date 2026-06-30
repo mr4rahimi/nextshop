@@ -58,6 +58,11 @@ export async function PUT(req: Request) {
   if (data.smsPatternOrderCancel !== undefined) updateData.smsPatternOrderCancel = data.smsPatternOrderCancel ?? null;
   // Wallet
   if (data.walletEnabled !== undefined) updateData.walletEnabled = data.walletEnabled ?? false;
+  // Payment gateway
+  if (data.paymentGatewayProvider  !== undefined) updateData.paymentGatewayProvider  = data.paymentGatewayProvider  ?? null;
+  if (data.paymentGatewayMerchant  !== undefined) updateData.paymentGatewayMerchant  = data.paymentGatewayMerchant  ?? null;
+  if (data.paymentGatewayActive    !== undefined) updateData.paymentGatewayActive    = data.paymentGatewayActive    ?? false;
+  if (data.paymentGatewaySandbox   !== undefined) updateData.paymentGatewaySandbox   = data.paymentGatewaySandbox   ?? false;
 
   const s = await prisma.storeSettings.upsert({
     where: { id: "singleton" },
