@@ -37,6 +37,7 @@
     ".next/dev/types/**/*.ts"
 , "prisma/seed..ts.bak"  ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "list-of-cities-in-Iran-main"
   ]
 }
