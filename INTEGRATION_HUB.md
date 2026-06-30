@@ -2,7 +2,7 @@
 
 > **این فایل سند زنده پروژه Integration Hub است.**
 > هر بار که کار روی این پروژه شروع می‌شود، این فایل اول خوانده شود.
-> آخرین به‌روزرسانی: ۱۴۰۵/۰۴/۱۲
+> آخرین به‌روزرسانی: ۱۴۰۵/۰۴/۱۳
 
 ---
 
@@ -767,11 +767,32 @@ export function startWorkerIfNeeded() {
 - [x] Admin `/admin/integration/price-rules/create`: فرم با formula editor + templates + preview زنده
 - [x] Admin `/admin/integration/price-rules/[id]`: ویرایش قانون
 
-### فاز ۵ — گسترش
-- [ ] Adapterهای بعدی (Digikala، Divar، SnappShop، TapsiShop)
-- [ ] داشبورد مانیتورینگ پیشرفته
+### فاز ۵ — مانیتورینگ پیشرفته ✅ تکمیل شد (۱۴۰۵/۰۴/۱۲)
+- [x] داشبورد پیشرفته `/admin/integration`:
+  - پانل هشدار: job‌های شکست‌خورده، خطاهای ۲۴ ساعت، پیشنهادهای در انتظار، پلتفرم‌های قطع
+  - آمار ۲۴ ساعت (موفق/خطا)
+  - وضعیت per-platform با آخرین sync time و lastError
+  - Activity feed از ۱۰ لاگ اخیر
+  - بخش job‌های شکست‌خورده با لینک به queue
+- [x] صفحه Queue `/admin/integration/queue` (تعاملی):
+  - فیلتر بر اساس وضعیت (کارت‌های کلیک‌پذیر) + پلتفرم
+  - Retry برای FAILED jobs و Cancel برای PENDING jobs
+  - Auto-refresh هر ۱۵ ثانیه (toggle)
+  - Expand row برای دیدن payload + خطا + زمان شروع/پایان
+  - Pagination (۳۰ per page)
+- [x] API `/api/integration/queue`: GET (paginated + filter) + POST (retry/cancel)
+- [x] صفحه Logs `/admin/integration/logs` (تعاملی):
+  - فیلتر: پلتفرم + وضعیت + نوع عملیات
+  - Pagination (۴۰ per page)
+  - Expand row برای نتیجه JSON + خطای کامل
+- [x] API `/api/integration/logs`: GET (paginated + filter)
+
+### فاز ۶ — Adapterهای بعدی (نیاز به مستندات API)
+- [ ] DigikalaAdapter (مستندات API لازم است)
+- [ ] DivarAdapter
+- [ ] SnappShopAdapter
+- [ ] TapsiShopAdapter
 - [ ] مشاهده سفارشات از مارکت‌پلیس‌ها (view-only)
-- [ ] هشدارها و نوتیفیکیشن (sync شکست خورد، موجودی صفر شد، ...)
 
 ---
 
