@@ -4,10 +4,12 @@ import { getQueueStats } from "@/lib/integration/core/queue";
 export const dynamic = "force-dynamic";
 
 export default async function IntegrationDashboardPage() {
-  const [platforms, connections, queueStats] = await Promise.all([
+  const [platforms, connections, queueStats, mappingCount, suggestionCount] = await Promise.all([
     prisma.integPlatform.findMany({ where: { isActive: true }, orderBy: { type: "asc" } }),
     prisma.integConnection.findMany({ include: { platform: true } }),
     getQueueStats(),
+    prisma.integProductMapping.count({ where: { isActive: true } }),
+    prisma.integMappingSuggestion.count({ where: { status: "PENDING" } }),
   ]);
 
   const connMap = new Map(connections.map(c => [c.platformCode, c]));
@@ -19,20 +21,29 @@ export default async function IntegrationDashboardPage() {
         <p className="text-sm text-gray-500 mt-1">مدیریت اتصال به نرم‌افزارهای حسابداری و مارکت‌پلیس‌ها</p>
       </div>
 
-      {/* Queue Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: "در انتظار",     value: queueStats.pending,    color: "text-amber-500" },
-          { label: "در حال اجرا",   value: queueStats.processing, color: "text-blue-500"  },
-          { label: "شکست خورده",   value: queueStats.failed,     color: "text-red-500"   },
-          { label: "تکمیل‌شده",    value: queueStats.done,       color: "text-green-500" },
-        ].map(s => (
-          <div key={s.label} className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
-            <p className="text-xs text-gray-500 font-bold">{s.label}</p>
-            <p className={`text-3xl font-black mt-1 ${s.color}`}>{s.value}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">عملیات Queue</p>
-          </div>
-        ))}
+      {/* آمار کلی */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <a href="/admin/integration/mapping"
+          className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-blue-300 dark:hover:border-blue-500/30 transition-colors">
+          <p className="text-xs text-gray-500 font-bold">نگاشت فعال</p>
+          <p className="text-3xl font-black mt-1 text-blue-600 dark:text-blue-400">{mappingCount}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">محصول ← پلتفرم</p>
+        </a>
+        <a href="/admin/integration/mapping/suggestions"
+          className="bg-white dark:bg-[#0f1117] rounded-2xl border border-amber-200 dark:border-amber-500/20 p-4 hover:border-amber-400 dark:hover:border-amber-500/40 transition-colors">
+          <p className="text-xs text-gray-500 font-bold">پیشنهاد در انتظار</p>
+          <p className="text-3xl font-black mt-1 text-amber-500">{suggestionCount}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">نیاز به تأیید</p>
+        </a>
+        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
+          <p className="text-xs text-gray-500 font-bold">Queue</p>
+          <p className="text-3xl font-black mt-1 text-gray-900 dark:text-white">
+            {queueStats.pending + queueStats.processing}
+          </p>
+          <p className="text-[10px] text-gray-400 mt-0.5">
+            {queueStats.processing} در اجرا · {queueStats.failed} شکست
+          </p>
+        </div>
       </div>
 
       {/* Platforms */}

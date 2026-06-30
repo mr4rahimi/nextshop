@@ -735,13 +735,13 @@ export function startWorkerIfNeeded() {
 - [ ] job: `SYNC_ALL_PRICE` از حسابداری به فروشگاه
 - [ ] داشبورد: نمایش آخرین sync
 
-### فاز ۲ — Mapping محصولات
-**تخمین: ۴-۵ روز**
-- [ ] job: `FETCH_PRODUCTS` از حسابداری
-- [ ] الگوریتم auto-match + ذخیره در `IntegMappingSuggestion`
-- [ ] صفحه `/admin/integration/mapping/suggestions` (تأیید/رد/دستی)
-- [ ] صفحه `/admin/integration/mapping` (جدول کامل)
-- [ ] پیشنهاد ساخت محصول جدید در فروشگاه
+### فاز ۲ — Mapping محصولات ✅ تکمیل شد (۱۴۰۵/۰۴/۱۱)
+- [x] job: `FETCH_PRODUCTS` از حسابداری → auto-match
+- [x] الگوریتم auto-match (bigram similarity فارسی) در `lib/integration/core/mapping.ts`
+- [x] صفحه `/admin/integration/mapping/suggestions` با approve/reject کاربردی
+- [x] صفحه `/admin/integration/mapping` با جدول + دکمه fetch
+- [x] API: `/api/integration/mapping` (GET/POST/DELETE)
+- [x] API: `/api/integration/mapping/suggestions` (GET/PATCH)
 
 ### فاز ۳ — باسلام (نیاز به مستندات API)
 **تخمین: ۳-۵ روز**

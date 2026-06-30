@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import SuggestionsClient from "./SuggestionsClient";
 
 export const dynamic = "force-dynamic";
 
@@ -7,44 +9,59 @@ export default async function SuggestionsPage() {
     where:   { status: "PENDING" },
     orderBy: { confidence: "desc" },
     take:    100,
-    include: { platform: true },
+    include: { platform: { select: { name: true } } },
   });
+
+  const total = await prisma.integMappingSuggestion.count({ where: { status: "PENDING" } });
+
+  // اضافه کردن اطلاعات محصول فروشگاه
+  const withShop = await Promise.all(
+    suggestions.map(async (s) => {
+      const shopProduct = await prisma.product.findUnique({
+        where:  { id: s.shopProductId },
+        select: { id: true, title: true, mainImage: true },
+      });
+      return { ...s, shopProduct };
+    }),
+  );
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6" dir="rtl">
-      <div>
-        <h1 className="text-xl font-black text-gray-900 dark:text-white">پیشنهادهای اتصال</h1>
-        <p className="text-sm text-gray-500 mt-1">تأیید یا رد پیشنهادهای auto-match سیستم</p>
+      <div className="flex items-center gap-3">
+        <Link href="/admin/integration/mapping"
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-sm">
+          ← نگاشت
+        </Link>
+        <span className="text-gray-300 dark:text-gray-600">/</span>
+        <div>
+          <h1 className="text-xl font-black text-gray-900 dark:text-white">پیشنهادهای اتصال</h1>
+        </div>
       </div>
 
-      {suggestions.length === 0 ? (
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-12 text-center">
-          <p className="text-gray-400 text-sm">پیشنهادی در انتظار بررسی وجود ندارد</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {suggestions.map(s => (
-            <div key={s.id} className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{s.platformTitle ?? s.platformProductId}</p>
-                <p className="text-xs text-gray-400">{s.platform.name} · ID: {s.platformProductId}</p>
-              </div>
-              <div className="text-center flex-shrink-0">
-                <p className="text-lg font-black text-blue-500">{Math.round(s.confidence * 100)}%</p>
-                <p className="text-[10px] text-gray-400">اطمینان</p>
-              </div>
-              <div className="flex gap-2 flex-shrink-0">
-                <button className="px-3 py-1.5 rounded-lg bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-bold hover:bg-green-200 transition-colors">
-                  تأیید
-                </button>
-                <button className="px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-200 transition-colors">
-                  رد
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <p className="text-sm text-gray-500 -mt-3">
+        سیستم auto-match این جفت‌های محصول را پیشنهاد داده — تأیید یا رد کنید
+      </p>
+
+      {/* راهنما */}
+      <div className="flex gap-4 text-xs text-gray-500 flex-wrap">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+          اطمینان بالای ۸۰٪ — احتمالاً صحیح
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+          اطمینان ۷۰–۸۰٪ — نیاز به بررسی دقیق‌تر
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
+          اطمینان زیر ۷۰٪ — احتمال خطا
+        </span>
+      </div>
+
+      <SuggestionsClient
+        initialSuggestions={withShop}
+        total={total}
+      />
     </div>
   );
 }

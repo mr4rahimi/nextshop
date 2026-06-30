@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const body = await req.json() as {
     platformCode: string;
-    type: "SYNC_ALL_STOCK" | "SYNC_ALL_PRICE" | "FETCH_PRODUCTS";
+    type: "SYNC_ALL_STOCK" | "SYNC_ALL_PRICE" | "FETCH_PRODUCTS" | "TEST_CONNECTION";
+    priority?: number;
   };
 
   if (!body.platformCode || !body.type) {
@@ -16,10 +17,10 @@ export async function POST(req: NextRequest) {
   }
 
   const connection = await prisma.integConnection.findFirst({
-    where: { platformCode: body.platformCode, status: { in: ["CONNECTED", "SYNCING"] } },
+    where: { platformCode: body.platformCode },
   });
 
-  if (!connection) {
+  if (!connection || (body.type !== "TEST_CONNECTION" && !["CONNECTED", "SYNCING"].includes(connection.status))) {
     return NextResponse.json({ error: "ابتدا اتصال را برقرار کنید" }, { status: 400 });
   }
 
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
       platformCode: body.platformCode,
       type:         body.type,
       payload:      {},
-      priority:     2,
+      priority:     body.priority ?? 2,
       status:       "PENDING",
     },
   });

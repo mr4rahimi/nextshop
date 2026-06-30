@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import type { IntegJob } from "@prisma/client";
 import type { BaseAdapter } from "@/lib/integration/adapters/base.adapter";
+import type { IntegProductInfo } from "@/lib/integration/types";
 import { writeLog } from "./log";
 import { getAdapter } from "./adapter-registry";
 import { decryptCredentials } from "./crypto";
+import { runAutoMatch } from "./mapping";
 
 // اجرای یک چرخه Worker — فراخوانی هر N ثانیه
 export async function runWorkerCycle(maxJobs = 5): Promise<void> {
@@ -124,9 +126,12 @@ async function dispatchJob(job: IntegJob): Promise<void> {
       break;
     }
 
-    case "FETCH_PRODUCTS":
+    case "FETCH_PRODUCTS": {
+      await fetchAndMatch(job.id, job.platformCode, adapter, credentials);
+      break;
+    }
+
     case "CREATE_PRODUCT":
-      // این‌ها در فازهای بعدی پیاده‌سازی می‌شوند
       throw new Error(`Job type ${job.type} not yet implemented`);
 
     default:
@@ -307,4 +312,48 @@ async function syncAllPrice(
       responseData:  { success: result.success.length, failed: result.failed.length },
     }).catch(() => {});
   }
+}
+
+// ── FETCH_PRODUCTS + AUTO-MATCH ──────────────────────────────────────
+// دریافت کل محصولات پلتفرم و اجرای auto-match با محصولات فروشگاه
+
+async function fetchAndMatch(
+  jobId: string,
+  platformCode: string,
+  adapter: BaseAdapter,
+  credentials: Record<string, string>,
+): Promise<void> {
+  let page = 1;
+  let totalFetched = 0;
+  let autoMapped   = 0;
+  let suggested    = 0;
+  let hasMore      = true;
+
+  while (hasMore) {
+    const result = await adapter.fetchProducts(credentials, page, 100);
+    totalFetched += result.items.length;
+
+    const matchResult = await runAutoMatch(platformCode, result.items);
+    autoMapped += matchResult.autoMapped;
+    suggested  += matchResult.suggested;
+
+    hasMore = result.hasMore;
+    page++;
+  }
+
+  // آپدیت lastSyncAt روی اتصال
+  await prisma.integConnection.updateMany({
+    where: { platformCode },
+    data:  { lastSyncAt: new Date() },
+  });
+
+  await writeLog({
+    jobId,
+    platformCode,
+    operationType: "FETCH_PRODUCTS",
+    direction:     "INBOUND",
+    entityType:    "PRODUCT",
+    status:        "SUCCESS",
+    responseData:  { totalFetched, autoMapped, suggested, pages: page - 1 },
+  }).catch(() => {});
 }
