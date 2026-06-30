@@ -35,8 +35,14 @@ const ICONS = {
   wallet: "M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z",
   appearance: "M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01",
   "chat-settings": "M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
-  changelog: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0-8c-1.11 0-2.08.402-2.599 1M12 16v1m0-1c1.11 0 2.08-.402 2.599-1M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
+  changelog:    "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0-8c-1.11 0-2.08.402-2.599 1M12 16v1m0-1c1.11 0 2.08-.402 2.599-1M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
   "chat-history": "M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
+  integration:  "M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
+  plug:         "M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1",
+  mapping:      "M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4",
+  price:        "M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a1 1 0 001-1V6a1 1 0 00-1-1H4a1 1 0 00-1 1v12a1 1 0 001 1z",
+  queue:        "M4 6h16M4 10h16M4 14h16M4 18h16",
+  logs:         "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01",
 };
 
 const MENU_GROUPS = [
@@ -97,6 +103,23 @@ const MENU_GROUPS = [
           { href: "/admin/widgets", label: "ویجت‌ها" },
           { href: "/admin/hero-slides", label: "اسلایدر Hero" },
           { href: "/admin/stories", label: "استوری‌ها" },
+        ],
+      },
+    ],
+  },
+  {
+    label: "یکپارچه‌سازی",
+    items: [
+      {
+        href: "/admin/integration", label: "یکپارچه‌سازی", icon: "integration",
+        children: [
+          { href: "/admin/integration",                  label: "داشبورد" },
+          { href: "/admin/integration/connections",       label: "اتصالات" },
+          { href: "/admin/integration/mapping",           label: "نگاشت محصولات" },
+          { href: "/admin/integration/mapping/suggestions", label: "پیشنهادهای اتصال" },
+          { href: "/admin/integration/price-rules",      label: "قوانین قیمت" },
+          { href: "/admin/integration/queue",            label: "صف عملیات" },
+          { href: "/admin/integration/logs",             label: "گزارش لاگ‌ها" },
         ],
       },
     ],
@@ -357,6 +380,7 @@ function Breadcrumb() {
     stories: "استوری‌ها", "hero-slides": "اسلایدر", shipping: "ارسال",
     "site-settings": "تنظیمات", footer: "فوتر", menu: "منو",
     create: "جدید", comments: "نظرات", media: "کتابخانه رسانه", guaranty: "گارانتی", requests: "درخواست‌ها", wallet: "کیف پول", appearance: "ظاهر سایت", "chat-settings": "تنظیمات چت", changelog: "نسخه برنامه", "chat-history": "تاریخچه چت", "callback-requests": "درخواست‌های تماس",
+    integration: "یکپارچه‌سازی", connections: "اتصالات", mapping: "نگاشت محصولات", suggestions: "پیشنهادها", "price-rules": "قوانین قیمت", queue: "صف عملیات", logs: "لاگ‌ها",
   };
 
   return (
