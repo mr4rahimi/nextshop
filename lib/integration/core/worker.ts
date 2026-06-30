@@ -6,6 +6,7 @@ import { writeLog } from "./log";
 import { getAdapter } from "./adapter-registry";
 import { decryptCredentials } from "./crypto";
 import { runAutoMatch } from "./mapping";
+import { applyRulesToPrices } from "./price-rule-engine";
 
 // اجرای یک چرخه Worker — فراخوانی هر N ثانیه
 export async function runWorkerCycle(maxJobs = 5): Promise<void> {
@@ -179,6 +180,14 @@ async function syncAllStock(
             where: { id: mapping.shopProductId },
             data:  { stock: Math.max(0, Math.floor(item.stock)) },
           });
+          // ذخیره آخرین قیمت خرید در meta mapping (برای Rule Engine)
+          if (item.purchasePrice) {
+            const currentMeta = (mapping.meta ?? {}) as Record<string, unknown>;
+            await prisma.integProductMapping.update({
+              where: { id: mapping.id },
+              data:  { meta: { ...currentMeta, lastPurchasePrice: item.purchasePrice } },
+            });
+          }
           updatedCount++;
         }
       }
@@ -288,19 +297,25 @@ async function syncAllPrice(
 
     const mappings = await prisma.integProductMapping.findMany({
       where:   { platformCode, isActive: true },
-      include: { shopProduct: { select: { price: true, salePrice: true } } },
+      include: { shopProduct: { select: { price: true, salePrice: true, stock: true } } },
     });
 
     if (!mappings.length) return;
 
-    const result = await adapter.updatePrice(
-      credentials,
+    // اعمال قوانین قیمت قبل از ارسال به پلتفرم
+    const priceUpdates = await applyRulesToPrices(
+      platformCode,
       mappings.map((m) => ({
+        shopProductId:     m.shopProductId,
         platformProductId: m.platformProductId,
         price:             Number(m.shopProduct.price),
         salePrice:         m.shopProduct.salePrice ? Number(m.shopProduct.salePrice) : undefined,
+        stock:             m.shopProduct.stock,
+        lastPurchasePrice: (m.meta as { lastPurchasePrice?: number } | null)?.lastPurchasePrice,
       })),
     );
+
+    const result = await adapter.updatePrice(credentials, priceUpdates);
 
     await writeLog({
       jobId,

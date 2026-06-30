@@ -2,7 +2,7 @@
 
 > **این فایل سند زنده پروژه Integration Hub است.**
 > هر بار که کار روی این پروژه شروع می‌شود، این فایل اول خوانده شود.
-> آخرین به‌روزرسانی: ۱۴۰۵/۰۴/۱۱
+> آخرین به‌روزرسانی: ۱۴۰۵/۰۴/۱۲
 
 ---
 
@@ -755,13 +755,17 @@ export function startWorkerIfNeeded() {
 - [x] Sync موجودی: فروشگاه → باسلام (PUSH — worker.ts از قبل پشتیبانی می‌کند)
 - [x] Sync قیمت: فروشگاه → باسلام با `primary_price`
 
-### فاز ۴ — Rule Engine قیمت
-**تخمین: ۴-۶ روز**
-- [ ] `PriceRuleEngine` (اجرای فرمول JSON)
-- [ ] ۵ نوع rule آماده (cost_plus, last_purchase_plus, fixed_margin, if_stock_low, platform_specific)
-- [ ] صفحه CRUD قوانین در ادمین
-- [ ] اعمال قوانین هنگام `SYNC_PRICE`
-- [ ] (آینده) Visual builder گرافیکی
+### فاز ۴ — Rule Engine قیمت ✅ تکمیل شد (۱۴۰۵/۰۴/۱۱)
+- [x] `evaluateFormula` + `applyRulesToPrices` در `lib/integration/core/price-rule-engine.ts`
+  - انواع node: var, const, add, subtract, multiply, divide, max, min, percent_of, round_up, if
+  - انواع condition: lt, gt, lte, gte, eq, and, or
+- [x] ۵ template آماده: shop_as_is, cost_plus_30, shop_plus_5, fixed_margin_20, dynamic_stock
+- [x] worker.ts: قبل از updatePrice برای MARKETPLACE، applyRulesToPrices فراخوانی می‌شود
+- [x] worker.ts: هنگام SYNC_ALL_STOCK از حسابان، lastPurchasePrice در mapping.meta ذخیره می‌شود
+- [x] API: GET/POST `/api/integration/price-rules` + GET/PUT/DELETE `/api/integration/price-rules/[id]`
+- [x] Admin `/admin/integration/price-rules`: لیست + toggle + حذف
+- [x] Admin `/admin/integration/price-rules/create`: فرم با formula editor + templates + preview زنده
+- [x] Admin `/admin/integration/price-rules/[id]`: ویرایش قانون
 
 ### فاز ۵ — گسترش
 - [ ] Adapterهای بعدی (Digikala، Divar، SnappShop، TapsiShop)
