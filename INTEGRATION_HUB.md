@@ -8,146 +8,175 @@
 
 ## ۱. خلاصه اجرایی
 
-Integration Hub یک ماژول مستقل است که داخل پنل ادمین فروشگاه نمایش داده می‌شود و وظیفه یکپارچه‌سازی فروشگاه با نرم‌افزارهای حسابداری و مارکت‌پلیس‌ها را دارد.
+Integration Hub یک ماژول مستقل است که داخل پنل ادمین فروشگاه نمایش داده می‌شود
+(سایدبار جدید: «سیستم یکپارچه‌سازی») و وظیفه یکپارچه‌سازی فروشگاه با
+نرم‌افزارهای حسابداری و مارکت‌پلیس‌ها را دارد.
 
 **اصول اساسی طراحی:**
-- فروشگاه (shop) هیچ کد مستقیمی به حسابداری/مارکت‌پلیس‌ها ندارد — همه چیز از طریق Integration Hub
-- هر پلتفرم خارجی = یک Adapter مستقل
+- فروشگاه هیچ کد مستقیمی به حسابداری / مارکت‌پلیس‌ها ندارد — همه چیز از Integration Hub
+- هر پلتفرم خارجی = یک Adapter مستقل با interface یکسان
 - Mapping بر اساس شناسه داخلی هر سیستم (نه عنوان یا SKU جدید)
-- حسابداری = مرجع نهایی موجودی
-- همه عملیات از طریق Queue پردازش می‌شوند
+- حسابداری = مرجع نهایی موجودی و قیمت خرید
+- همه عملیات از طریق Queue (PostgreSQL-based) پردازش می‌شوند
 - همه عملیات در Log ثبت می‌شوند
 
 ---
 
-## ۲. وضعیت فعلی
+## ۲. تصمیمات قطعی شده
 
-### ✅ تکمیل‌شده
-- طراحی معماری کلی
-- بررسی کدبیس فروشگاه
-- طراحی Database Schema
-- طراحی Adapter Interface
-
-### 🔄 در انتظار تصمیم (سوالات باز)
-- [ ] **کدام نرم‌افزار حسابداری هدف اول؟** — بر معماری Accounting Adapter تأثیر مستقیم دارد
-- [ ] **Redis موجود است یا فقط PostgreSQL؟** — بر طراحی Queue تأثیر دارد
-- [ ] **اولویت Adapter اول: Basalam یا Digikala؟**
-- [ ] **آیا سفارشات مارکت‌پلیس به فروشگاه وارد می‌شوند؟** (bidirectional orders)
-- [ ] **تعداد محصولات برای mapping؟** (مقیاس سیستم)
-
-### 🔜 مرحله بعدی
-وقتی سوالات بالا جواب گرفت → شروع پیاده‌سازی Phase 1
+| موضوع | تصمیم | دلیل |
+|-------|-------|------|
+| **حسابداری هدف** | وب‌حسابان (Hesaban) | مستندات API بعداً ارائه می‌شود |
+| **مارکت‌پلیس اول** | باسلام | مستندات API بعداً ارائه می‌شود |
+| **Database** | همان PostgreSQL فروشگاه — جداول با پیشوند `Integ` | هر deployment DB مستقل دارد؛ JOIN با Product بدون overhead؛ یک Prisma client |
+| **Queue** | PostgreSQL-based (بدون Redis) | بدون نیاز به infrastructure اضافه؛ در صورت scale بالا migrate می‌شود |
+| **sync scope فعلی** | فقط موجودی + قیمت | سفارشات در آینده اضافه می‌شود |
+| **مشاهده سفارشات** | view‌only از همه پلتفرم‌ها در آینده | نه import به فروشگاه |
+| **مقیاس محصول** | ۲۰۰ تا چند هزار (متنوع) | بدون نیاز به بهینه‌سازی خاص؛ pagination استاندارد کافی است |
+| **جایگاه UI** | سایدبار ادمین — گروه «سیستم یکپارچه‌سازی» | مستقل از گروه‌های فروشگاه/محتوا/تنظیمات |
+| **isolation** | منطقی (کد جدا) نه فیزیکی (DB جدا) | کافی است؛ migration به DB جدا بعداً ممکن است |
 
 ---
 
-## ۳. معماری کلی
+## ۳. وضعیت فعلی
+
+### ✅ تکمیل‌شده
+- تمام تصمیمات معماری قطعی شد
+- طراحی Database Schema (کامل)
+- طراحی Adapter Interface (TypeScript)
+- طراحی Queue Worker (PostgreSQL-based)
+- طراحی الگوریتم Auto-Match
+- طراحی Rule Engine (ساختار JSON)
+- فازبندی پیاده‌سازی
+
+### ⏳ در انتظار (مستندات نیاز است)
+- [ ] مستندات API وب‌حسابان — برای شروع Accounting Adapter
+- [ ] مستندات API باسلام — برای Basalam Adapter
+
+### 🔜 مرحله بعدی (بعد از دریافت مستندات)
+→ شروع **فاز ۰**: اضافه کردن schema + ساخت زیرساخت + UI skeleton
+
+---
+
+## ۴. معماری کلی
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Admin Dashboard                       │
-│              (Integration Hub UI)                       │
-└─────────────────────┬───────────────────────────────────┘
-                      │ Next.js API Routes
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│                  Integration Hub Core                    │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐ │
-│  │ Sync     │  │ Mapping  │  │ Price    │  │  Log   │ │
-│  │ Engine   │  │ Service  │  │ Rule     │  │Service │ │
-│  └──────────┘  └──────────┘  │ Engine   │  └────────┘ │
-│                               └──────────┘             │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │              Queue Manager                      │   │
-│  └─────────────────────────────────────────────────┘   │
-└──────┬──────────────┬──────────────┬────────────────────┘
-       │              │              │
-       ▼              ▼              ▼
-┌───────────┐  ┌───────────┐  ┌───────────┐
-│Accounting │  │ Basalam   │  │ Digikala  │  ...
-│ Adapter   │  │ Adapter   │  │ Adapter   │
-│(Interface)│  │(Interface)│  │(Interface)│
-└─────┬─────┘  └─────┬─────┘  └─────┬─────┘
-      │               │              │
-      ▼               ▼              ▼
-  حسابداری        باسلام          دیجیکالا
+┌─────────────────────────────────────────────────────────────┐
+│          Admin Panel — سایدبار «سیستم یکپارچه‌سازی»         │
+│  /admin/integration/*  (Next.js pages)                      │
+└─────────────────────────────┬───────────────────────────────┘
+                              │ API Routes
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Integration Hub Core                      │
+│  lib/integration/core/                                      │
+│  ┌────────────┐ ┌──────────────┐ ┌───────────────────────┐ │
+│  │ Queue      │ │ Mapping      │ │ Price Rule Engine     │ │
+│  │ Worker     │ │ Service      │ │                       │ │
+│  └────────────┘ └──────────────┘ └───────────────────────┘ │
+│  ┌────────────┐ ┌──────────────┐                           │
+│  │ Sync       │ │ Log          │                           │
+│  │ Engine     │ │ Service      │                           │
+│  └────────────┘ └──────────────┘                           │
+└──────────┬──────────────────┬──────────────────────────────┘
+           │                  │
+           ▼                  ▼
+┌──────────────────┐  ┌──────────────────┐
+│ Accounting       │  │ Marketplace      │
+│ Adapters         │  │ Adapters         │
+│                  │  │                  │
+│ hesaban.adapter  │  │ basalam.adapter  │
+│ (آینده: دیگران)  │  │ (آینده: دیگران)  │
+└────────┬─────────┘  └────────┬─────────┘
+         │                     │
+         ▼                     ▼
+    وب‌حسابان                باسلام / دیجیکالا / ...
 ```
 
-### لایه‌بندی فایل‌ها (طراحی پیشنهادی)
+### ساختار فایل‌ها
 
 ```
 lib/
   integration/
     core/
-      sync-engine.ts        ← موتور اصلی sync
-      queue-manager.ts      ← مدیریت Queue
-      mapping-service.ts    ← مدیریت Mapping
-      price-rule-engine.ts  ← Rule Engine قیمت
-      log-service.ts        ← ثبت لاگ
+      sync-engine.ts           ← موتور اصلی sync
+      queue-worker.ts          ← Queue PostgreSQL-based
+      queue-manager.ts         ← enqueue / dequeue API
+      mapping-service.ts       ← مدیریت Mapping + auto-match
+      price-rule-engine.ts     ← اجرای Rule Engine
+      log-service.ts           ← ثبت Log
+      crypto.ts                ← رمزنگاری credentials (AES-256-GCM)
     adapters/
-      base.adapter.ts       ← Interface مشترک
+      base.adapter.ts          ← Interface مشترک
       accounting/
-        hesabfa.adapter.ts
-        (آینده: sepidaar.adapter.ts)
+        hesaban.adapter.ts     ← وب‌حسابان
       marketplace/
-        basalam.adapter.ts
-        digikala.adapter.ts
-        divar.adapter.ts
-        snappshop.adapter.ts
-        tapsi-shop.adapter.ts
+        basalam.adapter.ts     ← باسلام
+        digikala.adapter.ts    ← (آینده)
+        divar.adapter.ts       ← (آینده)
+        snappshop.adapter.ts   ← (آینده)
+        tapsi-shop.adapter.ts  ← (آینده)
     types/
-      integration.types.ts  ← TypeScript types
+      integration.types.ts     ← همه TypeScript types
+
 app/
   admin/
     integration/
-      page.tsx              ← داشبورد کلی Integration Hub
+      page.tsx                 ← داشبورد کلی (health + stats)
       connections/
-        page.tsx            ← لیست اتصالات + add new
-        [platform]/
-          page.tsx          ← تنظیمات هر پلتفرم
+        page.tsx               ← لیست اتصالات
+        [platform]/page.tsx    ← تنظیمات + credential هر پلتفرم
       mapping/
-        page.tsx            ← مدیریت Mapping محصولات
-        suggestions/
-          page.tsx          ← پیشنهادهای auto-match
+        page.tsx               ← مدیریت Mapping
+        suggestions/page.tsx   ← تأیید/رد پیشنهادهای auto-match
       price-rules/
-        page.tsx            ← مدیریت Rule Engine
+        page.tsx               ← لیست قوانین قیمت
         create/page.tsx
         [id]/page.tsx
-      queue/
-        page.tsx            ← وضعیت Queue
-      logs/
-        page.tsx            ← گزارش لاگ‌ها
+      queue/page.tsx           ← وضعیت Queue (pending/failed jobs)
+      logs/page.tsx            ← گزارش لاگ‌ها با فیلتر
+
   api/
     integration/
-      connections/route.ts
-      sync/route.ts
-      mapping/route.ts
-      mapping/suggestions/route.ts
-      price-rules/route.ts
-      queue/route.ts
-      logs/route.ts
-      webhook/[platform]/route.ts
+      worker/route.ts          ← POST — اجرای Queue (توسط setInterval)
+      connections/route.ts     ← CRUD اتصالات
+      connections/test/route.ts ← تست اتصال
+      sync/route.ts            ← trigger دستی sync
+      mapping/route.ts         ← CRUD Mapping
+      mapping/suggestions/route.ts ← تأیید/رد پیشنهادها
+      price-rules/route.ts     ← CRUD قوانین
+      queue/route.ts           ← وضعیت + cancel job
+      logs/route.ts            ← گزارش با فیلتر
+      webhook/[platform]/route.ts ← آماده برای آینده
 ```
 
 ---
 
-## ۴. طراحی Database Schema
+## ۵. Database Schema — جداول Prisma
 
-این جداول به schema.prisma فروشگاه اضافه می‌شوند:
+این جداول به `schema.prisma` فروشگاه اضافه می‌شوند.
+همه با پیشوند `Integ` و در همان DB فروشگاه.
 
 ```prisma
-// ── پلتفرم‌های تعریف‌شده (seeded — کاربر نمی‌سازد) ───────────────────────────
+// ════════════════════════════════════════════════════════════
+// INTEGRATION HUB TABLES
+// ════════════════════════════════════════════════════════════
 
-model IntegrationPlatform {
-  code        String   @id   // "hesabfa" | "basalam" | "digikala" | ...
-  name        String         // "حسابفا" | "باسلام" | "دیجیکالا"
+// ── پلتفرم‌های تعریف‌شده (seeded — کاربر نمی‌سازد) ──────────
+
+model IntegPlatform {
+  code        String   @id
+  // مقادیر: "hesaban" | "basalam" | "digikala" | "divar" | "snappshop" | "tapsi_shop"
+  name        String         // "وب‌حسابان" | "باسلام" | "دیجیکالا" | ...
   type        IntegPlatformType
   logoUrl     String?
-  docsUrl     String?
   isActive    Boolean  @default(true)
-  connections IntegrationConnection[]
-  mappings    IntegrationProductMapping[]
-  jobs        IntegrationJob[]
-  logs        IntegrationLog[]
+
+  connections IntegConnection[]
+  mappings    IntegProductMapping[]
+  jobs        IntegJob[]
+  logs        IntegLog[]
+  suggestions IntegMappingSuggestion[]
 }
 
 enum IntegPlatformType {
@@ -155,23 +184,26 @@ enum IntegPlatformType {
   MARKETPLACE
 }
 
-// ── اتصال کاربر به هر پلتفرم ─────────────────────────────────────────────────
+// ── اتصال به هر پلتفرم (credential ها) ──────────────────────
 
-model IntegrationConnection {
+model IntegConnection {
   id             String   @id @default(cuid())
   platformCode   String
-  siteId         String?  // برای multi-site
-  credentials    String   // JSON رمزنگاری‌شده (AES-256)
+  siteId         String?  // برای آینده — فعلاً null (هر deployment یک سایت)
+  credentials    String   // JSON رمزنگاری‌شده با AES-256-GCM
   status         IntegConnStatus @default(DISCONNECTED)
   lastSyncAt     DateTime?
   lastErrorAt    DateTime?
   lastError      String?
-  config         Json     @default("{}")  // تنظیمات اضافی هر پلتفرم
+  config         Json     @default("{}")  // تنظیمات اضافی per-platform
   syncEnabled    Boolean  @default(true)
-  syncInterval   Int      @default(60)    // دقیقه
+  syncStockEnabled  Boolean @default(true)
+  syncPriceEnabled  Boolean @default(false)
+  syncIntervalMin   Int    @default(60)   // هر چند دقیقه sync شود
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  platform       IntegrationPlatform @relation(fields: [platformCode], references: [code])
+
+  platform IntegPlatform @relation(fields: [platformCode], references: [code])
 
   @@unique([platformCode, siteId])
   @@index([status])
@@ -185,22 +217,23 @@ enum IntegConnStatus {
   SYNCING
 }
 
-// ── Mapping محصولات ───────────────────────────────────────────────────────────
-// هر ردیف = یک محصول فروشگاه ↔ یک محصول در پلتفرم خارجی
+// ── Mapping محصولات ───────────────────────────────────────────
+// هر ردیف = محصول فروشگاه ↔ محصول در یک پلتفرم خارجی
 
-model IntegrationProductMapping {
-  id                 String   @id @default(cuid())
-  shopProductId      String
-  platformCode       String
-  platformProductId  String   // شناسه محصول در سیستم خارجی
-  platformSku        String?  // SKU در سیستم خارجی (اختیاری)
-  platformTitle      String?  // عنوان در آن سیستم (برای نمایش)
-  isActive           Boolean  @default(true)
-  meta               Json     @default("{}")  // داده‌های اضافی (مثلاً variant IDs)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  shopProduct        Product  @relation(fields: [shopProductId], references: [id], onDelete: Cascade)
-  platform           IntegrationPlatform @relation(fields: [platformCode], references: [code])
+model IntegProductMapping {
+  id                String   @id @default(cuid())
+  shopProductId     String
+  platformCode      String
+  platformProductId String   // شناسه محصول در سیستم خارجی
+  platformSku       String?  // SKU در سیستم خارجی (اختیاری)
+  platformTitle     String?  // عنوان در آن سیستم (فقط برای نمایش)
+  isActive          Boolean  @default(true)
+  meta              Json     @default("{}")  // داده‌های اضافی
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  shopProduct Product       @relation(fields: [shopProductId], references: [id], onDelete: Cascade)
+  platform    IntegPlatform @relation(fields: [platformCode], references: [code])
 
   @@unique([shopProductId, platformCode])
   @@unique([platformCode, platformProductId])
@@ -209,42 +242,43 @@ model IntegrationProductMapping {
   @@index([isActive])
 }
 
-// ── پیشنهادهای auto-match (قبل از تأیید کاربر) ───────────────────────────────
+// ── پیشنهادهای auto-match (قبل از تأیید کاربر) ──────────────
 
-model IntegrationMappingSuggestion {
-  id                 String   @id @default(cuid())
-  shopProductId      String
-  platformCode       String
-  platformProductId  String
-  platformTitle      String?
-  confidence         Float    // 0.0 - 1.0
-  matchReason        String?  // "title_match" | "barcode" | "sku" | ...
-  status             IntegSuggestionStatus @default(PENDING)
-  reviewedAt         DateTime?
-  createdAt          DateTime @default(now())
+model IntegMappingSuggestion {
+  id                String   @id @default(cuid())
+  shopProductId     String
+  platformCode      String
+  platformProductId String
+  platformTitle     String?
+  confidence        Float    // 0.0 تا 1.0
+  matchReason       String?  // "barcode" | "sku" | "title_exact" | "title_fuzzy"
+  status            IntegSuggestionStatus @default(PENDING)
+  reviewedAt        DateTime?
+  createdAt         DateTime @default(now())
+
+  platform IntegPlatform @relation(fields: [platformCode], references: [code])
 
   @@index([shopProductId])
-  @@index([platformCode])
-  @@index([status])
+  @@index([platformCode, status])
   @@index([confidence])
 }
 
 enum IntegSuggestionStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  EXPIRED
+  PENDING    // در انتظار بررسی کاربر
+  APPROVED   // تأیید شد → mapping ساخته شد
+  REJECTED   // رد شد
+  EXPIRED    // منقضی شد (محصول تغییر کرد)
 }
 
-// ── Queue ─────────────────────────────────────────────────────────────────────
+// ── Queue ─────────────────────────────────────────────────────
 
-model IntegrationJob {
+model IntegJob {
   id            String   @id @default(cuid())
   type          IntegJobType
   platformCode  String
-  payload       Json     // داده‌های لازم برای اجرا
+  payload       Json
   status        IntegJobStatus @default(PENDING)
-  priority      Int      @default(5)    // 1 = بالاترین اولویت
+  priority      Int      @default(5)    // 1 = بالاترین
   attempts      Int      @default(0)
   maxAttempts   Int      @default(3)
   lastError     String?
@@ -252,24 +286,23 @@ model IntegrationJob {
   startedAt     DateTime?
   completedAt   DateTime?
   createdAt     DateTime @default(now())
-  platform      IntegrationPlatform @relation(fields: [platformCode], references: [code])
-  logs          IntegrationLog[]
+
+  platform IntegPlatform @relation(fields: [platformCode], references: [code])
+  logs     IntegLog[]
 
   @@index([status, scheduledAt])
   @@index([platformCode, status])
-  @@index([type])
   @@index([priority, scheduledAt])
+  @@index([type])
 }
 
 enum IntegJobType {
-  SYNC_STOCK         // همگام‌سازی موجودی
-  SYNC_PRICE         // همگام‌سازی قیمت
-  SYNC_PRODUCT       // همگام‌سازی اطلاعات محصول
+  SYNC_STOCK         // sync موجودی یک محصول
+  SYNC_PRICE         // sync قیمت یک محصول
+  SYNC_ALL_STOCK     // sync کل موجودی
+  SYNC_ALL_PRICE     // sync کل قیمت‌ها
+  FETCH_PRODUCTS     // دریافت لیست محصولات (برای mapping)
   CREATE_PRODUCT     // ساخت محصول در پلتفرم
-  FETCH_PRODUCTS     // دریافت محصولات از پلتفرم (برای mapping)
-  SYNC_ORDER         // دریافت سفارش از مارکت‌پلیس
-  SYNC_ALL_STOCK     // همگام‌سازی کل موجودی
-  SYNC_ALL_PRICE     // همگام‌سازی کل قیمت‌ها
   TEST_CONNECTION    // تست اتصال
 }
 
@@ -282,24 +315,25 @@ enum IntegJobStatus {
   CANCELLED
 }
 
-// ── Log ───────────────────────────────────────────────────────────────────────
+// ── Log ───────────────────────────────────────────────────────
 
-model IntegrationLog {
+model IntegLog {
   id             String   @id @default(cuid())
   jobId          String?
   platformCode   String
   operationType  IntegJobType
   direction      IntegLogDirection
   entityType     IntegEntityType
-  entityId       String?  // shopProductId یا orderId
-  requestData    Json?    // درخواست ارسال‌شده به API
-  responseData   Json?    // پاسخ دریافت‌شده از API
+  entityId       String?   // shopProductId
+  requestData    Json?
+  responseData   Json?
   status         IntegLogStatus
   errorMessage   String?
   durationMs     Int?
   createdAt      DateTime @default(now())
-  job            IntegrationJob? @relation(fields: [jobId], references: [id])
-  platform       IntegrationPlatform @relation(fields: [platformCode], references: [code])
+
+  job      IntegJob?     @relation(fields: [jobId], references: [id])
+  platform IntegPlatform @relation(fields: [platformCode], references: [code])
 
   @@index([platformCode, createdAt])
   @@index([entityType, entityId])
@@ -309,15 +343,14 @@ model IntegrationLog {
 }
 
 enum IntegLogDirection {
-  INBOUND   // دریافت از پلتفرم
-  OUTBOUND  // ارسال به پلتفرم
+  INBOUND    // دریافت از پلتفرم
+  OUTBOUND   // ارسال به پلتفرم
 }
 
 enum IntegEntityType {
   PRODUCT
   STOCK
   PRICE
-  ORDER
   CONNECTION
 }
 
@@ -327,71 +360,63 @@ enum IntegLogStatus {
   PARTIAL
 }
 
-// ── قوانین قیمت‌گذاری (Rule Engine) ─────────────────────────────────────────
+// ── قوانین قیمت‌گذاری (Rule Engine) ──────────────────────────
 
-model IntegrationPriceRule {
-  id             String   @id @default(cuid())
-  name           String
-  description    String?
-  isActive       Boolean  @default(true)
-  priority       Int      @default(100)  // عدد کمتر = اولویت بالاتر
-  // scope: null = همه محصولات؛ وگرنه فیلتر می‌کند
-  scopeCategoryIds  String[]  @default([])
-  scopeBrandIds     String[]  @default([])
-  // پلتفرم‌های هدف: [] = همه
-  targetPlatforms   String[]  @default([])
-  // فرمول: درخت JSON از شرط‌ها و عملیات
-  formula        Json
-  // مثال formula:
-  // { "type": "add_percent", "base": "last_purchase_price", "percent": 20 }
-  // { "type": "if_stock_low", "threshold": 5, "then": { "type": "add_percent", "base": "cost", "percent": 30 } }
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+model IntegPriceRule {
+  id               String   @id @default(cuid())
+  name             String
+  description      String?
+  isActive         Boolean  @default(true)
+  priority         Int      @default(100)  // عدد کمتر = اجرا اول
+  scopeCategoryIds String[] @default([])   // خالی = همه دسته‌ها
+  scopeBrandIds    String[] @default([])   // خالی = همه برندها
+  targetPlatforms  String[] @default([])   // خالی = همه پلتفرم‌ها
+  formula          Json                    // ساختار JSON فرمول (ببینید بخش ۹)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([isActive, priority])
 }
 
-// ── تنظیمات کلی Integration Hub ──────────────────────────────────────────────
+// ── تنظیمات کلی Integration Hub ──────────────────────────────
 
-model IntegrationSettings {
+model IntegSettings {
   id                    String   @id @default("singleton")
   workerEnabled         Boolean  @default(true)
-  workerIntervalSeconds Int      @default(30)   // هر چند ثانیه queue پردازش شود
+  workerIntervalSec     Int      @default(30)
   maxConcurrentJobs     Int      @default(5)
   logRetentionDays      Int      @default(30)
-  autoSyncStock         Boolean  @default(true)
-  autoSyncPrice         Boolean  @default(false)
   updatedAt             DateTime @updatedAt
 }
 ```
 
-**توجه**: به `Product` در schema.prisma فعلی باید یک رابطه اضافه شود:
+**اضافه کردن به model فعلی Product:**
 ```prisma
-// در model Product (فعلی):
-integrationMappings IntegrationProductMapping[]
+// در model Product — اضافه کردن این خط:
+integMappings IntegProductMapping[]
 ```
 
 ---
 
-## ۵. Adapter Interface
-
-هر Adapter باید این interface را پیاده کند:
+## ۶. Adapter Interface
 
 ```typescript
 // lib/integration/adapters/base.adapter.ts
 
-export interface ProductInfo {
-  platformId:   string;
-  title:        string;
-  sku?:         string;
-  barcode?:     string;
+export interface IntegProductInfo {
+  platformId:    string;
+  title:         string;
+  sku?:          string;
+  barcode?:      string;
   categoryName?: string;
-  brandName?:   string;
-  price?:       number;
-  stock?:       number;
-  weight?:      number;
-  attributes?:  Record<string, string>;
-  imageUrls?:   string[];
+  brandName?:    string;
+  purchasePrice?: number;  // قیمت خرید (فقط حسابداری)
+  salePrice?:    number;
+  stock?:        number;
+  unit?:         string;   // واحد (عدد / کیلوگرم / ...)
+  weight?:       number;
+  attributes?:   Record<string, string>;
+  imageUrls?:    string[];
 }
 
 export interface StockUpdate {
@@ -408,270 +433,337 @@ export interface PriceUpdate {
 export interface ConnectionTestResult {
   success:   boolean;
   message?:  string;
-  details?:  Record<string, unknown>;
+  shopInfo?: Record<string, unknown>;  // اطلاعات کسب‌وکار (نام، کد ...)
 }
 
-export interface BaseAdapter {
-  readonly platformCode: string;
-  readonly platformName: string;
+export interface PaginatedProducts {
+  items:    IntegProductInfo[];
+  total:    number;
+  page:     number;
+  hasMore:  boolean;
+}
 
-  // تست اتصال
-  testConnection(credentials: Record<string, string>): Promise<ConnectionTestResult>;
+export abstract class BaseAdapter {
+  abstract readonly platformCode: string;
+  abstract readonly platformName: string;
 
-  // دریافت همه محصولات (برای initial mapping)
-  fetchAllProducts(credentials: Record<string, string>): Promise<ProductInfo[]>;
+  // تست اتصال — همیشه پیاده‌سازی می‌شود
+  abstract testConnection(
+    credentials: Record<string, string>
+  ): Promise<ConnectionTestResult>;
 
-  // به‌روزرسانی موجودی
-  updateStock(credentials: Record<string, string>, updates: StockUpdate[]): Promise<void>;
+  // دریافت محصولات (برای initial mapping)
+  abstract fetchProducts(
+    credentials: Record<string, string>,
+    page: number,
+    pageSize: number
+  ): Promise<PaginatedProducts>;
 
-  // به‌روزرسانی قیمت
-  updatePrice(credentials: Record<string, string>, updates: PriceUpdate[]): Promise<void>;
+  // به‌روزرسانی موجودی (batch)
+  abstract updateStock(
+    credentials: Record<string, string>,
+    updates: StockUpdate[]
+  ): Promise<{ success: string[]; failed: { id: string; error: string }[] }>;
 
-  // ساخت محصول جدید (اختیاری - هر Adapter می‌تواند پیاده نکند)
-  createProduct?(credentials: Record<string, string>, product: ProductInfo): Promise<string>;
+  // به‌روزرسانی قیمت (batch) — اختیاری
+  updatePrice?(
+    credentials: Record<string, string>,
+    updates: PriceUpdate[]
+  ): Promise<{ success: string[]; failed: { id: string; error: string }[] }>;
 
-  // دریافت سفارشات جدید (فقط مارکت‌پلیس‌ها)
-  fetchOrders?(credentials: Record<string, string>, since?: Date): Promise<unknown[]>;
+  // ساخت محصول جدید — اختیاری (نه همه پلتفرم‌ها support دارند)
+  createProduct?(
+    credentials: Record<string, string>,
+    product: IntegProductInfo
+  ): Promise<string>;  // platformProductId ساخته‌شده
+
+  // Rate limit helper — هر Adapter می‌تواند override کند
+  protected async rateLimit(): Promise<void> {
+    // پیاده‌سازی پیش‌فرض: بدون تأخیر
+  }
 }
 ```
 
 ---
 
-## ۶. فازبندی پیاده‌سازی
+## ۷. Queue Worker — روش کار
 
-### فاز ۰ — زیرساخت (باید اول انجام شود)
-**تخمین زمان: ۲-۳ روز**
-- [ ] اضافه کردن جداول Integration به `schema.prisma`
-- [ ] Migration و generate
-- [ ] ساخت `BaseAdapter` interface و types
-- [ ] Queue Worker: یک API route که هر N ثانیه job‌های pending را پردازش می‌کند (ساده‌ترین رویکرد: cron-like از طریق `/api/integration/worker` که pm2 آن را می‌زند یا یه setInterval ساده)
-- [ ] LogService: تابع ثبت log
-- [ ] صفحه ادمین `/admin/integration` (skeleton)
-- [ ] اضافه کردن Integration Hub به منوی ادمین
-
-### فاز ۱ — اتصال حسابداری
-**تخمین زمان: ۳-۵ روز (بستگی به پلتفرم حسابداری)**
-- [ ] Accounting Adapter (برای پلتفرم انتخاب‌شده)
-- [ ] صفحه اتصال حسابداری (ورود credential‌ها + تست)
-- [ ] Sync موجودی: حسابداری → فروشگاه
-- [ ] Sync قیمت: حسابداری → فروشگاه
-- [ ] dashboard نمایش وضعیت sync
-
-### فاز ۲ — Mapping محصولات
-**تخمین زمان: ۴-۶ روز**
-- [ ] FetchAllProducts از حسابداری
-- [ ] الگوریتم auto-match (similarity بر اساس عنوان + bارکد + ویژگی‌ها)
-- [ ] صفحه مدیریت Mapping:
-  - لیست محصولات matched / unmatched
-  - تأیید/رد پیشنهادها
-  - manual match
-  - ایجاد محصول جدید در فروشگاه از حسابداری
-
-### فاز ۳ — اتصال مارکت‌پلیس اول
-**تخمین زمان: ۳-۵ روز**
-- [ ] Adapter مارکت‌پلیس اول (اولویت: باسلام یا دیجیکالا)
-- [ ] Sync موجودی: فروشگاه → مارکت‌پلیس
-- [ ] Sync قیمت: فروشگاه → مارکت‌پلیس
-- [ ] Mapping محصولات فروشگاه ↔ مارکت‌پلیس
-
-### فاز ۴ — Rule Engine قیمت
-**تخمین زمان: ۴-۶ روز**
-- [ ] طراحی ساختار JSON فرمول‌ها
-- [ ] موتور اجرای Rule (با input‌های قیمت خرید، موجودی، هزینه‌ها)
-- [ ] UI ساخت و ویرایش قوانین در ادمین
-- [ ] اعمال قوانین هنگام sync قیمت
-
-### فاز ۵ — گسترش (ادامه Adapterها)
-- [ ] Adapter مارکت‌پلیس‌های بعدی
-- [ ] دریافت سفارشات از مارکت‌پلیس به فروشگاه
-- [ ] داشبورد مانیتورینگ پیشرفته
-- [ ] هشدارها و نوتیفیکیشن‌ها
-
----
-
-## ۷. جزئیات Queue Worker
-
-چون Redis نداریم (سوال باز)، ساده‌ترین رویکرد برای MVP:
-
-```
-Option A (بدون Redis — فقط PostgreSQL):
-- یک setInterval در یه Singleton Service
-- یا یه cron job که /api/integration/worker را می‌زند
-- Worker هر N ثانیه job‌های PENDING را fetch و پردازش می‌کند
-- برای جلوگیری از duplicate processing: atomic update با SELECT ... FOR UPDATE SKIP LOCKED
-- برای multi-instance (چند process/سرور): همان مکانیسم FOR UPDATE کافی است
-
-Option B (با Redis):
-- Bull Queue یا BullMQ
-- Worker process جدا
-- بهتر برای scale بالا
-```
-
-**توصیه**: با Option A شروع کن. اگر load زیاد شد، به B مهاجرت کن.
+بدون Redis — فقط PostgreSQL با `SELECT ... FOR UPDATE SKIP LOCKED`:
 
 ```typescript
 // lib/integration/core/queue-worker.ts (ساختار کلی)
-async function processNextBatch(batchSize = 5) {
+
+export async function runWorkerCycle(maxJobs = 5): Promise<void> {
+  // ۱. گرفتن job‌های pending به صورت atomic
   const jobs = await prisma.$transaction(async (tx) => {
-    const pending = await tx.$queryRaw`
-      SELECT * FROM "IntegrationJob"
-      WHERE status = 'PENDING' AND "scheduledAt" <= NOW()
+    const rows = await tx.$queryRaw<IntegJob[]>`
+      SELECT * FROM "IntegJob"
+      WHERE status = 'PENDING'
+        AND "scheduledAt" <= NOW()
       ORDER BY priority ASC, "scheduledAt" ASC
-      LIMIT ${batchSize}
+      LIMIT ${maxJobs}
       FOR UPDATE SKIP LOCKED
     `;
-    // mark as PROCESSING
-    ...
-    return pending;
+    if (!rows.length) return [];
+
+    const ids = rows.map(r => r.id);
+    await tx.integJob.updateMany({
+      where: { id: { in: ids } },
+      data: { status: "PROCESSING", startedAt: new Date(), attempts: { increment: 1 } },
+    });
+    return rows;
   });
-  
-  await Promise.all(jobs.map(job => executeJob(job)));
+
+  // ۲. اجرای موازی
+  await Promise.allSettled(jobs.map(job => executeJob(job)));
 }
+
+// در app startup (lib/integration/core/worker-bootstrap.ts):
+// setInterval(() => runWorkerCycle(), settings.workerIntervalSec * 1000)
+// یا: یک API route که pm2 هر 30 ثانیه صدا می‌زند
 ```
+
+**Retry logic:**
+- هر job حداکثر `maxAttempts` (پیش‌فرض ۳) بار تلاش می‌کند
+- بعد از هر شکست: `scheduledAt = now + (attempts² × 60s)` — exponential backoff
+- بعد از `maxAttempts`: status → `FAILED`، دست کاربر برای Retry دستی
 
 ---
 
 ## ۸. Auto-Match Algorithm
 
-برای اتصال اولیه محصولات، similarity score محاسبه می‌شود:
+برای matching اولیه محصولات فروشگاه با محصولات پلتفرم:
 
 ```
-score = 0
+confidence = 0
 
-اگر barcode یکسان → score += 1.0 (قطعی)
-اگر SKU یکسان → score += 0.9
-اگر عنوان دقیقاً یکسان → score += 0.8
-اگر عنوان similarity > 80% → score += 0.6
-اگر برند یکسان → score += 0.1
-اگر دسته‌بندی یکسان → score += 0.1
-اگر وزن نزدیک (±۵٪) → score += 0.05
+اگر barcode یکسان:            → confidence = 1.0  (قطعی، بلافاصله mapping)
+اگر SKU یکسان:                → confidence = 0.95 (قطعی)
+اگر عنوان دقیقاً یکسان:       → confidence = 0.85
+اگر عنوان similarity > 80%:   → confidence = 0.65
+  + برند یکسان:               → +0.10
+  + دسته‌بندی یکسان:          → +0.10
+  + وزن نزدیک (±10%):         → +0.05
 
-score >= 0.85 → نمایش به عنوان پیشنهاد قوی
-score >= 0.6  → نمایش به عنوان پیشنهاد ضعیف
-score < 0.6   → unmatched (نیاز به بررسی دستی)
+آستانه نمایش به کاربر: confidence >= 0.60
+آستانه auto-approve:   confidence >= 0.95 (barcode/SKU)
 ```
 
-برای similarity متن: جایزین فارسی داریم (نرمال‌سازی اعداد/حروف)
+برای similarity متن فارسی:
+- نرمال‌سازی: حذف فاصله‌های اضافی، یکسان‌سازی ی/ک عربی و فارسی، حذف اعراب
+- الگوریتم: Jaro-Winkler (سریع، بدون dependency اضافه)
 
 ---
 
-## ۹. Rule Engine قیمت — ساختار JSON
+## ۹. Rule Engine — ساختار فرمول JSON
 
-```json
-// مثال: قیمت = آخرین خرید × ۱.۳ + هزینه ارسال، حداقل ۱۵٪ سود
+```typescript
+// انواع node در فرمول:
+
+// متغیرها (ورودی)
+{ "type": "var", "name": "last_purchase_price" }
+{ "type": "var", "name": "avg_purchase_price" }
+{ "type": "var", "name": "current_stock" }
+{ "type": "var", "name": "shop_price" }
+{ "type": "var", "name": "shipping_cost" }   // از StoreSettings
+{ "type": "const", "value": 50000 }
+
+// عملیات ریاضی
+{ "type": "add",      "args": [nodeA, nodeB] }
+{ "type": "subtract", "args": [nodeA, nodeB] }
+{ "type": "multiply", "args": [nodeA, nodeB] }
+{ "type": "divide",   "args": [nodeA, nodeB] }
+{ "type": "max",      "args": [nodeA, nodeB] }
+{ "type": "min",      "args": [nodeA, nodeB] }
+{ "type": "percent_of", "percent": 20, "of": node }  // 20% از X
+{ "type": "round_up", "to": 1000, "arg": node }      // گرد کردن به ۱۰۰۰
+
+// شرطی
 {
-  "type": "max",
-  "args": [
+  "type": "if",
+  "condition": { "type": "lt", "args": [{ "type": "var", "name": "current_stock" }, 5] },
+  "then": { "type": "percent_of", "percent": 35, "of": { "type": "var", "name": "last_purchase_price" } },
+  "else": { "type": "percent_of", "percent": 25, "of": { "type": "var", "name": "last_purchase_price" } }
+}
+```
+
+**مثال کامل**: قیمت = آخرین خرید + ۲۸٪، حداقل ۱۵٪ سود، گرد شده به ۱۰۰۰ تومان
+```json
+{
+  "type": "round_up",
+  "to": 1000,
+  "arg": {
+    "type": "max",
+    "args": [
+      {
+        "type": "multiply",
+        "args": [
+          { "type": "var", "name": "last_purchase_price" },
+          1.28
+        ]
+      },
+      {
+        "type": "multiply",
+        "args": [
+          { "type": "var", "name": "last_purchase_price" },
+          1.15
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+## ۱۰. UI — سایدبار ادمین
+
+در `app/admin/layout.tsx`، یه گروه جدید اضافه می‌شود:
+
+```typescript
+{
+  label: "یکپارچه‌سازی",
+  items: [
     {
-      "type": "add",
-      "args": [
-        { "type": "multiply", "args": [{ "type": "var", "name": "last_purchase_price" }, 1.3] },
-        { "type": "var", "name": "shipping_cost" }
-      ]
+      href: "/admin/integration", label: "داشبورد", icon: "integration",
     },
     {
-      "type": "multiply",
-      "args": [{ "type": "var", "name": "last_purchase_price" }, 1.15]
-    }
-  ]
+      href: "/admin/integration/connections", label: "اتصالات", icon: "plug",
+      children: [
+        { href: "/admin/integration/connections", label: "همه اتصالات" },
+        // per-platform links داینامیک
+      ],
+    },
+    {
+      href: "/admin/integration/mapping", label: "نگاشت محصولات", icon: "mapping",
+      children: [
+        { href: "/admin/integration/mapping", label: "لیست Mapping" },
+        { href: "/admin/integration/mapping/suggestions", label: "پیشنهادهای اتصال" },
+      ],
+    },
+    { href: "/admin/integration/price-rules", label: "قوانین قیمت", icon: "price" },
+    { href: "/admin/integration/queue", label: "صف عملیات", icon: "queue" },
+    { href: "/admin/integration/logs", label: "گزارش لاگ‌ها", icon: "logs" },
+  ],
 }
-
-// متغیرهای قابل استفاده:
-// last_purchase_price   → آخرین قیمت خرید از حسابداری
-// avg_purchase_price    → میانگین قیمت خرید
-// cost_price            → قیمت تمام‌شده
-// current_stock         → موجودی فعلی
-// shop_price            → قیمت فعلی فروشگاه
-// shipping_cost         → هزینه ارسال (از StoreSettings)
-// packaging_cost        → هزینه بسته‌بندی (قابل تعریف)
-
-// عملیات پایه:
-// add, subtract, multiply, divide
-// max, min
-// if_then_else
-// percent_of (x درصد از y)
-// round_up (گرد کردن به بالا — برای قیمت‌های زیبا)
 ```
+
+### صفحات UI
+
+| مسیر | توضیح |
+|------|-------|
+| `/admin/integration` | داشبورد: health پلتفرم‌ها، آمار sync، آخرین job‌ها |
+| `/admin/integration/connections` | لیست پلتفرم‌های موجود + وضعیت اتصال |
+| `/admin/integration/connections/hesaban` | ورود API key وب‌حسابان + تست |
+| `/admin/integration/connections/basalam` | ورود credential باسلام + تست |
+| `/admin/integration/mapping` | جدول: محصولات فروشگاه + ستون هر پلتفرم |
+| `/admin/integration/mapping/suggestions` | لیست پیشنهادها با confidence + دکمه تأیید/رد |
+| `/admin/integration/price-rules` | لیست قوانین + فعال/غیرفعال |
+| `/admin/integration/price-rules/create` | سازنده قانون جدید |
+| `/admin/integration/queue` | job‌های pending/failed + retry دستی |
+| `/admin/integration/logs` | لاگ‌ها با فیلتر پلتفرم/تاریخ/وضعیت |
 
 ---
 
-## ۱۰. نکات مهم معماری
+## ۱۱. نکات مهم پیاده‌سازی
 
-### ۱۰.۱ رمزنگاری Credentials
-credentials هر پلتفرم (API key، token و ...) باید رمزنگاری شده در DB ذخیره شوند:
+### ۱۱.۱ رمزنگاری Credentials
 ```typescript
 // lib/integration/core/crypto.ts
-// AES-256-GCM با کلید از env var INTEGRATION_SECRET
+// کلید: env var INTEGRATION_ENCRYPTION_KEY (32 bytes, hex)
+// الگوریتم: AES-256-GCM
+// هر encrypt یه IV جدید تولید می‌کند
 function encryptCredentials(data: Record<string, string>): string
 function decryptCredentials(encrypted: string): Record<string, string>
 ```
+باید `INTEGRATION_ENCRYPTION_KEY` به `.env` هر deployment اضافه شود.
 
-### ۱۰.۲ Event از فروشگاه به Integration
-وقتی موجودی یا قیمت در فروشگاه تغییر می‌کند، باید job به queue اضافه شود:
+### ۱۱.۲ ارتباط با فروشگاه
+فروشگاه به هیچ‌وجه import مستقیم از `lib/integration` نمی‌کند.
+تنها نقطه تماس: وقتی موجودی یا قیمت در فروشگاه تغییر می‌کند، یک job به queue اضافه می‌شود:
 ```typescript
-// در API routes فروشگاه که موجودی را تغییر می‌دهند:
-await integrationQueueManager.enqueue({
-  type: "SYNC_STOCK",
-  platformCode: "all", // همه پلتفرم‌های متصل
-  payload: { shopProductId: "...", newStock: 10 }
-});
+// این تابع داخل lib/integration/core/queue-manager.ts است
+// و فروشگاه می‌تواند آن را import کند (نه برعکس)
+export async function enqueueStockSync(shopProductId: string, newStock: number)
+export async function enqueuePriceSync(shopProductId: string)
+```
+**مهم:** این import یک‌طرفه است. integration از shop import نمی‌کند.
+
+### ۱۱.۳ Worker bootstrap
+```typescript
+// lib/integration/core/worker-bootstrap.ts
+// این فایل در app/layout.tsx یا یه server component اجرا می‌شود
+// یا از طریق یک cron endpoint که pm2 می‌زند
+
+let workerStarted = false;
+export function startWorkerIfNeeded() {
+  if (workerStarted || typeof window !== "undefined") return;
+  workerStarted = true;
+  setInterval(() => runWorkerCycle(), 30_000);
+}
 ```
 
-این کار با کمترین وابستگی (فقط یک import از integration) انجام می‌شود.
-
-### ۱۰.۳ Multi-site
-این فروشگاه روی چند دامنه اجرا می‌شود (۴ دامنه با SITE_URL مختلف). باید مشخص شود که:
-- آیا Integration Hub باید per-site باشد؟ (احتمالاً بله — هر سایت حسابداری و مارکت‌پلیس خودش را دارد)
-- `siteId` در `IntegrationConnection` برای این منظور طراحی شده
-
-### ۱۰.۴ Rate Limiting
-هر API پلتفرم محدودیت دارد. در Adapter باید rate limiting رعایت شود:
-- باسلام: بررسی کردن docs
-- دیجیکالا: بررسی کردن docs
-- Queue بخشی از این کنترل را انجام می‌دهد
+### ۱۱.۴ Pagination برای Fetch Products
+چون تعداد محصولات بین ۲۰۰ تا چند هزار است، `fetchProducts` صفحه‌به‌صفحه کار می‌کند:
+- pageSize پیش‌فرض: ۱۰۰
+- در `FETCH_PRODUCTS` job، از `meta.nextPage` برای ادامه استفاده می‌شود
 
 ---
 
-## ۱۱. پیشنهادات اضافی Claude
+## ۱۲. فازبندی پیاده‌سازی
 
-### ۱۱.۱ شروع با Accounting-only
-پیشنهاد می‌کنم فاز ۰ و ۱ را کامل کنیم قبل از هر مارکت‌پلیسی. دلیل:
-- حسابداری مرجع است — اگر sync آن کار کند، بقیه راحت‌تر است
-- Mapping اول از حسابداری انجام می‌شود
+### فاز ۰ — زیرساخت (بدون مستندات API)
+**تخمین: ۲-۳ روز**
+- [ ] اضافه کردن جداول Integ به `schema.prisma` + migration
+- [ ] Seed کردن `IntegPlatform` (hesaban, basalam, ...)
+- [ ] `BaseAdapter` interface
+- [ ] `CryptoService` (رمزنگاری credentials)
+- [ ] `LogService`
+- [ ] `QueueManager` (enqueue + dequeue)
+- [ ] `QueueWorker` (runWorkerCycle)
+- [ ] Worker bootstrap
+- [ ] اضافه کردن گروه «یکپارچه‌سازی» به سایدبار ادمین
+- [ ] صفحه skeleton `/admin/integration` (داشبورد خالی)
+- [ ] صفحه skeleton `/admin/integration/connections`
 
-### ۱۱.۲ Worker بدون Redis
-برای شروع، به جای Redis، از یک API route `/api/integration/worker` استفاده کنیم که:
-- داخل `next start` با یک `setInterval` هر ۳۰ ثانیه اجرا می‌شود
-- یا یک endpoint که pm2 با crontab آن را می‌زند
-- بعداً اگر load زیاد شد می‌توان به BullMQ + Redis مهاجرت کرد
+### فاز ۱ — اتصال وب‌حسابان (نیاز به مستندات API)
+**تخمین: ۳-۵ روز**
+- [ ] `HesabanAdapter` (testConnection + fetchProducts + updateStock + updatePrice)
+- [ ] صفحه تنظیمات `/admin/integration/connections/hesaban`
+- [ ] job: `TEST_CONNECTION`
+- [ ] job: `SYNC_ALL_STOCK` از حسابداری به فروشگاه
+- [ ] job: `SYNC_ALL_PRICE` از حسابداری به فروشگاه
+- [ ] داشبورد: نمایش آخرین sync
 
-### ۱۱.۳ Rule Engine — شروع ساده
-برای MVP، ۵ نوع rule ساده داشته باشیم:
-1. `cost_plus_percent` — هزینه + درصد سود
-2. `last_purchase_plus_percent` — آخرین خرید + درصد سود
-3. `fixed_margin` — حداقل مارژین ثابت
-4. `if_stock_low_increase` — اگر موجودی کم بود، قیمت را بالا ببر
-5. `platform_specific` — قیمت متفاوت برای هر پلتفرم
+### فاز ۲ — Mapping محصولات
+**تخمین: ۴-۵ روز**
+- [ ] job: `FETCH_PRODUCTS` از حسابداری
+- [ ] الگوریتم auto-match + ذخیره در `IntegMappingSuggestion`
+- [ ] صفحه `/admin/integration/mapping/suggestions` (تأیید/رد/دستی)
+- [ ] صفحه `/admin/integration/mapping` (جدول کامل)
+- [ ] پیشنهاد ساخت محصول جدید در فروشگاه
 
-Visual builder بعداً اضافه می‌شود.
+### فاز ۳ — باسلام (نیاز به مستندات API)
+**تخمین: ۳-۵ روز**
+- [ ] `BasalamAdapter` (testConnection + fetchProducts + updateStock + updatePrice)
+- [ ] صفحه تنظیمات `/admin/integration/connections/basalam`
+- [ ] Mapping: فروشگاه ↔ باسلام
+- [ ] Sync موجودی: فروشگاه → باسلام
+- [ ] Sync قیمت: فروشگاه → باسلام (اختیاری — اگه باسلام allow کند)
 
-### ۱۱.۴ Webhook (آینده)
-اگر پلتفرم‌ها webhook داشتند:
-- `/api/integration/webhook/[platform]` آماده است در طراحی
-- برای الان، polling کافی است
+### فاز ۴ — Rule Engine قیمت
+**تخمین: ۴-۶ روز**
+- [ ] `PriceRuleEngine` (اجرای فرمول JSON)
+- [ ] ۵ نوع rule آماده (cost_plus, last_purchase_plus, fixed_margin, if_stock_low, platform_specific)
+- [ ] صفحه CRUD قوانین در ادمین
+- [ ] اعمال قوانین هنگام `SYNC_PRICE`
+- [ ] (آینده) Visual builder گرافیکی
 
----
-
-## ۱۲. سوالات باز — نیاز به جواب قبل از شروع کد
-
-| # | سوال | تأثیر بر چه چیزی |
-|---|------|-----------------|
-| 1 | کدام نرم‌افزار حسابداری؟ | Accounting Adapter — API کاملاً متفاوت است |
-| 2 | Redis موجود است؟ | Queue Worker architecture |
-| 3 | اولویت اول مارکت‌پلیس؟ | کدام Adapter اول نوشته شود |
-| 4 | سفارشات مارکت‌پلیس وارد فروشگاه شوند؟ | جداول Order و نیاز به `fetchOrders` در Adapter |
-| 5 | تعداد محصولات؟ | بهینه‌سازی auto-match و batch size |
-| 6 | Integration Hub per-site باشد؟ | استفاده از `siteId` در Connection |
+### فاز ۵ — گسترش
+- [ ] Adapterهای بعدی (Digikala، Divar، SnappShop، TapsiShop)
+- [ ] داشبورد مانیتورینگ پیشرفته
+- [ ] مشاهده سفارشات از مارکت‌پلیس‌ها (view-only)
+- [ ] هشدارها و نوتیفیکیشن (sync شکست خورد، موجودی صفر شد، ...)
 
 ---
 
@@ -679,11 +771,36 @@ Visual builder بعداً اضافه می‌شود.
 
 | تاریخ | تصمیم | دلیل |
 |-------|-------|------|
-| ۱۴۰۵/۰۴/۱۰ | طراحی اولیه schema و architecture | بررسی کدبیس فروشگاه |
-| - | Queue بدون Redis (اولیه) | سادگی + عدم نیاز به Redis برای MVP |
-| - | Mapping با confidence score | کاهش کار دستی کاربر |
+| ۱۴۰۵/۰۴/۱۰ | طراحی اولیه schema و architecture | بررسی کدبیس |
+| ۱۴۰۵/۰۴/۱۰ | DB: همان PostgreSQL فروشگاه، پیشوند Integ | JOIN با Product، یک Prisma client، هر deployment مستقل |
+| ۱۴۰۵/۰۴/۱۰ | Queue: PostgreSQL بدون Redis | بدون infrastructure اضافه، کافی برای این scale |
+| ۱۴۰۵/۰۴/۱۰ | حسابداری: وب‌حسابان | اولین هدف — مستندات API بعداً |
+| ۱۴۰۵/۰۴/۱۰ | مارکت‌پلیس اول: باسلام | اولین هدف — مستندات API بعداً |
+| ۱۴۰۵/۰۴/۱۰ | scope فعلی: فقط موجودی + قیمت | سفارشات view-only در آینده |
+| ۱۴۰۵/۰۴/۱۰ | Adapter import یک‌طرفه | فروشگاه از Integration import می‌کند، نه برعکس |
 
 ---
 
-*این فایل را هر بار که کار انجام می‌شود، آپدیت کنید.*
-*بخش «وضعیت فعلی» و «تاریخچه تصمیمات» را به‌روز نگه دارید.*
+## ۱۴. env vars جدید مورد نیاز
+
+```bash
+# در .env هر deployment اضافه شود:
+INTEGRATION_ENCRYPTION_KEY="..."   # 32-byte hex — برای رمزنگاری credentials
+```
+
+---
+
+## ۱۵. سوالات باقیمانده (بعد از دریافت مستندات)
+
+| # | سوال | کِی جواب می‌گیرد |
+|---|------|-----------------|
+| 1 | نوع احراز هویت API وب‌حسابان؟ (API Key / OAuth / ...) | بعد از دریافت مستندات |
+| 2 | endpoint های موجودی و قیمت در وب‌حسابان؟ | بعد از دریافت مستندات |
+| 3 | آیا وب‌حسابان webhook دارد؟ | بعد از دریافت مستندات |
+| 4 | rate limit وب‌حسابان؟ | بعد از دریافت مستندات |
+| 5 | نوع احراز هویت API باسلام؟ | بعد از دریافت مستندات |
+| 6 | آیا باسلام امکان update قیمت از API دارد؟ | بعد از دریافت مستندات |
+
+---
+
+*آخرین به‌روزرسانی: ۱۴۰۵/۰۴/۱۰ — تمام تصمیمات اصلی قطعی شد، آماده شروع فاز ۰*
