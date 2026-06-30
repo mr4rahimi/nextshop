@@ -225,24 +225,28 @@ export default function HeroSection() {
             ) : (
               <div className="swiper mainHeroSwiper w-full h-full">
                 <div className="swiper-wrapper">
-                  {slides.map((slide, idx) => (
+                  {slides.map((slide, idx) => {
+                    const isGif = slide.imageUrl.toLowerCase().endsWith(".gif");
+                    const imgEl = (
+                      <Image src={slide.imageUrl} alt={slide.title || ""} fill
+                        className="object-cover" sizes="(max-width: 1024px) 100vw, 66vw"
+                        priority={idx === 0} unoptimized={isGif} />
+                    );
+                    return (
                     <div key={slide.id} className="swiper-slide relative w-full aspect-[1400/500] min-h-[280px] lg:aspect-auto lg:h-full">
                       {slide.linkUrl ? (
                         <Link href={slide.linkUrl} className="block w-full h-full">
-                          <Image src={slide.imageUrl} alt={slide.title || ""} fill
-                            className="object-cover" sizes="(max-width: 1024px) 100vw, 66vw" priority={idx === 0} />
+                          {imgEl}
                         </Link>
-                      ) : (
-                        <Image src={slide.imageUrl} alt={slide.title || ""} fill
-                          className="object-cover" sizes="(max-width: 1024px) 100vw, 66vw" priority={idx === 0} />
-                      )}
+                      ) : imgEl}
                       {slide.title && (
                         <div className="absolute bottom-10 right-8 bg-black/50 backdrop-blur-sm text-white px-5 py-2.5 rounded-2xl z-10">
                           <span className="font-black text-sm">{slide.title}</span>
                         </div>
                       )}
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
 
                 {}
