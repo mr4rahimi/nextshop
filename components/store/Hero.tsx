@@ -92,20 +92,18 @@ function SuggestionCard({ product }: { product: SuggestProduct }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function HeroSection() {
   const [slides, setSlides] = useState<HeroSlide[]>([]);
+  const [slidesLoading, setSlidesLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<SuggestProduct[]>([]);
   const [swiperReady, setSwiperReady] = useState(false);
   const heroRef = useRef<any>(null);
   const suggRef = useRef<any>(null);
   const uid = useRef(`sugg-${Math.random().toString(36).slice(2, 6)}`);
 
-  const defaultSlides: HeroSlide[] = [
-    { id: "1", title: null, imageUrl: "/assets/images/slider/slide2-2.jpg", linkUrl: null },
-    { id: "2", title: null, imageUrl: "/assets/images/slider/slide3-1.jpg", linkUrl: null },
-    { id: "3", title: null, imageUrl: "/assets/images/slider/slide4.jpg", linkUrl: null },
-  ];
-
   useEffect(() => {
-    fetch("/api/store/hero-slides").then(r => r.json()).then(setSlides).catch(() => {});
+    fetch("/api/store/hero-slides")
+      .then(r => r.json())
+      .then(data => { setSlides(data); setSlidesLoading(false); })
+      .catch(() => setSlidesLoading(false));
     fetch("/api/store/amazing-products?count=6").then(r => r.json()).then(setSuggestions).catch(() => {});
   }, []);
 
@@ -117,11 +115,11 @@ export default function HeroSection() {
     heroRef.current?.destroy?.(true, true);
     suggRef.current?.destroy?.(true, true);
 
-    const displaySlides = slides.length > 0 ? slides : defaultSlides;
+    if (slides.length === 0) return;
 
     heroRef.current = new win.Swiper(".mainHeroSwiper", {
       rtl: true,
-      loop: displaySlides.length > 1,
+      loop: slides.length > 1,
       speed: 800,
       autoplay: { delay: 5000, disableOnInteraction: false, pauseOnMouseEnter: true },
       navigation: { nextEl: ".hero-next", prevEl: ".hero-prev" },
@@ -144,18 +142,16 @@ export default function HeroSection() {
         breakpoints: {
           0:    { direction: "horizontal", slidesPerView: 1 },
           640:  { direction: "horizontal", slidesPerView: 2 },
-          1024: { direction: "vertical",   slidesPerView: 2, spaceBetween: 16, height: 280 },
+          1024: { direction: "vertical",   slidesPerView: 2, spaceBetween: 16 },
         },
       });
     }
   }, [swiperReady, slides, suggestions]);
 
-  const displaySlides = slides.length > 0 ? slides : defaultSlides;
-
   return (
     <>
       <section className="container transition-colors duration-500">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:h-[420px]">
 
           {}
           <div className="lg:col-span-4 relative bg-white dark:bg-[#0a0a0a] lg:bg-white/80 lg:dark:bg-[#0a0a0a]/60 lg:backdrop-blur-3xl rounded-[3rem] p-6 border border-gray-100 dark:border-white/5 flex flex-col shadow-sm overflow-hidden">
@@ -180,8 +176,8 @@ export default function HeroSection() {
                 ))}
               </div>
             ) : (
-              <div className="flex-1 overflow-hidden">
-                <div className={`swiper ${uid.current}`} style={{ height: 280 }}>
+              <div className="flex-1 overflow-hidden min-h-0">
+                <div className={`swiper ${uid.current} h-full`}>
                   <div className="swiper-wrapper">
                     {suggestions.map(p => (
                       <div key={p.id} className="swiper-slide">
@@ -219,40 +215,44 @@ export default function HeroSection() {
           </div>
 
           {}
-          <div className="lg:col-span-8 relative overflow-hidden rounded-[2.5rem] min-h-[400px]">
-            <div className="swiper mainHeroSwiper h-full min-h-[400px]">
-              <div className="swiper-wrapper">
-                {displaySlides.map((slide, idx) => (
-                  <div key={slide.id} className="swiper-slide relative">
-                    {slide.linkUrl ? (
-                      <Link href={slide.linkUrl}>
-                        <div className="relative min-h-[400px]">
+          <div className="lg:col-span-8 relative overflow-hidden rounded-[2.5rem] lg:h-full">
+            {slidesLoading ? (
+              <div className="w-full aspect-[1400/500] min-h-[280px] lg:aspect-auto lg:h-full bg-gray-200 dark:bg-white/5 animate-pulse rounded-[2.5rem]" />
+            ) : slides.length === 0 ? (
+              <div className="w-full aspect-[1400/500] min-h-[280px] lg:aspect-auto lg:h-full bg-gray-100 dark:bg-white/5 rounded-[2.5rem] flex items-center justify-center text-gray-400 text-sm">
+                اسلایدی تنظیم نشده
+              </div>
+            ) : (
+              <div className="swiper mainHeroSwiper w-full h-full">
+                <div className="swiper-wrapper">
+                  {slides.map((slide, idx) => (
+                    <div key={slide.id} className="swiper-slide relative w-full aspect-[1400/500] min-h-[280px] lg:aspect-auto lg:h-full">
+                      {slide.linkUrl ? (
+                        <Link href={slide.linkUrl} className="block w-full h-full">
                           <Image src={slide.imageUrl} alt={slide.title || ""} fill
-                            className="object-cover" sizes="100vw" priority={idx === 0} />
-                        </div>
-                      </Link>
-                    ) : (
-                      <div className="relative min-h-[400px]">
+                            className="object-cover" sizes="(max-width: 1024px) 100vw, 66vw" priority={idx === 0} />
+                        </Link>
+                      ) : (
                         <Image src={slide.imageUrl} alt={slide.title || ""} fill
-                          className="object-cover" sizes="100vw" priority={idx === 0} />
-                      </div>
-                    )}
-                    {slide.title && (
-                      <div className="absolute bottom-20 right-8 bg-black/50 backdrop-blur-sm text-white px-5 py-2.5 rounded-2xl">
-                        <span className="font-black text-sm">{slide.title}</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                          className="object-cover" sizes="(max-width: 1024px) 100vw, 66vw" priority={idx === 0} />
+                      )}
+                      {slide.title && (
+                        <div className="absolute bottom-10 right-8 bg-black/50 backdrop-blur-sm text-white px-5 py-2.5 rounded-2xl z-10">
+                          <span className="font-black text-sm">{slide.title}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
 
-              {}
-              <div className="absolute bottom-8 left-8 flex gap-3 z-10">
-                <button className="hero-prev w-12 h-12 bg-white/20 hover:bg-white/60 backdrop-blur-md rounded-2xl flex items-center justify-center text-white text-2xl transition-all border border-white/20">‹</button>
-                <button className="hero-next w-12 h-12 bg-white/20 hover:bg-white/60 backdrop-blur-md rounded-2xl flex items-center justify-center text-white text-2xl transition-all border border-white/20">›</button>
+                {}
+                <div className="absolute bottom-6 left-8 flex gap-3 z-10">
+                  <button className="hero-prev w-12 h-12 bg-white/20 hover:bg-white/60 backdrop-blur-md rounded-2xl flex items-center justify-center text-white text-2xl transition-all border border-white/20">‹</button>
+                  <button className="hero-next w-12 h-12 bg-white/20 hover:bg-white/60 backdrop-blur-md rounded-2xl flex items-center justify-center text-white text-2xl transition-all border border-white/20">›</button>
+                </div>
+                <div className="hero-pagination swiper-pagination !bottom-6 !right-8 !left-auto !w-auto z-10" />
               </div>
-              <div className="hero-pagination swiper-pagination !bottom-8 !right-8 !left-auto !w-auto z-10" />
-            </div>
+            )}
           </div>
 
         </div>
