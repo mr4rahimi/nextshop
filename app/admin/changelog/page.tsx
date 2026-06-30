@@ -3,6 +3,30 @@
 const VERSIONS = [
 
   {
+    version: "2.7.0",
+    date: "1405/04/09",
+    tag: "minor",
+    title: "درگاه پرداخت آقای پرداخت، API ترب v3 و رفع باگ‌های تصاویر",
+    description: "یکپارچه‌سازی کامل درگاه پرداخت آنلاین آقای پرداخت با پشتیبانی از حالت sandbox برای تست، پیاده‌سازی API محصولات ترب نسخه ۳ با احراز هویت JWT، و رفع چند باگ نمایش تصاویر",
+    changes: [
+      { type: "feature", text: "درگاه پرداخت آقای پرداخت: تب جدید «درگاه پرداخت» در تنظیمات سایت — انتخاب درگاه، ورود کد پین و تاگل حالت آزمایشی (Sandbox)" },
+      { type: "feature", text: "API POST /api/payment/create: ایجاد تراکنش در پنل آقای پرداخت و بازگرداندن آدرس redirect" },
+      { type: "feature", text: "API GET /api/payment/callback: دریافت نتیجه پرداخت از درگاه، verify تراکنش و به‌روزرسانی وضعیت سفارش به PAID" },
+      { type: "feature", text: "صفحه checkout/payment: جایگزینی صفحه mock با اتصال واقعی به درگاه + نمایش loading و state خطا با دکمه تلاش مجدد" },
+      { type: "feature", text: "حالت Sandbox برای تست روی localhost بدون نیاز به PIN واقعی — از pin=sandbox و URL sandbox آقای پرداخت استفاده می‌کند" },
+      { type: "improvement", text: "بخش «درگاه پرداخت آنلاین» در صفحه shipping نمایش وضعیت و نام درگاه پیکربندی‌شده را نشان می‌دهد" },
+      { type: "improvement", text: "گزینه پرداخت آنلاین در checkout فقط زمانی نمایش داده می‌شود که درگاه فعال باشد" },
+      { type: "feature", text: "API POST /api/torob/v3/products: اندپوینت کامل سازگار با مشخصات Torob API v3" },
+      { type: "feature", text: "احراز هویت JWT با EdDSA (jose) — تأیید امضای ترب با کلید عمومی، بررسی aud و exp" },
+      { type: "feature", text: "سه حالت پاسخ ترب: لیست صفحه‌بندی‌شده (۱۰۰ محصول/صفحه)، جستجو با page_urls، جستجو با page_uniques" },
+      { type: "feature", text: "lib/torob-webhook.ts: هلپر notifyTorob() برای ارسال fire-and-forget webhook به ترب هنگام آپدیت محصول" },
+      { type: "fix", text: "رفع باگ از بین رفتن انیمیشن GIF در Hero Slider — تصاویر .gif با unoptimized بارگذاری می‌شوند" },
+      { type: "fix", text: "رفع باگ نمایش آیکون‌های دسته‌بندی در هدر منو و صفحه دسته — تصاویر کوچک (۲۴-۲۸px) با unoptimized و loading=eager سرو می‌شوند" },
+      { type: "fix", text: "حذف پوشه list-of-cities-in-Iran-main از کامپایل TypeScript با به‌روزرسانی tsconfig.json" },
+    ],
+  },
+
+  {
     version: "2.6.0",
     date: "1405/04/09",
     tag: "minor",
