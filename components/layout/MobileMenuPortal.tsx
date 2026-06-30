@@ -147,7 +147,7 @@ export default function MobileMenuPortal({ logoUrl, siteName }: { logoUrl?: stri
                         className="w-full flex items-center justify-between p-4 rounded-2xl bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 shadow-sm hover:bg-white/60 dark:hover:bg-white/8 transition-all">
                         <div className="flex items-center gap-3 text-gray-800 dark:text-gray-200">
                           {m.category.imageUrl
-                            ? <Image src={m.category.imageUrl} alt={m.category.title} width={24} height={24} className="rounded-lg object-cover" />
+                            ? <Image src={m.category.imageUrl} alt={m.category.title} width={24} height={24} className="rounded-lg object-cover" unoptimized />
                             : <div className="w-6 h-6 rounded-lg bg-primary-500/20 flex items-center justify-center text-[10px] font-black text-primary-600">{m.category.title.charAt(0)}</div>
                           }
                           <span className="font-black text-sm">{m.category.title}</span>
