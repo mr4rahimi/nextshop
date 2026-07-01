@@ -5,7 +5,10 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   const categories = await prisma.category.findMany({
     orderBy: { sortOrder: "asc" },
-    include: { parent: true },
+    include: {
+      parent: true,
+      _count: { select: { products: true } },
+    },
   });
 
   return NextResponse.json(categories);
@@ -58,9 +61,25 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   const { id } = await req.json();
 
-  await prisma.category.delete({
-    where: { id },
-  });
+  const [childrenCount, productsCount] = await Promise.all([
+    prisma.category.count({ where: { parentId: id } }),
+    prisma.product.count({ where: { categoryId: id } }),
+  ]);
 
+  if (childrenCount > 0) {
+    return NextResponse.json(
+      { error: `این دسته دارای ${childrenCount} زیردسته است و قابل حذف نیست` },
+      { status: 400 }
+    );
+  }
+
+  if (productsCount > 0) {
+    return NextResponse.json(
+      { error: `این دسته دارای ${productsCount} محصول است و قابل حذف نیست` },
+      { status: 400 }
+    );
+  }
+
+  await prisma.category.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

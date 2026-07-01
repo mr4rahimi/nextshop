@@ -25,6 +25,8 @@ function buildTree(cats: any[]) {
 function TreeNode({ node, level, expanded, onToggle, onEdit, onDelete }: any) {
   const hasChildren = node.children.length > 0;
   const isOpen = expanded[node.id];
+  const productCount: number = node._count?.products ?? 0;
+  const canDelete = !hasChildren && productCount === 0;
 
   return (
     <div>
@@ -74,6 +76,15 @@ function TreeNode({ node, level, expanded, onToggle, onEdit, onDelete }: any) {
         )}
 
         {}
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+          productCount > 0
+            ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10"
+            : "text-gray-400 bg-gray-100 dark:bg-white/5"
+        }`}>
+          {productCount} محصول
+        </span>
+
+        {}
         <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border flex-shrink-0 ${
           node.isActive
             ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20"
@@ -84,6 +95,17 @@ function TreeNode({ node, level, expanded, onToggle, onEdit, onDelete }: any) {
 
         {}
         <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          <a
+            href={`/store/categories/${node.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="مشاهده در فروشگاه"
+            className="w-7 h-7 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-gray-500 hover:text-emerald-600 hover:border-emerald-300 dark:hover:border-emerald-500/30 transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
           <button
             onClick={() => onEdit(node)}
             className="w-7 h-7 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:border-blue-300 dark:hover:border-blue-500/30 transition-all"
@@ -93,8 +115,14 @@ function TreeNode({ node, level, expanded, onToggle, onEdit, onDelete }: any) {
             </svg>
           </button>
           <button
-            onClick={() => onDelete(node.id)}
-            className="w-7 h-7 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-gray-500 hover:text-red-500 hover:border-red-300 dark:hover:border-red-500/30 transition-all"
+            onClick={() => canDelete && onDelete(node.id)}
+            disabled={!canDelete}
+            title={!canDelete ? (hasChildren ? `دارای ${node.children.length} زیردسته` : `دارای ${productCount} محصول`) : "حذف"}
+            className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all ${
+              canDelete
+                ? "border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-500 hover:text-red-500 hover:border-red-300 dark:hover:border-red-500/30 cursor-pointer"
+                : "border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/[0.02] text-gray-300 dark:text-white/20 cursor-not-allowed"
+            }`}
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -279,11 +307,16 @@ export default function CategoriesPage() {
 
   async function handleDelete(id: string) {
     if (!confirm("این دسته‌بندی حذف شود؟")) return;
-    await fetch("/api/admin/categories", {
+    const res = await fetch("/api/admin/categories", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || "خطا در حذف دسته‌بندی");
+      return;
+    }
     fetchCategories();
   }
 
