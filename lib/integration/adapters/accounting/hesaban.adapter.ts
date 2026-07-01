@@ -8,7 +8,7 @@ import type {
   BatchResult,
 } from "@/lib/integration/types";
 
-const BASE_URL = "https://hesabanweb.com";
+const BASE_URL = "https://app.hesabanweb.com";
 const DEFAULT_PAGE_SIZE = 100;
 
 // ── Hesaban API response shapes ───────────────────────────────────────
