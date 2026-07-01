@@ -734,6 +734,8 @@ export function startWorkerIfNeeded() {
 - [x] job: `SYNC_ALL_PRICE` از حسابداری به فروشگاه
 - [x] داشبورد: نمایش آخرین sync
 - [x] **bugfix**: `BASE_URL` از `https://hesabanweb.com` به `https://app.hesabanweb.com` تصحیح شد (باعث HTTP 404 می‌شد)
+- [x] **bugfix**: `lastError` هنگام test موفق پاک نمی‌شد (`undefined` → `null` در Prisma)
+- [x] تست اتصال موفق تأیید شد — اطلاعات کاربر «امیر اسدی» + شرکت «شیرآلات اندیکا» دریافت شد
 
 ### فاز ۲ — Mapping محصولات ✅ تکمیل شد (۱۴۰۵/۰۴/۱۱)
 - [x] job: `FETCH_PRODUCTS` از حسابداری → auto-match
