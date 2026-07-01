@@ -36,8 +36,8 @@ export async function POST(req: NextRequest) {
       data: {
         credentials:  encrypted,
         status:       result.success ? "CONNECTED" : "ERROR",
-        lastErrorAt:  result.success ? undefined : new Date(),
-        lastError:    result.success ? undefined : result.message,
+        lastErrorAt:  result.success ? null : new Date(),
+        lastError:    result.success ? null : (result.message ?? null),
         updatedAt:    new Date(),
       },
     });
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         platformCode: body.platformCode,
         credentials:  encrypted,
         status:       result.success ? "CONNECTED" : "ERROR",
-        lastError:    result.success ? undefined : result.message,
+        lastError:    result.success ? null : (result.message ?? null),
       },
     });
   }

@@ -950,4 +950,4 @@ update_bulk_products(vendor_id, {
 
 ---
 
-*آخرین به‌روزرسانی: ۱۴۰۵/۰۴/۱۱ — bugfix: BASE_URL حسابان تصحیح شد (app.hesabanweb.com)، فاز ۱ تکمیل شد*
+*آخرین به‌روزرسانی: ۱۴۰۵/۰۴/۱۱ — bugfix: BASE_URL حسابان + پاک نشدن lastError در test موفق*
