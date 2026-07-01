@@ -1032,16 +1032,43 @@ model IntegPlatform {
   logoUrl  String?
   isActive Boolean           @default(true)
 
-  connections IntegConnection[]
-  mappings    IntegProductMapping[]
-  suggestions IntegMappingSuggestion[]
-  jobs        IntegJob[]
-  logs        IntegLog[]
+  connections      IntegConnection[]
+  mappings         IntegProductMapping[]
+  suggestions      IntegMappingSuggestion[]
+  jobs             IntegJob[]
+  logs             IntegLog[]
+  platformProducts IntegPlatformProduct[]
 }
 
 enum IntegPlatformType {
   ACCOUNTING
   MARKETPLACE
+}
+
+// ── محصولات دریافت‌شده از هر پلتفرم ────────────────────────────────
+
+model IntegPlatformProduct {
+  id                String    @id @default(cuid())
+  platformCode      String
+  platformProductId String
+  title             String
+  sku               String?
+  barcode           String?
+  stock             Float?
+  price             Float?
+  purchasePrice     Float?
+  unit              String?
+  isEnabled         Boolean   @default(true)
+  rawData           Json      @default("{}")
+  lastFetchedAt     DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  platform IntegPlatform @relation(fields: [platformCode], references: [code])
+
+  @@unique([platformCode, platformProductId])
+  @@index([platformCode])
+  @@index([platformCode, isEnabled])
 }
 
 // ── اتصال به هر پلتفرم ──────────────────────────────────────────────

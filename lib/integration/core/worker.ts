@@ -344,9 +344,47 @@ async function fetchAndMatch(
   let suggested    = 0;
   let hasMore      = true;
 
+  const now = new Date();
+
   while (hasMore) {
     const result = await adapter.fetchProducts(credentials, page, 100);
     totalFetched += result.items.length;
+
+    // ذخیره محصولات خام در IntegPlatformProduct
+    for (const item of result.items) {
+      await prisma.integPlatformProduct.upsert({
+        where: {
+          platformCode_platformProductId: {
+            platformCode,
+            platformProductId: item.platformId,
+          },
+        },
+        update: {
+          title:         item.title,
+          sku:           item.sku ?? null,
+          barcode:       item.barcode ?? null,
+          stock:         item.stock ?? null,
+          price:         item.salePrice ?? null,
+          purchasePrice: item.purchasePrice ?? null,
+          unit:          item.unit ?? null,
+          isEnabled:     true,
+          lastFetchedAt: now,
+          updatedAt:     now,
+        },
+        create: {
+          platformCode,
+          platformProductId: item.platformId,
+          title:         item.title,
+          sku:           item.sku ?? null,
+          barcode:       item.barcode ?? null,
+          stock:         item.stock ?? null,
+          price:         item.salePrice ?? null,
+          purchasePrice: item.purchasePrice ?? null,
+          unit:          item.unit ?? null,
+          lastFetchedAt: now,
+        },
+      });
+    }
 
     const matchResult = await runAutoMatch(platformCode, result.items);
     autoMapped += matchResult.autoMapped;
