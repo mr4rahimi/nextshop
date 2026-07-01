@@ -745,7 +745,7 @@ export function startWorkerIfNeeded() {
 - [x] API: `/api/integration/mapping` (GET/POST/DELETE)
 - [x] API: `/api/integration/mapping/suggestions` (GET/PATCH)
 
-### فاز ۳ — باسلام ✅ تکمیل شد (۱۴۰۵/۰۴/۱۱)
+### فاز ۳ — باسلام ✅ تکمیل شد (۱۴۰۵/۰۴/۱۱) + تست واقعی (۱۴۰۵/۰۴/۱۱)
 - [x] `BasalamAdapter` در `lib/integration/adapters/marketplace/basalam.adapter.ts`
   - testConnection → `GET /v1/users/me` + auto-extract vendorId
   - fetchProducts → `GET /v1/vendors/{vendorId}/products?page=&per_page=`
@@ -756,6 +756,8 @@ export function startWorkerIfNeeded() {
 - [x] Mapping: صفحه `/admin/integration/mapping` حالا چند-پلتفرمی با تب‌ها
 - [x] Sync موجودی: فروشگاه → باسلام (PUSH — worker.ts از قبل پشتیبانی می‌کند)
 - [x] Sync قیمت: فروشگاه → باسلام با `primary_price`
+- [x] **تست واقعی تأیید شد** — فروشگاه «شیرآلات اندیکا» vendorId=184346
+- [x] **نکته**: access token = JWT (eyJ...) — refresh token (def502...) کار نمی‌کند
 
 ### فاز ۴ — Rule Engine قیمت ✅ تکمیل شد (۱۴۰۵/۰۴/۱۱)
 - [x] `evaluateFormula` + `applyRulesToPrices` در `lib/integration/core/price-rule-engine.ts`
@@ -952,4 +954,4 @@ update_bulk_products(vendor_id, {
 
 ---
 
-*آخرین به‌روزرسانی: ۱۴۰۵/۰۴/۱۱ — bugfix: BASE_URL حسابان + پاک نشدن lastError در test موفق*
+*آخرین به‌روزرسانی: ۱۴۰۵/۰۴/۱۱ — هر دو اتصال حسابان و باسلام تأیید و ذخیره شد. ۴۴۵ محصول از حسابان دریافت شد. نگاشت دستی لازم است (محصولات فروشگاه با حسابان عنوان متفاوت دارند)*
