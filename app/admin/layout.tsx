@@ -113,13 +113,13 @@ const MENU_GROUPS = [
       {
         href: "/admin/integration", label: "یکپارچه‌سازی", icon: "integration",
         children: [
-          { href: "/admin/integration",                  label: "داشبورد" },
-          { href: "/admin/integration/connections",       label: "اتصالات" },
-          { href: "/admin/integration/mapping",           label: "نگاشت محصولات" },
-          { href: "/admin/integration/mapping/suggestions", label: "پیشنهادهای اتصال" },
-          { href: "/admin/integration/price-rules",      label: "قوانین قیمت" },
-          { href: "/admin/integration/queue",            label: "صف عملیات" },
-          { href: "/admin/integration/logs",             label: "گزارش لاگ‌ها" },
+          { href: "/admin/integration",                       label: "داشبورد" },
+          { href: "/admin/integration/connections",           label: "اتصالات" },
+          { href: "/admin/integration/mapping",               label: "نگاشت محصولات" },
+          { href: "/admin/integration/product-suggestions",   label: "پیشنهادات اضافه کردن محصول" },
+          { href: "/admin/integration/price-rules",           label: "قوانین قیمت" },
+          { href: "/admin/integration/queue",                 label: "صف عملیات" },
+          { href: "/admin/integration/logs",                  label: "گزارش لاگ‌ها" },
         ],
       },
     ],
@@ -380,7 +380,7 @@ function Breadcrumb() {
     stories: "استوری‌ها", "hero-slides": "اسلایدر", shipping: "ارسال",
     "site-settings": "تنظیمات", footer: "فوتر", menu: "منو",
     create: "جدید", comments: "نظرات", media: "کتابخانه رسانه", guaranty: "گارانتی", requests: "درخواست‌ها", wallet: "کیف پول", appearance: "ظاهر سایت", "chat-settings": "تنظیمات چت", changelog: "نسخه برنامه", "chat-history": "تاریخچه چت", "callback-requests": "درخواست‌های تماس",
-    integration: "یکپارچه‌سازی", connections: "اتصالات", mapping: "نگاشت محصولات", suggestions: "پیشنهادها", "price-rules": "قوانین قیمت", queue: "صف عملیات", logs: "لاگ‌ها",
+    integration: "یکپارچه‌سازی", connections: "اتصالات", mapping: "نگاشت محصولات", "product-suggestions": "پیشنهادات محصول", "price-rules": "قوانین قیمت", queue: "صف عملیات", logs: "لاگ‌ها",
   };
 
   return (

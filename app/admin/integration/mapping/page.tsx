@@ -9,7 +9,7 @@ export default async function MappingPage() {
       where: { isActive: true },
       select: { code: true, name: true, type: true },
     }),
-    prisma.integProductMapping.count({ where: { isActive: true } }),
+    prisma.integMapping.count({ where: { isActive: true } }),
     prisma.integMappingSuggestion.count({ where: { status: "PENDING" } }),
   ]);
 

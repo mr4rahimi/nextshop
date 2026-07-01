@@ -9,7 +9,7 @@ export function normalizeText(text: string): string {
     .replace(/\s+/g, " ")
     .replace(/ي/g, "ی")            // ی عربی
     .replace(/ك/g, "ک")            // ک عربی
-    .replace(/[ً-ٰٟ]/g, "")  // حذف اعراب
+    .replace(/[ً-ٰٟ]/g, "")  // حذف اعراب
     .toLowerCase();
 }
 
@@ -71,7 +71,7 @@ function findBestMatch(
     } else {
       const sim = bigramSimilarity(hp.title, sp.title);
       if (sim >= 0.80) {
-        confidence = 0.55 + sim * 0.10; // 0.63–0.65 محدوده
+        confidence = 0.55 + sim * 0.10;
         reason = "title_fuzzy";
 
         if (hBrand && sp.brandName && normalizeText(sp.brandName).includes(hBrand)) {
@@ -110,11 +110,11 @@ export async function runAutoMatch(
     brandName:       p.brand?.title ?? null,
   }));
 
-  // آنچه قبلاً mapping یا suggestion دارد
-  const [existingMaps, existingSugs] = await Promise.all([
-    prisma.integProductMapping.findMany({
-      where:  { platformCode },
-      select: { platformProductId: true },
+  // محصولاتی که قبلاً لینک یا پیشنهاد دارند
+  const [existingLinks, existingSugs] = await Promise.all([
+    prisma.integMappingLink.findMany({
+      where:  { platformCode, isActive: true },
+      select: { externalId: true },
     }),
     prisma.integMappingSuggestion.findMany({
       where:  { platformCode, status: "PENDING" },
@@ -122,7 +122,7 @@ export async function runAutoMatch(
     }),
   ]);
 
-  const alreadyMapped    = new Set(existingMaps.map((m) => m.platformProductId));
+  const alreadyMapped    = new Set(existingLinks.map((l) => l.externalId));
   const alreadySuggested = new Set(existingSugs.map((s) => s.platformProductId));
 
   let autoMapped = 0;
@@ -139,19 +139,27 @@ export async function runAutoMatch(
     if (!best) { skipped++; continue; }
 
     if (best.confidence >= 0.95) {
-      // auto-approve
-      const existingForShop = await prisma.integProductMapping.findFirst({
-        where: { shopProductId: best.shopProductId, platformCode },
+      // auto-approve: بررسی که shop product قبلاً لینک نداشته باشد
+      const existingShopLink = await prisma.integMappingLink.findUnique({
+        where: { platformCode_externalId: { platformCode: "shop", externalId: best.shopProductId } },
       });
-      if (!existingForShop) {
-        await prisma.integProductMapping.create({
-          data: {
-            shopProductId:     best.shopProductId,
-            platformCode,
-            platformProductId: hp.platformId,
-            platformTitle:     hp.title,
-            isActive:          true,
-          },
+      if (!existingShopLink) {
+        const mapping = await prisma.integMapping.create({ data: {} });
+        await prisma.integMappingLink.createMany({
+          data: [
+            {
+              mappingId:     mapping.id,
+              platformCode:  "shop",
+              externalId:    best.shopProductId,
+              externalTitle: hp.title,
+            },
+            {
+              mappingId:     mapping.id,
+              platformCode,
+              externalId:    hp.platformId,
+              externalTitle: hp.title,
+            },
+          ],
         });
         alreadyMapped.add(hp.platformId);
         autoMapped++;
@@ -177,28 +185,72 @@ export async function runAutoMatch(
   return { autoMapped, suggested, skipped };
 }
 
-// ── تأیید یک suggestion → تبدیل به mapping ───────────────────────────
+// ── تأیید یک suggestion → تبدیل به IntegMapping + IntegMappingLink ──
 
 export async function approveSuggestion(suggestionId: string): Promise<void> {
   const sug = await prisma.integMappingSuggestion.findUniqueOrThrow({
     where: { id: suggestionId },
   });
 
-  await prisma.$transaction([
-    prisma.integProductMapping.create({
-      data: {
-        shopProductId:     sug.shopProductId,
-        platformCode:      sug.platformCode,
-        platformProductId: sug.platformProductId,
-        platformTitle:     sug.platformTitle,
-        isActive:          true,
+  // بررسی که این پلتفرم‌پروداکت قبلاً لینک نشده باشد
+  const existingPlatformLink = await prisma.integMappingLink.findUnique({
+    where: {
+      platformCode_externalId: {
+        platformCode: sug.platformCode,
+        externalId:   sug.platformProductId,
       },
-    }),
-    prisma.integMappingSuggestion.update({
+    },
+  });
+  if (existingPlatformLink) {
+    throw new Error("این محصول پلتفرم قبلاً نگاشت دارد");
+  }
+
+  // اگر shop product قبلاً mapping دارد، به همان mapping اضافه کنیم
+  const existingShopLink = await prisma.integMappingLink.findUnique({
+    where: {
+      platformCode_externalId: {
+        platformCode: "shop",
+        externalId:   sug.shopProductId,
+      },
+    },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    if (existingShopLink) {
+      // اضافه کردن لینک پلتفرم به mapping موجود
+      await tx.integMappingLink.create({
+        data: {
+          mappingId:     existingShopLink.mappingId,
+          platformCode:  sug.platformCode,
+          externalId:    sug.platformProductId,
+          externalTitle: sug.platformTitle,
+        },
+      });
+    } else {
+      // ایجاد mapping جدید با دو لینک
+      const mapping = await tx.integMapping.create({ data: {} });
+      await tx.integMappingLink.createMany({
+        data: [
+          {
+            mappingId:     mapping.id,
+            platformCode:  "shop",
+            externalId:    sug.shopProductId,
+          },
+          {
+            mappingId:     mapping.id,
+            platformCode:  sug.platformCode,
+            externalId:    sug.platformProductId,
+            externalTitle: sug.platformTitle,
+          },
+        ],
+      });
+    }
+
+    await tx.integMappingSuggestion.update({
       where: { id: suggestionId },
       data:  { status: "APPROVED", reviewedAt: new Date() },
-    }),
-  ]);
+    });
+  });
 }
 
 // ── رد یک suggestion ──────────────────────────────────────────────────

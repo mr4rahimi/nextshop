@@ -166,25 +166,25 @@ async function syncAllStock(
       for (const item of result.items) {
         if (item.stock === undefined) continue;
 
-        const mapping = await prisma.integProductMapping.findUnique({
-          where: {
-            platformCode_platformProductId: {
-              platformCode,
-              platformProductId: item.platformId,
+        const platformLink = await prisma.integMappingLink.findUnique({
+          where: { platformCode_externalId: { platformCode, externalId: item.platformId } },
+          include: {
+            mapping: {
+              include: { links: { where: { platformCode: "shop", isActive: true } } },
             },
           },
         });
 
-        if (mapping?.isActive) {
+        const shopLink = platformLink?.mapping?.links[0];
+        if (platformLink?.isActive && shopLink) {
           await prisma.product.update({
-            where: { id: mapping.shopProductId },
+            where: { id: shopLink.externalId },
             data:  { stock: Math.max(0, Math.floor(item.stock)) },
           });
-          // ذخیره آخرین قیمت خرید در meta mapping (برای Rule Engine)
           if (item.purchasePrice) {
-            const currentMeta = (mapping.meta ?? {}) as Record<string, unknown>;
-            await prisma.integProductMapping.update({
-              where: { id: mapping.id },
+            const currentMeta = (platformLink.meta ?? {}) as Record<string, unknown>;
+            await prisma.integMappingLink.update({
+              where: { id: platformLink.id },
               data:  { meta: { ...currentMeta, lastPurchasePrice: item.purchasePrice } },
             });
           }
@@ -207,19 +207,26 @@ async function syncAllStock(
     }).catch(() => {});
   } else {
     // مارکت‌پلیس ← فروشگاه: ارسال موجودی فعلی به پلتفرم
-    const mappings = await prisma.integProductMapping.findMany({
+    const platformLinks = await prisma.integMappingLink.findMany({
       where:   { platformCode, isActive: true },
-      include: { shopProduct: { select: { stock: true } } },
+      include: { mapping: { include: { links: { where: { platformCode: "shop", isActive: true } } } } },
     });
 
-    if (!mappings.length) return;
+    const pairs = platformLinks
+      .map((l) => ({ platformProductId: l.externalId, shopProductId: l.mapping.links[0]?.externalId }))
+      .filter((p): p is { platformProductId: string; shopProductId: string } => Boolean(p.shopProductId));
+
+    if (!pairs.length) return;
+
+    const shopProducts = await prisma.product.findMany({
+      where:  { id: { in: pairs.map((p) => p.shopProductId) } },
+      select: { id: true, stock: true },
+    });
+    const stockMap = new Map(shopProducts.map((p) => [p.id, p.stock]));
 
     const result = await adapter.updateStock(
       credentials,
-      mappings.map((m) => ({
-        platformProductId: m.platformProductId,
-        stock:             m.shopProduct.stock,
-      })),
+      pairs.map((p) => ({ platformProductId: p.platformProductId, stock: stockMap.get(p.shopProductId) ?? 0 })),
     );
 
     await writeLog({
@@ -258,18 +265,19 @@ async function syncAllPrice(
       for (const item of result.items) {
         if (!item.salePrice) continue;
 
-        const mapping = await prisma.integProductMapping.findUnique({
-          where: {
-            platformCode_platformProductId: {
-              platformCode,
-              platformProductId: item.platformId,
+        const platformLink = await prisma.integMappingLink.findUnique({
+          where: { platformCode_externalId: { platformCode, externalId: item.platformId } },
+          include: {
+            mapping: {
+              include: { links: { where: { platformCode: "shop", isActive: true } } },
             },
           },
         });
 
-        if (mapping?.isActive) {
+        const shopLink = platformLink?.mapping?.links[0];
+        if (platformLink?.isActive && shopLink) {
           await prisma.product.update({
-            where: { id: mapping.shopProductId },
+            where: { id: shopLink.externalId },
             data:  { price: BigInt(item.salePrice) },
           });
           updatedCount++;
@@ -295,24 +303,41 @@ async function syncAllPrice(
       throw new Error(`${platformCode} does not support price sync`);
     }
 
-    const mappings = await prisma.integProductMapping.findMany({
+    const platformLinks = await prisma.integMappingLink.findMany({
       where:   { platformCode, isActive: true },
-      include: { shopProduct: { select: { price: true, salePrice: true, stock: true } } },
+      include: { mapping: { include: { links: { where: { platformCode: "shop", isActive: true } } } } },
     });
 
-    if (!mappings.length) return;
+    const pairs = platformLinks
+      .map((l) => ({
+        platformProductId: l.externalId,
+        shopProductId:     l.mapping.links[0]?.externalId,
+        lastPurchasePrice: (l.meta as { lastPurchasePrice?: number } | null)?.lastPurchasePrice,
+      }))
+      .filter((p): p is typeof p & { shopProductId: string } => Boolean(p.shopProductId));
+
+    if (!pairs.length) return;
+
+    const shopProducts = await prisma.product.findMany({
+      where:  { id: { in: pairs.map((p) => p.shopProductId) } },
+      select: { id: true, price: true, salePrice: true, stock: true },
+    });
+    const shopMap = new Map(shopProducts.map((p) => [p.id, p]));
 
     // اعمال قوانین قیمت قبل از ارسال به پلتفرم
     const priceUpdates = await applyRulesToPrices(
       platformCode,
-      mappings.map((m) => ({
-        shopProductId:     m.shopProductId,
-        platformProductId: m.platformProductId,
-        price:             Number(m.shopProduct.price),
-        salePrice:         m.shopProduct.salePrice ? Number(m.shopProduct.salePrice) : undefined,
-        stock:             m.shopProduct.stock,
-        lastPurchasePrice: (m.meta as { lastPurchasePrice?: number } | null)?.lastPurchasePrice,
-      })),
+      pairs.map((p) => {
+        const sp = shopMap.get(p.shopProductId)!;
+        return {
+          shopProductId:     p.shopProductId,
+          platformProductId: p.platformProductId,
+          price:             Number(sp.price),
+          salePrice:         sp.salePrice ? Number(sp.salePrice) : undefined,
+          stock:             sp.stock,
+          lastPurchasePrice: p.lastPurchasePrice,
+        };
+      }),
     );
 
     const result = await adapter.updatePrice(credentials, priceUpdates);

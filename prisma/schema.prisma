@@ -135,7 +135,6 @@ model Product {
   downloadTitle      String?
   downloadUrl        String?
   blogPosts          BlogPostProduct[]
-  integMappings      IntegProductMapping[]
   cartItems          CartItem[]
   orderItems         OrderItem[]
   assembledProduct   AssembledProduct?  @relation(fields: [assembledProductId], references: [id])
@@ -1033,7 +1032,6 @@ model IntegPlatform {
   isActive Boolean           @default(true)
 
   connections      IntegConnection[]
-  mappings         IntegProductMapping[]
   suggestions      IntegMappingSuggestion[]
   jobs             IntegJob[]
   logs             IntegLog[]
@@ -1103,28 +1101,36 @@ enum IntegConnStatus {
   SYNCING
 }
 
-// ── Mapping محصولات ──────────────────────────────────────────────────
+// ── ظرف یکپارچه نگاشت (گروه چند پلتفرمه) ──────────────────────────
 
-model IntegProductMapping {
-  id                String   @id @default(cuid())
-  shopProductId     String
-  platformCode      String
-  platformProductId String
-  platformSku       String?
-  platformTitle     String?
-  isActive          Boolean  @default(true)
-  meta              Json     @default("{}")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+model IntegMapping {
+  id        String   @id @default(cuid())
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  shopProduct Product       @relation(fields: [shopProductId], references: [id], onDelete: Cascade)
-  platform    IntegPlatform @relation(fields: [platformCode], references: [code])
+  links IntegMappingLink[]
+}
 
-  @@unique([shopProductId, platformCode])
-  @@unique([platformCode, platformProductId])
-  @@index([shopProductId])
+model IntegMappingLink {
+  id            String   @id @default(cuid())
+  mappingId     String
+  platformCode  String   // "shop" | "hesaban" | "basalam" | ...
+  externalId    String   // Product.id for "shop", platformProductId for others
+  externalTitle String?
+  isActive      Boolean  @default(true)
+  meta          Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  mapping IntegMapping @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+
+  @@unique([mappingId, platformCode])
+  @@unique([platformCode, externalId])
+  @@index([mappingId])
   @@index([platformCode])
-  @@index([isActive])
+  @@index([platformCode, isActive])
 }
 
 // ── پیشنهادهای auto-match ────────────────────────────────────────────

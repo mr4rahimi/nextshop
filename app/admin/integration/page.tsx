@@ -29,7 +29,7 @@ export default async function IntegrationDashboardPage() {
     prisma.integPlatform.findMany({ where: { isActive: true }, orderBy: { type: "asc" } }),
     prisma.integConnection.findMany({ include: { platform: true } }),
     getQueueStats(),
-    prisma.integProductMapping.count({ where: { isActive: true } }),
+    prisma.integMapping.count({ where: { isActive: true } }),
     prisma.integMappingSuggestion.count({ where: { status: "PENDING" } }),
     prisma.integPriceRule.count({ where: { isActive: true } }),
     prisma.integLog.findMany({
