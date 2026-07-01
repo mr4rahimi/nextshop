@@ -2,8 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { evaluateFormula, RULE_TEMPLATES } from "@/lib/integration/core/price-rule-engine";
-import type { FormulaNode } from "@/lib/integration/core/price-rule-engine";
+import { evaluateFormula, RULE_TEMPLATES } from "@/lib/integration/core/formula";
+import type { FormulaNode } from "@/lib/integration/core/formula";
 import type { PriceRuleContext } from "@/lib/integration/types";
 
 const PLATFORMS = [
