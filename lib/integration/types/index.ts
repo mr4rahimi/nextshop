@@ -92,3 +92,17 @@ export interface PriceRuleContext {
   shipping_cost:       number;
   packaging_cost:      number;
 }
+
+export interface OrderItemInfo {
+  platformOrderId: string;      
+  platformOrderItemId?: string;
+  platformProductId: string;    
+  qty: number;
+  title?: string;
+}
+
+export interface FetchOrdersResult {
+  items: OrderItemInfo[];
+  hasMore: boolean;
+  cursor?: string;
+}

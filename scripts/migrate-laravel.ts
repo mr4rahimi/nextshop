@@ -26,6 +26,7 @@ function stripHtml(h: string | null): string {
   return (h || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+
 async function main() {
   const db = await mysql.createConnection({
     host: "127.0.0.1", port: 3307,

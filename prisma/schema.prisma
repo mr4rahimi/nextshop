@@ -1104,13 +1104,18 @@ enum IntegConnStatus {
 // ── ظرف یکپارچه نگاشت (گروه چند پلتفرمه) ──────────────────────────
 
 model IntegMapping {
-  id        String   @id @default(cuid())
-  notes     String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String    @id @default(cuid())
+  notes            String?
+  isActive         Boolean   @default(true)
+  stock            Int       @default(0)
+  syncStockEnabled Boolean   @default(true)
+  lastStockSyncAt  DateTime?
+  lastHesabanStock Int?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  links IntegMappingLink[]
+  links  IntegMappingLink[]
+  orders IntegOrder[]
 }
 
 model IntegMappingLink {
@@ -1161,6 +1166,36 @@ enum IntegSuggestionStatus {
   EXPIRED
 }
 
+// ── سفارش‌های دریافت‌شده از مارکت‌پلیس‌ها ─────────────────────────────
+
+model IntegOrder {
+  id                  String           @id @default(cuid())
+  mappingId           String?
+  platformCode        String
+  platformOrderId     String
+  platformOrderItemId String?
+  productTitle        String
+  qty                 Int
+  unitPrice           Float?
+  status              IntegOrderStatus @default(PENDING)
+  invoicedAt          DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  mapping IntegMapping? @relation(fields: [mappingId], references: [id])
+
+  @@unique([platformCode, platformOrderId])
+  @@index([mappingId])
+  @@index([platformCode, status])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum IntegOrderStatus {
+  PENDING
+  INVOICED
+}
+
 // ── Queue ────────────────────────────────────────────────────────────
 
 model IntegJob {
@@ -1193,6 +1228,7 @@ enum IntegJobType {
   SYNC_ALL_STOCK
   SYNC_ALL_PRICE
   FETCH_PRODUCTS
+  FETCH_ORDERS
   CREATE_PRODUCT
   TEST_CONNECTION
 }
@@ -1242,6 +1278,7 @@ enum IntegEntityType {
   PRODUCT
   STOCK
   PRICE
+  ORDER
   CONNECTION
 }
 
