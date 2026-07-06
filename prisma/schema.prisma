@@ -1291,19 +1291,49 @@ enum IntegLogStatus {
 // ── قوانین قیمت‌گذاری ────────────────────────────────────────────────
 
 model IntegPriceRule {
-  id               String   @id @default(cuid())
+  id               String        @id @default(cuid())
   name             String
   description      String?
-  isActive         Boolean  @default(true)
-  priority         Int      @default(100)
-  scopeCategoryIds String[] @default([])
-  scopeBrandIds    String[] @default([])
-  targetPlatforms  String[] @default([])
-  formula          Json
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  isActive         Boolean       @default(true)
+  priority         Int           @default(100)
+  targetPlatforms  String[]      @default([])   // خالی = همه پلتفرم‌ها (شامل shop هم می‌شود)
+  scopeCategoryIds String[]      @default([])
+  scopeBrandIds    String[]      @default([])
+
+  feePercent    Float         @default(0)
+  shippingType  IntegCostType @default(FIXED)
+  shippingValue Float         @default(0)
+  packagingType IntegCostType @default(FIXED)
+  packagingValue Float        @default(0)
+  miscType      IntegCostType @default(FIXED)
+  miscValue     Float         @default(0)
+  marginPercent Float         @default(0)   // سود پیش‌فرض — وقتی هیچ tier ای match نشود
+  roundTo       Int?
+
+  tiers IntegPriceRuleTier[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isActive, priority])
+}
+
+enum IntegCostType {
+  FIXED
+  PERCENT
+}
+
+model IntegPriceRuleTier {
+  id            String @id @default(cuid())
+  ruleId        String
+  minStock      Int?   // null = بدون حد پایین
+  maxStock      Int?   // null = بدون حد بالا
+  marginPercent Float
+  sortOrder     Int    @default(0)
+
+  rule IntegPriceRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
 }
 
 // ── تنظیمات کلی ──────────────────────────────────────────────────────
