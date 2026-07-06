@@ -1,4 +1,6 @@
 import { BaseAdapter } from "../base.adapter";
+import type { FetchOrdersResult } from "@/lib/integration/types";
+
 import type {
   ConnectionTestResult,
   PaginatedProducts,
@@ -167,6 +169,49 @@ export class BasalamAdapter extends BaseAdapter {
       updates.map((u) => u.platformProductId),
     );
   }
+
+  async fetchOrders(
+  credentials: Record<string, string>,
+  cursor?: string,
+): Promise<FetchOrdersResult> {
+  const { accessToken } = credentials;
+
+  const params = new URLSearchParams({
+    statuses: "3739", // فقط سفارش‌های جدید
+    per_page: "30",
+    sort:     "created_at:asc",
+  });
+  if (cursor) params.set("cursor", cursor);
+
+  const res = await fetch(`${OPENAPI_BASE}/v1/vendor-parcels?${params}`, {
+    headers: this.headers(accessToken),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { message?: string };
+    throw new Error(body.message ?? `HTTP ${res.status}`);
+  }
+
+  const data = await res.json() as {
+    data: {
+      id: number;
+      items: { id: number; quantity: number; title: string; product: { id: number } }[];
+    }[];
+    next_cursor?: string;
+  };
+
+  const items = data.data.flatMap((parcel) =>
+    parcel.items.map((item) => ({
+      platformOrderId:     `${parcel.id}:${item.id}`, // یکتا در سطح آیتم، نه کل سفارش
+      platformOrderItemId: String(item.id),
+      platformProductId:   String(item.product.id),
+      qty:                 item.quantity,
+      title:               item.title,
+    })),
+  );
+
+  return { items, hasMore: !!data.next_cursor, cursor: data.next_cursor };
+}
 
   // ── bulk update به core.basalam.com ──────────────────────────────
   // endpoint: PATCH /v3/vendors/{vendor_id}/products
