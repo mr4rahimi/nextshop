@@ -8,6 +8,10 @@ import { decryptCredentials } from "./crypto";
 import { runAutoMatch } from "./mapping";
 import { applyRulesToPrices } from "./price-rule-engine";
 
+import { resyncStockFromAccounting } from "./inventory";
+import { fetchAndProcessOrders } from "./orders";
+import { enqueue } from "./queue";
+
 // اجرای یک چرخه Worker — فراخوانی هر N ثانیه
 export async function runWorkerCycle(maxJobs = 5): Promise<void> {
   const settings = await prisma.integSettings.findUnique({ where: { id: "singleton" } });
@@ -132,6 +136,18 @@ async function dispatchJob(job: IntegJob): Promise<void> {
       break;
     }
 
+     case "FETCH_ORDERS": {
+      await fetchAndProcessOrders(job.id, job.platformCode, adapter, credentials);
+      await enqueue({
+        type:         "FETCH_ORDERS",
+        platformCode: job.platformCode,
+        payload:      {},
+        priority:     3,
+        delayMs:      connection.syncIntervalMin * 60_000,
+      });
+      break;
+    }
+
     case "CREATE_PRODUCT":
       throw new Error(`Job type ${job.type} not yet implemented`);
 
@@ -140,9 +156,6 @@ async function dispatchJob(job: IntegJob): Promise<void> {
   }
 }
 
-// ── SYNC_ALL_STOCK ────────────────────────────────────────────────────
-// برای پلتفرم‌های حسابداری (مثل Hesaban): موجودی را از پلتفرم می‌خواند و در فروشگاه به‌روزرسانی می‌کند
-// برای مارکت‌پلیس‌ها (مثل Basalam): موجودی فروشگاه را به پلتفرم می‌فرستد
 
 async function syncAllStock(
   jobId: string,
@@ -155,58 +168,9 @@ async function syncAllStock(
   });
 
   if (platform?.type === "ACCOUNTING") {
-    // حسابداری → فروشگاه: خواندن موجودی از حسابداری و آپدیت در فروشگاه
-    let page = 1;
-    let updatedCount = 0;
-    let hasMore = true;
-
-    while (hasMore) {
-      const result = await adapter.fetchProducts(credentials, page, 100);
-
-      for (const item of result.items) {
-        if (item.stock === undefined) continue;
-
-        const platformLink = await prisma.integMappingLink.findUnique({
-          where: { platformCode_externalId: { platformCode, externalId: item.platformId } },
-          include: {
-            mapping: {
-              include: { links: { where: { platformCode: "shop", isActive: true } } },
-            },
-          },
-        });
-
-        const shopLink = platformLink?.mapping?.links[0];
-        if (platformLink?.isActive && shopLink) {
-          await prisma.product.update({
-            where: { id: shopLink.externalId },
-            data:  { stock: Math.max(0, Math.floor(item.stock)) },
-          });
-          if (item.purchasePrice) {
-            const currentMeta = (platformLink.meta ?? {}) as Record<string, unknown>;
-            await prisma.integMappingLink.update({
-              where: { id: platformLink.id },
-              data:  { meta: { ...currentMeta, lastPurchasePrice: item.purchasePrice } },
-            });
-          }
-          updatedCount++;
-        }
-      }
-
-      hasMore = result.hasMore;
-      page++;
-    }
-
-    await writeLog({
-      jobId,
-      platformCode,
-      operationType: "SYNC_ALL_STOCK",
-      direction:     "INBOUND",
-      entityType:    "STOCK",
-      status:        "SUCCESS",
-      responseData:  { updatedCount, pages: page - 1 },
-    }).catch(() => {});
+    await resyncStockFromAccounting(jobId, platformCode);
   } else {
-    // مارکت‌پلیس ← فروشگاه: ارسال موجودی فعلی به پلتفرم
+   
     const platformLinks = await prisma.integMappingLink.findMany({
       where:   { platformCode, isActive: true },
       include: { mapping: { include: { links: { where: { platformCode: "shop", isActive: true } } } } },
