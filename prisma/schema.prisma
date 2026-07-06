@@ -1,5 +1,5 @@
 generator client {
-  provider   = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -7,27 +7,27 @@ datasource db {
 }
 
 model User {
-  id           String              @id @default(cuid())
-  role         UserRole            @default(CUSTOMER)
-  firstName    String?
-  lastName     String?
-  phone        String              @unique
-  email        String?             @unique
-  avatarUrl    String?
-  nationalCode String?
-  passwordHash String
-  isActive     Boolean             @default(true)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  walletBalance BigInt @default(0)
-  addresses    Address[]
-  cart         Cart?
-  orders       Order[]
-  reviews      Review[]
-  walletTx     WalletTransaction[]
-  wishlist     WishlistItem[]
-  guaranties Guaranty[]
-  blogComments BlogComment[]
+  id            String              @id @default(cuid())
+  role          UserRole            @default(CUSTOMER)
+  firstName     String?
+  lastName      String?
+  phone         String              @unique
+  email         String?             @unique
+  avatarUrl     String?
+  nationalCode  String?
+  passwordHash  String
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  walletBalance BigInt              @default(0)
+  addresses     Address[]
+  cart          Cart?
+  orders        Order[]
+  reviews       Review[]
+  walletTx      WalletTransaction[]
+  wishlist      WishlistItem[]
+  guaranties    Guaranty[]
+  blogComments  BlogComment[]
 
   @@index([role])
   @@index([isActive])
@@ -53,26 +53,24 @@ model Address {
 }
 
 model Category {
-  id             String     @id @default(cuid())
-  title          String
-  slug           String     @unique
-  parentId       String?
-  isActive       Boolean    @default(true)
-  sortOrder      Int        @default(0)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  description    String?
-  imageUrl       String?
-  seoDescription String?
-  seoKeywords    String?
-  seoTitle       String?
-  parent         Category?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children       Category[] @relation("CategoryTree")
-  products       Product[]
-  megaMenu       MegaMenuCategory?
+  id              String                   @id @default(cuid())
+  title           String
+  slug            String                   @unique
+  parentId        String?
+  isActive        Boolean                  @default(true)
+  sortOrder       Int                      @default(0)
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  description     String?
+  imageUrl        String?
+  seoDescription  String?
+  seoKeywords     String?
+  seoTitle        String?
+  parent          Category?                @relation("CategoryTree", fields: [parentId], references: [id])
+  children        Category[]               @relation("CategoryTree")
+  products        Product[]
+  megaMenu        MegaMenuCategory?
   attributeGroups CategoryAttributeGroup[]
-
-
 
   @@index([parentId])
   @@index([isActive])
@@ -146,9 +144,7 @@ model Product {
   wishlist           WishlistItem[]
   relatedProducts    ProductRelated[]   @relation("ProductRelations")
   relatedTo          ProductRelated[]   @relation("RelatedToProducts")
-  attributes     ProductAttribute[]
-
-
+  attributes         ProductAttribute[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -210,8 +206,8 @@ model Order {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   orderNumber   String      @unique
-  note          String?     
-  trackingCode  String?     
+  note          String?
+  trackingCode  String?
   address       Address?    @relation(fields: [addressId], references: [id])
   user          User        @relation(fields: [userId], references: [id])
   items         OrderItem[]
@@ -480,7 +476,6 @@ model ProductSpecValue {
   @@index([specItemId])
 }
 
-
 model Widget {
   id        String     @id @default(cuid())
   type      WidgetType
@@ -511,14 +506,14 @@ model Story {
 }
 
 model HeroSlide {
-  id          String   @id @default(cuid())
-  title       String?
-  imageUrl    String
-  linkUrl     String?
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  title     String?
+  imageUrl  String
+  linkUrl   String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isActive])
   @@index([sortOrder])
@@ -538,87 +533,87 @@ model OtpCode {
 }
 
 model ShippingMethod {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   title       String
   type        ShippingType
-  isActive    Boolean  @default(true)
+  isActive    Boolean      @default(true)
   cities      String[] // لیست شهرهای مجاز (خالی = همه جا)
-  fee         BigInt   @default(0)
+  fee         BigInt       @default(0)
   description String?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@index([isActive])
 }
 
 model StoreSettings {
-  id        String   @id @default("singleton")
+  id                       String   @id @default("singleton")
   // کارت به کارت
-  cardNumber    String?
-  cardHolder    String?
-  cardBank      String?
-  cardReceiptInfo String? 
-  paymentGatewayActive Boolean @default(false)
-  paymentGatewayProvider String?
-  paymentGatewayMerchant String?
-  paymentGatewaySandbox Boolean @default(false)
-  senderName       String?
-  senderPhone      String?
-  senderProvince   String?
-  senderCity       String?
-  senderAddress    String?
-  senderPostalCode String?
-  storeName        String?
-  storeLogo        String?
-  siteFavicon      String?
-  siteDescription  String?
-  siteKeywords     String?
-  siteEmail        String?
-  sitePhone        String?
-  siteAddress      String?
-  siteCity         String?
-  siteProvince     String?
-  sitePostalCode   String?
-  openingHours     String?   // schema.org format: "Sa-Th 09:00-17:00"
-  socialInstagram  String?
-  socialTelegram   String?
-  socialWhatsapp   String?
-  socialTwitter    String?
-  footerText       String?
-  enamadCode   String?   // کد نماد اعتماد
-  samanCode    String?   // کد ساماندهی  
-  trustBadge3  String?   // نماد سوم (URL تصویر)
-  trustBadge4  String?   // نماد چهارم (URL تصویر)
-  maintenanceMode  Boolean @default(false)
-  smsApiKey              String?
-  smsLineNumber          String?
-  smsEnabled             Boolean @default(false)
-  smsPatternOtp          String?
-  smsPatternOrderNew     String?
-  smsPatternOrderPaid    String?
-  smsPatternOrderConfirm String?
-  smsPatternOrderPrepare String?
-  smsPatternOrderPack    String?
-  smsPatternOrderSent    String?
+  cardNumber               String?
+  cardHolder               String?
+  cardBank                 String?
+  cardReceiptInfo          String?
+  paymentGatewayActive     Boolean  @default(false)
+  paymentGatewayProvider   String?
+  paymentGatewayMerchant   String?
+  paymentGatewaySandbox    Boolean  @default(false)
+  senderName               String?
+  senderPhone              String?
+  senderProvince           String?
+  senderCity               String?
+  senderAddress            String?
+  senderPostalCode         String?
+  storeName                String?
+  storeLogo                String?
+  siteFavicon              String?
+  siteDescription          String?
+  siteKeywords             String?
+  siteEmail                String?
+  sitePhone                String?
+  siteAddress              String?
+  siteCity                 String?
+  siteProvince             String?
+  sitePostalCode           String?
+  openingHours             String? // schema.org format: "Sa-Th 09:00-17:00"
+  socialInstagram          String?
+  socialTelegram           String?
+  socialWhatsapp           String?
+  socialTwitter            String?
+  footerText               String?
+  enamadCode               String? // کد نماد اعتماد
+  samanCode                String? // کد ساماندهی  
+  trustBadge3              String? // نماد سوم (URL تصویر)
+  trustBadge4              String? // نماد چهارم (URL تصویر)
+  maintenanceMode          Boolean  @default(false)
+  smsApiKey                String?
+  smsLineNumber            String?
+  smsEnabled               Boolean  @default(false)
+  smsPatternOtp            String?
+  smsPatternOrderNew       String?
+  smsPatternOrderPaid      String?
+  smsPatternOrderConfirm   String?
+  smsPatternOrderPrepare   String?
+  smsPatternOrderPack      String?
+  smsPatternOrderSent      String?
   smsPatternOrderDelivered String?
-  smsPatternOrderDone    String?
-  smsPatternOrderCancel  String?
-  walletEnabled Boolean @default(false)
-  themeConfig Json?
-  chatSettings Json?
-  updatedAt DateTime @updatedAt
+  smsPatternOrderDone      String?
+  smsPatternOrderCancel    String?
+  walletEnabled            Boolean  @default(false)
+  themeConfig              Json?
+  chatSettings             Json?
+  updatedAt                DateTime @updatedAt
 }
 
 model MenuItem {
-  id          String   @id @default(cuid())
-  title       String
-  url         String?
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-  openInNewTab Boolean @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  title        String
+  url          String?
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+  openInNewTab Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model MegaMenuCategory {
@@ -632,70 +627,70 @@ model MegaMenuCategory {
 }
 
 model FooterColumn {
-  id        String       @id @default(cuid())
+  id        String        @id @default(cuid())
   title     String
   type      FooterColType
-  isActive  Boolean      @default(true)
-  sortOrder Int          @default(0)
+  isActive  Boolean       @default(true)
+  sortOrder Int           @default(0)
   items     FooterItem[]
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   @@index([sortOrder])
 }
 
 model FooterItem {
-  id        String      @id @default(cuid())
+  id        String       @id @default(cuid())
   columnId  String
   label     String
   url       String?
-  sortOrder Int         @default(0)
-  isActive  Boolean     @default(true)
+  sortOrder Int          @default(0)
+  isActive  Boolean      @default(true)
   column    FooterColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
 
   @@index([columnId])
 }
 
 model BlogCategory {
-  id        String    @id @default(cuid())
+  id        String     @id @default(cuid())
   title     String
-  slug      String    @unique
-  isActive  Boolean   @default(true)
-  sortOrder Int       @default(0)
+  slug      String     @unique
+  isActive  Boolean    @default(true)
+  sortOrder Int        @default(0)
   posts     BlogPost[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model BlogTag {
-  id    String         @id @default(cuid())
-  title String         @unique
-  slug  String         @unique
+  id    String        @id @default(cuid())
+  title String        @unique
+  slug  String        @unique
   posts BlogPostTag[]
 }
 
 model BlogPost {
-  id              String        @id @default(cuid())
+  id              String            @id @default(cuid())
   title           String
-  slug            String        @unique
+  slug            String            @unique
   excerpt         String?
   content         String
   coverImage      String?
   videoUrl        String?
   categoryId      String?
-  status          BlogStatus    @default(DRAFT)
+  status          BlogStatus        @default(DRAFT)
   publishedAt     DateTime?
   seoTitle        String?
   seoDescription  String?
   seoKeywords     String?
-  viewCount       Int           @default(0)
-  readingTime     Int           @default(0)
-  category        BlogCategory? @relation(fields: [categoryId], references: [id])
+  viewCount       Int               @default(0)
+  readingTime     Int               @default(0)
+  category        BlogCategory?     @relation(fields: [categoryId], references: [id])
   tags            BlogPostTag[]
   comments        BlogComment[]
   relatedProducts BlogPostProduct[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   @@index([status])
   @@index([publishedAt])
@@ -714,7 +709,7 @@ model BlogPostTag {
 model BlogPostProduct {
   postId    String
   productId String
-  sortOrder Int     @default(0)
+  sortOrder Int      @default(0)
   post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -740,24 +735,24 @@ model BlogComment {
 }
 
 model ProductRelated {
-  id          String  @id @default(cuid())
-  productId   String
-  relatedId   String
-  sortOrder   Int     @default(0)
-  product     Product @relation("ProductRelations", fields: [productId], references: [id], onDelete: Cascade)
-  related     Product @relation("RelatedToProducts", fields: [relatedId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  productId String
+  relatedId String
+  sortOrder Int     @default(0)
+  product   Product @relation("ProductRelations", fields: [productId], references: [id], onDelete: Cascade)
+  related   Product @relation("RelatedToProducts", fields: [relatedId], references: [id], onDelete: Cascade)
 
   @@unique([productId, relatedId])
   @@index([productId])
 }
 
 model AttributeGroup {
-  id         String                    @id @default(cuid())
+  id         String                   @id @default(cuid())
   title      String
-  isActive   Boolean                   @default(true)
-  sortOrder  Int                       @default(0)
-  createdAt  DateTime                  @default(now())
-  updatedAt  DateTime                  @updatedAt
+  isActive   Boolean                  @default(true)
+  sortOrder  Int                      @default(0)
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime                 @updatedAt
   attributes Attribute[]
   categories CategoryAttributeGroup[]
 
@@ -837,17 +832,16 @@ enum CommentStatus {
 }
 
 enum FooterColType {
-  LINKS        // لینک‌های دلخواه
-  CATEGORIES   // دسته‌بندی‌های محصول (از DB)
-  CONTACT      // اطلاعات تماس + نمادها
-  BRAND        // لوگو + توضیحات + سوشال
+  LINKS // لینک‌های دلخواه
+  CATEGORIES // دسته‌بندی‌های محصول (از DB)
+  CONTACT // اطلاعات تماس + نمادها
+  BRAND // لوگو + توضیحات + سوشال
 }
 
 enum ShippingType {
-  EXPRESS   // تحویل سریع با پیک
-  STANDARD  // ارسال عادی پست
+  EXPRESS // تحویل سریع با پیک
+  STANDARD // ارسال عادی پست
 }
-
 
 enum WidgetType {
   STORY
@@ -940,16 +934,16 @@ enum GuarantyRequestStatus {
 }
 
 model Guaranty {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   userId       String
-  serialNumber String    @unique
+  serialNumber String   @unique
   productTitle String
   durationDays Int
-  startDate    DateTime  @default(now())
+  startDate    DateTime @default(now())
   endDate      DateTime
   notes        String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   user     User              @relation(fields: [userId], references: [id])
   requests GuarantyRequest[]
@@ -992,9 +986,9 @@ model ChatConversation {
 model ChatMessage {
   id             String           @id @default(cuid())
   conversationId String
-  role           String           // "user" | "assistant"
+  role           String // "user" | "assistant"
   content        String           @db.Text
-  context        String?          // مثل "topic:warranty" یا "category:printer" یا "free"
+  context        String? // مثل "topic:warranty" یا "category:printer" یا "free"
   createdAt      DateTime         @default(now())
   conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
@@ -1002,15 +996,15 @@ model ChatMessage {
 }
 
 model CallbackRequest {
-  id             String    @id @default(cuid())
+  id             String   @id @default(cuid())
   siteId         String?
   conversationId String?
   userId         String?
   phone          String
-  status         String    @default("pending") // pending | contacted | done
+  status         String   @default("pending") // pending | contacted | done
   note           String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([siteId])
   @@index([status])
@@ -1046,7 +1040,7 @@ enum IntegPlatformType {
 // ── محصولات دریافت‌شده از هر پلتفرم ────────────────────────────────
 
 model IntegPlatformProduct {
-  id                String    @id @default(cuid())
+  id                String   @id @default(cuid())
   platformCode      String
   platformProductId String
   title             String
@@ -1056,11 +1050,11 @@ model IntegPlatformProduct {
   price             Float?
   purchasePrice     Float?
   unit              String?
-  isEnabled         Boolean   @default(true)
-  rawData           Json      @default("{}")
-  lastFetchedAt     DateTime  @default(now())
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  isEnabled         Boolean  @default(true)
+  rawData           Json     @default("{}")
+  lastFetchedAt     DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   platform IntegPlatform @relation(fields: [platformCode], references: [code])
 
@@ -1075,7 +1069,7 @@ model IntegConnection {
   id               String          @id @default(cuid())
   platformCode     String
   siteId           String?
-  credentials      String          // JSON رمزنگاری‌شده AES-256-GCM
+  credentials      String // JSON رمزنگاری‌شده AES-256-GCM
   status           IntegConnStatus @default(DISCONNECTED)
   lastSyncAt       DateTime?
   lastErrorAt      DateTime?
@@ -1111,8 +1105,14 @@ model IntegMapping {
   syncStockEnabled Boolean   @default(true)
   lastStockSyncAt  DateTime?
   lastHesabanStock Int?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+
+  purchasePriceSource IntegPurchasePriceSource @default(HESABAN)
+  purchasePrice       Float?
+  syncPriceEnabled    Boolean                  @default(true)
+  lastPriceSyncAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   links  IntegMappingLink[]
   orders IntegOrder[]
@@ -1121,8 +1121,8 @@ model IntegMapping {
 model IntegMappingLink {
   id            String   @id @default(cuid())
   mappingId     String
-  platformCode  String   // "shop" | "hesaban" | "basalam" | ...
-  externalId    String   // Product.id for "shop", platformProductId for others
+  platformCode  String // "shop" | "hesaban" | "basalam" | ...
+  externalId    String // Product.id for "shop", platformProductId for others
   externalTitle String?
   isActive      Boolean  @default(true)
   meta          Json     @default("{}")
@@ -1291,24 +1291,24 @@ enum IntegLogStatus {
 // ── قوانین قیمت‌گذاری ────────────────────────────────────────────────
 
 model IntegPriceRule {
-  id               String        @id @default(cuid())
+  id               String   @id @default(cuid())
   name             String
   description      String?
-  isActive         Boolean       @default(true)
-  priority         Int           @default(100)
-  targetPlatforms  String[]      @default([])   // خالی = همه پلتفرم‌ها (شامل shop هم می‌شود)
-  scopeCategoryIds String[]      @default([])
-  scopeBrandIds    String[]      @default([])
+  isActive         Boolean  @default(true)
+  priority         Int      @default(100)
+  targetPlatforms  String[] @default([]) // خالی = همه پلتفرم‌ها (شامل shop هم می‌شود)
+  scopeCategoryIds String[] @default([])
+  scopeBrandIds    String[] @default([])
 
-  feePercent    Float         @default(0)
-  shippingType  IntegCostType @default(FIXED)
-  shippingValue Float         @default(0)
-  packagingType IntegCostType @default(FIXED)
-  packagingValue Float        @default(0)
-  miscType      IntegCostType @default(FIXED)
-  miscValue     Float         @default(0)
-  marginPercent Float         @default(0)   // سود پیش‌فرض — وقتی هیچ tier ای match نشود
-  roundTo       Int?
+  feePercent     Float         @default(0)
+  shippingType   IntegCostType @default(FIXED)
+  shippingValue  Float         @default(0)
+  packagingType  IntegCostType @default(FIXED)
+  packagingValue Float         @default(0)
+  miscType       IntegCostType @default(FIXED)
+  miscValue      Float         @default(0)
+  marginPercent  Float         @default(0) // سود پیش‌فرض — وقتی هیچ tier ای match نشود
+  roundTo        Int?
 
   tiers IntegPriceRuleTier[]
 
@@ -1326,8 +1326,8 @@ enum IntegCostType {
 model IntegPriceRuleTier {
   id            String @id @default(cuid())
   ruleId        String
-  minStock      Int?   // null = بدون حد پایین
-  maxStock      Int?   // null = بدون حد بالا
+  minStock      Int? // null = بدون حد پایین
+  maxStock      Int? // null = بدون حد بالا
   marginPercent Float
   sortOrder     Int    @default(0)
 
@@ -1345,28 +1345,6 @@ model IntegSettings {
   maxConcurrentJobs Int      @default(5)
   logRetentionDays  Int      @default(30)
   updatedAt         DateTime @updatedAt
-}
-
-model IntegMapping {
-  id               String    @id @default(cuid())
-  notes            String?
-  isActive         Boolean   @default(true)
-  stock            Int       @default(0)
-  syncStockEnabled Boolean   @default(true)
-  lastStockSyncAt  DateTime?
-  lastHesabanStock Int?
-
-  // ── قیمت‌گذاری ──────────────────────────────────
-  purchasePriceSource IntegPurchasePriceSource @default(HESABAN)
-  purchasePrice       Float?
-  syncPriceEnabled    Boolean                  @default(true)
-  lastPriceSyncAt     DateTime?
-
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  links  IntegMappingLink[]
-  orders IntegOrder[]
 }
 
 enum IntegPurchasePriceSource {
