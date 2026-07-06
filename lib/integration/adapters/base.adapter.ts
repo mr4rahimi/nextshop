@@ -5,6 +5,8 @@ import type {
   PriceUpdate,
   BatchResult,
   ConnectionTestResult,
+  FetchOrdersResult,   
+  
 } from "@/lib/integration/types";
 
 export abstract class BaseAdapter {
@@ -40,6 +42,11 @@ export abstract class BaseAdapter {
     credentials: Record<string, string>,
     product: IntegProductInfo
   ): Promise<string>;
+
+  fetchOrders?(
+    credentials: Record<string, string>,
+    cursor?: string
+  ): Promise<FetchOrdersResult>;
 
   // Rate limiting — هر Adapter می‌تواند override کند
   protected async rateLimit(_ms = 0): Promise<void> {
