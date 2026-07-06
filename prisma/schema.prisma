@@ -1316,3 +1316,30 @@ model IntegSettings {
   logRetentionDays  Int      @default(30)
   updatedAt         DateTime @updatedAt
 }
+
+model IntegMapping {
+  id               String    @id @default(cuid())
+  notes            String?
+  isActive         Boolean   @default(true)
+  stock            Int       @default(0)
+  syncStockEnabled Boolean   @default(true)
+  lastStockSyncAt  DateTime?
+  lastHesabanStock Int?
+
+  // ── قیمت‌گذاری ──────────────────────────────────
+  purchasePriceSource IntegPurchasePriceSource @default(HESABAN)
+  purchasePrice       Float?
+  syncPriceEnabled    Boolean                  @default(true)
+  lastPriceSyncAt     DateTime?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  links  IntegMappingLink[]
+  orders IntegOrder[]
+}
+
+enum IntegPurchasePriceSource {
+  HESABAN
+  MANUAL
+}
