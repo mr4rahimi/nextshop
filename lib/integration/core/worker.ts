@@ -6,7 +6,7 @@ import { writeLog } from "./log";
 import { getAdapter } from "./adapter-registry";
 import { decryptCredentials } from "./crypto";
 import { runAutoMatch } from "./mapping";
-import { applyRulesToPrices } from "./price-rule-engine";
+import { resyncPricesFromAccounting } from "./pricing";
 
 import { resyncStockFromAccounting } from "./inventory";
 import { fetchAndProcessOrders } from "./orders";
