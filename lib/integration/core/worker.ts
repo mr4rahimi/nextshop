@@ -127,7 +127,7 @@ async function dispatchJob(job: IntegJob): Promise<void> {
     }
 
     case "SYNC_ALL_PRICE": {
-      await syncAllPrice(job.id, job.platformCode, adapter, credentials);
+      await resyncPricesFromAccounting(job.id, job.platformCode);
       break;
     }
 
