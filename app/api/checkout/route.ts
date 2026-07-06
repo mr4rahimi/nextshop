@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
+import { decrementMappingStockForOrder } from "@/lib/integration/core/inventory";
 
 export const runtime = "nodejs";
 
@@ -140,3 +141,21 @@ export async function POST(req: Request) {
 
   return NextResponse.json(serialize({ orderId: order.id, orderNumber: order.orderNumber }));
 }
+
+await Promise.all(
+     orderItems.map((item: { productId: string; qty: number }) =>
+       prisma.product.updateMany({
+         where: { id: item.productId, trackStock: true, stock: { gt: 0 } },
+         data: { stock: { decrement: item.qty } },
+       })
+     )
+   );
+
+
+  await Promise.all(
+    orderItems.map((item: { productId: string; qty: number }) =>
+      decrementMappingStockForOrder("shop", item.productId, item.qty).catch(() => {})
+    )
+  ).catch(() => {});
+
+  return NextResponse.json(serialize({ orderId: order.id, orderNumber: order.orderNumber }));
