@@ -11,7 +11,10 @@ export default async function EditPriceRulePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const rule = await prisma.integPriceRule.findUnique({ where: { id } });
+  const rule = await prisma.integPriceRule.findUnique({
+    where: { id },
+    include: { tiers: { orderBy: { sortOrder: "asc" } } },
+  });
   if (!rule) notFound();
 
   const initial = {
@@ -21,7 +24,20 @@ export default async function EditPriceRulePage({
     isActive:        rule.isActive,
     priority:        rule.priority,
     targetPlatforms: rule.targetPlatforms,
-    formula:         rule.formula,
+    feePercent:      rule.feePercent,
+    shippingType:    rule.shippingType,
+    shippingValue:   rule.shippingValue,
+    packagingType:   rule.packagingType,
+    packagingValue:  rule.packagingValue,
+    miscType:        rule.miscType,
+    miscValue:       rule.miscValue,
+    marginPercent:   rule.marginPercent,
+    roundTo:         rule.roundTo,
+    tiers: rule.tiers.map((t) => ({
+      minStock:      t.minStock,
+      maxStock:      t.maxStock,
+      marginPercent: t.marginPercent,
+    })),
   };
 
   return (

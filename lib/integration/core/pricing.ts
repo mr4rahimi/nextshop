@@ -180,7 +180,7 @@ export async function resyncPricesFromAccounting(
 
       await prisma.integMapping.update({
         where: { id: link.mappingId },
-        data:  { purchasePrice: item.purchasePrice, lastPriceSyncAt: new Date() },
+        data:  { purchasePrice: item.purchasePrice / 10, lastPriceSyncAt: new Date() },
       });
       updatedFromHesaban++;
     }
@@ -210,4 +210,111 @@ export async function resyncPricesFromAccounting(
   }).catch(() => {});
 
   return { updatedFromHesaban, pushedMappings: mappings.length };
+}
+
+async function pushMappingPrice(mapping: {
+  id: string;
+  purchasePrice: number | null;
+  stock: number;
+}): Promise<void> {
+  if (mapping.purchasePrice == null) return;
+
+  const links = await prisma.integMappingLink.findMany({
+    where: { mappingId: mapping.id, isActive: true },
+  });
+
+  const shopLink = links.find((l) => l.platformCode === "shop");
+  const shopProduct = shopLink
+    ? await prisma.product.findUnique({
+        where:  { id: shopLink.externalId },
+        select: { categoryId: true, brandId: true },
+      })
+    : null;
+
+  for (const link of links) {
+    const platform = await prisma.integPlatform.findUnique({ where: { code: link.platformCode } });
+    if (platform?.type === "ACCOUNTING") continue;
+
+    const rule = await findApplicableRule(link.platformCode, shopProduct);
+    if (!rule) {
+      await writeLog({
+        platformCode:  link.platformCode,
+        operationType: "SYNC_PRICE",
+        direction:     "OUTBOUND",
+        entityType:    "PRICE",
+        entityId:      link.externalId,
+        status:        "ERROR",
+        errorMessage:  "هیچ قانون قیمت فعالی برای این پلتفرم/محصول پیدا نشد",
+      }).catch(() => {});
+      continue;
+    }
+
+    const price = calculatePrice(rule, mapping.purchasePrice, mapping.stock);
+
+    if (link.platformCode === "shop") {
+      await prisma.product.update({
+        where: { id: link.externalId },
+        data:  { price: BigInt(Math.round(price)) },
+      }).catch(() => {});
+      continue;
+    }
+
+    const connection = await prisma.integConnection.findFirst({
+      where: { platformCode: link.platformCode, status: { in: ["CONNECTED", "SYNCING"] } },
+    });
+    if (!connection) {
+      await writeLog({
+        platformCode:  link.platformCode,
+        operationType: "SYNC_PRICE",
+        direction:     "OUTBOUND",
+        entityType:    "PRICE",
+        entityId:      link.externalId,
+        status:        "ERROR",
+        errorMessage:  "اتصال این پلتفرم برقرار نیست",
+      }).catch(() => {});
+      continue;
+    }
+    if (!connection.syncPriceEnabled) {
+      await writeLog({
+        platformCode:  link.platformCode,
+        operationType: "SYNC_PRICE",
+        direction:     "OUTBOUND",
+        entityType:    "PRICE",
+        entityId:      link.externalId,
+        status:        "ERROR",
+        errorMessage:  "همگام‌سازی قیمت برای این اتصال غیرفعال است — از صفحه اتصالات فعال کنید",
+      }).catch(() => {});
+      continue;
+    }
+
+    const adapter = getAdapter(link.platformCode);
+    if (!adapter?.updatePrice) continue;
+
+    const credentials = decryptCredentials(connection.credentials);
+    const start = Date.now();
+
+    try {
+      await adapter.updatePrice(credentials, [{ platformProductId: link.externalId, price }]);
+      await writeLog({
+        platformCode:  link.platformCode,
+        operationType: "SYNC_PRICE",
+        direction:     "OUTBOUND",
+        entityType:    "PRICE",
+        entityId:      link.externalId,
+        status:        "SUCCESS",
+        durationMs:    Date.now() - start,
+      }).catch(() => {});
+    } catch (err) {
+      await writeLog({
+        platformCode:  link.platformCode,
+        operationType: "SYNC_PRICE",
+        direction:     "OUTBOUND",
+        entityType:    "PRICE",
+        entityId:      link.externalId,
+        status:        "ERROR",
+        errorMessage:  err instanceof Error ? err.message : String(err),
+        durationMs:    Date.now() - start,
+      }).catch(() => {});
+    }
+  }
 }
