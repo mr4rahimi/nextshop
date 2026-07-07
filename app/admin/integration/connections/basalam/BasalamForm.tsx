@@ -68,27 +68,34 @@ export default function BasalamForm({ existingConnection }: Props) {
   }
 
   async function handleSave() {
-    if (!accessToken.trim()) {
+    const isUpdatingSettingsOnly = !!existingConnection && !accessToken.trim();
+  
+    if (!isUpdatingSettingsOnly && !accessToken.trim()) {
       alert("Access Token را وارد کنید");
       return;
     }
-    if (!vendorId.trim()) {
+    if (!isUpdatingSettingsOnly && !vendorId.trim()) {
       alert("شناسه فروشگاه (vendorId) را وارد کنید یا اتصال را تست کنید تا به‌صورت خودکار پر شود");
       return;
     }
+  
     setSaving(true);
     setSaved(false);
     try {
+      const body: Record<string, unknown> = {
+        platformCode:     "basalam",
+        syncStockEnabled: syncStock,
+        syncPriceEnabled: syncPrice,
+        syncIntervalMin:  Number(interval) || 60,
+      };
+      if (!isUpdatingSettingsOnly) {
+        body.credentials = credentials;
+      }
+  
       const res = await fetch("/api/integration/connections", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          platformCode:     "basalam",
-          credentials,
-          syncStockEnabled: syncStock,
-          syncPriceEnabled: syncPrice,
-          syncIntervalMin:  Number(interval) || 60,
-        }),
+        body:    JSON.stringify(body),
       });
       if (res.ok) setSaved(true);
       else alert("خطا در ذخیره");

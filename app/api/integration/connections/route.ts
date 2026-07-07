@@ -25,41 +25,49 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/integration/connections — ذخیره یا آپدیت اتصال
+// POST /api/integration/connections — ذخیره یا آپدیت اتصال
 export async function POST(req: NextRequest) {
   const body = await req.json() as {
     platformCode: string;
-    credentials:  Record<string, string>;
-    config?:      Record<string, unknown>;
+    credentials?: Record<string, string>;
+    config?: Record<string, unknown>;
     syncStockEnabled?: boolean;
     syncPriceEnabled?: boolean;
-    syncIntervalMin?:  number;
+    syncIntervalMin?: number;
   };
 
-  if (!body.platformCode || !body.credentials) {
-    return NextResponse.json({ error: "platformCode و credentials الزامی هستند" }, { status: 400 });
+  if (!body.platformCode) {
+    return NextResponse.json({ error: "platformCode الزامی است" }, { status: 400 });
   }
-
-  const encrypted = encryptCredentials(body.credentials);
 
   const existing = await prisma.integConnection.findFirst({
     where: { platformCode: body.platformCode, siteId: null },
   });
 
+  // اگر credentials ارسال نشده و اتصال قبلی وجود دارد، credential قدیمی حفظ می‌شود
+  const hasNewCredentials = body.credentials && Object.values(body.credentials).some((v) => v?.trim());
+
+  if (!hasNewCredentials && !existing) {
+    return NextResponse.json({ error: "credentials الزامی است" }, { status: 400 });
+  }
+
+  const encrypted = hasNewCredentials ? encryptCredentials(body.credentials!) : existing?.credentials;
+
   const connection = existing
     ? await prisma.integConnection.update({
         where: { id: existing.id },
         data: {
-          credentials:      encrypted,
-          syncStockEnabled: body.syncStockEnabled ?? true,
-          syncPriceEnabled: body.syncPriceEnabled ?? false,
-          syncIntervalMin:  body.syncIntervalMin  ?? 60,
+          credentials:      encrypted!,
+          syncStockEnabled: body.syncStockEnabled ?? existing.syncStockEnabled,
+          syncPriceEnabled: body.syncPriceEnabled ?? existing.syncPriceEnabled,
+          syncIntervalMin:  body.syncIntervalMin  ?? existing.syncIntervalMin,
           updatedAt:        new Date(),
         },
       })
     : await prisma.integConnection.create({
         data: {
           platformCode:     body.platformCode,
-          credentials:      encrypted,
+          credentials:      encrypted!,
           status:           "DISCONNECTED",
           syncStockEnabled: body.syncStockEnabled ?? true,
           syncPriceEnabled: body.syncPriceEnabled ?? false,
