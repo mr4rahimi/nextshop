@@ -1,49 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/integration/price-rules/[id]
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const rule = await prisma.integPriceRule.findUnique({ where: { id } });
+  const rule = await prisma.integPriceRule.findUnique({
+    where: { id },
+    include: { tiers: { orderBy: { sortOrder: "asc" } } },
+  });
   if (!rule) return NextResponse.json({ error: "یافت نشد" }, { status: 404 });
   return NextResponse.json(rule);
 }
 
-// PUT /api/integration/price-rules/[id]
+interface TierInput {
+  minStock?: number | null;
+  maxStock?: number | null;
+  marginPercent: number;
+}
+
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const body = await req.json() as {
-    name?:            string;
-    description?:     string;
-    priority?:        number;
-    isActive?:        boolean;
-    targetPlatforms?: string[];
-    scopeCategoryIds?: string[];
-    scopeBrandIds?:   string[];
-    formula?:         unknown;
-  };
+  const body = await req.json() as Record<string, unknown> & { tiers?: TierInput[] };
 
   try {
+    const { tiers, ...rest } = body;
+
     const rule = await prisma.integPriceRule.update({
       where: { id },
       data: {
-        ...(body.name            !== undefined && { name: body.name.trim() }),
-        ...(body.description     !== undefined && { description: body.description?.trim() ?? null }),
-        ...(body.priority        !== undefined && { priority: body.priority }),
-        ...(body.isActive        !== undefined && { isActive: body.isActive }),
-        ...(body.targetPlatforms !== undefined && { targetPlatforms: body.targetPlatforms }),
-        ...(body.scopeCategoryIds !== undefined && { scopeCategoryIds: body.scopeCategoryIds }),
-        ...(body.scopeBrandIds   !== undefined && { scopeBrandIds: body.scopeBrandIds }),
-        ...(body.formula         !== undefined && { formula: body.formula as object }),
+        ...(rest.name             !== undefined && { name: (rest.name as string).trim() }),
+        ...(rest.description      !== undefined && { description: (rest.description as string)?.trim() ?? null }),
+        ...(rest.priority         !== undefined && { priority: rest.priority as number }),
+        ...(rest.isActive         !== undefined && { isActive: rest.isActive as boolean }),
+        ...(rest.targetPlatforms  !== undefined && { targetPlatforms: rest.targetPlatforms as string[] }),
+        ...(rest.scopeCategoryIds !== undefined && { scopeCategoryIds: rest.scopeCategoryIds as string[] }),
+        ...(rest.scopeBrandIds    !== undefined && { scopeBrandIds: rest.scopeBrandIds as string[] }),
+        ...(rest.feePercent       !== undefined && { feePercent: rest.feePercent as number }),
+        ...(rest.shippingType     !== undefined && { shippingType: rest.shippingType as "FIXED" | "PERCENT" }),
+        ...(rest.shippingValue    !== undefined && { shippingValue: rest.shippingValue as number }),
+        ...(rest.packagingType    !== undefined && { packagingType: rest.packagingType as "FIXED" | "PERCENT" }),
+        ...(rest.packagingValue   !== undefined && { packagingValue: rest.packagingValue as number }),
+        ...(rest.miscType         !== undefined && { miscType: rest.miscType as "FIXED" | "PERCENT" }),
+        ...(rest.miscValue        !== undefined && { miscValue: rest.miscValue as number }),
+        ...(rest.marginPercent    !== undefined && { marginPercent: rest.marginPercent as number }),
+        ...(rest.roundTo          !== undefined && { roundTo: rest.roundTo as number | null }),
+        ...(tiers !== undefined && {
+          tiers: {
+            deleteMany: {},
+            create: tiers.map((t, i) => ({
+              minStock:      t.minStock ?? null,
+              maxStock:      t.maxStock ?? null,
+              marginPercent: t.marginPercent,
+              sortOrder:     i,
+            })),
+          },
+        }),
       },
+      include: { tiers: true },
     });
+
     return NextResponse.json(rule);
   } catch {
     return NextResponse.json({ error: "قانون یافت نشد" }, { status: 404 });
   }
 }
 
-// DELETE /api/integration/price-rules/[id]
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
