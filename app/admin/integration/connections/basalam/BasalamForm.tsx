@@ -237,7 +237,7 @@ export default function BasalamForm({ existingConnection }: Props) {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !accessToken.trim() || !vendorId.trim()}
+            disabled={saving || (!existingConnection && (!accessToken.trim() || !vendorId.trim()))}
             className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {saving ? "ذخیره..." : saved ? "✓ ذخیره شد" : "ذخیره"}
