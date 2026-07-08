@@ -25,24 +25,59 @@ async function pushMappingStock(
       await prisma.product.update({
         where: { id: link.externalId },
         data:  { stock: Math.max(0, Math.floor(stock)) },
-      }).catch(() => {}); 
+      }).catch(() => {});
       continue;
     }
 
     const platformType = await getPlatformType(link.platformCode);
-    if (platformType === "ACCOUNTING") continue; 
+    if (platformType === "ACCOUNTING") continue;
+
     const adapter = getAdapter(link.platformCode);
-    if (!adapter) continue;
+    if (!adapter) {
+      await writeLog({
+        platformCode:  link.platformCode,
+        operationType: "SYNC_STOCK",
+        direction:     "OUTBOUND",
+        entityType:    "STOCK",
+        entityId:      link.externalId,
+        status:        "ERROR",
+        errorMessage:  "آداپتور این پلتفرم یافت نشد",
+      }).catch(() => {});
+      continue;
+    }
 
     const connection = await prisma.integConnection.findFirst({
       where: { platformCode: link.platformCode, status: { in: ["CONNECTED", "SYNCING"] } },
     });
-    if (!connection) continue;
+    if (!connection) {
+      await writeLog({
+        platformCode:  link.platformCode,
+        operationType: "SYNC_STOCK",
+        direction:     "OUTBOUND",
+        entityType:    "STOCK",
+        entityId:      link.externalId,
+        status:        "ERROR",
+        errorMessage:  "اتصال این پلتفرم برقرار نیست یا وضعیت CONNECTED/SYNCING ندارد",
+      }).catch(() => {});
+      continue;
+    }
+    if (!connection.syncStockEnabled) {
+      await writeLog({
+        platformCode:  link.platformCode,
+        operationType: "SYNC_STOCK",
+        direction:     "OUTBOUND",
+        entityType:    "STOCK",
+        entityId:      link.externalId,
+        status:        "ERROR",
+        errorMessage:  "همگام‌سازی موجودی برای این اتصال غیرفعال است — از صفحه اتصالات فعال کنید",
+      }).catch(() => {});
+      continue;
+    }
 
     const credentials = decryptCredentials(connection.credentials);
     const start = Date.now();
 
-     try {
+    try {
       const result = await adapter.updateStock(credentials, [
         { platformProductId: link.externalId, stock: Math.max(0, Math.floor(stock)) },
       ]);
