@@ -163,8 +163,8 @@ export class BasalamAdapter extends BaseAdapter {
     return this.bulkUpdate(
       credentials,
       updates.map((u) => ({
-        id:            parseInt(u.platformProductId, 10),
-        primary_price: u.salePrice ?? u.price,
+        id:    parseInt(u.platformProductId, 10),
+        price: u.salePrice ?? u.price,   // ← فیلد صحیح طبق MinimalProductSchema
       })),
       updates.map((u) => u.platformProductId),
     );
@@ -217,7 +217,7 @@ export class BasalamAdapter extends BaseAdapter {
   // endpoint: PATCH /v3/vendors/{vendor_id}/products
   // body: { "data": [{ "id": number, "stock"?: number, "primary_price"?: number }] }
 
-  private async bulkUpdate(
+   private async bulkUpdate(
     credentials: Record<string, string>,
     data: Record<string, unknown>[],
     ids: string[],
@@ -245,8 +245,14 @@ export class BasalamAdapter extends BaseAdapter {
         );
 
         if (!res.ok) {
-          const body = await res.json().catch(() => ({})) as { message?: string };
-          const error = body.message ?? `HTTP ${res.status}`;
+          const body = await res.json().catch(() => ({})) as {
+            message?: string;
+            errors?: { message?: string; fields?: string[] }[];
+          };
+          const detail = body.errors?.length
+            ? body.errors.map((e) => `${e.message ?? ""}${e.fields?.length ? ` (فیلدها: ${e.fields.join(", ")})` : ""}`).join(" | ")
+            : null;
+          const error = detail || body.message || `HTTP ${res.status}`;
           failed.push(...chunkIds.map((id) => ({ id, error })));
           continue;
         }
@@ -267,7 +273,6 @@ export class BasalamAdapter extends BaseAdapter {
             }
           }
         } else {
-          // اگر پاسخ آرایه‌ای نبود، فرض بر موفقیت کل chunk می‌گذاریم (سازگاری با نسخه‌های قدیمی‌تر API)
           success.push(...chunkIds);
         }
       } catch (err) {
