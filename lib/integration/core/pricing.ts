@@ -147,33 +147,56 @@ async function pushMappingPrice(mapping: {
 
     const adapter = getAdapter(link.platformCode);
     if (!adapter?.updatePrice) continue;
-
     const credentials = decryptCredentials(connection.credentials);
     const start = Date.now();
-
+    
     try {
-      await adapter.updatePrice(credentials, [{ platformProductId: link.externalId, price }]);
-      await writeLog({
-        platformCode:  link.platformCode,
-        operationType: "SYNC_PRICE",
-        direction:     "OUTBOUND",
-        entityType:    "PRICE",
-        entityId:      link.externalId,
-        status:        "SUCCESS",
-        durationMs:    Date.now() - start,
-      }).catch(() => {});
+      const result = await adapter.updatePrice(credentials, [
+        {
+          platformProductId: link.externalId,
+          price,
+        },
+      ]);
+    
+      if (result.failed.length > 0) {
+        await writeLog({
+          platformCode: link.platformCode,
+          operationType: "SYNC_PRICE",
+          direction: "OUTBOUND",
+          entityType: "PRICE",
+          entityId: link.externalId,
+          status: "ERROR",
+          errorMessage:
+            result.failed[0]?.error ?? "خطای نامشخص از پلتفرم",
+          durationMs: Date.now() - start,
+        }).catch(() => {});
+      } else {
+        await writeLog({
+          platformCode: link.platformCode,
+          operationType: "SYNC_PRICE",
+          direction: "OUTBOUND",
+          entityType: "PRICE",
+          entityId: link.externalId,
+          status: "SUCCESS",
+          responseData: {
+            price,
+          },
+          durationMs: Date.now() - start,
+        }).catch(() => {});
+      }
     } catch (err) {
       await writeLog({
-        platformCode:  link.platformCode,
+        platformCode: link.platformCode,
         operationType: "SYNC_PRICE",
-        direction:     "OUTBOUND",
-        entityType:    "PRICE",
-        entityId:      link.externalId,
-        status:        "ERROR",
-        errorMessage:  err instanceof Error ? err.message : String(err),
-        durationMs:    Date.now() - start,
+        direction: "OUTBOUND",
+        entityType: "PRICE",
+        entityId: link.externalId,
+        status: "ERROR",
+        errorMessage: err instanceof Error ? err.message : String(err),
+        durationMs: Date.now() - start,
       }).catch(() => {});
     }
+
   }
 }
 
