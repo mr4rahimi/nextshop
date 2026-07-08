@@ -298,47 +298,37 @@ export default function BasalamForm({ existingConnection }: Props) {
         </div>
       </div>
 
-      {/* اجرای دستی */}
-      {existingConnection?.status === "CONNECTED" && (
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
-          <h2 className="font-black text-sm text-gray-900 dark:text-white">اجرای دستی</h2>
-          <p className="text-xs text-gray-400">برای sync فوری یا دریافت اولیه محصولات باسلام</p>
+           {/* اجرای دستی */}
+           {existingConnection?.status === "CONNECTED" && (
+             <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
+               <h2 className="font-black text-sm text-gray-900 dark:text-white">اجرای دستی</h2>
+               <p className="text-xs text-gray-400">برای دریافت اولیه محصولات باسلام (برای نگاشت)</p>     
 
-          {syncMsg && (
-            <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">{syncMsg}</p>
-          )}
+               {syncMsg && (
+                 <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">{syncMsg}</p>
+               )}     
 
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => handleSync("FETCH_PRODUCTS")}
-              disabled={syncing !== null}
-              className="px-4 py-2 rounded-xl border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 text-sm font-bold hover:bg-gray-50 dark:hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {syncing === "FETCH_PRODUCTS" ? "در صف..." : "دریافت محصولات از باسلام"}
-            </button>
+               <div className="flex flex-wrap gap-3">
+                 <button
+                   onClick={() => handleSync("FETCH_PRODUCTS")}
+                   disabled={syncing !== null}
+                   className="px-4 py-2 rounded-xl border border-gray-300 dark:border-white/10 text-gray-700 dark:text-gray-300 text-sm font-bold hover:bg-gray-50 dark:hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                 >
+                   {syncing === "FETCH_PRODUCTS" ? "در صف..." : "دریافت محصولات از باسلام"}
+                 </button>
+               </div>     
 
-            {syncStock && (
-              <button
-                onClick={() => handleSync("SYNC_ALL_STOCK")}
-                disabled={syncing !== null}
-                className="px-4 py-2 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {syncing === "SYNC_ALL_STOCK" ? "در صف..." : "ارسال موجودی به باسلام"}
-              </button>
-            )}
-
-            {syncPrice && (
-              <button
-                onClick={() => handleSync("SYNC_ALL_PRICE")}
-                disabled={syncing !== null}
-                className="px-4 py-2 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {syncing === "SYNC_ALL_PRICE" ? "در صف..." : "ارسال قیمت به باسلام"}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+               <div className="pt-2 border-t border-gray-100 dark:border-white/[0.04]">
+                 <p className="text-xs text-gray-400">
+                   برای بروزرسانی موجودی و قیمت، به صفحه‌های{" "}
+                   <a href="/admin/integration/inventory" className="text-blue-600 dark:text-blue-400 underline">مدیریت موجودی</a>
+                   {" "}و{" "}
+                   <a href="/admin/integration/pricing" className="text-blue-600 dark:text-blue-400 underline">مدیریت قیمت</a>
+                   {" "}مراجعه کنید.
+                 </p>
+               </div>
+             </div>
+           )}
     </div>
   );
 }

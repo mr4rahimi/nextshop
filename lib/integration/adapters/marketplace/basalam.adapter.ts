@@ -154,7 +154,7 @@ export class BasalamAdapter extends BaseAdapter {
     );
   }
 
-  // ── ارسال قیمت از فروشگاه به باسلام ─────────────────────────────
+
 
   async updatePrice(
     credentials: Record<string, string>,
@@ -164,7 +164,7 @@ export class BasalamAdapter extends BaseAdapter {
       credentials,
       updates.map((u) => ({
         id:    parseInt(u.platformProductId, 10),
-        price: u.salePrice ?? u.price,   // ← فیلد صحیح طبق MinimalProductSchema
+        price: (u.salePrice ?? u.price) * 10,  
       })),
       updates.map((u) => u.platformProductId),
     );

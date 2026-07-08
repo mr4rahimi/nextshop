@@ -180,7 +180,18 @@ async function syncAllStock(
       .map((l) => ({ platformProductId: l.externalId, shopProductId: l.mapping.links[0]?.externalId }))
       .filter((p): p is { platformProductId: string; shopProductId: string } => Boolean(p.shopProductId));
 
-    if (!pairs.length) return;
+    if (!pairs.length) {
+      await writeLog({
+        jobId,
+        platformCode,
+        operationType: "SYNC_ALL_STOCK",
+        direction:     "OUTBOUND",
+        entityType:    "STOCK",
+        status:        "ERROR",
+        errorMessage:  "هیچ محصول نگاشت‌شده‌ای با لینک فعال فروشگاه یافت نشد — این مسیر منسوخ شده؛ از صفحه «مدیریت موجودی» استفاده کنید",
+      }).catch(() => {});
+      return;
+    }
 
     const shopProducts = await prisma.product.findMany({
       where:  { id: { in: pairs.map((p) => p.shopProductId) } },
@@ -390,12 +401,13 @@ async function fetchAndMatch(
   });
 
   await writeLog({
-    jobId,
-    platformCode,
-    operationType: "FETCH_PRODUCTS",
-    direction:     "INBOUND",
-    entityType:    "PRODUCT",
-    status:        "SUCCESS",
-    responseData:  { totalFetched, autoMapped, suggested, pages: page - 1 },
-  }).catch(() => {});
+      jobId,
+      platformCode,
+      operationType: "SYNC_ALL_STOCK",
+      direction:     "OUTBOUND",
+      entityType:    "STOCK",
+      status:        result.failed.length === 0 ? "SUCCESS" : result.success.length > 0 ? "PARTIAL" : "ERROR",
+      errorMessage:  result.failed[0]?.error,
+      responseData:  { success: result.success.length, failed: result.failed.length },
+    }).catch(() => {});
 }
