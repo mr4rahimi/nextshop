@@ -244,12 +244,31 @@ export class BasalamAdapter extends BaseAdapter {
           },
         );
 
-        if (res.ok) {
-          success.push(...chunkIds);
-        } else {
+        if (!res.ok) {
           const body = await res.json().catch(() => ({})) as { message?: string };
           const error = body.message ?? `HTTP ${res.status}`;
           failed.push(...chunkIds.map((id) => ({ id, error })));
+          continue;
+        }
+
+        // باسلام حتی با HTTP 200 ممکن است هر آیتم را جداگانه رد کند (has_error)
+        const results = await res.json().catch(() => null) as
+          | { id: number; has_error?: boolean; error_message?: string }[]
+          | null;
+
+        if (Array.isArray(results)) {
+          const resultMap = new Map(results.map((r) => [String(r.id), r]));
+          for (const id of chunkIds) {
+            const r = resultMap.get(id);
+            if (r?.has_error) {
+              failed.push({ id, error: r.error_message ?? "رد شد توسط باسلام (has_error)" });
+            } else {
+              success.push(id);
+            }
+          }
+        } else {
+          // اگر پاسخ آرایه‌ای نبود، فرض بر موفقیت کل chunk می‌گذاریم (سازگاری با نسخه‌های قدیمی‌تر API)
+          success.push(...chunkIds);
         }
       } catch (err) {
         const error = err instanceof Error ? err.message : String(err);
