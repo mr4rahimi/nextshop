@@ -42,19 +42,34 @@ async function pushMappingStock(
     const credentials = decryptCredentials(connection.credentials);
     const start = Date.now();
 
-    try {
-      await adapter.updateStock(credentials, [
+     try {
+      const result = await adapter.updateStock(credentials, [
         { platformProductId: link.externalId, stock: Math.max(0, Math.floor(stock)) },
       ]);
-      await writeLog({
-        platformCode:  link.platformCode,
-        operationType: "SYNC_STOCK",
-        direction:     "OUTBOUND",
-        entityType:    "STOCK",
-        entityId:      link.externalId,
-        status:        "SUCCESS",
-        durationMs:    Date.now() - start,
-      }).catch(() => {});
+
+      if (result.failed.length > 0) {
+        await writeLog({
+          platformCode:  link.platformCode,
+          operationType: "SYNC_STOCK",
+          direction:     "OUTBOUND",
+          entityType:    "STOCK",
+          entityId:      link.externalId,
+          status:        "ERROR",
+          errorMessage:  result.failed[0]?.error ?? "خطای نامشخص از پلتفرم",
+          durationMs:    Date.now() - start,
+        }).catch(() => {});
+      } else {
+        await writeLog({
+          platformCode:  link.platformCode,
+          operationType: "SYNC_STOCK",
+          direction:     "OUTBOUND",
+          entityType:    "STOCK",
+          entityId:      link.externalId,
+          status:        "SUCCESS",
+          responseData:  { stock },
+          durationMs:    Date.now() - start,
+        }).catch(() => {});
+      }
     } catch (err) {
       await writeLog({
         platformCode:  link.platformCode,
