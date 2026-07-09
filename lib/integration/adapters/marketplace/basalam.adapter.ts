@@ -244,16 +244,25 @@ export class BasalamAdapter extends BaseAdapter {
           },
         );
 
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({})) as {
-            message?: string;
-            errors?: { message?: string; fields?: string[] }[];
-          };
-          const detail = body.errors?.length
-            ? body.errors.map((e) => `${e.message ?? ""}${e.fields?.length ? ` (فیلدها: ${e.fields.join(", ")})` : ""}`).join(" | ")
-            : null;
-          const error = detail || body.message || `HTTP ${res.status}`;
-          failed.push(...chunkIds.map((id) => ({ id, error })));
+         if (!res.ok) {
+          const rawText = await res.text().catch(() => "");
+          let detail = `HTTP ${res.status}`;
+          try {
+            const body = JSON.parse(rawText) as {
+              message?: string;
+              errors?: { message?: string; fields?: string[] }[];
+            };
+            if (body.errors?.length) {
+              detail = body.errors
+                .map((e) => `${e.message ?? ""}${e.fields?.length ? ` [${e.fields.join(", ")}]` : ""}`)
+                .join(" | ");
+            } else if (body.message) {
+              detail = body.message;
+            }
+          } catch {
+            if (rawText) detail = `HTTP ${res.status}: ${rawText.slice(0, 200)}`;
+          }
+          failed.push(...chunkIds.map((id) => ({ id, error: detail })));
           continue;
         }
 
