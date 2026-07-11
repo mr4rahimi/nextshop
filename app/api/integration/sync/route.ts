@@ -3,15 +3,12 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-type: "SYNC_ALL_STOCK" | "SYNC_ALL_PRICE" | "FETCH_PRODUCTS" | "FETCH_ORDERS" | "TEST_CONNECTION";
 // POST /api/integration/sync
-// body: { platformCode, type: "SYNC_ALL_STOCK" | "SYNC_ALL_PRICE" | "FETCH_PRODUCTS" }
-
-
+// body: { platformCode, type: "SYNC_ALL_STOCK" | "SYNC_ALL_PRICE" | "FETCH_PRODUCTS" | "FETCH_ORDERS" }
 export async function POST(req: NextRequest) {
   const body = await req.json() as {
     platformCode: string;
-    type: "SYNC_ALL_STOCK" | "SYNC_ALL_PRICE" | "FETCH_PRODUCTS" | "TEST_CONNECTION";
+    type: "SYNC_ALL_STOCK" | "SYNC_ALL_PRICE" | "FETCH_PRODUCTS" | "FETCH_ORDERS" | "TEST_CONNECTION";
     priority?: number;
   };
 

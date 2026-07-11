@@ -216,121 +216,6 @@ async function syncAllStock(
   }
 }
 
-// ── SYNC_ALL_PRICE ────────────────────────────────────────────────────
-
-async function syncAllPrice(
-  jobId: string,
-  platformCode: string,
-  adapter: BaseAdapter,
-  credentials: Record<string, string>,
-): Promise<void> {
-  const platform = await prisma.integPlatform.findUnique({
-    where: { code: platformCode },
-  });
-
-  if (platform?.type === "ACCOUNTING") {
-    // حسابداری → فروشگاه: خواندن قیمت از حسابداری و آپدیت در فروشگاه
-    let page = 1;
-    let updatedCount = 0;
-    let hasMore = true;
-
-    while (hasMore) {
-      const result = await adapter.fetchProducts(credentials, page, 100);
-
-      for (const item of result.items) {
-        if (!item.salePrice) continue;
-
-        const platformLink = await prisma.integMappingLink.findUnique({
-          where: { platformCode_externalId: { platformCode, externalId: item.platformId } },
-          include: {
-            mapping: {
-              include: { links: { where: { platformCode: "shop", isActive: true } } },
-            },
-          },
-        });
-
-        const shopLink = platformLink?.mapping?.links[0];
-        if (platformLink?.isActive && shopLink) {
-          await prisma.product.update({
-            where: { id: shopLink.externalId },
-            data:  { price: BigInt(item.salePrice) },
-          });
-          updatedCount++;
-        }
-      }
-
-      hasMore = result.hasMore;
-      page++;
-    }
-
-    await writeLog({
-      jobId,
-      platformCode,
-      operationType: "SYNC_ALL_PRICE",
-      direction:     "INBOUND",
-      entityType:    "PRICE",
-      status:        "SUCCESS",
-      responseData:  { updatedCount, pages: page - 1 },
-    }).catch(() => {});
-  } else {
-    // مارکت‌پلیس ← فروشگاه: ارسال قیمت فعلی به پلتفرم
-    if (!adapter.updatePrice) {
-      throw new Error(`${platformCode} does not support price sync`);
-    }
-
-    const platformLinks = await prisma.integMappingLink.findMany({
-      where:   { platformCode, isActive: true },
-      include: { mapping: { include: { links: { where: { platformCode: "shop", isActive: true } } } } },
-    });
-
-    const pairs = platformLinks
-      .map((l) => ({
-        platformProductId: l.externalId,
-        shopProductId:     l.mapping.links[0]?.externalId,
-        lastPurchasePrice: (l.meta as { lastPurchasePrice?: number } | null)?.lastPurchasePrice,
-      }))
-      .filter((p): p is typeof p & { shopProductId: string } => Boolean(p.shopProductId));
-
-    if (!pairs.length) return;
-
-    const shopProducts = await prisma.product.findMany({
-      where:  { id: { in: pairs.map((p) => p.shopProductId) } },
-      select: { id: true, price: true, salePrice: true, stock: true },
-    });
-    const shopMap = new Map(shopProducts.map((p) => [p.id, p]));
-
-    // اعمال قوانین قیمت قبل از ارسال به پلتفرم
-    const priceUpdates = await applyRulesToPrices(
-      platformCode,
-      pairs.map((p) => {
-        const sp = shopMap.get(p.shopProductId)!;
-        return {
-          shopProductId:     p.shopProductId,
-          platformProductId: p.platformProductId,
-          price:             Number(sp.price),
-          salePrice:         sp.salePrice ? Number(sp.salePrice) : undefined,
-          stock:             sp.stock,
-          lastPurchasePrice: p.lastPurchasePrice,
-        };
-      }),
-    );
-
-    const result = await adapter.updatePrice(credentials, priceUpdates);
-
-    await writeLog({
-      jobId,
-      platformCode,
-      operationType: "SYNC_ALL_PRICE",
-      direction:     "OUTBOUND",
-      entityType:    "PRICE",
-      status:        result.failed.length === 0 ? "SUCCESS" : result.success.length > 0 ? "PARTIAL" : "ERROR",
-      responseData:  { success: result.success.length, failed: result.failed.length },
-    }).catch(() => {});
-  }
-}
-
-// ── FETCH_PRODUCTS + AUTO-MATCH ──────────────────────────────────────
-// دریافت کل محصولات پلتفرم و اجرای auto-match با محصولات فروشگاه
 
 async function fetchAndMatch(
   jobId: string,
@@ -401,13 +286,12 @@ async function fetchAndMatch(
   });
 
   await writeLog({
-      jobId,
-      platformCode,
-      operationType: "SYNC_ALL_STOCK",
-      direction:     "OUTBOUND",
-      entityType:    "STOCK",
-      status:        result.failed.length === 0 ? "SUCCESS" : result.success.length > 0 ? "PARTIAL" : "ERROR",
-      errorMessage:  result.failed[0]?.error,
-      responseData:  { success: result.success.length, failed: result.failed.length },
-    }).catch(() => {});
+    jobId,
+    platformCode,
+    operationType: "FETCH_PRODUCTS",
+    direction:     "INBOUND",
+    entityType:    "PRODUCT",
+    status:        "SUCCESS",
+    responseData:  { totalFetched, autoMapped, suggested, pages: page - 1 },
+  }).catch(() => {});
 }

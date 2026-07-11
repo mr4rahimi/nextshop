@@ -130,28 +130,16 @@ export async function POST(req: Request) {
   const cart = await prisma.cart.findUnique({ where: { userId: user.id } });
   if (cart) await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-   await Promise.all(
-     orderItems.map((item: { productId: string; qty: number }) =>
-       prisma.product.updateMany({
-         where: { id: item.productId, trackStock: true, stock: { gt: 0 } },
-         data: { stock: { decrement: item.qty } },
-       })
-     )
-   );
+  await Promise.all(
+    orderItems.map((item: { productId: string; qty: number }) =>
+      prisma.product.updateMany({
+        where: { id: item.productId, trackStock: true, stock: { gt: 0 } },
+        data: { stock: { decrement: item.qty } },
+      })
+    )
+  );
 
-  return NextResponse.json(serialize({ orderId: order.id, orderNumber: order.orderNumber }));
-}
-
-await Promise.all(
-     orderItems.map((item: { productId: string; qty: number }) =>
-       prisma.product.updateMany({
-         where: { id: item.productId, trackStock: true, stock: { gt: 0 } },
-         data: { stock: { decrement: item.qty } },
-       })
-     )
-   );
-
-
+  // Integration Hub: 
   await Promise.all(
     orderItems.map((item: { productId: string; qty: number }) =>
       decrementMappingStockForOrder("shop", item.productId, item.qty).catch(() => {})
@@ -159,3 +147,4 @@ await Promise.all(
   ).catch(() => {});
 
   return NextResponse.json(serialize({ orderId: order.id, orderNumber: order.orderNumber }));
+}
