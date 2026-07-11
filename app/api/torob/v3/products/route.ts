@@ -21,17 +21,29 @@ async function getPublicKey() {
 
 async function verifyTorobJWT(req: Request): Promise<boolean> {
   const token = req.headers.get("x-torob-token");
-  if (!token) return false;
+  const urlHost = new URL(req.url).host;
+  const hostHeader = req.headers.get("host");
+
+  if (!token) {
+    console.error("[torob-debug] NO TOKEN", { urlHost, hostHeader, ua: req.headers.get("user-agent") });
+    return false;
+  }
 
   try {
-    const host = new URL(req.url).host;
     const key = await getPublicKey();
     await jwtVerify(token, key, {
       algorithms: ["EdDSA"],
-      audience: host,
+      audience: urlHost,
     });
+    console.error("[torob-debug] SUCCESS", { urlHost });
     return true;
-  } catch {
+  } catch (err) {
+    console.error("[torob-debug] FAILED", {
+      urlHost,
+      hostHeader,
+      tokenPreview: token.slice(0, 20),
+      error: String(err),
+    });
     return false;
   }
 }
@@ -47,7 +59,8 @@ function isAvailable(trackStock: boolean, stock: number): boolean {
 }
 
 function formatDate(d: Date): string {
-  return d.toISOString().replace("Z", "+03:30").replace(/\.\d{3}/, "");
+  const tehran = new Date(d.getTime() + 3.5 * 60 * 60 * 1000);
+  return tehran.toISOString().replace("Z", "+03:30").replace(/\.\d{3}/, "");
 }
 
 function buildSpec(specs: { specItem: { title: string }; value: string }[]): Record<string, string> {

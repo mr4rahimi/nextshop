@@ -439,7 +439,11 @@ du -sh /tmp/shop-full.tar.gz</code></pre>
         <tr><td>PM2</td><td>آخرین</td><td>مدیریت پروسس</td></tr>
         <tr><td>Nginx</td><td>1.24+</td><td>Reverse Proxy</td></tr>
         <tr><td>PostgreSQL</td><td>16+</td><td>دیتابیس</td></tr>
+        
       </table>
+      <p>Node.js: 20.x LTS</p>
+      <p>pnpm: آخرین نسخه</p>
+      <p>PostgreSQL: 15+</p>
 
       <div class="code-block">
         <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
@@ -884,35 +888,286 @@ tar -czf /tmp/shop-update.tar.gz \
       <div class="code-block">
         <div class="code-header"><span class="code-lang">bash — سرور</span><button class="copy-btn" onclick="copyCode(this)">📋 کپی</button></div>
         <pre><code>wget https://yourhost.com/shop-update.tar.gz -O /tmp/shop-update.tar.gz
-tar -xzf /tmp/shop-update.tar.gz -C /var/www/mymonta/
-
-<span class="comment"># اگه migration جدید داری</span>
-cd /var/www/mymonta
-DATABASE_URL=<span class="str">"postgresql://myuser:pass@localhost:5432/mydb"</span> \
-./node_modules/.bin/prisma migrate deploy
-
-<span class="comment"># rebuild روی سرور</span>
-NODE_ENV=production \
-DATABASE_URL=<span class="str">"postgresql://myuser:pass@localhost:5432/mydb"</span> \
-./node_modules/.bin/next build
-
-<span class="comment"># اگه app/page.tsx وجود نداره یا تغییر کرده — چک کن</span>
-ls /var/www/mymonta/app/page.tsx || \
-  cp "/var/www/mymonta/app/(shop)/page.tsx" /var/www/mymonta/app/page.tsx
-
-<span class="comment"># پوشه‌های قدیمی که نباید باشن رو حذف کن</span>
-rm -rf /var/www/mymonta/app/store 2>/dev/null || true
-rm -rf /var/www/mymonta/app/checkout 2>/dev/null || true
-
-<span class="comment"># restart</span>
-pm2 restart mymonta-shop --update-env
-pm2 save</code></pre>
+         tar -xzf /tmp/shop-update.tar.gz -C /var/www/mymonta/
+         
+         <span class="comment"># اگه migration جدید داری</span>
+         cd /var/www/mymonta
+         DATABASE_URL=<span class="str">"postgresql://myuser:pass@localhost:5432/mydb"</span> \
+         ./node_modules/.bin/prisma migrate deploy
+         
+         <span class="comment"># rebuild روی سرور</span>
+         NODE_ENV=production \
+         DATABASE_URL=<span class="str">"postgresql://myuser:pass@localhost:5432/mydb"</span> \
+         ./node_modules/.bin/next build
+         
+         <span class="comment"># اگه app/page.tsx وجود نداره یا تغییر کرده — چک کن</span>
+         ls /var/www/mymonta/app/page.tsx || \
+           cp "/var/www/mymonta/app/(shop)/page.tsx" /var/www/mymonta/app/page.tsx
+         
+         <span class="comment"># پوشه‌های قدیمی که نباید باشن رو حذف کن</span>
+         rm -rf /var/www/mymonta/app/store 2>/dev/null || true
+         rm -rf /var/www/mymonta/app/checkout 2>/dev/null || true
+         
+         <span class="comment"># restart</span>
+         pm2 restart mymonta-shop --update-env
+         pm2 save</code></pre>
       </div>
 
       <div class="success"><span class="note-icon">✅</span><span>سایت بروز شد! با <code>pm2 logs myshop --lines 20</code> وضعیت رو چک کن.</span></div>
       <div class="warning"><span class="note-icon">⚠️</span><span>بعد از آپدیت چک کن: <code>app/page.tsx</code> باید Header/Footer داشته باشه. اگه صفحه اصلی بدون هدر بود، فایل <code>app/page.tsx</code> رو با نسخه کامل جایگزین کن.</span></div>
+   
+ 
+
+
+
+  <section id="env-extra">
+    <h2>متغیرهای محیطی مهم</h2>
+
+    <p>
+        علاوه بر مقادیر معمول، متغیرهای زیر باید در فایل
+        <code>.env.production</code>
+        و در صورت نیاز
+        <code>.env</code>
+        تنظیم شوند.
+    </p>
+
+<pre><code>DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
+INTEGRATION_ENCRYPTION_KEY=YOUR_RANDOM_64_CHAR_HEX_KEY
+</code></pre>
+
+    <h3>ساخت کلید رمزنگاری</h3>
+
+<pre><code>openssl rand -hex 32
+</code></pre>
+
+    <div class="warning">
+        <strong>نکته مهم</strong><br>
+        در صورت نبود
+        <code>INTEGRATION_ENCRYPTION_KEY</code>
+        اطلاعات اتصال سرویس‌های حسابداری و مارکت‌پلیس به درستی رمزنگاری نشده و اتصال API با خطا مواجه خواهد شد.
     </div>
-  </div>
+</section>
+
+<section id="database-url">
+    <h2>نکات مهم DATABASE_URL</h2>
+
+    <p>
+        اگر رمز عبور دیتابیس دارای کاراکترهای خاص مانند
+        <code>@</code>
+        باشد باید به صورت URL Encode نوشته شود.
+    </p>
+
+    <h3>اشتباه</h3>
+
+<pre><code>postgresql://mymonta:MyMonta@2024Strong@localhost:5432/mymonta_db
+</code></pre>
+
+    <h3>صحیح</h3>
+
+<pre><code>postgresql://mymonta:MyMonta%402024Strong@localhost:5432/mymonta_db
+</code></pre>
+</section>
+
+<section id="database-url">
+    <h2>نکات مهم DATABASE_URL</h2>
+
+    <p>
+        اگر رمز عبور دیتابیس دارای کاراکترهای خاص مانند
+        <code>@</code>
+        باشد باید به صورت URL Encode نوشته شود.
+    </p>
+
+    <h3>اشتباه</h3>
+
+<pre><code>postgresql://mymonta:MyMonta@2024Strong@localhost:5432/mymonta_db
+</code></pre>
+
+    <h3>صحیح</h3>
+
+<pre><code>postgresql://mymonta:MyMonta%402024Strong@localhost:5432/mymonta_db
+</code></pre>
+</section>
+
+<section id="deploy">
+    <h2>بروزرسانی پروژه</h2>
+
+    <p>پس از هر Pull از GitHub مراحل زیر را به ترتیب اجرا کنید.</p>
+
+<pre><code>git pull
+
+pnpm install
+
+pnpm exec prisma generate
+
+pnpm exec prisma migrate deploy
+
+pnpm build
+
+pm2 restart mymonta-shop --update-env
+</code></pre>
+</section>
+
+<section id="prisma-errors">
+
+<h2>رفع خطاهای Prisma</h2>
+
+<p>
+در صورتی که هنگام Build یا TypeScript با خطاهای زیر مواجه شدید:
+</p>
+
+<ul>
+<li>PrismaClient has no exported member</li>
+<li>Parameter implicitly has an any type</li>
+<li>Property ... does not exist</li>
+<li>TypeScript Errors after Pull</li>
+</ul>
+
+<p>ابتدا Prisma Client را مجدداً تولید کنید.</p>
+
+<pre><code>pnpm exec prisma generate
+
+pnpm exec tsc --noEmit
+</code></pre>
+
+<p>
+در اکثر موارد مشکل با اجرای این دو دستور برطرف خواهد شد.
+</p>
+
+</section>
+
+<section id="integration-empty">
+
+<h2>اگر صفحه Integration خالی بود</h2>
+
+<p>
+اگر صفحه
+</p>
+
+<pre><code>/admin/integration/connections
+</code></pre>
+
+<p>
+فقط عنوان صفحه را نمایش می‌دهد و هیچ پلتفرمی مشاهده نمی‌شود،
+ابتدا جدول زیر را بررسی کنید.
+</p>
+
+<pre><code>SELECT * FROM "IntegPlatform";
+</code></pre>
+
+<p>
+در صورتی که جدول خالی باشد باید اطلاعات اولیه (Seed) مجدداً وارد شوند.
+</p>
+
+</section>
+
+<section id="seed-errors">
+
+<h2>خطا در اجرای Seed</h2>
+
+<p>
+اگر هنگام اجرای Seed با خطای زیر مواجه شدید:
+</p>
+
+<pre><code>Authentication failed against the database server
+</code></pre>
+
+<p>
+موارد زیر را بررسی کنید:
+</p>
+
+<ul>
+<li>درست بودن DATABASE_URL</li>
+<li>URL Encode بودن کاراکتر @ در رمز عبور</li>
+<li>بارگذاری صحیح فایل .env</li>
+<li>سطح دسترسی کاربر PostgreSQL</li>
+</ul>
+
+</section>
+
+<section id="env-reload">
+
+<h2>اعمال تغییرات فایل‌های ENV</h2>
+
+<p>
+پس از هرگونه تغییر در فایل‌های
+<code>.env</code>
+یا
+<code>.env.production</code>
+حتماً برنامه را با دستور زیر ری‌استارت کنید.
+</p>
+
+<pre><code>pm2 restart mymonta-shop --update-env
+</code></pre>
+
+<p>
+استفاده از دستور Restart بدون گزینه
+<code>--update-env</code>
+ممکن است باعث شود تغییرات اعمال نشوند.
+</p>
+
+</section>
+
+<section id="swap">
+
+<h2>فعال‌سازی Swap برای سرورهای کم‌حافظه</h2>
+
+<p>
+برای سرورهای دارای ۲ گیگابایت RAM پیشنهاد می‌شود حداقل ۴ گیگابایت Swap ایجاد شود.
+</p>
+
+<pre><code>fallocate -l 4G /swapfile
+
+chmod 600 /swapfile
+
+mkswap /swapfile
+
+swapon /swapfile
+</code></pre>
+
+<p>برای دائمی شدن:</p>
+
+<pre><code>echo '/swapfile none swap sw 0 0' >> /etc/fstab
+</code></pre>
+
+</section>
+
+
+<section id="checklist">
+
+<h2>چک لیست نهایی نصب</h2>
+
+<ul>
+
+<li>☐ اجرای pnpm install</li>
+
+<li>☐ اجرای prisma generate</li>
+
+<li>☐ اجرای migrate deploy</li>
+
+<li>☐ اجرای Build پروژه</li>
+
+<li>☐ راه‌اندازی PM2 با --update-env</li>
+
+<li>☐ بررسی اتصال دیتابیس</li>
+
+<li>☐ بررسی مقدار DATABASE_URL</li>
+
+<li>☐ بررسی INTEGRATION_ENCRYPTION_KEY</li>
+
+<li>☐ بررسی جدول IntegPlatform</li>
+
+<li>☐ تست صفحه /admin/integration/connections</li>
+
+<li>☐ تست ورود به پنل مدیریت</li>
+
+<li>☐ تست APIهای اتصال مارکت‌پلیس‌ها</li>
+
+</ul>
+
+</section>
+
+ </div>
+ </div>
 
 </div>
 
