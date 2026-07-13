@@ -254,29 +254,42 @@ export async function generateMetadata({
     };
   }
 
-  const img =
-    p.mainImage ??
-    p.images?.[0]?.url ??
-    null;
+  const img = p.mainImage ?? p.images?.[0]?.url ?? null;
+
+  
+  const absoluteImg = img
+    ? img.startsWith("http")
+      ? img
+      : `${SITE_URL}${img.startsWith("/") ? img : `/${img}`}`
+    : undefined;
+
+
+  const priceNum = Number(p.price);
+  const salePriceNum = p.salePrice ? Number(p.salePrice) : null;
+  const effectivePrice =
+    salePriceNum && salePriceNum < priceNum ? salePriceNum : priceNum;
+
+
+  const inStock = p.isActive && p.stock !== 0;
 
   return {
     ...buildBaseMetadata({
-      title:
-        p.seoTitle ||
-        `خرید ${p.title}`,
-
+      title: p.seoTitle || `خرید ${p.title}`,
       description:
         p.seoDescription ||
         p.shortDescription ||
         `خرید ${p.title} با بهترین قیمت`,
-
-      keywords:
-        p.seoKeywords || undefined,
-
-      image: img,
-
+      keywords: p.seoKeywords || undefined,
+      image: absoluteImg,
       path: `/products/${slug}`,
     }),
+    other: {
+      product_price: String(effectivePrice),
+      availability: inStock ? "instock" : "outofstock",
+      product_name: p.title,
+      product_id: p.id,
+      ...(p.warranty ? { guarantee: p.warranty } : {}),
+    },
   };
 }
 

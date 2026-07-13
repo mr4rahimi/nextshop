@@ -2,9 +2,6 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
-// این صفحه فقط برای خزیدن ربات‌های تجمیع‌کننده قیمت (مثل ترب) است.
-// عمداً نوایندکس است تا در نتایج گوگل ظاهر نشود، ولی follow است تا
-// ربات بتواند از طریق لینک‌های این صفحه به صفحه تک‌محصول برسد.
 export const metadata: Metadata = {
   title: "لیست محصولات",
   robots: {
@@ -13,7 +10,7 @@ export const metadata: Metadata = {
   },
 };
 
-// همیشه در لحظه از دیتابیس بخوان (کش نشود) تا ترب همیشه لیست به‌روز ببیند.
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -29,7 +26,7 @@ export default async function TorobProductsPage({ searchParams }: Props) {
   const [items, total] = await Promise.all([
     prisma.product.findMany({
       where: { isActive: true },
-      orderBy: { id: "asc" }, // ترتیب پایدار برای صفحه‌بندی سازگار بین بازدیدها
+      orderBy: { id: "asc" }, 
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       select: {
@@ -53,7 +50,7 @@ export default async function TorobProductsPage({ searchParams }: Props) {
       <ul>
         {items.map((p) => (
           <li key={p.id}>
-            {/* آدرس صفحه تک‌محصول را در صورت متفاوت بودن اصلاح کنید */}
+
             <Link href={`/products/${p.slug}`}>{p.title}</Link>
           </li>
         ))}
