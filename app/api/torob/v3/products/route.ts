@@ -21,27 +21,44 @@ async function getPublicKey() {
 
 async function verifyTorobJWT(req: Request): Promise<boolean> {
   const token = req.headers.get("x-torob-token");
-  const urlHost = new URL(req.url).host;
-  const hostHeader = req.headers.get("host");
 
   if (!token) {
-    console.error("[torob-debug] NO TOKEN", { urlHost, hostHeader, ua: req.headers.get("user-agent") });
+    console.error("[torob-debug] NO TOKEN", {
+      urlHost: new URL(req.url).host,
+      hostHeader: req.headers.get("host"),
+    });
     return false;
   }
+
+  // همه هاست‌نیم‌های معتبر برای این سایت
+  const allowed = new Set<string>();
+  const hostHeader = req.headers.get("host");
+  if (hostHeader) allowed.add(hostHeader.toLowerCase());
+  const xfHost = req.headers.get("x-forwarded-host");
+  if (xfHost) allowed.add(xfHost.split(",")[0].trim().toLowerCase());
+  try { allowed.add(new URL(req.url).host.toLowerCase()); } catch {}
+  try {
+    const siteHost = new URL(SITE_URL).host.toLowerCase();
+    allowed.add(siteHost);
+    // پوشش www / بدون www
+    allowed.add(siteHost.startsWith("www.") ? siteHost.slice(4) : `www.${siteHost}`);
+  } catch {}
 
   try {
     const key = await getPublicKey();
     await jwtVerify(token, key, {
       algorithms: ["EdDSA"],
-      audience: urlHost,
+      audience: [...allowed],
+      clockTolerance: 60, // تحمل ۶۰ ثانیه اختلاف ساعت
     });
-    console.error("[torob-debug] SUCCESS", { urlHost });
     return true;
   } catch (err) {
+    // لاگ aud واقعی که ترب فرستاده برای دیباگ
+    let sentAud = "?";
+    try { sentAud = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()).aud; } catch {}
     console.error("[torob-debug] FAILED", {
-      urlHost,
-      hostHeader,
-      tokenPreview: token.slice(0, 20),
+      allowedAudiences: [...allowed],
+      sentAud,
       error: String(err),
     });
     return false;
