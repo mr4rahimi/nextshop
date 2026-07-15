@@ -14,8 +14,13 @@ import { enqueue } from "./queue";
 
 // اجرای یک چرخه Worker — فراخوانی هر N ثانیه
 export async function runWorkerCycle(maxJobs = 5): Promise<void> {
-  const settings = await prisma.integSettings.findUnique({ where: { id: "singleton" } });
-  if (!settings?.workerEnabled) return;
+  // upsert: اگر رکورد تنظیمات وجود نداشت با مقادیر پیش‌فرض ساخته می‌شود
+  const settings = await prisma.integSettings.upsert({
+    where:  { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+  if (!settings.workerEnabled) return;
 
   const concurrent = Math.min(maxJobs, settings.maxConcurrentJobs);
 

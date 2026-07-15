@@ -10,9 +10,7 @@ export function startIntegrationWorker(): void {
 
   async function tick() {
     try {
-      const settings = await prisma.integSettings.findUnique({ where: { id: "singleton" } });
-      if (!settings?.workerEnabled) return;
-      await runWorkerCycle(settings.maxConcurrentJobs);
+      await runWorkerCycle();
     } catch {
       // worker error نباید server را crash کند
     }
