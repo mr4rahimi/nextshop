@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
-import { decrementMappingStockForOrder } from "@/lib/integration/core/inventory";
+import { deductStockForOrderItems } from "@/lib/order-stock";
 
 export const runtime = "nodejs";
 
@@ -130,21 +130,13 @@ export async function POST(req: Request) {
   const cart = await prisma.cart.findUnique({ where: { userId: user.id } });
   if (cart) await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-  await Promise.all(
-    orderItems.map((item: { productId: string; qty: number }) =>
-      prisma.product.updateMany({
-        where: { id: item.productId, trackStock: true, stock: { gt: 0 } },
-        data: { stock: { decrement: item.qty } },
-      })
-    )
-  );
-
-  // Integration Hub: 
-  await Promise.all(
-    orderItems.map((item: { productId: string; qty: number }) =>
-      decrementMappingStockForOrder("shop", item.productId, item.qty).catch(() => {})
-    )
-  ).catch(() => {});
+  // کسر موجودی فقط وقتی سفارش همین لحظه پرداخت‌شده ساخته شده (پرداخت کامل با کیف پول)
+  // سایر سفارش‌ها بعد از پرداخت موفق (callback درگاه یا تأیید ادمین) کسر می‌شوند
+  if (order.status === "PAID") {
+    await deductStockForOrderItems(orderItems).catch((e: unknown) =>
+      console.error("[order-stock] کسر موجودی سفارش کیف‌پولی ناموفق:", e)
+    );
+  }
 
   return NextResponse.json(serialize({ orderId: order.id, orderNumber: order.orderNumber }));
 }

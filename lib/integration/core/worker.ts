@@ -11,6 +11,53 @@ import { resyncPricesFromAccounting } from "./pricing";
 import { resyncStockFromAccounting } from "./inventory";
 import { fetchAndProcessOrders } from "./orders";
 import { enqueue } from "./queue";
+import { processPendingInvoices } from "./invoicing";
+
+// ── jobهای زمان‌بندی‌شده خودکار (خودترمیم) ─────────────────────────
+// - هر مارکت‌پلیس متصل که fetchOrders دارد: حلقه FETCH_ORDERS همیشه زنده می‌ماند
+// - حسابداری متصل: هر syncIntervalMin دقیقه یک SYNC_ALL_STOCK خودکار
+async function ensureScheduledJobs(): Promise<void> {
+  const connections = await prisma.integConnection.findMany({
+    where:   { status: { in: ["CONNECTED", "SYNCING"] } },
+    include: { platform: { select: { type: true } } },
+  });
+
+  for (const conn of connections) {
+    if (conn.platform.type === "MARKETPLACE") {
+      const adapter = getAdapter(conn.platformCode);
+      if (!adapter?.fetchOrders) continue;
+
+      const existing = await prisma.integJob.findFirst({
+        where:  { platformCode: conn.platformCode, type: "FETCH_ORDERS", status: { in: ["PENDING", "PROCESSING"] } },
+        select: { id: true },
+      });
+      if (!existing) {
+        await enqueue({ type: "FETCH_ORDERS", platformCode: conn.platformCode, payload: {}, priority: 3 });
+      }
+    }
+
+    if (conn.platform.type === "ACCOUNTING") {
+      const intervalMs = conn.syncIntervalMin * 60_000;
+      const lastDone = await prisma.integJob.findFirst({
+        where:   { platformCode: conn.platformCode, type: "SYNC_ALL_STOCK", status: "DONE" },
+        orderBy: { completedAt: "desc" },
+        select:  { completedAt: true },
+      });
+      const lastTimes = [conn.lastSyncAt, lastDone?.completedAt].filter(Boolean) as Date[];
+      const lastRun = lastTimes.length ? Math.max(...lastTimes.map((d) => d.getTime())) : 0;
+      if (Date.now() - lastRun < intervalMs) continue;
+
+      const existing = await prisma.integJob.findFirst({
+        where:  { platformCode: conn.platformCode, type: "SYNC_ALL_STOCK", status: { in: ["PENDING", "PROCESSING"] } },
+        select: { id: true },
+      });
+      if (!existing) {
+        await enqueue({ type: "SYNC_ALL_STOCK", platformCode: conn.platformCode, payload: {}, priority: 6 });
+      }
+    }
+  }
+}
+
 
 // اجرای یک چرخه Worker — فراخوانی هر N ثانیه
 export async function runWorkerCycle(maxJobs = 5): Promise<void> {
@@ -21,6 +68,10 @@ export async function runWorkerCycle(maxJobs = 5): Promise<void> {
     create: { id: "singleton" },
   });
   if (!settings.workerEnabled) return;
+
+  // jobهای زمان‌بندی‌شده (polling سفارش باسلام + سینک دوره‌ای حسابداری) و فاکتورهای معوق
+  await ensureScheduledJobs().catch((e: unknown) => console.error("[integ] ensureScheduledJobs:", e));
+  await processPendingInvoices().catch((e: unknown) => console.error("[integ-invoice] چرخه فاکتور ناموفق:", e));
 
   const concurrent = Math.min(maxJobs, settings.maxConcurrentJobs);
 

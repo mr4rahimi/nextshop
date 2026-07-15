@@ -50,7 +50,12 @@ export async function queueShopOrderForInvoicing(orderId: string): Promise<void>
         customerPhone,
         status:              "PENDING",
       },
-    }).catch(() => {}); // unique constraint → گذار تکراری ردیف تکراری نمی‌سازد
+    }).catch((e: unknown) => {
+      // P2002 = تکراری (طبیعی در گذار مجدد) — بقیه خطاها باید دیده شوند
+      if ((e as { code?: string })?.code !== "P2002") {
+        console.error("[integ-invoice] ساخت ردیف IntegOrder ناموفق:", e);
+      }
+    });
   }
 }
 

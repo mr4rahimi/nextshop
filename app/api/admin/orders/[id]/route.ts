@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { deductStockForOrderItems } from "@/lib/order-stock";
+import { queueShopOrderForInvoicing } from "@/lib/integration/core/invoicing";
 import { serialize } from "@/lib/serialize";
 import { sendOrderSms, OrderSmsEvent } from "@/lib/sms";
 
@@ -79,19 +81,23 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
   });
 
 
+  // کسر موجودی فقط در «اولین» گذار از PENDING_PAYMENT به پرداخت‌شده/تأییدشده.
+  // پرداخت آنلاین موفق در callback درگاه کسر می‌شود؛ این مسیر برای کارت‌به‌کارت/تأیید دستی است.
   const shouldDeductStock =
-   prevOrder &&
-   ["PENDING_PAYMENT", "PAID"].includes(prevOrder.status) &&
-   data.status === "CONFIRMED";
+    prevOrder &&
+    prevOrder.status === "PENDING_PAYMENT" &&
+    ["PAID", "CONFIRMED"].includes(data.status ?? "");
 
-  if (shouldDeductStock && prevOrder?.items.length > 0) {
-    await Promise.all(
-      prevOrder.items.map(item =>
-        prisma.product.updateMany({
-          where: { id: item.productId, trackStock: true, stock: { gt: 0 } },
-          data: { stock: { decrement: item.qty } },
-        })
-      )
+  if (shouldDeductStock && prevOrder.items.length > 0) {
+    await deductStockForOrderItems(
+      prevOrder.items.map((item) => ({ productId: item.productId, qty: item.qty })),
+    ).catch((e: unknown) => console.error("[order-stock] کسر موجودی در تأیید ادمین ناموفق:", e));
+  }
+
+  // ثبت ردیف‌های فاکتور خودکار حسابداری — فقط در اولین گذار به CONFIRMED
+  if (prevOrder && data.status === "CONFIRMED" && prevOrder.status !== "CONFIRMED") {
+    await queueShopOrderForInvoicing(id).catch((e: unknown) =>
+      console.error("[integ-invoice] ثبت ردیف فاکتور سفارش سایت ناموفق:", e)
     );
   }
 
