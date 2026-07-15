@@ -99,6 +99,9 @@ export interface OrderItemInfo {
   platformProductId: string;    
   qty: number;
   title?: string;
+  unitPrice?: number;      // تومان
+  customerName?: string;
+  customerPhone?: string;
 }
 
 export interface FetchOrdersResult {

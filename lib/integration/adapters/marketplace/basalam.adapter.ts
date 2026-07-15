@@ -195,20 +195,30 @@ export class BasalamAdapter extends BaseAdapter {
   const data = await res.json() as {
     data: {
       id: number;
-      items: { id: number; quantity: number; title: string; product: { id: number } }[];
+      recipient?: { name?: string; mobile?: string } | null;
+      customer?:  { name?: string; mobile?: string } | null;
+      items: { id: number; quantity: number; title: string; price?: number; product: { id: number; price?: number } }[];
     }[];
     next_cursor?: string;
   };
 
-  const items = data.data.flatMap((parcel) =>
-    parcel.items.map((item) => ({
-      platformOrderId:     `${parcel.id}:${item.id}`, // یکتا در سطح آیتم، نه کل سفارش
-      platformOrderItemId: String(item.id),
-      platformProductId:   String(item.product.id),
-      qty:                 item.quantity,
-      title:               item.title,
-    })),
-  );
+  const items = data.data.flatMap((parcel) => {
+    const person = parcel.recipient ?? parcel.customer ?? null;
+    return parcel.items.map((item) => {
+      // قیمت باسلام به ریال است — داخلی به تومان نگه می‌داریم
+      const rawPrice = item.price ?? item.product?.price;
+      return {
+        platformOrderId:     `${parcel.id}:${item.id}`, // یکتا در سطح آیتم
+        platformOrderItemId: String(item.id),
+        platformProductId:   String(item.product.id),
+        qty:                 item.quantity,
+        title:               item.title,
+        unitPrice:           typeof rawPrice === "number" ? Math.round(rawPrice / 10) : undefined,
+        customerName:        person?.name ?? undefined,
+        customerPhone:       person?.mobile ?? undefined,
+      };
+    });
+  });
 
   return { items, hasMore: !!data.next_cursor, cursor: data.next_cursor };
 }

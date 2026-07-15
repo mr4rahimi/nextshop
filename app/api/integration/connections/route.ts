@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
           syncStockEnabled: body.syncStockEnabled ?? existing.syncStockEnabled,
           syncPriceEnabled: body.syncPriceEnabled ?? existing.syncPriceEnabled,
           syncIntervalMin:  body.syncIntervalMin  ?? existing.syncIntervalMin,
+          ...(body.config !== undefined ? { config: body.config as any } : {}),
           updatedAt:        new Date(),
         },
       })

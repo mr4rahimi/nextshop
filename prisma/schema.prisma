@@ -1177,6 +1177,8 @@ model IntegOrder {
   productTitle        String
   qty                 Int
   unitPrice           Float?
+  customerName        String?
+  customerPhone       String?
   status              IntegOrderStatus @default(PENDING)
   invoicedAt          DateTime?
   createdAt           DateTime         @default(now())

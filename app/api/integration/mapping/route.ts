@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { serialize } from "@/lib/serialize";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
     })),
   }));
 
-  return NextResponse.json({ total, page, perPage, mappings: enriched });
+  return NextResponse.json(serialize({ total, page, perPage, mappings: enriched }));
 }
 
 // POST /api/integration/mapping — ایجاد نگاشت جدید (wizard)

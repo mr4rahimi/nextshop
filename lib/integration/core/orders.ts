@@ -41,6 +41,9 @@ export async function fetchAndProcessOrders(
           platformOrderItemId: item.platformOrderItemId ?? null,
           productTitle:        item.title ?? "(بدون عنوان)",
           qty:                 item.qty,
+          unitPrice:           item.unitPrice ?? null,
+          customerName:        item.customerName ?? null,
+          customerPhone:       item.customerPhone ?? null,
           status:              "PENDING", 
         },
       });

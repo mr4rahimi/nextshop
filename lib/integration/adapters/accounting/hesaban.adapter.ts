@@ -46,6 +46,59 @@ export class HesabanAdapter extends BaseAdapter {
     };
   }
 
+  // ── لیست انبارها (برای انتخاب انبار فاکتور در ادمین) ─────────────
+  async getStorages(
+    credentials: Record<string, string>,
+  ): Promise<{ id: number; name: string }[]> {
+    const { token } = credentials;
+    const res = await fetch(`${BASE_URL}/Storage/GetAllStorages`, { headers: this.headers(token) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json() as { id: number; name: string | null }[];
+    return data.map((st) => ({ id: st.id, name: st.name ?? `انبار ${st.id}` }));
+  }
+
+  // ── استعلام وجود فاکتور فروش با شناسه یکتا (جلوگیری از فاکتور تکراری) ──
+  async salesInvoiceExists(
+    credentials: Record<string, string>,
+    uniqueId: string,
+  ): Promise<boolean> {
+    const { token } = credentials;
+    const res = await fetch(`${BASE_URL}/SalesInvoice/Inquiry`, {
+      method:  "POST",
+      headers: this.headers(token),
+      body:    JSON.stringify({ ids: [uniqueId] }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json().catch(() => []) as { uniqueId: string; id: number }[];
+    const entry = Array.isArray(data) ? data.find((d) => d.uniqueId === uniqueId) : null;
+    return !!entry && entry.id > 0;
+  }
+
+  // ── ثبت فاکتور فروش — حسابداری خودش موجودی را کم می‌کند ─────────
+  async createSalesInvoice(
+    credentials: Record<string, string>,
+    invoice: {
+      id: string;
+      customer: { isRealPerson: boolean; title: string; name: string; surname?: string; phoneNumber?: string; address?: string; postalCode?: string };
+      articles: { storageId: number; productCode: string; count: number; amount: number; taxable: boolean; description?: string }[];
+      payment?: { internetPaymentId?: string; description?: string };
+      description?: string;
+    },
+  ): Promise<number> {
+    const { token } = credentials;
+    const res = await fetch(`${BASE_URL}/SalesInvoice/AddInvoice`, {
+      method:  "POST",
+      headers: this.headers(token),
+      body:    JSON.stringify(invoice),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`ثبت فاکتور ناموفق: HTTP ${res.status} ${body.slice(0, 200)}`);
+    }
+    const data = await res.json() as { id: number };
+    return data.id;
+  }
+
   // ── تست اتصال ────────────────────────────────────────────────────
 
   async testConnection(

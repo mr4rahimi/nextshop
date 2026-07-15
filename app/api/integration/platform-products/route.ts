@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { serialize } from "@/lib/serialize";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -109,11 +110,11 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  return NextResponse.json({
+  return NextResponse.json(serialize({
     items:   enriched,
     total,
     page,
     pageSize,
     hasMore: page * pageSize < total,
-  });
+  }));
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AutoInvoiceSettings from "./AutoInvoiceSettings";
 
 interface Props {
   existingConnection?: {
@@ -271,6 +272,8 @@ export default function HesabanForm({ existingConnection }: Props) {
           </div>
         </div>
       )}
+
+      <AutoInvoiceSettings />
     </div>
   );
 }
