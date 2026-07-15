@@ -202,6 +202,11 @@ export class BasalamAdapter extends BaseAdapter {
     next_cursor?: string;
   };
 
+  if (data.data.length > 0) {
+    // موقت برای صحت‌سنجی ساختار پاسخ (قیمت/گیرنده) با اولین سفارش واقعی — بعد از تأیید حذف می‌شود
+    console.log("[basalam-orders] raw sample:", JSON.stringify(data.data[0]).slice(0, 1500));
+  }
+
   const items = data.data.flatMap((parcel) => {
     const person = parcel.recipient ?? parcel.customer ?? null;
     return parcel.items.map((item) => {

@@ -135,6 +135,19 @@ export async function processPendingInvoices(): Promise<void> {
           });
           amountRial = hp?.price != null && hp.price > 0 ? Math.round(hp.price) : null;
         }
+        if (amountRial == null && row.mappingId) {
+          // fallback سوم: قیمت خود کالا در پلتفرم مبدأ سفارش (مثلاً قیمت درج‌شده در باسلام — ریال)
+          const srcLink = await prisma.integMappingLink.findUnique({
+            where: { mappingId_platformCode: { mappingId: row.mappingId, platformCode } },
+          });
+          if (srcLink) {
+            const sp = await prisma.integPlatformProduct.findUnique({
+              where:  { platformCode_platformProductId: { platformCode, platformProductId: srcLink.externalId } },
+              select: { price: true },
+            });
+            amountRial = sp?.price != null && sp.price > 0 ? Math.round(sp.price) : null;
+          }
+        }
         if (amountRial == null || amountRial < 1) continue; // بدون قیمت معتبر — قلم حذف می‌شود
 
         articles.push({
@@ -146,7 +159,18 @@ export async function processPendingInvoices(): Promise<void> {
           description: row.productTitle,
         });
       }
-      if (!articles.length) continue; // هنوز نگاشت حسابداری ندارد — PENDING می‌ماند
+      if (!articles.length) {
+        // مشکل (نبود نگاشت حسابداری یا قیمت معتبر) باید دیده شود — فقط تا ۵ دقیقه اول لاگ می‌شود
+        const newest = Math.max(...rows.map((r) => r.createdAt.getTime()));
+        if (Date.now() - newest < 5 * 60_000) {
+          await writeLog({
+            platformCode: ACCOUNTING_CODE, operationType: "FETCH_ORDERS", direction: "OUTBOUND",
+            entityType: "ORDER", entityId: invoiceRef, status: "ERROR",
+            errorMessage: "هیچ قلم معتبری برای فاکتور ساخته نشد — نگاشت حسابداری یا قیمت معتبر (بزرگ‌تر از صفر) وجود ندارد",
+          }).catch(() => {});
+        }
+        continue;
+      }
 
       const exists = await adapter.salesInvoiceExists(credentials, invoiceUniqueId);
       if (!exists) {
