@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getAdapter } from "./adapter-registry";
 import { decryptCredentials } from "./crypto";
@@ -7,6 +8,20 @@ import type { HesabanAdapter } from "@/lib/integration/adapters/accounting/hesab
 const ACCOUNTING_CODE = "hesaban";
 const PLATFORM_SUFFIX: Record<string, string> = { shop: "سایت", basalam: "باسلام" };
 const MAX_GROUPS_PER_CYCLE = 10;
+
+// وب‌حسابان فیلد id فاکتور را GUID می‌خواهد.
+// UUID v5 قطعی از کلید سفارش می‌سازیم تا retry همیشه همان GUID را تولید کند (idempotency).
+const UUID_NAMESPACE = "9a7b3c1e-5d2f-4e8a-b6c4-1f0e2d3a4b5c";
+
+function deterministicUuid(name: string): string {
+  const ns = Buffer.from(UUID_NAMESPACE.replace(/-/g, ""), "hex");
+  const hash = createHash("sha1").update(ns).update(name, "utf8").digest();
+  const b = Buffer.from(hash.subarray(0, 16));
+  b[6] = (b[6] & 0x0f) | 0x50; // version 5
+  b[8] = (b[8] & 0x3f) | 0x80; // variant RFC 4122
+  const h = b.toString("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
 
 interface InvoiceConfig {
   autoInvoiceEnabled?: boolean;
@@ -36,7 +51,10 @@ export async function queueShopOrderForInvoicing(orderId: string): Promise<void>
     const link = await prisma.integMappingLink.findUnique({
       where: { platformCode_externalId: { platformCode: "shop", externalId: item.productId } },
     });
-    const priceToman = Number(item.unitSalePrice ?? item.unitPrice);
+    // قیمت صفر یعنی قیمت معتبر ثبت نشده — unitSalePrice صفر نباید جای قیمت اصلی را بگیرد
+    const sale  = Number(item.unitSalePrice ?? 0);
+    const base  = Number(item.unitPrice ?? 0);
+    const priceToman = sale > 0 ? sale : base;
     await prisma.integOrder.create({
       data: {
         mappingId:           link?.mappingId ?? null,
@@ -45,7 +63,7 @@ export async function queueShopOrderForInvoicing(orderId: string): Promise<void>
         platformOrderItemId: item.id,
         productTitle:        item.titleSnapshot,
         qty:                 item.qty,
-        unitPrice:           Number.isFinite(priceToman) ? priceToman : null,
+        unitPrice:           Number.isFinite(priceToman) && priceToman > 0 ? priceToman : null,
         customerName,
         customerPhone,
         status:              "PENDING",
@@ -94,7 +112,8 @@ export async function processPendingInvoices(): Promise<void> {
     if (handled >= MAX_GROUPS_PER_CYCLE) break;
     handled++;
     const [platformCode, orderKey] = key.split("|");
-    const invoiceUniqueId = `${platformCode}-${orderKey}`;
+    const invoiceRef = `${platformCode}-${orderKey}`;
+    const invoiceUniqueId = deterministicUuid(invoiceRef);
 
     try {
       // اقلام فاکتور — فقط ردیف‌هایی که به کالای حسابداری نگاشت دارند
@@ -107,15 +126,16 @@ export async function processPendingInvoices(): Promise<void> {
         if (!hesabanLink?.isActive) continue;
 
         // مبلغ به ریال: قیمت داخلی (تومان)×۱۰ — وگرنه قیمت خود کالای حسابداری (ریال)
-        let amountRial: number | null = row.unitPrice != null ? Math.round(row.unitPrice * 10) : null;
+        let amountRial: number | null =
+          row.unitPrice != null && row.unitPrice > 0 ? Math.round(row.unitPrice * 10) : null;
         if (amountRial == null) {
           const hp = await prisma.integPlatformProduct.findUnique({
             where:  { platformCode_platformProductId: { platformCode: ACCOUNTING_CODE, platformProductId: hesabanLink.externalId } },
             select: { price: true },
           });
-          amountRial = hp?.price != null ? Math.round(hp.price) : null;
+          amountRial = hp?.price != null && hp.price > 0 ? Math.round(hp.price) : null;
         }
-        if (amountRial == null) continue;
+        if (amountRial == null || amountRial < 1) continue; // بدون قیمت معتبر — قلم حذف می‌شود
 
         articles.push({
           storageId:   config.invoiceStorageId,
@@ -141,7 +161,7 @@ export async function processPendingInvoices(): Promise<void> {
             phoneNumber:  rows.find((r) => r.customerPhone)?.customerPhone ?? undefined,
           },
           articles,
-          description: `ثبت خودکار — ${suffix} — سفارش ${orderKey}`,
+          description: `ثبت خودکار — ${suffix} — سفارش ${orderKey} — ${invoiceRef}`,
         });
       }
 
@@ -153,7 +173,7 @@ export async function processPendingInvoices(): Promise<void> {
       await writeLog({
         platformCode: ACCOUNTING_CODE, operationType: "FETCH_ORDERS", direction: "OUTBOUND",
         entityType: "ORDER", entityId: invoiceUniqueId, status: "SUCCESS",
-        responseData: { articles: articles.length, platform: platformCode },
+        responseData: { articles: articles.length, platform: platformCode, ref: invoiceRef },
       }).catch(() => {});
     } catch (err) {
       await writeLog({

@@ -94,6 +94,14 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
     ).catch((e: unknown) => console.error("[order-stock] کسر موجودی در تأیید ادمین ناموفق:", e));
   }
 
+  // تأیید دستی (کارت‌به‌کارت): رکورد پرداختِ در انتظار را موفق علامت بزن
+  if (prevOrder && prevOrder.status === "PENDING_PAYMENT" && ["PAID", "CONFIRMED"].includes(data.status ?? "")) {
+    await prisma.payment.updateMany({
+      where: { orderId: id, status: "PENDING" },
+      data:  { status: "SUCCEEDED", providerRef: `manual-admin-${Date.now()}` },
+    }).catch((e: unknown) => console.error("[order] تسویه پرداخت دستی ناموفق:", e));
+  }
+
   // ثبت ردیف‌های فاکتور خودکار حسابداری — فقط در اولین گذار به CONFIRMED
   if (prevOrder && data.status === "CONFIRMED" && prevOrder.status !== "CONFIRMED") {
     await queueShopOrderForInvoicing(id).catch((e: unknown) =>
