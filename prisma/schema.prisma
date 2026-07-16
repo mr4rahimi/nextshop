@@ -1196,6 +1196,7 @@ model IntegOrder {
 enum IntegOrderStatus {
   PENDING
   INVOICED
+  CANCELLED
 }
 
 // ── Queue ────────────────────────────────────────────────────────────

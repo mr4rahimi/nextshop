@@ -192,6 +192,29 @@ export async function resyncStockFromAccounting(
 
 
 
+// برگرداندن موجودی نگاشت هنگام لغو سفارش (معکوس decrement) + push به پلتفرم‌ها
+export async function restoreMappingStockForCancel(
+  sourcePlatformCode: string,
+  externalId: string,
+  qty: number,
+): Promise<void> {
+  const link = await prisma.integMappingLink.findUnique({
+    where: { platformCode_externalId: { platformCode: sourcePlatformCode, externalId } },
+    include: { mapping: true },
+  });
+
+  if (!link?.isActive || !link.mapping.isActive || !link.mapping.syncStockEnabled) return;
+
+  const newStock = link.mapping.stock + qty;
+
+  await prisma.integMapping.update({
+    where: { id: link.mappingId },
+    data:  { stock: newStock },
+  });
+
+  await pushMappingStock(link.mappingId, newStock, sourcePlatformCode);
+}
+
 export async function decrementMappingStockForOrder(
   sourcePlatformCode: string,
   externalId: string,
