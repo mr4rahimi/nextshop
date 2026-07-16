@@ -731,6 +731,7 @@ function MappingsTab({ platforms }: { platforms: Platform[] }) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingMapping, setEditingMapping] = useState<MappingGroup | null>(null);
 
   const load = useCallback(async (p: number) => {
     setLoading(true);
@@ -794,13 +795,21 @@ function MappingsTab({ platforms }: { platforms: Platform[] }) {
                       );
                     })}
                   </div>
-                  <button
-                    onClick={() => handleDelete(m.id)}
-                    disabled={deletingId === m.id}
-                    className="text-xs text-red-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0 disabled:opacity-40"
-                  >
-                    {deletingId === m.id ? "..." : "حذف"}
-                  </button>
+                  <div className="flex-shrink-0 flex items-center gap-1">
+                    <button
+                      onClick={() => setEditingMapping(m)}
+                      className="text-xs text-blue-500 hover:text-blue-600 px-2 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                    >
+                      ویرایش
+                    </button>
+                    <button
+                      onClick={() => handleDelete(m.id)}
+                      disabled={deletingId === m.id}
+                      className="text-xs text-red-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40"
+                    >
+                      {deletingId === m.id ? "..." : "حذف"}
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -814,6 +823,181 @@ function MappingsTab({ platforms }: { platforms: Platform[] }) {
           <span className="text-xs text-gray-500">صفحه {page}</span>
           <button onClick={() => setPage((p) => p + 1)} disabled={page * 30 >= total}
             className="px-3 py-1 text-xs rounded-lg bg-gray-100 dark:bg-white/5 disabled:opacity-40">بعدی</button>
+        </div>
+      )}
+
+      {editingMapping && (
+        <EditMappingModal
+          mapping={editingMapping}
+          platforms={platforms}
+          onClose={() => setEditingMapping(null)}
+          onSaved={() => { setEditingMapping(null); void load(page); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── مودال ویرایش نگاشت: افزودن/حذف پلتفرم از یک نگاشت موجود ──────────
+function EditMappingModal({
+  mapping,
+  platforms,
+  onClose,
+  onSaved,
+}: {
+  mapping: MappingGroup;
+  platforms: Platform[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [links, setLinks] = useState(mapping.links);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [addingFor, setAddingFor] = useState<string | null>(null);
+
+  const allCodes = ["shop", ...platforms.map((p) => p.code)];
+  const linkByCode = new Map(links.map((l) => [l.platformCode, l]));
+
+  function labelOf(code: string) {
+    return code === "shop" ? "فروشگاه" : platformName(code, platforms);
+  }
+
+  async function removeLink(linkId: string) {
+    if (!confirm("این پلتفرم از نگاشت حذف شود؟")) return;
+    setBusy(linkId); setError(null);
+    try {
+      const res = await fetch(`/api/integration/mapping/link?id=${linkId}`, { method: "DELETE" });
+      if (!res.ok) { setError("حذف ناموفق بود"); return; }
+      setLinks((prev) => prev.filter((l) => l.id !== linkId));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function addLink(platformCode: string, externalId: string, externalTitle: string) {
+    setBusy(platformCode); setError(null);
+    try {
+      const res = await fetch("/api/integration/mapping/link", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ mappingId: mapping.id, platformCode, externalId, externalTitle }),
+      });
+      const data = await res.json() as { id?: string; error?: string };
+      if (!res.ok) { setError(data.error ?? "افزودن ناموفق بود"); return; }
+      setLinks((prev) => [
+        ...prev.filter((l) => l.platformCode !== platformCode),
+        { id: data.id!, platformCode, externalId, externalTitle, isActive: true, shopProduct: null },
+      ]);
+      setAddingFor(null);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/10 w-full max-w-lg max-h-[85vh] overflow-y-auto p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="font-black text-gray-900 dark:text-white">ویرایش نگاشت</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+        </div>
+
+        {error && <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg p-2">{error}</p>}
+
+        <div className="space-y-2">
+          {allCodes.map((code) => {
+            const link = linkByCode.get(code);
+            return (
+              <div key={code} className="flex items-center gap-2 p-2 rounded-xl border border-gray-100 dark:border-white/[0.06]">
+                <span className="text-xs text-gray-400 w-20 flex-shrink-0">{labelOf(code)}</span>
+                {link ? (
+                  <>
+                    <span className="flex-1 text-xs font-bold text-gray-900 dark:text-white truncate">
+                      {link.platformCode === "shop" && link.shopProduct
+                        ? link.shopProduct.title
+                        : (link.externalTitle ?? link.externalId)}
+                    </span>
+                    <button
+                      onClick={() => removeLink(link.id)}
+                      disabled={busy === link.id}
+                      className="text-xs text-red-400 hover:text-red-500 px-2 py-0.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-40 flex-shrink-0"
+                    >
+                      {busy === link.id ? "..." : "حذف"}
+                    </button>
+                  </>
+                ) : addingFor === code ? (
+                  <div className="flex-1">
+                    <MappingLinkPicker
+                      platformCode={code}
+                      onPick={(id, title) => addLink(code, id, title)}
+                      onCancel={() => setAddingFor(null)}
+                    />
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setAddingFor(code)}
+                    className="flex-1 text-right text-xs text-blue-500 hover:text-blue-600"
+                  >
+                    + افزودن
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <button onClick={onSaved} className="w-full py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors">
+          تمام
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── انتخابگر محصول برای افزودن لینک (shop یا پلتفرم) ─────────────────
+function MappingLinkPicker({
+  platformCode,
+  onPick,
+  onCancel,
+}: {
+  platformCode: string;
+  onPick: (externalId: string, externalTitle: string) => void;
+  onCancel: () => void;
+}) {
+  const shop = useShopSearch();
+  const plat = usePlatformSearch(platformCode);
+  const isShop = platformCode === "shop";
+  const q = isShop ? shop.q : plat.q;
+  const setQ = isShop ? shop.setQ : plat.setQ;
+  const loading = isShop ? shop.loading : plat.loading;
+  const results = isShop
+    ? shop.results.map((r) => ({ id: r.id, title: r.title }))
+    : plat.results.map((r) => ({ id: r.platformProductId, title: r.title }));
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-1">
+        <input
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="جستجوی محصول..."
+          className="flex-1 px-2 py-1 text-xs rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] focus:outline-none focus:border-blue-500"
+        />
+        <button onClick={onCancel} className="text-xs text-gray-400 hover:text-gray-600 px-1">لغو</button>
+      </div>
+      {loading && <p className="text-[11px] text-gray-400 px-1">در حال جستجو...</p>}
+      {results.length > 0 && (
+        <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-100 dark:border-white/[0.06]">
+          {results.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => onPick(r.id, r.title)}
+              className="w-full text-right px-2 py-1.5 text-xs hover:bg-blue-50 dark:hover:bg-blue-900/20 truncate block"
+            >
+              {r.title}
+            </button>
+          ))}
         </div>
       )}
     </div>
