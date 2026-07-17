@@ -975,3 +975,55 @@ update_bulk_products(vendor_id, {
 ---
 
 *آخرین به‌روزرسانی: ۱۴۰۵/۰۴/۱۱ — هر دو اتصال حسابان و باسلام تأیید و ذخیره شد. ۴۴۵ محصول از حسابان دریافت شد. نگاشت دستی لازم است (محصولات فروشگاه با حسابان عنوان متفاوت دارند)*
+
+---
+
+# نسخه ۲.۱۰.۰ — تپسی‌شاپ، فاکتور خودکار، ویرایش نگاشت (۱۴۰۵/۰۴/۲۶)
+
+## پلتفرم تپسی‌شاپ
+- **آداپتور:** `lib/integration/adapters/marketplace/tapsi.adapter.ts` — ثبت‌شده در `adapter-registry.ts`.
+- **Base API:** `https://vendorgw.tapsi.shop/Web/Hub/vendors/v1` — هدر احراز: `TapsiShop.Hub.Authorization: {token}` (توکن از پنل وندور، دستی وارد می‌شود).
+- **تست اتصال:** `GET /vendor-information` (نام فروشگاه + vendorId).
+- **دریافت محصولات:** `GET /products/{page}/{pageSize}` — تپسی **عنوان نمی‌فرستد**؛ فقط `id`, `sku`, `hsin`. نمایش با sku/hsin. نگاشت دستی بر اساس عنوان (auto-match ضعیف چون عنوان نیست).
+- **push موجودی/قیمت:** `PUT /products` با `{products:[{id, stock, price, specialPrice, referenceCode}]}` — قیمت تومان×۱۰ = ریال.
+- **دریافت سفارش (polling، پشتیبان):** `POST /orders` با `orderStatusId:["4"]` سپس `GET /orders/{id}` برای اقلام.
+- **اتصال در ادمین:** `app/admin/integration/connections/tapsi_shop/` (page + TapsiForm).
+
+## وب‌هوک لحظه‌ای تپسی
+- **Endpoint:** `POST /api/integration/webhooks/tapsi` (عمومی — proxy.ts فقط /admin و /api/admin را می‌گیرد).
+- **احراز:** هدر `TapsiShop.Hub.Webhook-Authorization` با توکن ذخیره‌شده مقایسه می‌شود.
+- **changeType=1 (خرید):** dedup با unique، کسر موجودی نگاشت، ساخت `IntegOrder` (فاکتور توسط worker).
+- **changeType=2 (لغو):** برگشت موجودی نگاشت (`restoreMappingStockForCancel`) + علامت `CANCELLED`.
+- **پاسخ:** همیشه `{"succeed":true}` با HTTP 200 (وگرنه تپسی ارسال را متوقف می‌کند).
+- **آدرس ثبت‌شده در پنل تپسی:** `https://{domain}/api/integration/webhooks/tapsi`.
+
+## فاکتور خودکار حسابداری
+- **هسته:** `lib/integration/core/invoicing.ts` — `processPendingInvoices` در هر چرخه worker اجرا می‌شود.
+- **سفارش سایت:** در اولین گذار به CONFIRMED، `queueShopOrderForInvoicing` ردیف‌های IntegOrder می‌سازد.
+- **شناسه فاکتور:** حسابان‌وب فیلد `id` را **GUID** می‌خواهد → UUID v5 قطعی از کلید سفارش (`deterministicUuid`) برای idempotency + استعلام `SalesInvoice/Inquiry` قبل از ثبت.
+- **مبلغ:** تومان×۱۰=ریال؛ اگر قیمت سفارش صفر/نامعتبر بود fallback به قیمت کالای حسابداری، سپس قیمت پلتفرم مبدأ. مبالغ < ۱ ریال حذف (خطای حسابان‌وب).
+- **مشتری:** نام واقعی + پسوند «-سایت» یا «-باسلام»/«-تپسی». `taxable=false`.
+- **تنظیمات:** `AutoInvoiceSettings.tsx` در اتصال حسابداری — تاگل فعال/غیرفعال + انتخاب انبار (`GET /Storage/GetAllStorages`) + `autoInvoiceSince` (فقط سفارش‌های بعد از فعال‌سازی).
+
+## ویرایش نگاشت
+- مودال `EditMappingModal` در `MappingPageClient.tsx` — افزودن/حذف پلتفرم از نگاشت موجود.
+- از endpoint موجود `/api/integration/mapping/link` (POST/DELETE) استفاده می‌کند.
+
+## اصلاح جریان موجودی سفارش
+- `lib/order-stock.ts` — `deductStockForOrderItems` هسته مشترک کسر.
+- **سایت:** کسر فقط پس از PAID (callback درگاه) یا اولین گذار PENDING_PAYMENT→PAID/CONFIRMED در ادمین. رفع کسر دوباره.
+- **مارکت‌پلیس:** کسر نگاشت + push به همه پلتفرم‌ها به‌جز مبدأ و حسابداری.
+- **worker خودترمیم:** `ensureScheduledJobs` — FETCH_ORDERS مارکت‌پلیس‌ها همیشه زنده، SYNC_ALL_STOCK حسابداری دوره‌ای.
+
+## درس‌های عملیاتی (نقاط خرابی حل‌شده)
+1. **IntegSettings singleton:** اگر رکورد نباشد worker ساکت است → `upsert` در worker (خودکار روی دیپلوی تازه).
+2. **ترب ۴۰۱:** audience توکن باید با Host header/SITE_URL تطبیق شود نه req.url (پشت پراکسی localhost می‌شود). nginx نیاز به `proxy_set_header Host $host`.
+3. **باسلام FETCH_ORDERS 422:** پارامتر `sort` پذیرفته نمی‌شود — حذف شد.
+4. **باسلام تخفیف زمانمند:** محصولاتی با تخفیف زمان‌دار با این API قابل ویرایش نیستند (خطای 422 صریح) — باید تخفیف در پنل باسلام برداشته شود.
+5. **BigInt:** خروجی APIهای نگاشت/محصولات باید از هلپر `serialize` عبور کند (Product.price نوع BigInt است).
+6. **حسابان‌وب:** واحد ریال (تومان×۱۰)؛ id فاکتور GUID؛ مبلغ هر قلم ≥ ۱.
+7. **لاگ‌ها:** همه عملیات موجودی/قیمت/سفارش در جدول `IntegLog` → قابل مشاهده در `/admin/integration/logs`. کسر/برگشت موجودی با «از چند به چند» و سفارش محصول بدون نگاشت با خطای واضح ثبت می‌شود.
+
+## کارهای باز / نیازمند بررسی
+- **محصولات تنوع‌دار (variation) باسلام:** خطای «Invalid Sku» — نیاز به پشتیبانی مسیر variation (`v3/products/{id}/variations`) در آداپتور (در صورت تأیید تنوع‌دار بودن).
+- **صحت‌سنجی قیمت/گیرنده سفارش باسلام و تپسی:** با اولین سفارش واقعی از روی `[basalam-orders] raw sample` و لاگ‌های `IntegLog`.
