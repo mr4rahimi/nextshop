@@ -181,7 +181,7 @@ export class TapsiAdapter extends BaseAdapter {
 
         if (!res.ok) {
           const txt = await res.text().catch(() => "");
-          failed.push(...chunkIds.map((id) => ({ id, error: `HTTP ${res.status}: ${txt.slice(0, 150)}` })));
+          failed.push(...chunkIds.map((id) => ({ id, error: `HTTP ${res.status}: ${txt.slice(0, 400)}` })));
           continue;
         }
 

@@ -212,6 +212,16 @@ export async function restoreMappingStockForCancel(
     data:  { stock: newStock },
   });
 
+  await writeLog({
+    platformCode:  sourcePlatformCode,
+    operationType: "FETCH_ORDERS",
+    direction:     "INBOUND",
+    entityType:    "STOCK",
+    entityId:      externalId,
+    status:        "SUCCESS",
+    responseData:  { action: "برگشت موجودی (لغو سفارش)", qty, from: link.mapping.stock, to: newStock },
+  }).catch(() => {});
+
   await pushMappingStock(link.mappingId, newStock, sourcePlatformCode);
 }
 
@@ -225,7 +235,23 @@ export async function decrementMappingStockForOrder(
     include: { mapping: true },
   });
 
-  if (!link?.isActive || !link.mapping.isActive || !link.mapping.syncStockEnabled) return;
+  if (!link?.isActive || !link.mapping.isActive || !link.mapping.syncStockEnabled) {
+    // سفارش مارکت‌پلیس برای محصول بدون نگاشت/غیرفعال — باید در لاگ ادمین دیده شود
+    if (sourcePlatformCode !== "shop") {
+      await writeLog({
+        platformCode:  sourcePlatformCode,
+        operationType: "FETCH_ORDERS",
+        direction:     "INBOUND",
+        entityType:    "STOCK",
+        entityId:      externalId,
+        status:        "ERROR",
+        errorMessage:  link
+          ? "نگاشت یا همگام‌سازی موجودی این محصول غیرفعال است — کسر موجودی انجام نشد"
+          : "سفارش برای محصولی بدون نگاشت — کسر موجودی انجام نشد (شناسه محصول پلتفرم را در نگاشت لینک کنید)",
+      }).catch(() => {});
+    }
+    return;
+  }
 
   const newStock = Math.max(0, link.mapping.stock - qty);
 
@@ -233,6 +259,16 @@ export async function decrementMappingStockForOrder(
     where: { id: link.mappingId },
     data:  { stock: newStock },
   });
+
+  await writeLog({
+    platformCode:  sourcePlatformCode,
+    operationType: "FETCH_ORDERS",
+    direction:     "INBOUND",
+    entityType:    "STOCK",
+    entityId:      externalId,
+    status:        "SUCCESS",
+    responseData:  { action: "کسر موجودی سفارش", qty, from: link.mapping.stock, to: newStock },
+  }).catch(() => {});
 
   await pushMappingStock(link.mappingId, newStock, sourcePlatformCode);
 }

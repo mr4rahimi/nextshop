@@ -179,7 +179,7 @@ export class BasalamAdapter extends BaseAdapter {
   const params = new URLSearchParams({
     statuses: "3739", // فقط سفارش‌های جدید
     per_page: "30",
-    sort:     "created_at:asc",
+    // نکته: پارامتر sort توسط باسلام پذیرفته نمی‌شود (422: مرتب سازی معتبر نمی باشد)
   });
   if (cursor) params.set("cursor", cursor);
 
@@ -188,8 +188,9 @@ export class BasalamAdapter extends BaseAdapter {
   });
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({})) as { message?: string };
-    throw new Error(body.message ?? `HTTP ${res.status}`);
+    const rawText = await res.text().catch(() => "");
+    // بدنه کامل خطا برای دیباگ — در لاگ ادمین دیده می‌شود
+    throw new Error(`HTTP ${res.status}: ${rawText.slice(0, 400) || "(بدون بدنه)"}`);
   }
 
   const data = await res.json() as {
@@ -275,7 +276,11 @@ export class BasalamAdapter extends BaseAdapter {
               detail = body.message;
             }
           } catch {
-            if (rawText) detail = `HTTP ${res.status}: ${rawText.slice(0, 200)}`;
+            /* JSON نبود */
+          }
+          // اگر پیام قابل‌استخراج نبود، بدنه خام را کامل بگذار
+          if (detail === `HTTP ${res.status}` && rawText) {
+            detail = `HTTP ${res.status}: ${rawText.slice(0, 400)}`;
           }
           failed.push(...chunkIds.map((id) => ({ id, error: detail })));
           continue;

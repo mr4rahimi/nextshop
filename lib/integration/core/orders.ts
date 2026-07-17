@@ -17,6 +17,7 @@ export async function fetchAndProcessOrders(
   let hasMore = true;
   let processed = 0;
   let skipped = 0;
+  const unmatched: string[] = [];
 
   while (hasMore) {
     const result = await adapter.fetchOrders(credentials, cursor);
@@ -30,6 +31,7 @@ export async function fetchAndProcessOrders(
       const link = await prisma.integMappingLink.findUnique({
         where: { platformCode_externalId: { platformCode, externalId: item.platformProductId } },
       });
+      if (!link) unmatched.push(item.platformProductId);
 
       await decrementMappingStockForOrder(platformCode, item.platformProductId, item.qty).catch(() => {});
 
@@ -62,6 +64,6 @@ export async function fetchAndProcessOrders(
     direction:     "INBOUND",
     entityType:    "ORDER",
     status:        "SUCCESS",
-    responseData:  { processed, skipped },
+    responseData:  { processed, skipped, unmatchedCount: unmatched.length, unmatched: unmatched.slice(0, 10) },
   }).catch(() => {});
 }

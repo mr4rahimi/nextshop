@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
   const customerPhone = body.orderDetail?.customerMobile ?? null;
 
   let purchased = 0, cancelled = 0, skipped = 0;
+  const unmatched: string[] = [];
 
   for (let idx = 0; idx < items.length; idx++) {
     const item = items[idx];
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
         const link = await prisma.integMappingLink.findUnique({
           where: { platformCode_externalId: { platformCode: PLATFORM, externalId: sku } },
         });
+        if (!link) unmatched.push(sku);
 
         await decrementMappingStockForOrder(PLATFORM, sku, qty).catch(() => {});
 
@@ -135,7 +137,7 @@ export async function POST(req: NextRequest) {
   await writeLog({
     platformCode: PLATFORM, operationType: "FETCH_ORDERS", direction: "INBOUND",
     entityType: "ORDER", entityId: orderId, status: "SUCCESS",
-    responseData: { purchased, cancelled, skipped, via: "webhook" },
+    responseData: { purchased, cancelled, skipped, unmatched: unmatched.slice(0, 10), via: "webhook" },
   }).catch(() => {});
 
   // تپسی انتظار succeed:true دارد وگرنه ارسال را غیرفعال می‌کند
