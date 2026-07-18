@@ -1,0 +1,105 @@
+# Register
+
+## OpenAPI Specification
+
+```yaml
+openapi: 3.0.1
+info:
+  title: ''
+  description: ''
+  version: 1.0.0
+paths:
+  /ws/v1/auth/register:
+    post:
+      summary: Register
+      deprecated: false
+      description: ''
+      tags:
+        - Auth
+      parameters:
+        - name: Accept
+          in: header
+          description: ''
+          required: false
+          example: application/json
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+            example: "{\r\n  \"plan_id\": 3,\r\n  \"person_type\": \"personal\",\r\n  \"username\": \"test_name2\",\r\n  \"first_name\": \"test fname\",\r\n  \"last_name\": \"test lname\",\r\n  \"national_code\": \"1234567890\",\r\n  \"mobile\": \"09121234567\",\r\n  \"discount_code\": \"\", // nullable\r\n  \"seller_id\": 1, // nullable\r\n  \"should_notify_user\": true, // nullable(default = true)\r\n  \"redirect_url\": \"https://test.com/test\" // nullable\r\n}\r\n"
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+                x-apidog-orders: []
+          headers: {}
+          x-apidog-name: Success
+      security:
+        - apikey-header-Api-Key: []
+      x-apidog-folder: Auth
+      x-apidog-status: released
+      x-run-in-apidog: https://app.apidog.com/web/project/805827/apis/api-24945818-run
+components:
+  schemas: {}
+  securitySchemes:
+    bearer:
+      type: bearer
+      scheme: bearer
+    apikey-header-Api-Key:
+      type: apiKey
+      in: header
+      name: Api-Key
+servers:
+  - url: https://api.iranpayamak.com
+    description: Prod Env
+security:
+  - apikey-header-Api-Key: []
+
+```
+
+
+POST
+https://api.iranpayamak.com/ws/v1/auth/register
+Request
+Authorization
+Header Params
+Accept
+string 
+optional
+Example:
+application/json
+Body Params
+application/json
+object
+ 
+Example
+{
+  "plan_id": 3,
+  "person_type": "personal",
+  "username": "test_name2",
+  "first_name": "test fname",
+  "last_name": "test lname",
+  "national_code": "1234567890",
+  "mobile": "09121234567",
+  "discount_code": "", // nullable
+  "seller_id": 1, // nullable
+  "should_notify_user": true, // nullable(default = true)
+  "redirect_url": "https://test.com/test" // nullable
+}
+Request Code Samples
+Responses
+🟢200
+Success
+application/json
+object
+ 
+Example
+{}
