@@ -59,13 +59,15 @@ export const smsStatusQueue = () => getQueue(QUEUE_NAMES.SMS_STATUS);
 export const clubCronQueue = () => getQueue(QUEUE_NAMES.CLUB_CRON);
 
 export interface SmsBatchJob {
-
   templateKey?: string;
-
   text: string;
-  lineNumber: string;
+  lineNumber?: string;                  
   kind: "TRANSACTIONAL" | "MARKETING";
-  recipients: { mobile: string; vars?: Record<string, string> }[];
+  recipients: {
+    mobile: string;
+    userId?: string | null;               
+    vars?: Record<string, string>;
+  }[];
   campaignId?: string;
   automationId?: string;
 }

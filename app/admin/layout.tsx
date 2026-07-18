@@ -127,15 +127,20 @@ const MENU_GROUPS = [
     ],
   },
 
-  { 
-    label: ",باشگاه مشتریان",
+  {
+    label: "باشگاه مشتریان",
     items: [
-          { 
-            href: "/admin/club/members",  label: "اعضا" , icon: "users" ,
-            children: [
-              { href: "/admin/club/members", label: "لیست اعضا" },
-            ],
-          },
+      {
+        href: "/admin/club/members", label: "باشگاه مشتریان", icon: "users",
+        children: [
+          { href: "/admin/club/members",     label: "اعضا" },
+          { href: "/admin/club/templates",   label: "قالب‌های پیامک" },   // فاز ۲
+          { href: "/admin/club/campaigns",   label: "کمپین‌ها" },          // فاز ۲
+          { href: "/admin/club/sms-log",     label: "گزارش ارسال" },       // فاز ۲
+          { href: "/admin/club/automations", label: "پیامک خودکار" },      // فاز ۳
+          { href: "/admin/club/settings",    label: "تنظیمات باشگاه" },    // فاز ۲
+        ],
+      },
     ],
   },
   {

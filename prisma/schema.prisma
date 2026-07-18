@@ -614,6 +614,7 @@ model StoreSettings {
   smsOptOutText        String? @default("لغو۱۱")
   pointPerToman        Float   @default(0.001)
   pointExpiryDays      Int     @default(365)
+  smsInboxCursor       Int?
 }
 
 model MenuItem {
@@ -1462,4 +1463,133 @@ model PointTransaction {
   @@index([createdAt])
   @@index([expiresAt])
   @@index([reason])
+}
+
+enum SmsKind {
+  TRANSACTIONAL
+  MARKETING
+}
+
+enum SmsSendMode {
+  PATTERN
+  TEXT
+}
+
+enum SmsStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  SKIPPED
+}
+
+model SmsTemplate {
+  id          String      @id @default(cuid())
+  key         String      @unique
+  title       String
+  kind        SmsKind     @default(MARKETING)
+  mode        SmsSendMode @default(TEXT)
+  patternCode String?
+  body        String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  campaigns   SmsCampaign[]
+  automations ClubAutomation[]
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  DONE
+  CANCELED
+}
+
+model SmsCampaign {
+  id            String         @id @default(cuid())
+  title         String
+  templateId    String
+  segment       Json           @default("{}")
+  status        CampaignStatus @default(DRAFT)
+  scheduledAt   DateTime?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  totalCount    Int            @default(0)
+  sentCount     Int            @default(0)
+  failedCount   Int            @default(0)
+  skippedCount  Int            @default(0)
+  estimatedCost BigInt         @default(0)
+  createdById   String?
+  createdAt     DateTime       @default(now())
+
+  template      SmsTemplate    @relation(fields: [templateId], references: [id])
+  messages      SmsMessage[]
+
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+model SmsMessage {
+  id               String    @id @default(cuid())
+  userId           String?
+  phone            String
+  campaignId       String?
+  automationId     String?
+  templateKey      String?
+  kind             SmsKind   @default(MARKETING)
+  body             String?
+  lineNumber       String?
+  provider         String    @default("iranpayamak")
+  providerRequestId Int?
+  status           SmsStatus @default(QUEUED)
+  skipReason       String?
+  errorMessage     String?
+  cost             BigInt    @default(0)
+  queuedAt         DateTime  @default(now())
+  sentAt           DateTime?
+  deliveredAt      DateTime?
+
+  campaign         SmsCampaign? @relation(fields: [campaignId], references: [id])
+
+  @@index([userId])
+  @@index([phone])
+  @@index([status])
+  @@index([campaignId])
+  @@index([providerRequestId])
+  @@index([queuedAt])
+}
+
+model SmsOptOut {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  reason    String?
+  source    String?  // "sms_reply" | "blacklist" | "admin" | "panel"
+  createdAt DateTime @default(now())
+}
+
+enum ClubTrigger {
+  WELCOME
+  BIRTHDAY
+  MEMBERSHIP_ANNIVERSARY
+  AFTER_PURCHASE
+  PURCHASE_FEEDBACK
+  DORMANT_CUSTOMER
+  TIER_UPGRADE
+  POINTS_EXPIRING
+}
+
+model ClubAutomation {
+  id           String      @id @default(cuid())
+  trigger      ClubTrigger @unique
+  templateId   String
+  delayMinutes Int         @default(0)
+  conditions   Json        @default("{}")
+  sendHour     Int         @default(10)
+  isActive     Boolean     @default(false)
+  lastRunAt    DateTime?
+
+  template     SmsTemplate @relation(fields: [templateId], references: [id])
 }
