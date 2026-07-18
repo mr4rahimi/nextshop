@@ -78,6 +78,8 @@ export default function UserDashboardClient({ user, stats, recentOrders }: Props
             </div>
           </div>
         </div>
+      </div>
+
 
         {}
         {/* کارت باشگاه مشتریان */}

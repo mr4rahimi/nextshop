@@ -126,6 +126,18 @@ const MENU_GROUPS = [
       },
     ],
   },
+
+  { 
+    label: ",باشگاه مشتریان",
+    items: [
+          { 
+            href: "/admin/club/members",  label: "اعضا" , icon: "users" ,
+            children: [
+              { href: "/admin/club/members", label: "لیست اعضا" },
+            ],
+          },
+    ],
+  },
   {
     label: "تنظیمات",
     items: [
