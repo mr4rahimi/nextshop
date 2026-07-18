@@ -15,7 +15,7 @@ model User {
   email         String?             @unique
   avatarUrl     String?
   nationalCode  String?
-  passwordHash  String
+  passwordHash  String?
   isActive      Boolean             @default(true)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
@@ -28,6 +28,7 @@ model User {
   wishlist      WishlistItem[]
   guaranties    Guaranty[]
   blogComments  BlogComment[]
+  clubProfile   ClubProfile? 
 
   @@index([role])
   @@index([isActive])
@@ -603,6 +604,16 @@ model StoreSettings {
   themeConfig              Json?
   chatSettings             Json?
   updatedAt                DateTime @updatedAt
+
+  clubEnabled          Boolean @default(false)
+  clubName             String?
+  smsMarketingLine     String?
+  smsAllowedHourStart  Int     @default(9)
+  smsAllowedHourEnd    Int     @default(21)
+  smsMonthlyCapPerUser Int     @default(4)
+  smsOptOutText        String? @default("لغو۱۱")
+  pointPerToman        Float   @default(0.001)
+  pointExpiryDays      Int     @default(365)
 }
 
 model MenuItem {
@@ -866,6 +877,7 @@ enum WidgetType {
 enum UserRole {
   CUSTOMER
   ADMIN
+  SELLER
 }
 
 enum OrderStatus {
@@ -1353,4 +1365,101 @@ model IntegSettings {
 enum IntegPurchasePriceSource {
   HESABAN
   MANUAL
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CUSTOMER CLUB — باشگاه مشتریان
+// ═══════════════════════════════════════════════════════════════════
+
+enum ClubSource {
+  ONLINE        // ثبت‌نام از سایت
+  IN_STORE      // ثبت توسط فروشنده
+  CALLER_ID     // دستگاه شماره‌گیر
+  IMPORT        // ورود از فایل
+  MARKETPLACE   // سفارش‌های باسلام / تپسی‌شاپ
+}
+
+enum PointReason {
+  PURCHASE
+  MANUAL
+  SIGNUP
+  BIRTHDAY
+  REFERRAL
+  REVIEW
+  REDEEM
+  EXPIRE
+  ADJUST
+}
+
+model ClubProfile {
+  id             String     @id @default(cuid())
+  userId         String     @unique
+  birthDate      DateTime?
+  birthMonth     Int?       // ماه شمسی ۱-۱۲ — برای کوئری سریع کمپین تولد
+  birthDay       Int?       // روز شمسی ۱-۳۱
+  gender         String?
+  source         ClubSource @default(ONLINE)
+  sourcePlatform String?    // وقتی source = MARKETPLACE → "basalam" | "tapsi_shop"
+  registeredById String?    // شناسه فروشنده‌ای که ثبت کرده
+  tierId         String?
+  totalSpent     BigInt     @default(0)
+  orderCount     Int        @default(0)
+  lastPurchaseAt DateTime?
+  smsConsent     Boolean    @default(false)
+  consentAt      DateTime?
+  consentIp      String?
+  isBlocked      Boolean    @default(false)
+  tags           String[]   @default([])
+  note           String?
+  joinedAt       DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier           ClubTier?          @relation(fields: [tierId], references: [id])
+  points         PointTransaction[]
+
+  @@index([tierId])
+  @@index([birthMonth, birthDay])
+  @@index([lastPurchaseAt])
+  @@index([smsConsent])
+  @@index([source])
+  @@index([sourcePlatform])
+  @@index([joinedAt])
+}
+
+model ClubTier {
+  id        String        @id @default(cuid())
+  title     String
+  slug      String        @unique
+  minSpent  BigInt        @default(0)
+  color     String?
+  pointRate Float         @default(1)
+  benefits  Json          @default("[]")
+  sortOrder Int           @default(0)
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  profiles  ClubProfile[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model PointTransaction {
+  id        String      @id @default(cuid())
+  profileId String
+  amount    Int         // مثبت = کسب، منفی = مصرف
+  reason    PointReason
+  refType   String?     // "order" | "campaign" | "instore"
+  refId     String?
+  note      String?
+  expiresAt DateTime?
+  createdAt DateTime    @default(now())
+
+  profile   ClubProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@index([reason])
 }

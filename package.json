@@ -10,6 +10,7 @@
     "worker": "tsx watch workers/index.ts",
     "worker:prod": "tsx workers/index.ts",
     "club:smoke": "tsx scripts/club-smoke-test.ts"
+    "club:backfill": "tsx scripts/backfill-club-profiles.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.2",
