@@ -1551,6 +1551,7 @@ model SmsMessage {
   queuedAt         DateTime  @default(now())
   sentAt           DateTime?
   deliveredAt      DateTime?
+  providerStatus   String?
 
   campaign         SmsCampaign? @relation(fields: [campaignId], references: [id])
 

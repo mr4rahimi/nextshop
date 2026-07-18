@@ -204,6 +204,7 @@ export async function dispatchBatch(input: DispatchInput): Promise<DispatchResul
       // متن نهایی هر گیرنده برای گزارش
       body: renderTemplate(finalText, varsByPhone.get(c.phone) ?? {}),
       providerRequestId: result.requestId ?? null,
+      providerStatus: result.requestStatus ?? null, 
       status: result.ok ? ("SENT" as const) : ("FAILED" as const),
       errorMessage: result.ok ? null : result.error ?? "ارسال ناموفق",
       sentAt: result.ok ? now : null,

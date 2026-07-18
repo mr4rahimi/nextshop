@@ -12,7 +12,8 @@
     "club:smoke": "tsx scripts/club-smoke-test.ts",
     "club:backfill": "tsx scripts/backfill-club-profiles.ts",
     "club:seller": "tsx scripts/create-seller.ts",
-    "sms:check": "tsx scripts/sms-check.ts"
+    "sms:check": "tsx scripts/sms-check.ts",
+    "sms:raw": "tsx scripts/sms-raw.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.2",

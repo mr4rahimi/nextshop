@@ -7,18 +7,28 @@
 
 export interface SendResult {
   ok: boolean;
-  /** شناسه درخواست ارسال در پنل — برای پیگیری وضعیت تحویل */
+  /** شناسه درخواست ارسال در پنل — برای پیگیری وضعیت */
   requestId?: number;
+  /**
+   * وضعیت اولیه درخواست در پنل.
+   * مهم: روی خطوط خدماتی، ارسال متن آزاد `pending-approval` می‌شود و تا
+   * تأیید دستی ارسال نمی‌گردد. فقط پترن فوری ارسال می‌شود.
+   */
+  requestStatus?: SendRequestStatus;
   error?: string;
 }
 
-export interface Recipient {
-  mobile: string;
-  /** متغیرهای شخصی این گیرنده — کلید بدون درصد، مثل { name: "مهدی" } */
-  vars?: Record<string, string>;
-}
+/** وضعیت کل درخواست ارسال */
+export type SendRequestStatus =
+  | "init"
+  | "pending-approval"
+  | "insufficient-balance"
+  | "cancelled"
+  | "rejected"
+  | "in-queue"
+  | "sent";
 
-/** وضعیت تحویل یک گیرنده — مقادیر خام پنل */
+/** وضعیت یک گیرنده مشخص */
 export type ProviderItemStatus =
   | "not-started"
   | "in-queue"
@@ -30,10 +40,57 @@ export type ProviderItemStatus =
   | "system-error"
   | "blacklist";
 
+/** آیا این وضعیت نهایی است و دیگر تغییر نمی‌کند؟ */
+export function isTerminalRequestStatus(s: SendRequestStatus): boolean {
+  return s === "sent" || s === "rejected" || s === "cancelled" || s === "insufficient-balance";
+}
+
+export function isTerminalItemStatus(s: ProviderItemStatus): boolean {
+  return (
+    s === "delivered" ||
+    s === "delivery-failure" ||
+    s === "send-failure" ||
+    s === "system-error" ||
+    s === "blacklist"
+  );
+}
+
+export interface Recipient {
+  mobile: string;
+  /** متغیرهای شخصی این گیرنده — کلید بدون درصد، مثل { name: "مهدی" } */
+  vars?: Record<string, string>;
+}
+
 export interface DeliveryItem {
   mobile: string;
   status: ProviderItemStatus;
-  cost?: number;
+  text?: string;
+  error?: string | null;
+  pages?: number;
+}
+
+/** شمارنده‌های آماده‌ی پنل — بدون نیاز به صفحه‌بندی آیتم‌ها */
+export interface SendRequestCounts {
+  total: number;
+  notStarted: number;
+  inQueue: number;
+  sent: number;
+  delivered: number;
+  deliveryFailure: number;
+  deliveryUndetermined: number;
+  sendFailure: number;
+  systemError: number;
+  blacklist: number;
+}
+
+export interface SendRequestInfo {
+  id: number;
+  status: SendRequestStatus;
+  type: string;
+  lineNumber?: string;
+  /** دلیل رد شدن — وقتی status = rejected */
+  rejectedDue?: string | null;
+  counts?: SendRequestCounts;
 }
 
 export interface InboxMessage {
@@ -47,7 +104,7 @@ export interface InboxMessage {
 export interface Balance {
   /** اعتبار ریالی/تومانی */
   amount: number;
-  /** تعداد پیامک باقی‌مانده در صورت وجود */
+  /** تعداد پیامک باقی‌مانده */
   count?: number;
 }
 
@@ -64,7 +121,7 @@ export interface SmsProvider {
 
   /**
    * ارسال شخصی‌سازی‌شده — یک درخواست، چند گیرنده، متغیر متفاوت برای هرکدام.
-   * این مسیر اصلی کمپین‌هاست.
+   * مسیر اصلی کمپین‌ها.
    */
   sendKeywords(
     lineNumber: string,
@@ -73,7 +130,10 @@ export interface SmsProvider {
     schedule?: string
   ): Promise<SendResult>;
 
-  /** ارسال با الگوی تأییدشده — برای OTP و پیام‌های تراکنشی */
+  /**
+   * ارسال با الگوی تأییدشده — تنها روشی که روی خط خدماتی فوری ارسال می‌شود.
+   * برای OTP و همه پیام‌های خودکار از این استفاده کنید.
+   */
   sendPattern(
     patternCode: string,
     mobile: string,
@@ -86,7 +146,10 @@ export interface SmsProvider {
   /** اعتبار حساب */
   getBalance(): Promise<Balance | null>;
 
-  /** وضعیت تحویل گیرنده‌های یک درخواست ارسال */
+  /** وضعیت کلی یک درخواست ارسال به‌همراه شمارنده‌ها */
+  getSendRequest(requestId: number): Promise<SendRequestInfo | null>;
+
+  /** وضعیت تحویل تک‌تک گیرنده‌ها */
   getDeliveryItems(requestId: number): Promise<DeliveryItem[]>;
 
   /** پیام‌های دریافتی (منشی پیامک) — این پنل webhook ندارد و باید pull شود */
