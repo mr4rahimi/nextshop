@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import ClubCard from "@/components/club/ClubCard";
 
 interface Order {
   id: string;
@@ -79,36 +80,8 @@ export default function UserDashboardClient({ user, stats, recentOrders }: Props
         </div>
 
         {}
-        <div className="group relative p-8 rounded-[2.5rem] bg-white/40 dark:bg-white/[0.03] backdrop-blur-3xl border border-white/60 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.04)] dark:shadow-none transition-all duration-500 hover:-translate-y-2">
-          <div className="absolute -top-10 -left-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-8">
-              <div className="w-14 h-14 rounded-[1.5rem] bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="flex flex-col items-end">
-                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full uppercase tracking-tighter">Points</span>
-                <span className="text-[11px] font-bold text-gray-400 mt-1">امتیاز باشگاه مشتریان</span>
-              </div>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-gray-900 dark:text-white tabular-nums tracking-tight">۰</span>
-              <span className="text-[11px] font-black text-gray-400">امتیاز مانا</span>
-            </div>
-            <div className="mt-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[9px] font-bold text-gray-400">تا سطح نقره‌ای</span>
-                <span className="text-[9px] font-black text-emerald-500">۰٪</span>
-              </div>
-              <div className="w-full h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden p-0.5">
-                <div className="w-0 h-full bg-gradient-to-l from-emerald-500 to-teal-400 rounded-full" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        {/* کارت باشگاه مشتریان */}
+        <ClubCard />
 
       {}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">

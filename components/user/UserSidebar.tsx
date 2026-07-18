@@ -71,6 +71,9 @@ const menuItems = [
       </svg>
     ),
   },
+  
+  { href: "/user/club", label: "باشگاه مشتریان" },  
+
 ];
 
 const settingsItems = [

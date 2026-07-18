@@ -10,7 +10,7 @@ export const metadata = {
 
 export default async function ClubPage() {
   const user = await getAuthUser();
-  if (!user) redirect("/auth?redirect=/account/club");
+  if (!user) redirect("/user");
 
   return <ClubPanelClient />;
 }
