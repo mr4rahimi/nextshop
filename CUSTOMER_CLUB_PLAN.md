@@ -382,11 +382,15 @@ Base URL: `https://api.iranpayamak.com` · احراز هویت: هدر `Api-Key`
 
 ### `jobId` یکتا (جلوگیری از ارسال تکراری)
 
+⚠️ BullMQ کاراکتر `:` را نه در **نام صف** و نه در **jobId** نمی‌پذیرد. برای فضای‌نام از گزینه `prefix` استفاده می‌شود و برای jobId از جداکننده `-`. همیشه از هلپر `makeJobId()` در `lib/club/queue.ts` استفاده کنید، نه رشته‌سازی دستی.
+
 ```
-birthday:{jalaliDate}:{userId}
-dormant:{jalaliDate}:{userId}
-campaign:{campaignId}:{userId}
+makeJobId("birthday", jalaliDate, userId)   → birthday-1405-05-02-cm3x9...
+makeJobId("dormant",  jalaliDate, userId)   → dormant-1405-05-02-cm3x9...
+makeJobId("campaign", campaignId, batchIdx) → campaign-cm4a2...-0
 ```
+
+نام صف‌ها: `sms-send` · `sms-status` · `cron` — همگی با `prefix: "club"` که کلیدهای Redis را به شکل `club:sms-send:...` می‌سازد.
 
 ---
 
@@ -459,7 +463,7 @@ scripts/
 - [x] نصب `bullmq`، `ioredis`، `tsx`، `dotenv`
 - [x] `lib/redis.ts` — اتصال singleton با `maxRetriesPerRequest: null`
 - [x] `lib/club/phone.ts` — نرمال‌سازی به فرمت `09xxxxxxxxx` (سازگار با `User.phone` موجود)
-- [x] `lib/club/queue.ts` — سه صف: `club:sms-send`، `club:sms-status`، `club:cron`
+- [x] `lib/club/queue.ts` — سه صف: `sms-send`، `sms-status`، `cron` با `prefix: "club"` + هلپر `makeJobId()`
 - [x] `workers/index.ts` — پروسه مصرف‌کننده با خاموشی تمیز
 - [x] `ecosystem.config.js` — پیکربندی PM2 برای web و worker
 - [x] `scripts/club-smoke-test.ts` — تست دود زیرساخت

@@ -11,7 +11,7 @@
 import "dotenv/config";
 import { Worker, Job } from "bullmq";
 import { redis, pingRedis } from "../lib/redis";
-import { QUEUE_NAMES, SmsBatchJob } from "../lib/club/queue";
+import { QUEUE_NAMES, QUEUE_PREFIX, SmsBatchJob } from "../lib/club/queue";
 
 const CONCURRENCY = Number(process.env.CLUB_WORKER_CONCURRENCY ?? 5);
 
@@ -33,10 +33,10 @@ async function main() {
       );
       return { ok: true, count: job.data.recipients.length };
     },
-    {
+     {
       connection: redis,
+      prefix: QUEUE_PREFIX,
       concurrency: CONCURRENCY,
-      // سقف نرخ ارسال — از فشار روی API پنل جلوگیری می‌کند
       limiter: { max: 10, duration: 1000 },
     }
   );

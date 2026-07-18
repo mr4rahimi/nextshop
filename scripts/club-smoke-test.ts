@@ -9,8 +9,8 @@
 
 import "dotenv/config";
 import { pingRedis, redis } from "../lib/redis";
-import { enqueueSmsBatch, closeQueues } from "../lib/club/queue";
 import { normalizePhone, maskPhone, normalizePhoneList } from "../lib/club/phone";
+import { enqueueSmsBatch, closeQueues, makeJobId } from "../lib/club/queue";
 
 const CASES: [string, string | null][] = [
   ["09123456789", "09123456789"],
@@ -63,7 +63,7 @@ async function testRedis() {
 
 async function testQueue() {
   console.log("\n── تست صف ──");
-  const jobId = `smoke:${Date.now()}`;
+  const jobId = makeJobId("smoke", Date.now());
 
   const job = await enqueueSmsBatch(
     {

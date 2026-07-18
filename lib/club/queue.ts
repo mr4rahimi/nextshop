@@ -1,21 +1,31 @@
 import { Queue, JobsOptions } from "bullmq";
-import { redis } from "@/lib/redis";
+import { redis } from "../redis";
 
-/**
- * تعریف صف‌های باشگاه مشتریان
- *
- * این فایل فقط «تولیدکننده» است — از سمت Next.js برای افزودن کار به صف
- * استفاده می‌شود. مصرف‌کننده‌ها (Worker) در پوشه `workers/` قرار دارند و
- * در پروسه‌ای جدا اجرا می‌شوند.
- */
 
 export const QUEUE_NAMES = {
-  SMS_SEND: "club:sms-send",
-  SMS_STATUS: "club:sms-status",
-  CLUB_CRON: "club:cron",
+  SMS_SEND:   "sms-send",
+  SMS_STATUS: "sms-status",
+  CLUB_CRON:  "cron",
 } as const;
 
+export const QUEUE_PREFIX = "club";
+
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
+
+/**
+ * ساخت jobId یکتا و قابل بازتولید
+ *
+ * BullMQ کاراکتر `:` را در jobId نمی‌پذیرد، پس جداکننده `-` است.
+ * بخش‌های نامعتبر خودکار پاک‌سازی می‌شوند.
+ *
+ * makeJobId("birthday", "1405-05-02", userId) → "birthday-1405-05-02-cm3x9..."
+ */
+export function makeJobId(...parts: (string | number)[]): string {
+  return parts
+    .map((p) => String(p).replace(/[:\s]/g, "-"))
+    .filter(Boolean)
+    .join("-");
+}
 
 const DEFAULT_JOB_OPTIONS: JobsOptions = {
   attempts: 3,
@@ -37,6 +47,7 @@ function getQueue(name: QueueName): Queue {
 
   const q = new Queue(name, {
     connection: redis,
+    prefix: QUEUE_PREFIX,
     defaultJobOptions: DEFAULT_JOB_OPTIONS,
   });
   registry.set(name, q);
@@ -47,42 +58,22 @@ export const smsSendQueue = () => getQueue(QUEUE_NAMES.SMS_SEND);
 export const smsStatusQueue = () => getQueue(QUEUE_NAMES.SMS_STATUS);
 export const clubCronQueue = () => getQueue(QUEUE_NAMES.CLUB_CRON);
 
-// ─── انواع داده‌ی کارها ──────────────────────────────────────────────
-
-/**
- * یک «دسته» پیامک — نه یک پیام تکی.
- * پنل ایران پیامک با `/ws/v1/sms/keywords` می‌تواند در یک درخواست
- * چند گیرنده با متغیرهای متفاوت را بفرستد، پس واحد کار «دسته» است.
- */
 export interface SmsBatchJob {
-  /** کلید قالب — برای لاگ و ردیابی */
+
   templateKey?: string;
-  /** متن با متغیرهای %var% */
+
   text: string;
-  /** خط ارسال — خدماتی یا تبلیغاتی */
   lineNumber: string;
-  /** نوع پیام؛ روی نگهبان‌ها و انتخاب خط اثر می‌گذارد */
   kind: "TRANSACTIONAL" | "MARKETING";
-  /** گیرنده‌ها به همراه متغیرهای شخصی هرکدام */
   recipients: { mobile: string; vars?: Record<string, string> }[];
-  /** شناسه کمپین در صورت وجود */
   campaignId?: string;
-  /** شناسه اتوماسیون در صورت وجود */
   automationId?: string;
 }
 
 export interface SmsStatusJob {
-  /** شناسه درخواست ارسال که پنل برگردانده (فیلد data در پاسخ) */
   providerRequestIds: number[];
 }
 
-// ─── هلپرهای افزودن کار ─────────────────────────────────────────────
-
-/**
- * افزودن یک دسته پیامک به صف.
- * `jobId` را همیشه یکتا و قابل بازتولید بدهید تا ارسال تکراری رخ ندهد.
- * مثال: `campaign:{campaignId}:{batchIndex}` یا `birthday:{1405-05-02}:{userId}`
- */
 export async function enqueueSmsBatch(
   data: SmsBatchJob,
   opts: { jobId?: string; delay?: number } = {}
@@ -97,7 +88,6 @@ export async function enqueueStatusCheck(data: SmsStatusJob, delayMs = 60_000) {
   return smsStatusQueue().add("check-status", data, { delay: delayMs });
 }
 
-/** بستن اتصال صف‌ها — در تست‌ها و اسکریپت‌ها لازم است */
 export async function closeQueues() {
   await Promise.all([...registry.values()].map((q) => q.close()));
   registry.clear();
