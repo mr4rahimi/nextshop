@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { decrementMappingStockForOrder, restoreMappingStockForCancel } from "@/lib/integration/core/inventory";
 import { writeLog } from "@/lib/integration/core/log";
 import { decryptCredentials } from "@/lib/integration/core/crypto";
+import { enrollMarketplaceCustomer } from "@/lib/club/marketplace";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -132,6 +133,14 @@ export async function POST(req: NextRequest) {
     } catch {
       skipped++;
     }
+  }
+
+  if (purchased > 0) {
+    void enrollMarketplaceCustomer({
+      platformCode: PLATFORM,
+      phone: customerPhone,
+      name:  customerName,
+    });
   }
 
   await writeLog({

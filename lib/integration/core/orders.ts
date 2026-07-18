@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { BaseAdapter } from "@/lib/integration/adapters/base.adapter";
 import { decrementMappingStockForOrder } from "./inventory";
 import { writeLog } from "./log";
+import { enrollMarketplaceCustomer } from "@/lib/club/marketplace";
 
 export async function fetchAndProcessOrders(
   jobId: string,
@@ -48,6 +49,12 @@ export async function fetchAndProcessOrders(
           customerPhone:       item.customerPhone ?? null,
           status:              "PENDING", 
         },
+      });
+
+       void enrollMarketplaceCustomer({
+        platformCode,
+        phone: item.customerPhone,
+        name:  item.customerName,
       });
 
       processed++;

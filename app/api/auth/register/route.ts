@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, signToken, setAuthCookie } from "@/lib/auth";
+import { ensureClubProfile } from "@/lib/club/profile";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,10 @@ export async function POST(req: Request) {
   const user = await prisma.user.create({
     data: { phone, passwordHash },
   });
+
+  await ensureClubProfile(user.id, { source: "ONLINE" }).catch((e) =>
+    console.error("[club] ساخت پروفایل باشگاه ناموفق:", e)
+  );
 
   const token = await signToken({ userId: user.id, phone: user.phone, role: user.role });
   await setAuthCookie(token);
