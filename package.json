@@ -13,7 +13,8 @@
     "club:backfill": "tsx scripts/backfill-club-profiles.ts",
     "club:seller": "tsx scripts/create-seller.ts",
     "sms:check": "tsx scripts/sms-check.ts",
-    "sms:raw": "tsx scripts/sms-raw.ts"
+    "sms:raw": "tsx scripts/sms-raw.ts",
+    "club:templates": "tsx scripts/seed-club-templates.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.2",

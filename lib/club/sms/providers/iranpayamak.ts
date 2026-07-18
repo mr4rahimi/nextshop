@@ -77,11 +77,15 @@ export class IranPayamakProvider implements SmsProvider {
   async sendPattern(
     patternCode: string,
     mobile: string,
-    vars: Record<string, string>
+    vars: Record<string, string>,
+    lineNumber?: string
   ): Promise<SendResult> {
     return this.send("/ws/v1/sms/pattern", {
-      pattern_code: patternCode,
-      recipients: [{ mobile, ...vars }],
+      code: patternCode,
+      recipient: mobile,
+      attributes: vars,
+      line_number: lineNumber ?? "",
+      number_format: "english",
     });
   }
 
@@ -241,17 +245,20 @@ export class IranPayamakProvider implements SmsProvider {
     const res = await this.request("POST", path, body);
     if (!res.ok) return { ok: false, error: res.error };
 
-    // ⚠️ data یک شیء است، نه عدد: { id, type, status, metadata, schedule }
-    const d = asRecord(res.body?.data);
+    const raw = res.body?.data;
+
+    // پترن → data یک عدد است. بقیه → data یک شیء { id, status, ... }
+    if (typeof raw === "number") {
+      return { ok: true, requestId: raw > 0 ? raw : undefined };
+    }
+
+    const d = asRecord(raw);
     const requestId = num(d?.id);
-    const requestStatus = d?.status
-      ? (String(d.status) as SendRequestStatus)
-      : undefined;
 
     return {
       ok: true,
       requestId: requestId > 0 ? requestId : undefined,
-      requestStatus,
+      requestStatus: d?.status ? (String(d.status) as SendRequestStatus) : undefined,
     };
   }
 
@@ -320,14 +327,23 @@ function describeError(
   parsed: ApiEnvelope | undefined,
   raw: string
 ): string {
-  const m = parsed?.message;
-  if (typeof m === "string" && m.trim()) return m;
+  const candidates = [
+    parsed?.message,
+    (parsed as Record<string, unknown> | undefined)?.messages,
+  ];
 
-  const messages = (parsed as Record<string, unknown> | undefined)?.messages;
-  if (typeof messages === "string") return messages;
-  if (Array.isArray(messages)) return messages.join(" — ");
-  if (messages && typeof messages === "object") {
-    return Object.values(messages as Record<string, unknown>).flat().join(" — ");
+  for (const m of candidates) {
+    if (typeof m === "string" && m.trim()) return m;
+    if (Array.isArray(m)) return m.join(" — ");
+    if (m && typeof m === "object") {
+      // { code: ["تکمیل گزینه code الزامی است"], recipient: [...] }
+      return Object.entries(m as Record<string, unknown>)
+        .map(([field, msgs]) => {
+          const t = Array.isArray(msgs) ? msgs.join("، ") : String(msgs);
+          return `${field}: ${t}`;
+        })
+        .join(" | ");
+    }
   }
 
   return `HTTP ${httpStatus}: ${raw.slice(0, 200) || "(بدون بدنه)"}`;

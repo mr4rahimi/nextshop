@@ -137,7 +137,8 @@ export interface SmsProvider {
   sendPattern(
     patternCode: string,
     mobile: string,
-    vars: Record<string, string>
+    vars: Record<string, string>,
+    lineNumber?: string
   ): Promise<SendResult>;
 
   /** ارسال آزمایشی به شماره مالک حساب */

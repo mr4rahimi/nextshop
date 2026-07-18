@@ -121,9 +121,16 @@ async function main() {
     const phone = normalizePhone(to);
     if (!phone) return fail(`شماره نامعتبر: ${to}`);
 
-    console.log(`ارسال با پترن ${patternCode} به ${phone}...`);
-    const res = await provider.sendPattern(patternCode, phone, { name: "دوست" });
-    report(res);
+    const vars: Record<string, string> = {};
+    args.forEach((a, i) => {
+      if (a === "--var" && args[i + 1]?.includes("=")) {
+        const [k, ...rest] = args[i + 1].split("=");
+        vars[k] = rest.join("=");
+      }
+    });
+
+    console.log(`ارسال پترن ${patternCode} به ${phone} — متغیرها: ${JSON.stringify(vars)}`);
+    report(await provider.sendPattern(patternCode, phone, vars, config.serviceLine));
   } else if (to) {
     const phone = normalizePhone(to);
     if (!phone) return fail(`شماره نامعتبر: ${to}`);
