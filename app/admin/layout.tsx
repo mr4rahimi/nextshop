@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ThemeProvider, useTheme } from "@/components/layout/ThemeProvider";
+import { Target } from "lucide-react";
 
 function Icon({ path, className = "w-4 h-4" }: { path: string; className?: string }) {
   return (
@@ -138,7 +139,8 @@ const MENU_GROUPS = [
           { href: "/admin/club/campaigns",   label: "کمپین‌ها" },          // فاز ۲
           { href: "/admin/club/sms-log",     label: "گزارش ارسال" },       // فاز ۲
           { href: "/admin/club/automations", label: "پیامک خودکار" },      // فاز ۳
-          { href: "/admin/club/settings",    label: "تنظیمات باشگاه" },    // فاز ۲
+          { href: "/admin/club/settings",    label: "تنظیمات باشگاه" },  
+          { href: "/seller/register",    label: " ورود به شماره گیر", target: "new_blank" },  
         ],
       },
     ],
