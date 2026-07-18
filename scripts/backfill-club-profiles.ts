@@ -14,7 +14,7 @@
  * اسکریپت idempotent است — اجرای چندباره مشکلی ایجاد نمی‌کند.
  */
 
-import "dotenv/config";
+import "../lib/load-env";
 import { prisma } from "../lib/prisma";
 import { normalizePhone } from "../lib/club/phone";
 

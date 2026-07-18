@@ -7,7 +7,7 @@
  * پیش‌نیاز: کانتینر redis بالا باشد و پروسه worker در ترمینال دیگر اجرا شده باشد.
  */
 
-import "dotenv/config";
+import "../lib/load-env";
 import { pingRedis, redis } from "../lib/redis";
 import { normalizePhone, maskPhone, normalizePhoneList } from "../lib/club/phone";
 import { enqueueSmsBatch, closeQueues, makeJobId } from "../lib/club/queue";

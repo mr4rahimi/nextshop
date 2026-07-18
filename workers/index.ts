@@ -8,7 +8,7 @@
  * در فاز ۲ به `smsWorker.ts` اضافه می‌گردد.
  */
 
-import "dotenv/config";
+import "../lib/load-env";
 import { Worker, Job } from "bullmq";
 import { redis, pingRedis } from "../lib/redis";
 import { QUEUE_NAMES, QUEUE_PREFIX, SmsBatchJob } from "../lib/club/queue";
