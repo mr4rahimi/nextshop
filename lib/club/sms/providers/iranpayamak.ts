@@ -198,26 +198,33 @@ export class IranPayamakProvider implements SmsProvider {
     const paginator = asRecord(res.body?.data);
     const rows = Array.isArray(paginator?.data) ? (paginator.data as unknown[]) : [];
 
-    return rows
-      .map((raw) => {
-        const row = asRecord(raw);
-        if (!row) return null;
+    const out: InboxMessage[] = [];
 
-        // نام فیلدها تا رسیدن اولین پیام واقعی قطعی نیست — چند حالت پوشش داده شده
-        const from = String(
-          row.sender ?? row.originator ?? row.from ?? row.mobile ?? row.source ?? ""
-        );
-        const text = String(row.text ?? row.message ?? row.body ?? row.content ?? "");
+    for (const raw of rows) {
+      const row = asRecord(raw);
+      if (!row) continue;
 
-        return {
-          id: num(row.id),
-          from,
-          to: row.destination ? String(row.destination) : row.receiver ? String(row.receiver) : undefined,
-          text,
-          receivedAt: row.created_at ? String(row.created_at) : undefined,
-        };
-      })
-      .filter((m): m is InboxMessage => !!m && m.id > 0 && !!m.from);
+      // نام فیلدها تا رسیدن اولین پیام واقعی قطعی نیست — چند حالت پوشش داده شده
+      const from = String(
+        row.sender ?? row.originator ?? row.from ?? row.mobile ?? row.source ?? ""
+      );
+      const id = num(row.id);
+
+      if (!from || id <= 0) continue;
+
+      const to = row.destination ?? row.receiver;
+      const receivedAt = row.created_at ?? row.receivedAt;
+
+      out.push({
+        id,
+        from,
+        text: String(row.text ?? row.message ?? row.body ?? row.content ?? ""),
+        ...(to ? { to: String(to) } : {}),
+        ...(receivedAt ? { receivedAt: String(receivedAt) } : {}),
+      });
+    }
+
+    return out;
   }
 
   async estimateCost(
