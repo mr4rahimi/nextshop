@@ -1,4 +1,5 @@
 import { BaseAdapter } from "../base.adapter";
+import { prisma } from "@/lib/prisma";
 import type {
   ConnectionTestResult,
   PaginatedProducts,
@@ -127,15 +128,31 @@ export class TapsiAdapter extends BaseAdapter {
     };
   }
 
+  // تپسی در سرویس بروزرسانی، فیلد id را «SKU فروشنده» می‌خواهد نه شناسه محصول
+  private async resolveSkus(platformProductIds: string[]): Promise<Map<string, string>> {
+    const rows = await prisma.integPlatformProduct.findMany({
+      where:  { platformCode: this.platformCode, platformProductId: { in: platformProductIds } },
+      select: { platformProductId: true, sku: true },
+    });
+    return new Map(
+      rows.filter((r) => r.sku).map((r) => [r.platformProductId, r.sku as string]),
+    );
+  }
+
   // ── ارسال موجودی ─────────────────────────────────────────────────
   async updateStock(
     credentials: Record<string, string>,
     updates: StockUpdate[],
   ): Promise<BatchResult> {
+    const ids    = updates.map((u) => u.platformProductId);
+    const skuMap = await this.resolveSkus(ids);
     return this.bulkUpdate(
       credentials,
-      updates.map((u) => ({ id: u.platformProductId, stock: u.stock })),
-      updates.map((u) => u.platformProductId),
+      updates.map((u) => ({
+        id:    skuMap.get(u.platformProductId) ?? u.platformProductId,
+        stock: u.stock,
+      })),
+      ids, // referenceCode برای گزارش نتیجه — شناسه داخلی نگاشت
     );
   }
 
@@ -144,13 +161,19 @@ export class TapsiAdapter extends BaseAdapter {
     credentials: Record<string, string>,
     updates: PriceUpdate[],
   ): Promise<BatchResult> {
+    const ids    = updates.map((u) => u.platformProductId);
+    const skuMap = await this.resolveSkus(ids);
     return this.bulkUpdate(
       credentials,
       updates.map((u) => {
         const toman = u.salePrice ?? u.price;
-        return { id: u.platformProductId, price: toman * 10, specialPrice: toman * 10 };
+        return {
+          id:           skuMap.get(u.platformProductId) ?? u.platformProductId,
+          price:        toman * 10,
+          specialPrice: toman * 10,
+        };
       }),
-      updates.map((u) => u.platformProductId),
+      ids,
     );
   }
 
@@ -259,6 +282,20 @@ export class TapsiAdapter extends BaseAdapter {
         });
       });
       await this.rateLimit(150);
+    }
+
+    // سفارش‌های تپسی با SKU می‌آیند؛ نگاشت با شناسه محصول ذخیره شده → تبدیل می‌کنیم
+    const skuList = items.map((i) => i.platformProductId).filter(Boolean);
+    if (skuList.length) {
+      const rows = await prisma.integPlatformProduct.findMany({
+        where:  { platformCode: this.platformCode, sku: { in: skuList } },
+        select: { platformProductId: true, sku: true },
+      });
+      const bySku = new Map(rows.filter((r) => r.sku).map((r) => [r.sku as string, r.platformProductId]));
+      for (const it of items) {
+        const mapped = bySku.get(it.platformProductId);
+        if (mapped) it.platformProductId = mapped;
+      }
     }
 
     const hasMore = (list.data?.totalItems ?? 0) > (pageNumber + 1) * 20;

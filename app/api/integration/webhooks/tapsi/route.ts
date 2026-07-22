@@ -35,6 +35,15 @@ interface TapsiWebhookBody {
 // تپسی توکن را با این هدر می‌فرستد
 const AUTH_HEADER = "tapsishop.hub.webhook-authorization";
 
+// تپسی در وب‌هوک، productId را به‌صورت SKU می‌فرستد؛ نگاشت با شناسه محصول ذخیره شده
+async function resolveExternalId(skuOrId: string): Promise<string> {
+  const row = await prisma.integPlatformProduct.findFirst({
+    where:  { platformCode: PLATFORM, OR: [{ platformProductId: skuOrId }, { sku: skuOrId }] },
+    select: { platformProductId: true },
+  });
+  return row?.platformProductId ?? skuOrId;
+}
+
 export async function POST(req: NextRequest) {
   // ── اعتبارسنجی توکن ────────────────────────────────────────────
   const sentToken = req.headers.get(AUTH_HEADER) ?? req.headers.get("TapsiShop.Hub.Webhook-Authorization");
@@ -89,10 +98,12 @@ export async function POST(req: NextRequest) {
 
     if (!sku) { skipped++; continue; }
 
+    const externalId = await resolveExternalId(sku);
+
     try {
       if (changeType === 2) {
         // ── لغو: برگرداندن موجودی + علامت‌گذاری سفارش ────────────
-        await restoreMappingStockForCancel(PLATFORM, sku, qty).catch(() => {});
+        await restoreMappingStockForCancel(PLATFORM, externalId, qty).catch(() => {});
         // ردیف سفارش مرتبط را کنسل‌شده علامت بزن (اگر هنوز فاکتور نخورده)
         await prisma.integOrder.updateMany({
           where: { platformCode: PLATFORM, platformOrderId: `${orderId}:${idx}`, status: "PENDING" },
@@ -108,11 +119,11 @@ export async function POST(req: NextRequest) {
         if (existing) { skipped++; continue; }
 
         const link = await prisma.integMappingLink.findUnique({
-          where: { platformCode_externalId: { platformCode: PLATFORM, externalId: sku } },
+          where: { platformCode_externalId: { platformCode: PLATFORM, externalId } },
         });
         if (!link) unmatched.push(sku);
 
-        await decrementMappingStockForOrder(PLATFORM, sku, qty).catch(() => {});
+        await decrementMappingStockForOrder(PLATFORM, externalId, qty).catch(() => {});
 
         await prisma.integOrder.create({
           data: {
