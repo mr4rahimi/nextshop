@@ -6,7 +6,7 @@ import { writeLog } from "./log";
 import type { HesabanAdapter } from "@/lib/integration/adapters/accounting/hesaban.adapter";
 
 const ACCOUNTING_CODE = "hesaban";
-const PLATFORM_SUFFIX: Record<string, string> = { shop: "سایت", basalam: "باسلام" };
+const PLATFORM_SUFFIX: Record<string, string> = { shop: "سایت", basalam: "باسلام", tapsi_shop: "تپسی‌شاپ" };
 const MAX_GROUPS_PER_CYCLE = 10;
 
 // وب‌حسابان فیلد id فاکتور را GUID می‌خواهد.

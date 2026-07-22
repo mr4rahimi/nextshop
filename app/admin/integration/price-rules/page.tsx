@@ -4,13 +4,17 @@ import PriceRulesClient from "./PriceRulesClient";
 
 export const dynamic = "force-dynamic";
 
-const PLATFORM_LABELS: Record<string, string> = {
-  shop: "فروشگاه",
-  hesaban: "وب‌حسابان",
-  basalam: "باسلام",
-};
-
 export default async function PriceRulesPage() {
+  // برچسب پلتفرم‌ها از دیتابیس — پلتفرم جدید خودکار اضافه می‌شود
+  const dbPlatforms = await prisma.integPlatform.findMany({
+    where:  { isActive: true },
+    select: { code: true, name: true },
+  });
+  const PLATFORM_LABELS: Record<string, string> = {
+    shop: "فروشگاه",
+    ...Object.fromEntries(dbPlatforms.map((p) => [p.code, p.name])),
+  };
+
   const rules = await prisma.integPriceRule.findMany({
     orderBy: { priority: "asc" },
     include: { tiers: true },

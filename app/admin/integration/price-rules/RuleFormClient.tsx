@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const PLATFORMS = [
+// لیست پیش‌فرض — در زمان اجرا با پلتفرم‌های دیتابیس جایگزین می‌شود
+const DEFAULT_PLATFORMS = [
   { code: "shop",    label: "فروشگاه" },
   { code: "hesaban", label: "وب‌حسابان" },
   { code: "basalam", label: "باسلام" },
@@ -77,6 +78,24 @@ export default function RuleFormClient({ mode, initial }: Props) {
   const [priority, setPriority]       = useState(String(initial?.priority ?? 100));
   const [isActive, setIsActive]       = useState(initial?.isActive ?? true);
   const [platforms, setPlatforms]     = useState<string[]>(initial?.targetPlatforms ?? []);
+  const [availablePlatforms, setAvailablePlatforms] = useState(DEFAULT_PLATFORMS);
+
+  // پلتفرم‌های فعال از دیتابیس — پلتفرم جدید (تپسی‌شاپ و…) خودکار اینجا ظاهر می‌شود
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/integration/platforms");
+        if (!res.ok) return;
+        const data = await res.json() as { platforms?: { code: string; name: string }[] };
+        if (data.platforms?.length) {
+          setAvailablePlatforms([
+            { code: "shop", label: "فروشگاه" },
+            ...data.platforms.map((p) => ({ code: p.code, label: p.name })),
+          ]);
+        }
+      } catch { /* لیست پیش‌فرض باقی می‌ماند */ }
+    })();
+  }, []);
 
   const [feePercent, setFeePercent]       = useState(String(initial?.feePercent ?? 0));
   const [shippingType, setShippingType]   = useState<"FIXED" | "PERCENT">(initial?.shippingType ?? "FIXED");
@@ -214,7 +233,7 @@ export default function RuleFormClient({ mode, initial }: Props) {
         <h2 className="font-black text-sm text-gray-900 dark:text-white">پلتفرم هدف</h2>
         <p className="text-xs text-gray-400 -mt-1">اگر هیچی انتخاب نشود، برای همه اعمال می‌شود (شامل فروشگاه)</p>
         <div className="flex gap-3 flex-wrap">
-          {PLATFORMS.map((p) => (
+          {availablePlatforms.map((p) => (
             <label key={p.code} className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={platforms.includes(p.code)} onChange={() => togglePlatform(p.code)} className="w-4 h-4 accent-blue-600" />
               <span className="text-sm text-gray-700 dark:text-gray-300 font-bold">{p.label}</span>
