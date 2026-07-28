@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { BaseAdapter } from "@/lib/integration/adapters/base.adapter";
-import { decrementMappingStockForOrder } from "./inventory";
+import { decrementMappingStockForOrder, restoreMappingStockForCancel } from "./inventory";
 import { writeLog } from "./log";
 import { enrollMarketplaceCustomer } from "@/lib/club/marketplace";
 
@@ -19,6 +19,7 @@ export async function fetchAndProcessOrders(
   let processed = 0;
   let skipped = 0;
   const unmatched: string[] = [];
+  const cancelledOrders = new Set<string>();
 
   while (hasMore) {
     const result = await adapter.fetchOrders(credentials, cursor);
@@ -60,8 +61,30 @@ export async function fetchAndProcessOrders(
       processed++;
     }
 
+    for (const c of result.cancelledOrderIds ?? []) cancelledOrders.add(c);
+
     hasMore = result.hasMore;
     cursor = result.cursor;
+  }
+
+  // لغو سفارش (فید رویدادی) — فقط ردیف‌های PENDING، پس تکرار رویداد بی‌خطر است
+  let cancelled = 0;
+  for (const orderNo of cancelledOrders) {
+    const rows = await prisma.integOrder.findMany({
+      where: { platformCode, platformOrderId: { startsWith: `${orderNo}:` }, status: "PENDING" },
+    });
+    for (const row of rows) {
+      if (row.mappingId) {
+        const link = await prisma.integMappingLink.findUnique({
+          where: { mappingId_platformCode: { mappingId: row.mappingId, platformCode } },
+        });
+        if (link) {
+          await restoreMappingStockForCancel(platformCode, link.externalId, row.qty).catch(() => {});
+        }
+      }
+      await prisma.integOrder.update({ where: { id: row.id }, data: { status: "CANCELLED" } }).catch(() => {});
+      cancelled++;
+    }
   }
 
   await writeLog({
@@ -71,6 +94,6 @@ export async function fetchAndProcessOrders(
     direction:     "INBOUND",
     entityType:    "ORDER",
     status:        "SUCCESS",
-    responseData:  { processed, skipped, unmatchedCount: unmatched.length, unmatched: unmatched.slice(0, 10) },
+    responseData:  { processed, skipped, cancelled, unmatchedCount: unmatched.length, unmatched: unmatched.slice(0, 10) },
   }).catch(() => {});
 }

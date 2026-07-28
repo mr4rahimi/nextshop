@@ -94,3 +94,21 @@ export async function closeQueues() {
   await Promise.all([...registry.values()].map((q) => q.close()));
   registry.clear();
 }
+
+export interface SmsBatchJob {
+  templateKey?: string;
+  /** حالت ارسال — پیش‌فرض TEXT برای سازگاری با کمپین‌ها */
+  mode?: "PATTERN" | "TEXT";
+  /** فقط در حالت PATTERN */
+  patternCode?: string;
+  text: string;
+  lineNumber?: string;
+  kind: "TRANSACTIONAL" | "MARKETING";
+  recipients: {
+    mobile: string;
+    userId?: string | null;
+    vars?: Record<string, string>;
+  }[];
+  campaignId?: string;
+  automationId?: string;
+}

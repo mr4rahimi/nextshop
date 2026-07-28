@@ -2,6 +2,7 @@ import type { BaseAdapter } from "@/lib/integration/adapters/base.adapter";
 import { HesabanAdapter } from "@/lib/integration/adapters/accounting/hesaban.adapter";
 import { BasalamAdapter } from "@/lib/integration/adapters/marketplace/basalam.adapter";
 import { TapsiAdapter } from "@/lib/integration/adapters/marketplace/tapsi.adapter";
+import { SnappShopAdapter } from "@/lib/integration/adapters/marketplace/snappshop.adapter";
 
 const registry = new Map<string, BaseAdapter>();
 
@@ -21,3 +22,4 @@ export function getAllAdapters(): BaseAdapter[] {
 registerAdapter(new HesabanAdapter());
 registerAdapter(new BasalamAdapter());
 registerAdapter(new TapsiAdapter());
+registerAdapter(new SnappShopAdapter());

@@ -105,6 +105,8 @@ export interface OrderItemInfo {
 }
 
 export interface FetchOrdersResult {
+  /** شماره سفارش‌هایی که در این دور لغو شده‌اند (اسنپ‌شاپ) */
+  cancelledOrderIds?: string[];
   items: OrderItemInfo[];
   hasMore: boolean;
   cursor?: string;
