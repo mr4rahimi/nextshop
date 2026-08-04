@@ -344,9 +344,15 @@ function FilterSidebar({
 export default function CategoryPageClient({
   category,
   categorySlug,
+  initialData,
+  landingH1,
+  landingIntro,
 }: {
   category: Category;
   categorySlug: string;
+  initialData?: ProductsResponse;
+  landingH1?: string | null;
+  landingIntro?: string | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -376,14 +382,14 @@ export default function CategoryPageClient({
   const absMin = String(Number(category?.priceRange?.min ?? 0));
   const absMax = String(Number(category?.priceRange?.max ?? 100000000));
 
-  const [products, setProducts] = useState<ProductCardItem[]>([]);
-  const [total, setTotal] = useState(0);
+  const [products, setProducts] = useState<ProductCardItem[]>(initialData?.items ?? []);
+  const [total, setTotal] = useState(initialData?.total ?? 0);
   const [page, setPage] = useState(() => {
     const n = parseInt(searchParams.get("page") ?? "1");
     return Number.isFinite(n) && n > 0 ? n : 1;
   });
   const [loading, setLoading] = useState(false);
-  const [initialLoaded, setInitialLoaded] = useState(false);
+  const [initialLoaded, setInitialLoaded] = useState(!!initialData);
 
   // Filters
   const [sort, setSort] = useState<SortType>(() => {
@@ -503,7 +509,9 @@ export default function CategoryPageClient({
 
   // ── ریست هنگام تغییر فیلتر (با احترام به page اولیهٔ URL) ──
   const entryPageRef = useRef(page);
+  const skipFirstFetch = useRef(!!initialData);
   useEffect(() => {
+    if (skipFirstFetch.current) { skipFirstFetch.current = false; return; }
     const target = entryPageRef.current;
     entryPageRef.current = 1;
     setPage(target);
