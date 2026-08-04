@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { slugify, isValidSlug } from "@/lib/slug";
 
 type AttributeValue = {
   id: string;
@@ -26,14 +27,6 @@ type AttributeGroup = {
   attributes: Attribute[];
 };
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[\s_]+/g, "-")
-    .replace(/[^\w\-]+/g, "")
-    .replace(/\-\-+/g, "-");
-}
 
 export default function AttributeGroupsPage() {
   const [groups, setGroups] = useState<AttributeGroup[]>([]);
@@ -162,35 +155,66 @@ export default function AttributeGroupsPage() {
     }
   }
 
-  async function createAttribute() {
+  async function createAttribute(force = false) {
     if (!selectedGroup || !attributeTitle.trim()) return;
-    setSaving(true);
-
     const finalSlug = attributeSlug.trim() || slugify(attributeTitle);
 
+    if (!isValidSlug(finalSlug)) {
+      alert(
+        `نشانی «${finalSlug}» نامعتبر است.\n\n` +
+        `این نشانی در آدرس صفحه استفاده می‌شود، پس باید انگلیسی، با حروف کوچک و خط تیره باشد.\n` +
+        `نمونه صحیح: print-type یا usage-type`
+      );
+      return;
+    }
+
+    setSaving(true);
     try {
       const res = await fetch("/api/admin/attributes", {
-        method: "POST",
+        method: editingAttribute ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          groupId: selectedGroup,
+          ...(editingAttribute ? { id: editingAttribute, force } : { groupId: selectedGroup }),
           title: attributeTitle,
           slug: finalSlug,
           isFilterable: true,
         }),
       });
 
-      if (!res.ok) throw new Error("خطا در ایجاد ویژگی");
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 409 && data.needsForce) {
+        if (confirm(`${data.message}\n\nآیا مطمئنی؟ باید بعداً آن صفحات فرود را اصلاح کنی.`)) {
+          setSaving(false);
+          return createAttribute(true);
+        }
+        return;
+      }
+
+      if (!res.ok) { alert(data.message ?? "خطا در ذخیره ویژگی"); return; }
 
       setAttributeTitle("");
       setAttributeSlug("");
+      setEditingAttribute(null);
       load();
     } catch (err) {
       console.error(err);
-      alert("خطا در ایجاد ویژگی (احتمالاً slug تکراری است)");
+      alert("خطا در ذخیره ویژگی (احتمالاً نشانی تکراری است)");
     } finally {
       setSaving(false);
     }
+  }
+
+  function startEditAttribute(attr: Attribute) {
+    setEditingAttribute(attr.id);
+    setAttributeTitle(attr.title);
+    setAttributeSlug(attr.slug);
+  }
+
+  function cancelEditAttribute() {
+    setEditingAttribute(null);
+    setAttributeTitle("");
+    setAttributeSlug("");
   }
 
   async function deleteAttribute(id: string) {
@@ -222,6 +246,13 @@ export default function AttributeGroupsPage() {
     setSaving(true);
 
     const finalSlug = valueSlug.trim() || slugify(valueTitle);
+    if (!isValidSlug(finalSlug)) {
+      alert(
+        `نشانی «${finalSlug}» نامعتبر است.\n\n` +
+        `نمونه صحیح: laser یا single-function`
+      );
+      return;
+    }
 
     try {
       const res = await fetch("/api/admin/attribute-values", {
@@ -448,13 +479,28 @@ export default function AttributeGroupsPage() {
                     disabled={saving}
                     className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
                   />
-                  <button
-                    onClick={createAttribute}
-                    disabled={saving || !attributeTitle.trim()}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-2 rounded-xl text-sm font-black transition-all"
-                  >
-                    {saving ? "در حال افزودن..." : "افزودن ویژگی"}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => createAttribute()}
+                      disabled={saving || !attributeTitle.trim()}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-2 rounded-xl text-sm font-black transition-all"
+                    >
+                      {saving
+                        ? "در حال ذخیره..."
+                        : editingAttribute
+                          ? "بروزرسانی ویژگی"
+                          : "افزودن ویژگی"}
+                    </button>
+                    {editingAttribute && (
+                      <button
+                        onClick={cancelEditAttribute}
+                        disabled={saving}
+                        className="px-4 border border-gray-200 dark:border-white/10 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 disabled:opacity-50"
+                      >
+                        انصراف
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -478,6 +524,15 @@ export default function AttributeGroupsPage() {
                           <p className="text-xs text-gray-400" dir="ltr">
                             {a.slug} • {a.values?.length || 0} مقدار
                           </p>
+                        </button>
+                        <button
+                          onClick={() => startEditAttribute(a)}
+                          title="ویرایش"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
                         </button>
                         <button
                           onClick={() => setConfirmDelete({ type: "attribute", id: a.id, title: a.title })}

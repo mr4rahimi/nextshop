@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+
 export async function GET() {
   const groups = await prisma.attributeGroup.findMany({
     include: {
@@ -35,6 +36,7 @@ export async function PUT(req: Request) {
   });
   return NextResponse.json(updated);
 }
+
 
 export async function DELETE(req: Request) {
   const { id } = await req.json();
