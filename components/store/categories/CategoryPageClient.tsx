@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ManaProductCard, { ProductCardItem } from "@/components/store/product/ManaProductCard";
 
@@ -347,21 +348,71 @@ export default function CategoryPageClient({
   category: Category;
   categorySlug: string;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // ── نگاشت دوطرفه slug ↔ id برای ویژگی‌ها ──
+  const attrMaps = useMemo(() => {
+    const attrIdToSlug = new Map<string, string>();
+    const attrSlugToId = new Map<string, string>();
+    const valueIdToSlug = new Map<string, string>();
+    const valueSlugToId = new Map<string, string>(); // key: `${attrId}:${valueSlug}`
+
+    (category?.attributeGroups ?? []).forEach((ag) => {
+      (ag.attributeGroup?.attributes ?? []).forEach((attr: any) => {
+        if (!attr.slug) return;
+        attrIdToSlug.set(attr.id, attr.slug);
+        attrSlugToId.set(attr.slug, attr.id);
+        (attr.values ?? []).forEach((v: any) => {
+          if (!v.slug) return;
+          valueIdToSlug.set(v.id, v.slug);
+          valueSlugToId.set(`${attr.id}:${v.slug}`, v.id);
+        });
+      });
+    });
+    return { attrIdToSlug, attrSlugToId, valueIdToSlug, valueSlugToId };
+  }, [category]);
+
+  const absMin = String(Number(category?.priceRange?.min ?? 0));
+  const absMax = String(Number(category?.priceRange?.max ?? 100000000));
+
   const [products, setProducts] = useState<ProductCardItem[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => {
+    const n = parseInt(searchParams.get("page") ?? "1");
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  });
   const [loading, setLoading] = useState(false);
   const [initialLoaded, setInitialLoaded] = useState(false);
 
   // Filters
-  const [sort, setSort] = useState<SortType>("newest");
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [appliedMin, setAppliedMin] = useState("");
-  const [appliedMax, setAppliedMax] = useState("");
+  const [sort, setSort] = useState<SortType>(() => {
+    const s = searchParams.get("sort") ?? "";
+    return (["newest", "popular", "price_asc", "price_desc"].includes(s) ? s : "newest") as SortType;
+  });
+  const [selectedBrands, setSelectedBrands] = useState<string[]>(() =>
+    (searchParams.get("brand") ?? "").split(",").map(s => s.trim()).filter(Boolean)
+  );
+  const [minPrice, setMinPrice] = useState(() => searchParams.get("minPrice") ?? "");
+  const [maxPrice, setMaxPrice] = useState(() => searchParams.get("maxPrice") ?? "");
+  const [appliedMin, setAppliedMin] = useState(() => searchParams.get("minPrice") ?? "");
+  const [appliedMax, setAppliedMax] = useState(() => searchParams.get("maxPrice") ?? "");
   const [brandSearch, setBrandSearch] = useState("");
-  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string[]>>({});
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string[]>>(() => {
+    const out: Record<string, string[]> = {};
+    (category?.attributeGroups ?? []).forEach((ag) => {
+      (ag.attributeGroup?.attributes ?? []).forEach((attr: any) => {
+        if (!attr.slug) return;
+        const raw = searchParams.get(attr.slug);
+        if (!raw) return;
+        const ids = raw.split(",").map(s => s.trim()).filter(Boolean)
+          .map(vs => (attr.values ?? []).find((v: any) => v.slug === vs)?.id)
+          .filter(Boolean) as string[];
+        if (ids.length) out[attr.id] = ids;
+      });
+    });
+    return out;
+  });
 
   // Mobile filter offcanvas
   const [filterOpen, setFilterOpen] = useState(false);
@@ -382,66 +433,83 @@ export default function CategoryPageClient({
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const useInfiniteScroll = page <= INFINITE_SCROLL_LIMIT;
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+  // ── سازنده مشترک پارامترها (هم برای URL هم برای API) ──
+  const buildParams = useCallback(
+    (opts: { forApi: boolean; page: number }) => {
+      const p = new URLSearchParams();
+
+      if (opts.forApi) {
+        p.set("category", categorySlug);
+        p.set("page", String(opts.page));
+        p.set("pageSize", String(PAGE_SIZE));
+        p.set("sort", sort);
+      } else {
+        if (opts.page > 1) p.set("page", String(opts.page));
+        if (sort !== "newest") p.set("sort", sort);
+      }
+
+      if (selectedBrands.length) p.set("brand", selectedBrands.join(","));
+
+      Object.entries(selectedAttributes).forEach(([attrId, valueIds]) => {
+        const aSlug = attrMaps.attrIdToSlug.get(attrId);
+        if (!aSlug || !valueIds?.length) return;
+        const vSlugs = valueIds
+          .map(id => attrMaps.valueIdToSlug.get(id))
+          .filter(Boolean) as string[];
+        if (vSlugs.length) p.set(aSlug, vSlugs.join(","));
+      });
+
+      if (appliedMin && appliedMin !== absMin) p.set("minPrice", appliedMin);
+      if (appliedMax && appliedMax !== absMax) p.set("maxPrice", appliedMax);
+
+      return p;
+    },
+    [categorySlug, sort, selectedBrands, selectedAttributes, appliedMin, appliedMax, absMin, absMax, attrMaps]
+  );
+
+  // ── نوشتن در URL ──
+  const skipFirstUrlWrite = useRef(true);
+  useEffect(() => {
+    if (skipFirstUrlWrite.current) { skipFirstUrlWrite.current = false; return; }
+    const qs = buildParams({ forApi: false, page }).toString();
+    router.replace(`/categories/${categorySlug}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [buildParams, page, categorySlug, router]);
+
+  // ── Fetch ──
+  const abortRef = useRef<AbortController | null>(null);
+
   const fetchProducts = useCallback(
     async (pageToFetch: number, append: boolean) => {
+      abortRef.current?.abort();
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
       setLoading(true);
       try {
-        const params = new URLSearchParams({
-          category: categorySlug,
-          page: String(pageToFetch),
-          pageSize: String(PAGE_SIZE),
-          sort,
-        });
-        if (selectedBrands.length === 1) params.set("brand", selectedBrands[0]);
-
-        Object.values(selectedAttributes).flat().forEach(valueId => {
-          params.append("attr", valueId);
-        });
-        const absMin = String(Number(category?.priceRange?.min ?? 0));
-        const absMax = String(Number(category?.priceRange?.max ?? 100000000));
-
-        if (appliedMin && appliedMin !== absMin) params.set("minPrice", appliedMin);
-        if (appliedMax && appliedMax !== absMax) params.set("maxPrice", appliedMax);
-        const res = await fetch(`/api/products?${params}`);
+        const params = buildParams({ forApi: true, page: pageToFetch });
+        const res = await fetch(`/api/products?${params}`, { signal: ctrl.signal });
         if (!res.ok) return;
         const data: ProductsResponse = await res.json();
-
         setTotal(data.total);
         setProducts((prev) => (append ? [...prev, ...data.items] : data.items));
         setInitialLoaded(true);
+      } catch (e: any) {
+        if (e?.name === "AbortError") return;
       } finally {
-        setLoading(false);
+        if (!ctrl.signal.aborted) setLoading(false);
       }
     },
-      [categorySlug, sort, selectedBrands, appliedMin, appliedMax, selectedAttributes]
-
+    [buildParams]
   );
 
+  // ── ریست هنگام تغییر فیلتر (با احترام به page اولیهٔ URL) ──
+  const entryPageRef = useRef(page);
   useEffect(() => {
-    setPage(1);
-    fetchProducts(1, false);
+    const target = entryPageRef.current;
+    entryPageRef.current = 1;
+    setPage(target);
+    fetchProducts(target, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort, selectedBrands, appliedMin, appliedMax, selectedAttributes, categorySlug]);
-
-  // Infinite scroll observer
-  useEffect(() => {
-    if (!useInfiniteScroll || !initialLoaded) return;
-    if (page >= totalPages) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !loading) {
-          const nextPage = page + 1;
-          setPage(nextPage);
-          fetchProducts(nextPage, true);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (sentinelRef.current) observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [page, totalPages, loading, useInfiniteScroll, initialLoaded, fetchProducts]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   function handleBrandToggle(slug: string) {

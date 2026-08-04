@@ -1,0 +1,5 @@
+[ATTR FIX]    "نوع کاربری": "-" → "usage-type"
+[ATTR OK]   "تکنولوژی چاپ" = fsfs
+[VAL FIX]    "تک کاره": "-" → "single-function"
+[VAL FIX]    "لیزری": "" → "laser"
+[VAL FIX]    "جوهر افشان": "-" → "inkjet"

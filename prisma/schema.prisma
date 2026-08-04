@@ -801,6 +801,7 @@ model AttributeValue {
   attribute   Attribute          @relation(fields: [attributeId], references: [id], onDelete: Cascade)
   products    ProductAttribute[]
 
+  @@unique([attributeId, slug])
   @@index([attributeId])
 }
 

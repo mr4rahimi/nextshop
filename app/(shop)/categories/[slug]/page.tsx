@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import CategoryPageClient from "@/components/store/categories/CategoryPageClient";
 import { SITE_URL, buildBaseMetadata, buildBreadcrumbSchema, buildItemListSchema, canonicalUrl } from "@/lib/seo";
@@ -59,7 +60,9 @@ export default async function CategoryPage({ params }: Props) {
     <>
       {breadcrumbJson && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJson }} />}
       {itemListJson   && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJson }} />}
-      <CategoryPageClient category={category} categorySlug={slug} />
+      <Suspense fallback={null}>
+        <CategoryPageClient category={category} categorySlug={slug} />
+      </Suspense>
     </>
   );
 }
