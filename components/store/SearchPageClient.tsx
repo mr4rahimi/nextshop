@@ -37,11 +37,16 @@ export default function SearchPageClient({ initialQ, initialPage, initialData }:
   const [loading, setLoading]    = useState(false);
   const [initialized, setInitialized] = useState(true);
 
+  useEffect(() => {
+  setProducts(initialData.products);
+  setTotal(initialData.total);
+}, [initialData]);
+
   const doSearch = useCallback(async (query: string, p: number) => {
     if (!query || query.length < 2) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&page=${p}&limit=${PAGE_SIZE}`);
+      const res = await fetch(`/api/store/search?q=${encodeURIComponent(query)}&page=${p}&limit=${PAGE_SIZE}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setProducts(data.products ?? []);
