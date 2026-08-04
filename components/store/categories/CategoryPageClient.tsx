@@ -590,7 +590,7 @@ export default function CategoryPageClient({
             <div className="relative">
               <div className="absolute -right-4 top-0 w-1 h-12 bg-primary-500 rounded-full blur-[2px]" />
               <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">
-                {category.title}
+                 {landingH1 ?? category.title}
               </h1>
               <div className="flex items-center gap-2 mt-3">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
