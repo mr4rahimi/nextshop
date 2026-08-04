@@ -1,6 +1,8 @@
 import { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { SITE_URL } from "@/lib/seo";
+import { listIndexableLandings } from "@/lib/landing-pages";
+import { parseCatalogQuery, buildCatalogWhere } from "@/lib/catalog";
 
 // force-dynamic: SITE_URL must come from the running process env, not build-time static output.
 // Each of the 4 deployments has a different SITE_URL in its ecosystem.config.js.
@@ -23,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         where: { isActive: true },
         select: { slug: true, updatedAt: true },
         orderBy: { updatedAt: "desc" },
-        take: 5000,
+        take: 45000,
       }),
       prisma.category.findMany({
         where: { isActive: true },
@@ -39,6 +41,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         orderBy: { publishedAt: "desc" },
       }),
     ]);
+
+    // ── صفحات فرود: فقط آن‌هایی که واقعاً محصول دارند ──
+    const landings = await listIndexableLandings();
+    const landingEntries: MetadataRoute.Sitemap = [];
+
+    for (const lp of landings) {
+      const cq = parseCatalogQuery(
+        { ...lp.filters, category: lp.categorySlug },
+        { pageSize: 1 }
+      );
+      const where = await buildCatalogWhere(cq);
+      if (!where) continue;
+      const count = await prisma.product.count({ where });
+      if (count === 0) continue;   // صفحه نازک وارد sitemap نمی‌شود
+
+      landingEntries.push({
+        url: `${SITE_URL}/collections/${lp.slug}`,
+        lastModified: now,
+        changeFrequency: "weekly",
+        priority: 0.75,
+      });
+    }
 
     const productUrls: MetadataRoute.Sitemap = products.map(p => ({
       url:             `${SITE_URL}/products/${p.slug}`,
@@ -68,8 +92,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority:        0.7,
     }));
 
-    return [...staticPages, ...productUrls, ...categoryUrls, ...brandUrls, ...postUrls];
-  } catch {
-    return staticPages;
+    return [...staticPages, ...categoryUrls, ...landingEntries, ...brandUrls, ...productUrls, ...postUrls];
+ } catch (err) {
+    console.error("[sitemap] failed to build dynamic entries:", err);
+    throw err;   // بهتر است sitemap موقتاً ۵۰۰ بدهد تا اینکه گوگل فکر کند سایت خالی شده
   }
 }
