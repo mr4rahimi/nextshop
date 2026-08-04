@@ -347,10 +347,12 @@ export default function CategoryPageClient({
   initialData,
   landingH1,
   landingIntro,
+  lockedFilters,
+  basePath,
 }: {
   category: Category;
   categorySlug: string;
-    initialData?: ProductsResponse;
+  initialData?: ProductsResponse;
   landingH1?: string | null;
   landingIntro?: string | null;
   lockedFilters?: Record<string, string>;
@@ -408,7 +410,7 @@ export default function CategoryPageClient({
   const [appliedMax, setAppliedMax] = useState(() => searchParams.get("maxPrice") ?? "");
   const [brandSearch, setBrandSearch] = useState("");
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string[]>>(() => {
-    const out: Record<string, string[]> = {};
+  const out: Record<string, string[]> = {};
     (category?.attributeGroups ?? []).forEach((ag) => {
       (ag.attributeGroup?.attributes ?? []).forEach((attr: any) => {
         if (!attr.slug) return;
@@ -479,6 +481,7 @@ export default function CategoryPageClient({
       return p;
     },
 [categorySlug, sort, selectedBrands, selectedAttributes, appliedMin, appliedMax, absMin, absMax, attrMaps, lockedFilters]
+  );
 
   // ── نوشتن در URL ──
   const skipFirstUrlWrite = useRef(true);
