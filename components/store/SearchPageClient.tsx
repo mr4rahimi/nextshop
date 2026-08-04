@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -38,25 +38,46 @@ export default function SearchPageClient({ initialQ, initialPage, initialData }:
   const [initialized, setInitialized] = useState(true);
 
   useEffect(() => {
-  setProducts(initialData.products);
-  setTotal(initialData.total);
-}, [initialData]);
+    const term = inputVal.trim();
+    if (term === q) return;
+    const t = setTimeout(() => {
+      if (term.length >= 2) { setQ(term); setPage(1); }
+      else { setQ(""); setProducts([]); setTotal(0); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [inputVal, q]);
 
-  const doSearch = useCallback(async (query: string, p: number) => {
-    if (!query || query.length < 2) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/store/search?q=${encodeURIComponent(query)}&page=${p}&limit=${PAGE_SIZE}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setProducts(data.products ?? []);
-      setTotal(data.total ?? 0);
-    } catch {
-      setProducts([]); setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  useEffect(() => {
+    setProducts(initialData.products);
+    setTotal(initialData.total);
+    setQ(initialQ);
+    setInputVal(initialQ);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQ]);
+const abortRef = useRef<AbortController | null>(null);
+
+const doSearch = useCallback(async (query: string, p: number) => {
+  if (!query || query.length < 2) return;
+  abortRef.current?.abort();
+  const ctrl = new AbortController();
+  abortRef.current = ctrl;
+  setLoading(true);
+  try {
+    const res = await fetch(
+      `/api/store/search?q=${encodeURIComponent(query)}&page=${p}&limit=${PAGE_SIZE}`,
+      { signal: ctrl.signal }
+    );
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    setProducts(data.products ?? []);
+    setTotal(data.total ?? 0);
+  } catch (e: any) {
+    if (e?.name === "AbortError") return;   // نتیجه قدیمی رو دور بریز
+    setProducts([]); setTotal(0);
+  } finally {
+    if (!ctrl.signal.aborted) setLoading(false);
+  }
+}, []);
 
   useEffect(() => {
     if (!initialized) { doSearch(q, page); }
