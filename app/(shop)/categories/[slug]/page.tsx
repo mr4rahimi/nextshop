@@ -6,7 +6,8 @@ import { serialize } from "@/lib/serialize";
 import CategoryPageClient from "@/components/store/categories/CategoryPageClient";
 import { SITE_URL, buildBaseMetadata, buildBreadcrumbSchema, buildItemListSchema, canonicalUrl } from "@/lib/seo";
 import { parseCatalogQuery, fetchCatalog, RESERVED_PARAMS } from "@/lib/catalog";
-import { matchLandingPage } from "@/lib/landing-pages";
+import { matchLandingByFilters } from "@/lib/landing-pages";
+import { redirect } from "next/navigation";
 
 const PAGE_SIZE = 12;
 
@@ -130,23 +131,12 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (!category) return { title: "دسته‌بندی یافت نشد", robots: { index: false, follow: false } };
 
   const { activeFilters, hasFilters, hasSort, hasPrice, page } = analyzeFilters(sp);
-  const landing = hasSort || hasPrice ? null : matchLandingPage(slug, activeFilters);
+  const landing = hasSort || hasPrice ? null : await matchLandingByFilters(slug, activeFilters);
 
   const basePath = `/categories/${slug}`;
   const pageSuffix = page > 1 ? ` — صفحه ${page}` : "";
 
-  // ── صفحه فرود منتخب: ایندکس می‌شود ──
-  if (landing) {
-    return buildBaseMetadata({
-      title:       landing.title + pageSuffix,
-      description: landing.description,
-      image:       category.imageUrl || settings?.storeLogo || null,
-      siteName:    settings?.storeName || undefined,
-      path:        `${basePath}${stableQs(activeFilters, page)}`,
-      noIndex:     page > 1,
-      followWhenNoIndex: true,
-    });
-  }
+
 
   // ── فیلتر معمولی / مرتب‌سازی / صفحه‌بندی: noindex, follow + canonical به دسته پایه ──
   if (hasFilters || hasSort || hasPrice || page > 1) {
@@ -178,7 +168,9 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   if (!category) notFound();
 
   const { activeFilters, hasSort, hasPrice } = analyzeFilters(sp);
-  const landing = hasSort || hasPrice ? null : matchLandingPage(slug, activeFilters);
+  const landing = hasSort || hasPrice ? null : await matchLandingByFilters(slug, activeFilters);
+  // ترکیب فیلتر منطبق با یک صفحه فرود → ریدایرکت دائم به نسخه canonical
+  if (landing) redirect(`/collections/${landing.slug}`);
 
   // ── SSR نتایج فیلترشده ──
   const cq = parseCatalogQuery(sp, { pageSize: PAGE_SIZE });
@@ -213,8 +205,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           category={category}
           categorySlug={slug}
           initialData={initialData}
-          landingH1={landing?.h1 ?? null}
-          landingIntro={landing?.intro ?? null}
+          landingH1={null}
+          landingIntro={null}
         />
       </Suspense>
     </>
