@@ -104,7 +104,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   cq.categorySlug = slug;
   const initialData = serialize(await fetchCatalog(cq));
 
-  const h1 = landing?.h1 ?? category.title;
+  const h1 = category.title;
 
   let breadcrumbJson = "";
   let itemListJson = "";
