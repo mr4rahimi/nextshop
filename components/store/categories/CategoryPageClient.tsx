@@ -350,9 +350,11 @@ export default function CategoryPageClient({
 }: {
   category: Category;
   categorySlug: string;
-  initialData?: ProductsResponse;
+    initialData?: ProductsResponse;
   landingH1?: string | null;
   landingIntro?: string | null;
+  lockedFilters?: Record<string, string>;
+  basePath?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -397,7 +399,8 @@ export default function CategoryPageClient({
     return (["newest", "popular", "price_asc", "price_desc"].includes(s) ? s : "newest") as SortType;
   });
   const [selectedBrands, setSelectedBrands] = useState<string[]>(() =>
-    (searchParams.get("brand") ?? "").split(",").map(s => s.trim()).filter(Boolean)
+    (lockedFilters?.brand ?? searchParams.get("brand") ?? "")
+      .split(",").map(s => s.trim()).filter(Boolean)
   );
   const [minPrice, setMinPrice] = useState(() => searchParams.get("minPrice") ?? "");
   const [maxPrice, setMaxPrice] = useState(() => searchParams.get("maxPrice") ?? "");
@@ -409,7 +412,7 @@ export default function CategoryPageClient({
     (category?.attributeGroups ?? []).forEach((ag) => {
       (ag.attributeGroup?.attributes ?? []).forEach((attr: any) => {
         if (!attr.slug) return;
-        const raw = searchParams.get(attr.slug);
+        const raw = lockedFilters?.[attr.slug] ?? searchParams.get(attr.slug);
         if (!raw) return;
         const ids = raw.split(",").map(s => s.trim()).filter(Boolean)
           .map(vs => (attr.values ?? []).find((v: any) => v.slug === vs)?.id)
@@ -454,11 +457,16 @@ export default function CategoryPageClient({
         if (sort !== "newest") p.set("sort", sort);
       }
 
-      if (selectedBrands.length) p.set("brand", selectedBrands.join(","));
+      const locked = lockedFilters ?? {};
+
+      if (selectedBrands.length && (opts.forApi || !locked.brand)) {
+        p.set("brand", selectedBrands.join(","));
+      }
 
       Object.entries(selectedAttributes).forEach(([attrId, valueIds]) => {
         const aSlug = attrMaps.attrIdToSlug.get(attrId);
         if (!aSlug || !valueIds?.length) return;
+        if (!opts.forApi && locked[aSlug]) return;
         const vSlugs = valueIds
           .map(id => attrMaps.valueIdToSlug.get(id))
           .filter(Boolean) as string[];
@@ -470,16 +478,16 @@ export default function CategoryPageClient({
 
       return p;
     },
-    [categorySlug, sort, selectedBrands, selectedAttributes, appliedMin, appliedMax, absMin, absMax, attrMaps]
-  );
+[categorySlug, sort, selectedBrands, selectedAttributes, appliedMin, appliedMax, absMin, absMax, attrMaps, lockedFilters]
 
   // ── نوشتن در URL ──
   const skipFirstUrlWrite = useRef(true);
   useEffect(() => {
     if (skipFirstUrlWrite.current) { skipFirstUrlWrite.current = false; return; }
     const qs = buildParams({ forApi: false, page }).toString();
-    router.replace(`/categories/${categorySlug}${qs ? `?${qs}` : ""}`, { scroll: false });
-  }, [buildParams, page, categorySlug, router]);
+    const base = basePath ?? `/categories/${categorySlug}`;
+    router.replace(`${base}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [buildParams, page, categorySlug, router, basePath]);
 
   // ── Fetch ──
   const abortRef = useRef<AbortController | null>(null);
@@ -598,6 +606,11 @@ export default function CategoryPageClient({
                   {toFarsi(total)} محصول موجود
                 </p>
               </div>
+               {landingIntro && (
+                <p className="mt-4 max-w-3xl text-sm leading-7 text-gray-600 dark:text-gray-300">
+                  {landingIntro}
+                </p>
+              )}
             </div>
 
             {/* Sort */}
