@@ -72,6 +72,7 @@ model Category {
   products        Product[]
   megaMenu        MegaMenuCategory?
   attributeGroups CategoryAttributeGroup[]
+  landingPages LandingPage[]
 
   @@index([parentId])
   @@index([isActive])
@@ -1594,4 +1595,26 @@ model ClubAutomation {
   lastRunAt    DateTime?
 
   template     SmsTemplate @relation(fields: [templateId], references: [id])
+}
+
+model LandingPage {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  categoryId  String
+  /// { "print-type": "laser", "usage-type": "single-function", "brand": "hp" }
+  filters     Json
+  title       String
+  h1          String
+  description String
+  intro       String?
+  bodyHtml    String?
+  isActive    Boolean  @default(true)
+  isIndexable Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@index([isActive, isIndexable])
 }
