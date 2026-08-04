@@ -17,17 +17,24 @@ export function buildBaseMetadata(opts: {
   image?: string | null;
   path: string;
   noIndex?: boolean;
+  /** برای صفحات فیلتری: noindex ولی follow (پیش‌فرض false) */
+  followWhenNoIndex?: boolean;
+  /** اگر داده شود، به‌جای path برای canonical استفاده می‌شود */
+  canonicalPath?: string;
   ogType?: "website" | "article";
   siteName?: string;
 }): Metadata {
   const url      = canonicalUrl(opts.path);
+  const canon    = canonicalUrl(opts.canonicalPath ?? opts.path);
   const siteName = opts.siteName ?? process.env.NEXT_PUBLIC_STORE_NAME;
   return {
     title:       opts.title,
     description: opts.description,
     keywords:    opts.keywords,
-    alternates:  { canonical: url },
-    robots:      opts.noIndex ? { index: false, follow: false } : { index: true, follow: true },
+    alternates:  { canonical: canon },
+    robots:      opts.noIndex
+      ? { index: false, follow: opts.followWhenNoIndex ?? false }
+      : { index: true, follow: true },
     openGraph: {
       title:       opts.title,
       description: opts.description,
