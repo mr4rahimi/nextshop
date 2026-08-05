@@ -621,22 +621,37 @@ export default function CategoryPageClient({
                 </p>
               )}
 
-              {!basePath && (category.landings?.length ?? 0) > 0 && (
-                <nav aria-label="دسته‌بندی‌های مرتبط" className="mt-5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {category.landings!.map((lp) => (
-                      <Link
-                        key={lp.slug}
-                        href={`/collections/${lp.slug}`}
-                        className="group inline-flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 px-3.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 transition-all hover:border-primary-500 hover:bg-primary-50 hover:text-primary-700 dark:hover:bg-primary-500/10 dark:hover:text-primary-300"
-                      >
-                        <span className="w-1 h-1 rounded-full bg-primary-500 opacity-60 group-hover:opacity-100 transition-opacity" />
-                        {lp.h1}
-                      </Link>
-                    ))}
+               {!basePath && (category.landings?.length ?? 0) > 0 && (
+                <nav aria-label="دسته‌بندی‌های مرتبط" className="mt-5 -mx-4 lg:mx-0">
+                  <div className="relative">
+                    <div
+                      className="flex gap-2 overflow-x-auto scroll-smooth px-4 lg:px-0 pb-2
+                                 [scrollbar-width:none] [-ms-overflow-style:none]
+                                 [&::-webkit-scrollbar]:hidden"
+                    >
+                      {category.landings!.map((lp) => (
+                        <Link
+                          key={lp.slug}
+                          href={`/collections/${lp.slug}`}
+                          className="group shrink-0 inline-flex items-center gap-1.5 rounded-full
+                                     border border-gray-200 dark:border-white/10
+                                     bg-white dark:bg-white/5 px-3.5 py-1.5
+                                     text-xs font-bold whitespace-nowrap
+                                     text-gray-700 dark:text-gray-200 transition-all
+                                     hover:border-primary-500 hover:bg-primary-50 hover:text-primary-700
+                                     dark:hover:bg-primary-500/10 dark:hover:text-primary-300"
+                        >
+                          <span className="w-1 h-1 rounded-full bg-primary-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+                          {lp.h1}
+                        </Link>
+                      ))}
+                    </div>
+                    {/* محو‌شدگی لبه — نشانه‌ی وجود محتوای بیشتر */}
+                    <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-gray-50 dark:from-[#0a0b0f] to-transparent lg:hidden" />
                   </div>
                 </nav>
               )}
+            
             </div>
 
             {/* Sort */}

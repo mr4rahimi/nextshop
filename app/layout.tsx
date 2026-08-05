@@ -70,7 +70,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {cssVars && (
           <style dangerouslySetInnerHTML={{ __html: cssVars }} />
         )}
-        <link rel="stylesheet" href="/assets/js/plugin/swiper/swiper-bundle.min.css" />
+        <link
+          rel="preload"
+          as="style"
+          href="/assets/js/plugin/swiper/swiper-bundle.min.css"
+        />
+        <noscript>
+          <link rel="stylesheet" href="/assets/js/plugin/swiper/swiper-bundle.min.css" />
+        </noscript>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='/assets/js/plugin/swiper/swiper-bundle.min.css';document.head.appendChild(l);})();`,
+          }}
+        />
         <script src="/assets/js/plugin/swiper/swiper-bundle.min.js" defer></script>
       </head>
       <body className={`${myFont.className} bg-white dark:bg-[#050505] text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300`}>

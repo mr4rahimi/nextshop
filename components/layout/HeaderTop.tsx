@@ -30,8 +30,7 @@ export default function HeaderTop({ logoUrl, siteName }: { logoUrl: string | nul
             </button>
  
             <Link href="/" className="flex items-center gap-2">
-              {logoUrl && <Image src={logoUrl} width={112} height={40} className="h-10 w-auto object-contain" alt={siteName ?? ""} priority />}
-            </Link>
+            {logoUrl && <Image src={logoUrl} width={112} height={40} className="h-10 w-auto object-contain" alt={siteName || "فروشگاه"} priority />}            </Link>
           </div>
 
           {/* CENTER: search */}
@@ -65,7 +64,7 @@ export default function HeaderTop({ logoUrl, siteName }: { logoUrl: string | nul
             </button>
 
             {/* LOGIN */}
-            <Link href="/user" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-md hover:border-primary-500/50 hover:bg-primary-50/50 dark:hover:bg-primary-500/10 transition-all duration-300 shadow-sm">
+            <Link href="/user" aria-label="حساب کاربری" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-md hover:border-primary-500/50 hover:bg-primary-50/50 dark:hover:bg-primary-500/10 transition-all duration-300 shadow-sm">
               <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
@@ -80,7 +79,7 @@ export default function HeaderTop({ logoUrl, siteName }: { logoUrl: string | nul
             </div>
 
             {/* SEARCH MOBILE */}
-            <Link href="/search"
+            <Link href="/search" aria-label="جستجو"
               className="md:hidden p-2.5 rounded-xl border border-gray-200/50 dark:border-white/10 bg-white/40 dark:bg-white/5 text-gray-600 dark:text-gray-400">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeWidth={2.5} />

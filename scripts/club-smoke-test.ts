@@ -116,7 +116,7 @@ async function main() {
   );
 
   await closeQueues();
-  await redis.quit();
+  await redis?.quit();
   process.exit(failed === 0 ? 0 : 1);
 }
 

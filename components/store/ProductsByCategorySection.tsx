@@ -70,6 +70,8 @@ function ProductSlide({ product }: { product: Product }) {
           </div>
         )}
 
+        
+
         <Link href={`/products/${product.slug}`} className="relative p-7 flex flex-col h-full z-10 transition-transform duration-500 group-hover:-translate-y-4">
 
           {/* Image */}

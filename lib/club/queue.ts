@@ -45,6 +45,13 @@ function getQueue(name: QueueName): Queue {
   const existing = registry.get(name);
   if (existing) return existing;
 
+  if (!redis) {
+    throw new Error(
+      "[club] REDIS_URL تنظیم نشده — صف پیامک در دسترس نیست. " +
+      "برای فعال‌سازی باشگاه مشتریان، Redis را راه‌اندازی و REDIS_URL را در .env تعریف کن."
+    );
+  }
+
   const q = new Queue(name, {
     connection: redis,
     prefix: QUEUE_PREFIX,

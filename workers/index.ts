@@ -35,6 +35,9 @@ if (!redis) {
   process.exit(1);
 }
 
+/** اتصال تأییدشده — پس از بررسی بالا قطعاً null نیست */
+const connection = redis;
+
 const CONCURRENCY = Number(process.env.CLUB_WORKER_CONCURRENCY ?? 5);
 
 // ─── کرون‌ها ─────────────────────────────────────────────────────────
@@ -119,7 +122,7 @@ async function main() {
       return result;
     },
     {
-      connection: redis,
+      connection,
       prefix: QUEUE_PREFIX,
       concurrency: CONCURRENCY,
       limiter: { max: 10, duration: 1000 },
@@ -173,7 +176,7 @@ async function main() {
       return { delivered, failed, optedOut };
     },
     {
-      connection: redis,
+      connection,
       prefix: QUEUE_PREFIX,
       concurrency: 2,
       limiter: { max: 5, duration: 1000 },
@@ -224,7 +227,7 @@ async function main() {
       }
     },
     {
-      connection: redis,
+      connection,
       prefix: QUEUE_PREFIX,
       concurrency: 1,
     }
@@ -243,7 +246,7 @@ async function main() {
     console.log(`[worker] دریافت ${signal} — در حال خاموش شدن...`);
     await Promise.all([smsWorker.close(), statusWorker.close(), cronWorker.close()]);
     await prisma.$disconnect();
-    await redis.quit();
+    await redis?.quit();
     process.exit(0);
   };
 

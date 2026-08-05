@@ -88,6 +88,7 @@ export default function MobileMenuPortal({ logoUrl, siteName }: { logoUrl?: stri
             {logoUrl && <Image src={logoUrl} width={120} height={32} className="h-8 w-auto max-w-[120px] object-contain" alt={siteName ?? ""} />}
           </Link>
           <button onClick={close}
+            aria-label="بستن منو"
             className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-secondary-500 rounded-xl transition-all border border-transparent hover:border-red-100">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
