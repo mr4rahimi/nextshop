@@ -18,7 +18,7 @@ export async function getCategoryData(slug: string) {
 
   const catIds = [category.id, ...category.children.map(c => c.id)];
 
-  const [brands, priceAgg, attrGroups] = await Promise.all([
+  const [brands, priceAgg, attrGroups, landings] = await Promise.all([
     prisma.brand.findMany({
       where: { isActive: true, products: { some: { isActive: true, categoryId: { in: catIds } } } },
       select: { id: true, title: true, slug: true, logoUrl: true },
@@ -47,6 +47,13 @@ export async function getCategoryData(slug: string) {
         },
       },
     }),
+
+    prisma.landingPage.findMany({
+      where: { categoryId: category.id, isActive: true },
+      select: { slug: true, h1: true },
+      orderBy: [{ sortOrder: "asc" }, { h1: "asc" }],
+      take: 12,
+    }),
   ]);
 
   return serialize({
@@ -64,6 +71,7 @@ export async function getCategoryData(slug: string) {
       min: priceAgg._min.price ?? 0,
       max: priceAgg._max.price ?? 100_000_000,
     },
+    landings,
     attributeGroups: attrGroups.map(ag => ({
       id: ag.id,
       attributeGroup: {

@@ -25,6 +25,7 @@ interface Category {
   parent: { id: string; title: string; slug: string } | null;
   brands: Brand[];
   priceRange: { min: string; max: string };
+  landings?: { slug: string; h1: string }[];
   attributeGroups?: {
     id: string;
     attributeGroup: {
@@ -381,7 +382,8 @@ export default function CategoryPageClient({
       });
     });
     return { attrIdToSlug, attrSlugToId, valueIdToSlug, valueSlugToId };
-  }, [category]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category?.id, category?.attributeGroups?.length]);
 
   const absMin = String(Number(category?.priceRange?.min ?? 0));
   const absMax = String(Number(category?.priceRange?.max ?? 100000000));
@@ -484,12 +486,16 @@ export default function CategoryPageClient({
   );
 
   // ── نوشتن در URL ──
-  const skipFirstUrlWrite = useRef(true);
   useEffect(() => {
-    if (skipFirstUrlWrite.current) { skipFirstUrlWrite.current = false; return; }
     const qs = buildParams({ forApi: false, page }).toString();
     const base = basePath ?? `/categories/${categorySlug}`;
-    router.replace(`${base}${qs ? `?${qs}` : ""}`, { scroll: false });
+    const next = `${base}${qs ? `?${qs}` : ""}`;
+
+    // اگر آدرس فعلی همین است، ننویس — وگرنه حلقه بی‌نهایت رندر ایجاد می‌شود
+    const current = window.location.pathname + window.location.search;
+    if (current === next) return;
+
+    router.replace(next, { scroll: false });
   }, [buildParams, page, categorySlug, router, basePath]);
 
   // ── Fetch ──
@@ -613,6 +619,23 @@ export default function CategoryPageClient({
                 <p className="mt-4 max-w-3xl text-sm leading-7 text-gray-600 dark:text-gray-300">
                   {landingIntro}
                 </p>
+              )}
+
+              {!basePath && (category.landings?.length ?? 0) > 0 && (
+                <nav aria-label="دسته‌بندی‌های مرتبط" className="mt-5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {category.landings!.map((lp) => (
+                      <Link
+                        key={lp.slug}
+                        href={`/collections/${lp.slug}`}
+                        className="group inline-flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 px-3.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-200 transition-all hover:border-primary-500 hover:bg-primary-50 hover:text-primary-700 dark:hover:bg-primary-500/10 dark:hover:text-primary-300"
+                      >
+                        <span className="w-1 h-1 rounded-full bg-primary-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        {lp.h1}
+                      </Link>
+                    ))}
+                  </div>
+                </nav>
               )}
             </div>
 

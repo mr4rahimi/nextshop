@@ -94,3 +94,16 @@ export async function validateFilters(
 
   return { ok: errors.length === 0, errors };
 }
+
+/** صفحات فرود فعال یک دسته — برای نمایش چیپ‌های لینک داخلی */
+export async function listLandingsForCategory(
+  categoryId: string
+): Promise<{ slug: string; h1: string }[]> {
+  const rows = await prisma.landingPage.findMany({
+    where: { categoryId, isActive: true },
+    select: { slug: true, h1: true },
+    orderBy: [{ sortOrder: "asc" }, { h1: "asc" }],
+    take: 12,
+  });
+  return rows;
+}
