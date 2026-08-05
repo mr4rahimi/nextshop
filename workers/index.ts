@@ -30,6 +30,11 @@ import {
 } from "../lib/club/sms/sync";
 import { prisma } from "../lib/prisma";
 
+if (!redis) {
+  console.error("[worker] REDIS_URL تنظیم نشده — ورکر اجرا نمی‌شود.");
+  process.exit(1);
+}
+
 const CONCURRENCY = Number(process.env.CLUB_WORKER_CONCURRENCY ?? 5);
 
 // ─── کرون‌ها ─────────────────────────────────────────────────────────

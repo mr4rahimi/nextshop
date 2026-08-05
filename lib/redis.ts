@@ -1,43 +1,55 @@
 import IORedis from "ioredis";
 
 /**
- * اتصال مشترک Redis
+ * اتصال اختیاری Redis
  *
- * نکته مهم: BullMQ الزاماً به `maxRetriesPerRequest: null` نیاز دارد.
- * اگر این مقدار تنظیم نشود، Worker با خطای
- * "BullMQ: Your redis options maxRetriesPerRequest must be null" بالا نمی‌آید.
+ * اگر REDIS_URL تنظیم نشده باشد، هیچ اتصالی برقرار نمی‌شود و redis برابر null است.
+ * مصرف‌کنندگان باید null را مدیریت کنند.
+ *
+ * نکته: BullMQ الزاماً به `maxRetriesPerRequest: null` نیاز دارد.
  */
+const REDIS_URL = process.env.REDIS_URL?.trim() || null;
 
-const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:63791";
+const globalForRedis = globalThis as unknown as { __redis?: IORedis | null };
 
-const globalForRedis = globalThis as unknown as { __redis?: IORedis };
+function createRedis(): IORedis | null {
+  if (!REDIS_URL) return null;
 
-function createRedis(): IORedis {
   const client = new IORedis(REDIS_URL, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
-    lazyConnect: false,
+    lazyConnect: true,          // فقط هنگام اولین استفاده وصل شود
+    enableOfflineQueue: false,  // اگر قطع بود، دستور را در صف نگه ندار
+    retryStrategy: (times) => (times > 5 ? null : Math.min(times * 500, 5000)),
   });
 
+  let logged = false;
   client.on("error", (err) => {
-    console.error("[redis] خطای اتصال:", err.message);
+    if (!logged) {                       // فقط یک بار لاگ کن، نه بی‌نهایت
+      console.error("[redis] خطای اتصال:", err.message);
+      logged = true;
+    }
   });
+  client.on("ready", () => { logged = false; });
 
   return client;
 }
 
-export const redis: IORedis = globalForRedis.__redis ?? createRedis();
+export const redis: IORedis | null =
+  globalForRedis.__redis !== undefined ? globalForRedis.__redis : createRedis();
 
-// در حالت توسعه، hot-reload نکست نباید هر بار یک اتصال جدید بسازد
 if (process.env.NODE_ENV !== "production") {
   globalForRedis.__redis = redis;
 }
 
-/** بررسی سلامت اتصال — در health-check و اسکریپت تست استفاده می‌شود */
+/** آیا Redis پیکربندی شده است؟ */
+export const isRedisEnabled = redis !== null;
+
+/** بررسی سلامت اتصال */
 export async function pingRedis(): Promise<boolean> {
+  if (!redis) return false;
   try {
-    const res = await redis.ping();
-    return res === "PONG";
+    return (await redis.ping()) === "PONG";
   } catch {
     return false;
   }
