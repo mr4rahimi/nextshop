@@ -1678,6 +1678,305 @@ function CallToActionEditor({ config, setConfig }: { config: CTAConfig; setConfi
   );
 }
 
+// ─── UniqueStarHeroEditor ─────────────────────────────────────────────────────
+interface USHLink {
+  text: string;
+  url: string;
+  tone: "primary" | "secondary" | "accent";
+}
+
+interface USHConfig {
+  brandLabel: string;
+  heading: string;
+  subheading: string;
+  description: string;
+  btnText: string;
+  btnUrl: string;
+  hangingLinks: USHLink[];
+  bgFrom: string;
+  bgMid: string;
+  bgTo: string;
+  colorPrimary: string;
+  colorSecondary: string;
+  colorAccent: string;
+  colorText: string;
+  colorMuted: string;
+  showParticles: boolean;
+  showMoon: boolean;
+  showMeteors: boolean;
+  showClock: boolean;
+  showHangingLinks: boolean;
+  height: "full" | "large" | "medium";
+  headerOverlay: boolean;
+}
+
+const USH_DEFAULT: USHConfig = {
+  brandLabel: "Unique Star",
+  heading: "یونیک استار",
+  subheading: "انواع تابلو و لگوهای خاص",
+  description: "تابلو دکوراتیو، ساعت لگویی و طرح‌های اختصاصی با سلیقه‌ی تو",
+  btnText: "مشاهده محصولات",
+  btnUrl: "/products",
+  hangingLinks: [
+    { text: "درباره ما", url: "#", tone: "primary" },
+    { text: "پیج اینستاگرام", url: "#", tone: "secondary" },
+    { text: "ارتباط با ما", url: "#", tone: "secondary" },
+    { text: "تخفیف‌ها ✦", url: "#", tone: "accent" },
+  ],
+  bgFrom: "#2a1650",
+  bgMid: "#17102e",
+  bgTo: "#0e0a1a",
+  colorPrimary: "#ff5fb0",
+  colorSecondary: "#8b5cf6",
+  colorAccent: "#ff8ac6",
+  colorText: "#e6dcff",
+  colorMuted: "#9d8ec4",
+  showParticles: true,
+  showMoon: true,
+  showMeteors: true,
+  showClock: true,
+  showHangingLinks: true,
+  height: "full",
+  headerOverlay: true,
+};
+
+const USH_TONES: { value: USHLink["tone"]; label: string }[] = [
+  { value: "primary", label: "صورتی" },
+  { value: "secondary", label: "بنفش" },
+  { value: "accent", label: "صورتی روشن" },
+];
+
+const USH_HEIGHTS: { value: USHConfig["height"]; label: string }[] = [
+  { value: "full", label: "تمام صفحه" },
+  { value: "large", label: "بلند" },
+  { value: "medium", label: "متوسط" },
+];
+
+function USHToggle({
+  label, hint, value, onChange,
+}: { label: string; hint?: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+      <span className="min-w-0">
+        <span className="block text-xs font-black text-gray-800 dark:text-gray-200">{label}</span>
+        {hint && <span className="block text-[10px] text-gray-400 mt-0.5">{hint}</span>}
+      </span>
+      <input
+        type="checkbox"
+        checked={value}
+        onChange={e => onChange(e.target.checked)}
+        className="w-4 h-4 rounded flex-shrink-0"
+        style={{ accentColor: "#8b5cf6" }}
+      />
+    </label>
+  );
+}
+
+function UniqueStarHeroEditor({
+  config, setConfig,
+}: { config: USHConfig; setConfig: (c: USHConfig) => void }) {
+  const set = <K extends keyof USHConfig>(k: K, v: USHConfig[K]) => setConfig({ ...config, [k]: v });
+
+  const setLink = (i: number, patch: Partial<USHLink>) =>
+    set("hangingLinks", config.hangingLinks.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+
+  const addLink = () =>
+    set("hangingLinks", [...config.hangingLinks, { text: "", url: "#", tone: "primary" }]);
+
+  const removeLink = (i: number) =>
+    set("hangingLinks", config.hangingLinks.filter((_, idx) => idx !== i));
+
+  const inputCls =
+    "w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white";
+
+  return (
+    <div className="space-y-5">
+
+      {/* راهنما */}
+      <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-2xl p-5">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center flex-shrink-0 text-lg">✦</div>
+          <div>
+            <p className="font-black text-sm text-violet-800 dark:text-violet-200 mb-1">بنر هرو یونیک استار</p>
+            <p className="text-xs text-violet-600 dark:text-violet-400 leading-relaxed">
+              این ویجت تمام‌عرض است و برای بالای صفحه اصلی طراحی شده. اگر «هدر شفاف» را در
+              تنظیمات صفحه اصلی فعال کرده‌اید، گزینه «فضای هدر شفاف» را روشن بگذارید تا هدر روی بنر بیفتد.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* متن‌ها */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">متن‌ها</h3>
+
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">برچسب کوچک بالا</label>
+          <input type="text" placeholder="Unique Star" className={inputCls}
+            value={config.brandLabel} onChange={e => set("brandLabel", e.target.value)} />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">عنوان اصلی</label>
+          <input type="text" placeholder="یونیک استار" className={inputCls}
+            value={config.heading} onChange={e => set("heading", e.target.value)} />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">زیرعنوان (نئونی)</label>
+          <input type="text" placeholder="انواع تابلو و لگوهای خاص" className={inputCls}
+            value={config.subheading} onChange={e => set("subheading", e.target.value)} />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">توضیح</label>
+          <textarea rows={2} placeholder="تابلو دکوراتیو، ساعت لگویی و ..." className={inputCls}
+            value={config.description} onChange={e => set("description", e.target.value)} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">متن دکمه</label>
+            <input type="text" placeholder="مشاهده محصولات" className={inputCls}
+              value={config.btnText} onChange={e => set("btnText", e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">لینک دکمه</label>
+            <input type="text" placeholder="/products" className={inputCls} dir="ltr"
+              value={config.btnUrl} onChange={e => set("btnUrl", e.target.value)} />
+          </div>
+        </div>
+      </div>
+
+      {/* تابلوهای آویزان */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-black text-sm text-gray-900 dark:text-white">تابلوهای نئون آویزان</h3>
+            <p className="text-xs text-gray-400 mt-0.5">حداکثر ۶ مورد — در موبایل ممکن است شلوغ شود</p>
+          </div>
+          {config.hangingLinks.length < 6 && (
+            <button type="button" onClick={addLink}
+              className="px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white/10 text-white text-xs font-black hover:opacity-80 transition-opacity">
+              + افزودن
+            </button>
+          )}
+        </div>
+
+        {config.hangingLinks.length === 0 && (
+          <p className="text-xs text-gray-400 py-3 text-center">هیچ تابلویی اضافه نشده</p>
+        )}
+
+        {config.hangingLinks.map((l, i) => (
+          <div key={i} className="grid grid-cols-12 gap-2 items-center">
+            <input type="text" placeholder="متن" className={`col-span-4 ${inputCls}`}
+              value={l.text} onChange={e => setLink(i, { text: e.target.value })} />
+            <input type="text" placeholder="لینک" dir="ltr" className={`col-span-4 ${inputCls}`}
+              value={l.url} onChange={e => setLink(i, { url: e.target.value })} />
+            <select className={`col-span-3 ${inputCls}`}
+              value={l.tone} onChange={e => setLink(i, { tone: e.target.value as USHLink["tone"] })}>
+              {USH_TONES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+            <button type="button" onClick={() => removeLink(i)}
+              className="col-span-1 h-9 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 text-sm font-black hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* رنگ‌ها */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">رنگ‌بندی</h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <ColorField label="پس‌زمینه ۱ (روشن)" value={config.bgFrom} onChange={v => set("bgFrom", v)} />
+          <ColorField label="پس‌زمینه ۲ (میانی)" value={config.bgMid} onChange={v => set("bgMid", v)} />
+          <ColorField label="پس‌زمینه ۳ (تیره)" value={config.bgTo} onChange={v => set("bgTo", v)} />
+        </div>
+
+        <div className="h-px bg-gray-100 dark:bg-gray-800" />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <ColorField label="رنگ اصلی" value={config.colorPrimary} onChange={v => set("colorPrimary", v)} />
+          <ColorField label="رنگ دوم" value={config.colorSecondary} onChange={v => set("colorSecondary", v)} />
+          <ColorField label="رنگ تاکیدی" value={config.colorAccent} onChange={v => set("colorAccent", v)} />
+          <ColorField label="رنگ متن" value={config.colorText} onChange={v => set("colorText", v)} />
+          <ColorField label="رنگ متن کم‌رنگ" value={config.colorMuted} onChange={v => set("colorMuted", v)} />
+        </div>
+      </div>
+
+      {/* عناصر و چیدمان */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">عناصر و چیدمان</h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <USHToggle label="ذرات و ستاره‌ها" hint="ستاره‌های چشمک‌زن و آجرهای لگویی" value={config.showParticles} onChange={v => set("showParticles", v)} />
+          <USHToggle label="ماه" hint="ماه با ستاره‌ی مداری" value={config.showMoon} onChange={v => set("showMoon", v)} />
+          <USHToggle label="شهاب‌ها" value={config.showMeteors} onChange={v => set("showMeteors", v)} />
+          <USHToggle label="ساعت لگویی" hint="گرافیک سمت چپ" value={config.showClock} onChange={v => set("showClock", v)} />
+          <USHToggle label="تابلوهای آویزان" value={config.showHangingLinks} onChange={v => set("showHangingLinks", v)} />
+          <USHToggle label="فضای هدر شفاف" hint="فضای خالی بالا برای هدری که روی بنر می‌افتد" value={config.headerOverlay} onChange={v => set("headerOverlay", v)} />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">ارتفاع بنر</label>
+          <div className="flex gap-2">
+            {USH_HEIGHTS.map(h => (
+              <button key={h.value} type="button" onClick={() => set("height", h.value)}
+                className={`flex-1 py-2 rounded-xl text-xs font-black transition-all ${
+                  config.height === h.value
+                    ? "bg-violet-600 text-white shadow-lg shadow-violet-500/30"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}>
+                {h.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* پیش‌نمایش رنگ */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white mb-3">پیش‌نمایش</h3>
+        <div className="relative rounded-2xl overflow-hidden h-44 flex items-center px-6" dir="rtl"
+          style={{ background: `radial-gradient(600px 300px at 78% 30%, ${config.bgFrom} 0%, ${config.bgMid} 45%, ${config.bgTo} 100%)` }}>
+          <div className="relative z-10">
+            {config.brandLabel && (
+              <span className="block text-[10px] font-bold mb-1.5" style={{ color: config.colorText, opacity: 0.8 }}>
+                {config.brandLabel}
+              </span>
+            )}
+            <span className="block text-2xl font-black mb-1.5"
+              style={{
+                background: `linear-gradient(90deg, ${config.colorPrimary}, ${config.colorSecondary}, ${config.colorAccent})`,
+                WebkitBackgroundClip: "text", backgroundClip: "text", WebkitTextFillColor: "transparent",
+              }}>
+              {config.heading || "عنوان"}
+            </span>
+            {config.subheading && (
+              <span className="block text-xs font-bold mb-3" style={{ color: config.colorText }}>
+                {config.subheading}
+              </span>
+            )}
+            {config.btnText && (
+              <span className="inline-block px-5 py-2 rounded-full text-xs font-black text-white"
+                style={{ background: `linear-gradient(90deg, ${config.colorSecondary}, ${config.colorPrimary})` }}>
+                {config.btnText}
+              </span>
+            )}
+          </div>
+          {config.showClock && (
+            <div className="absolute left-6 top-1/2 -translate-y-1/2 w-24 h-24 rounded-full border-4"
+              style={{ background: "#241a44", borderColor: "#2e2052", boxShadow: `0 0 30px ${config.colorSecondary}55` }} />
+          )}
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function WidgetEditPage() {
   const { id } = useParams<{ id: string }>();
