@@ -11,8 +11,19 @@ interface MegaCat {
 }
 interface MenuItem { id: string; title: string; url: string | null; openInNewTab: boolean; }
 
-export default function MobileMenuPortal({ logoUrl, siteName }: { logoUrl?: string | null; siteName?: string | null }) {
-  const [open, setOpen]         = useState(false);
+export default function MobileMenuPortal({
+  logoUrl,
+  siteName,
+  allowDesktop = false,
+  glass = false,
+}: {
+  logoUrl?: string | null;
+  siteName?: string | null;
+  /** اجازه‌ی باز شدن کشو در دسکتاپ (برای هدرهایی که مگامنو ندارند) */
+  allowDesktop?: boolean;
+  /** حالت شیشه‌ای شفاف */
+  glass?: boolean;
+}) {  const [open, setOpen]         = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [megaCats, setMegaCats] = useState<MegaCat[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -46,7 +57,7 @@ export default function MobileMenuPortal({ logoUrl, siteName }: { logoUrl?: stri
 
   return (
     <div
-      className="lg:hidden"
+      className={allowDesktop ? "" : "lg:hidden"}
       style={{
         position: "fixed", inset: 0, zIndex: 9000,
         pointerEvents: open ? "auto" : "none",
@@ -58,9 +69,9 @@ export default function MobileMenuPortal({ logoUrl, siteName }: { logoUrl?: stri
         onClick={close}
         style={{
           position: "absolute", inset: 0,
-          background: "rgba(0,0,0,0.5)",
-          backdropFilter: "blur(4px)",
-          WebkitBackdropFilter: "blur(4px)",
+          background: glass ? "rgba(8,6,18,0.32)" : "rgba(0,0,0,0.5)",
+          backdropFilter: glass ? "blur(10px) saturate(120%)" : "blur(4px)",
+          WebkitBackdropFilter: glass ? "blur(10px) saturate(120%)" : "blur(4px)",
           transition: "opacity 0.35s ease",
           opacity: open ? 1 : 0,
           pointerEvents: open ? "auto" : "none",
@@ -79,7 +90,11 @@ export default function MobileMenuPortal({ logoUrl, siteName }: { logoUrl?: stri
           flexDirection: "column",
           overflow: "hidden",
         }}
-        className="bg-white dark:bg-gray-950 shadow-2xl"
+        className={
+          glass
+            ? "shadow-2xl backdrop-blur-2xl backdrop-saturate-150 bg-white/70 dark:bg-gray-950/55 border-l border-white/50 dark:border-white/10"
+            : "bg-white dark:bg-gray-950 shadow-2xl"
+        }
         dir="rtl"
       >
         {}

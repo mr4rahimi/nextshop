@@ -551,7 +551,7 @@ model ShippingMethod {
 
 model StoreSettings {
   id                       String   @id @default("singleton")
-  // کارت به کارت
+
   cardNumber               String?
   cardHolder               String?
   cardBank                 String?
@@ -604,6 +604,7 @@ model StoreSettings {
   walletEnabled            Boolean  @default(false)
   themeConfig              Json?
   homeHeaderVariant        String   @default("DEFAULT")
+  mobileMenuGlass          Boolean  @default(false) 
   chatSettings             Json?
   updatedAt                DateTime @updatedAt
 
