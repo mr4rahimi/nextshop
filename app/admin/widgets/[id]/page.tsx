@@ -2065,9 +2065,10 @@ export default function WidgetEditPage() {
   { imageUrl: "", linkUrl: "", alt: "" },
   ]);
   const [dbUploading, setDbUploading] = useState([false, false]);
+  // UNIQUE_STAR_HERO
+  const [ushConfig, setUshConfig] = useState<USHConfig>({ ...USH_DEFAULT });
 
-  const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION", "ADVANCED_SEARCH"];
-  useEffect(() => {
+const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION", "ADVANCED_SEARCH", "UNIQUE_STAR_HERO"];  useEffect(() => {
     fetch("/api/admin/widgets")
       .then(r => r.json())
       .then((widgets: Widget[]) => {
@@ -2155,6 +2156,14 @@ export default function WidgetEditPage() {
           setAsSubheading(w.config.subheading ?? "محصول مورد نظر خود را سریع‌تر پیدا کنید");
           setAsAccentColor(w.config.accentColor ?? "#4f46e5");
           setAsCategoryIds(w.config.categoryIds ?? []);
+          } else if (w.type === "UNIQUE_STAR_HERO") {
+          setUshConfig({
+            ...USH_DEFAULT,
+            ...(w.config as Partial<USHConfig>),
+            hangingLinks: Array.isArray(w.config.hangingLinks)
+              ? w.config.hangingLinks
+              : USH_DEFAULT.hangingLinks,
+          });
         } else {
           setSelectedIds(w.config.categoryIds ?? []);
           setPerCategory(w.config.perCategory ?? 3);
@@ -2170,7 +2179,9 @@ export default function WidgetEditPage() {
     setSaving(true);
 
     let config: Record<string, any>;
-    if (widget.type === "ADVANCED_SEARCH") {
+    if (widget.type === "UNIQUE_STAR_HERO") {
+      config = { ...ushConfig };
+    } else if (widget.type === "ADVANCED_SEARCH") {
       config = { heading: asHeading, subheading: asSubheading, accentColor: asAccentColor, categoryIds: asCategoryIds };
     } else if (widget.type === "LAST_VISITED") {
       config = { heading: lvHeading, accentColor: lvAccentColor };
@@ -2247,6 +2258,7 @@ export default function WidgetEditPage() {
     HERO_SLIDER:          "اسلایدهای این بخش از صفحه مدیریت اسلایدر Hero قابل تنظیم هستند",
     STORY:                "استوری‌ها از صفحه مدیریت استوری‌ها قابل تنظیم هستند",
     LATEST_ARTICLES:      "آخرین مطالب بلاگ به صورت خودکار نمایش داده می‌شوند",
+    UNIQUE_STAR_HERO:     "بنر هرو تمام‌عرض با انیمیشن — متن‌ها، رنگ‌ها، لینک‌ها و عناصر قابل تنظیم",
   };
 
   return (
@@ -2604,6 +2616,10 @@ export default function WidgetEditPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {widget.type === "UNIQUE_STAR_HERO" && (
+        <UniqueStarHeroEditor config={ushConfig} setConfig={setUshConfig} />
       )}
 
      {(widget.type === "HERO_SLIDER" || widget.type === "STORY" || widget.type === "LATEST_ARTICLES") && (
