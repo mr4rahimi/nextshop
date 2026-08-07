@@ -63,6 +63,9 @@ export async function PUT(req: Request) {
   if (data.paymentGatewayMerchant  !== undefined) updateData.paymentGatewayMerchant  = data.paymentGatewayMerchant  ?? null;
   if (data.paymentGatewayActive    !== undefined) updateData.paymentGatewayActive    = data.paymentGatewayActive    ?? false;
   if (data.paymentGatewaySandbox   !== undefined) updateData.paymentGatewaySandbox   = data.paymentGatewaySandbox   ?? false;
+  // ظاهر — هدر صفحه اصلی
+  if (data.homeHeaderVariant !== undefined)
+    updateData.homeHeaderVariant = data.homeHeaderVariant || "DEFAULT";
 
   const s = await prisma.storeSettings.upsert({
     where: { id: "singleton" },

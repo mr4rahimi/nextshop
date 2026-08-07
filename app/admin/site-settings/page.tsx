@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { HEADER_VARIANTS } from "@/components/layout/headers/registry";
 
 interface SiteSettings {
   storeName: string; storeLogo: string; siteFavicon: string;
@@ -27,6 +28,7 @@ interface SiteSettings {
   smsPatternOrderDone: string;
   smsPatternOrderCancel: string;
   walletEnabled: boolean;
+  homeHeaderVariant: string;
   paymentGatewayProvider: string;
   paymentGatewayMerchant: string;
   paymentGatewayActive: boolean;
@@ -48,10 +50,11 @@ const EMPTY: SiteSettings = {
   smsPatternOrderSent: "", smsPatternOrderDelivered: "", smsPatternOrderDone: "",
   smsPatternOrderCancel: "",
   walletEnabled: false,
+  homeHeaderVariant: "DEFAULT",
   paymentGatewayProvider: "", paymentGatewayMerchant: "", paymentGatewayActive: false, paymentGatewaySandbox: false,
 };
 
-type Tab = "general" | "social" | "advanced" | "sms" | "wallet" | "gateway";
+type Tab = "general" | "social" | "advanced" | "sms" | "wallet" | "gateway" | "header";
 
 export default function AdminSiteSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings>({ ...EMPTY });
@@ -101,6 +104,7 @@ export default function AdminSiteSettingsPage() {
         smsPatternOrderDone:   d.smsPatternOrderDone   ?? "",
         smsPatternOrderCancel: d.smsPatternOrderCancel ?? "",
         walletEnabled: d.walletEnabled ?? false,
+        homeHeaderVariant: d.homeHeaderVariant ?? "DEFAULT",
         paymentGatewayProvider: d.paymentGatewayProvider ?? "",
         paymentGatewayMerchant: d.paymentGatewayMerchant ?? "",
         paymentGatewayActive:   d.paymentGatewayActive   ?? false,
@@ -173,6 +177,7 @@ export default function AdminSiteSettingsPage() {
           { key: "sms", label: "پیامک" },
           { key: "wallet", label: "کیف پول" },
           { key: "gateway", label: "درگاه پرداخت" },
+          { key: "header", label: "هدر صفحه اصلی" },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as Tab)}
             className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all ${tab === t.key ? "bg-white dark:bg-gray-900 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
@@ -623,6 +628,57 @@ export default function AdminSiteSettingsPage() {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {tab === "header" && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+            <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
+              <span className="w-1.5 h-5 bg-blue-600 rounded-full" />
+              انتخاب هدر صفحه اصلی
+            </h3>
+            <p className="text-xs text-gray-400 -mt-2">
+              این انتخاب فقط روی صفحه اصلی اعمال می‌شود؛ سایر صفحات همیشه هدر پیش‌فرض را نمایش می‌دهند.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {HEADER_VARIANTS.map(v => {
+                const active = settings.homeHeaderVariant === v.id;
+                return (
+                  <button key={v.id} type="button"
+                    onClick={() => set("homeHeaderVariant", v.id)}
+                    className={`text-right p-4 rounded-2xl border-2 transition-all ${
+                      active
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10"
+                        : "border-gray-100 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/20"
+                    }`}>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="text-sm font-black text-gray-900 dark:text-white">{v.label}</span>
+                      {active && <span className="text-[10px] font-black text-blue-600">فعال ✓</span>}
+                    </div>
+                    <p className="text-[11px] text-gray-500 leading-relaxed">{v.desc}</p>
+                    {v.overlay && (
+                      <span className="inline-block mt-2 text-[10px] font-black px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
+                        شفاف / روی بنر
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {HEADER_VARIANTS.find(v => v.id === settings.homeHeaderVariant)?.hint && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed font-bold">
+                  {HEADER_VARIANTS.find(v => v.id === settings.homeHeaderVariant)!.hint}
+                </p>
+                <a href="/admin/widgets" className="inline-block mt-2 text-[11px] font-black text-amber-800 dark:text-amber-200 underline">
+                  رفتن به مدیریت ویجت‌ها ←
+                </a>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

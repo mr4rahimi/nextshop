@@ -603,6 +603,7 @@ model StoreSettings {
   smsPatternOrderCancel    String?
   walletEnabled            Boolean  @default(false)
   themeConfig              Json?
+  homeHeaderVariant        String   @default("DEFAULT")
   chatSettings             Json?
   updatedAt                DateTime @updatedAt
 
