@@ -11,10 +11,12 @@ export default function HeaderSwitcher({
   logoUrl,
   siteName,
   homeVariant,
+  menuGlass = false,
 }: {
   logoUrl: string | null;
   siteName: string | null;
   homeVariant: string;
+  menuGlass?: boolean;
 }) {
   const pathname = usePathname();
   const isHome = pathname === "/";
@@ -24,7 +26,12 @@ export default function HeaderSwitcher({
     return (
       <>
         <UniqueStarHeader logoUrl={logoUrl} siteName={siteName} />
-        <MobileMenuPortal logoUrl={logoUrl} siteName={siteName} />
+        <MobileMenuPortal
+          logoUrl={logoUrl}
+          siteName={siteName}
+          allowDesktop
+          glass={menuGlass}
+        />
       </>
     );
   }
@@ -35,7 +42,7 @@ export default function HeaderSwitcher({
         <HeaderTop logoUrl={logoUrl} siteName={siteName} />
         <HeaderMenu />
       </header>
-      <MobileMenuPortal logoUrl={logoUrl} siteName={siteName} />
+      <MobileMenuPortal logoUrl={logoUrl} siteName={siteName} glass={menuGlass} />
     </>
   );
 }

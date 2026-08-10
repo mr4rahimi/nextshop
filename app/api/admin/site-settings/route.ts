@@ -67,6 +67,12 @@ export async function PUT(req: Request) {
   if (data.homeHeaderVariant !== undefined)
     updateData.homeHeaderVariant = data.homeHeaderVariant || "DEFAULT";
 
+  // ظاهر — هدر صفحه اصلی
+  if (data.homeHeaderVariant !== undefined)
+    updateData.homeHeaderVariant = data.homeHeaderVariant || "DEFAULT";
+  if (data.mobileMenuGlass !== undefined)
+    updateData.mobileMenuGlass = data.mobileMenuGlass ?? false;
+
   const s = await prisma.storeSettings.upsert({
     where: { id: "singleton" },
     update: updateData,

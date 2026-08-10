@@ -9,7 +9,7 @@ type WidgetType =
   | "NEWEST_PRODUCTS" | "SPECIAL_OFFERS" | "LAST_VISITED"
   | "FULL_BANNER" | "DOUBLE_BANNER" | "CALL_TO_ACTION"
   | "IMAGE_CONTENT" | "IMAGE_CONTENT_DOUBLE" | "LATEST_ARTICLES"
-  | "ADVANCED_SEARCH" | "UNIQUE_STAR_HERO";
+  | "ADVANCED_SEARCH" | "UNIQUE_STAR_HERO" | "DIMENSIONAL_CARDS"  | "COVERFLOW_GALLERY";
 
 interface Widget {
   id: string;
@@ -40,6 +40,8 @@ const WIDGET_META: Record<WidgetType, { label: string; icon: string; color: stri
   LATEST_ARTICLES:      { label: "آخرین مقالات",            icon: "📰", color: "bg-sky-50 border-sky-200 dark:bg-sky-900/20 dark:border-sky-800",        desc: "آخرین پست‌های وبلاگ" },
   ADVANCED_SEARCH:      { label: "جستجوی پیشرفته",          icon: "🔍", color: "bg-violet-50 border-violet-200 dark:bg-violet-900/20 dark:border-violet-800", desc: "جستجو با فیلتر دسته، برند و ویژگی‌ها" },
   UNIQUE_STAR_HERO:     { label: "بنر هرو یونیک استار",     icon: "✦", color: "bg-violet-50 border-violet-200 dark:bg-violet-900/20 dark:border-violet-800", desc: "بنر تمام‌عرض انیمیشن‌دار با هدر شفاف" },
+  DIMENSIONAL_CARDS:    { label: "کارت‌های سه‌بعدی",       icon: "🧊", color: "bg-teal-50 border-teal-200 dark:bg-teal-900/20 dark:border-teal-800", desc: "سه کارت شیشه‌ای با افکت سه‌بعدی و تصویر" },
+  COVERFLOW_GALLERY:    { label: "گالری کاورفلو",          icon: "🖼️", color: "bg-sky-50 border-sky-200 dark:bg-sky-900/20 dark:border-sky-800", desc: "گالری تصاویر با افکت چرخش سه‌بعدی" },
 };
 
 const ALL_TYPES = Object.keys(WIDGET_META) as WidgetType[];

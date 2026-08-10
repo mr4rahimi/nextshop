@@ -29,6 +29,7 @@ interface SiteSettings {
   smsPatternOrderCancel: string;
   walletEnabled: boolean;
   homeHeaderVariant: string;
+  mobileMenuGlass: boolean;
   paymentGatewayProvider: string;
   paymentGatewayMerchant: string;
   paymentGatewayActive: boolean;
@@ -51,6 +52,7 @@ const EMPTY: SiteSettings = {
   smsPatternOrderCancel: "",
   walletEnabled: false,
   homeHeaderVariant: "DEFAULT",
+  mobileMenuGlass: false,
   paymentGatewayProvider: "", paymentGatewayMerchant: "", paymentGatewayActive: false, paymentGatewaySandbox: false,
 };
 
@@ -105,6 +107,7 @@ export default function AdminSiteSettingsPage() {
         smsPatternOrderCancel: d.smsPatternOrderCancel ?? "",
         walletEnabled: d.walletEnabled ?? false,
         homeHeaderVariant: d.homeHeaderVariant ?? "DEFAULT",
+        mobileMenuGlass: d.mobileMenuGlass ?? false,
         paymentGatewayProvider: d.paymentGatewayProvider ?? "",
         paymentGatewayMerchant: d.paymentGatewayMerchant ?? "",
         paymentGatewayActive:   d.paymentGatewayActive   ?? false,
@@ -676,6 +679,35 @@ export default function AdminSiteSettingsPage() {
                 <a href="/admin/widgets" className="inline-block mt-2 text-[11px] font-black text-amber-800 dark:text-amber-200 underline">
                   رفتن به مدیریت ویجت‌ها ←
                 </a>
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+            <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
+              <span className="w-1.5 h-5 bg-blue-600 rounded-full" />
+              منوی کشویی (همبرگری)
+            </h3>
+
+            <label className="flex items-center justify-between gap-4 p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 cursor-pointer hover:border-gray-300 dark:hover:border-white/20 transition-all">
+              <span className="min-w-0">
+                <span className="block text-sm font-black text-gray-900 dark:text-white">حالت شیشه‌ای شفاف</span>
+                <span className="block text-[11px] text-gray-500 mt-1 leading-relaxed">
+                  کشوی منو نیمه‌شفاف با افکت بلور و شیشه‌ای نمایش داده می‌شود. روی همه‌ی صفحات اعمال می‌شود.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={settings.mobileMenuGlass}
+                onChange={e => set("mobileMenuGlass", e.target.checked)}
+                className="w-5 h-5 rounded flex-shrink-0"
+                style={{ accentColor: "#2563eb" }}
+              />
+            </label>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                  <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                    در هدر یونیک استار، دکمه‌ی همبرگری در دسکتاپ هم نمایش داده می‌شود و منو از کنار باز می‌شود
+                    (چون این هدر مگامنوی دسکتاپ ندارد). در هدر پیش‌فرض، منوی کشویی فقط در موبایل فعال است.
+                  </p>
+                </div>
+              </div>
               </div>
             )}
           </div>

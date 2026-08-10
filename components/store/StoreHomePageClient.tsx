@@ -21,6 +21,8 @@ const LastVisited        = dynamic(() => import("@/components/store/LastVisitedS
 const AdvancedSearch     = dynamic(() => import("@/components/store/AdvancedSearchSection"));
 
 const UniqueStarHero     = dynamic(() => import("@/components/store/UniqueStarHeroSection"));
+const DimensionalCards   = dynamic(() => import("@/components/store/DimensionalCardsSection"));
+const CoverflowGallery   = dynamic(() => import("@/components/store/CoverflowGallerySection"));
 
 type WidgetType = string;
 
@@ -59,7 +61,11 @@ function renderWidget(type: WidgetType, config: Record<string, any>, key: string
     case "ADVANCED_SEARCH":
       return <AdvancedSearch key={key} config={config} />;
     case "UNIQUE_STAR_HERO":
-      return <UniqueStarHero key={key} config={config} />;  
+      return <UniqueStarHero key={key} config={config} />; 
+    case "DIMENSIONAL_CARDS":
+      return <DimensionalCards key={key} config={config} />; 
+    case "COVERFLOW_GALLERY":
+      return <CoverflowGallery key={key} config={config} />;    
     default:
       return null;
   }

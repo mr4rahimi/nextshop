@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/store/cart/CartContext";
+import { useTheme } from "@/components/layout/ThemeProvider";
 
 
 const C = {
@@ -29,7 +30,7 @@ const CSS = `
 .ushd-search{transition:border-color .2s}
 .ushd-search:focus-within{border-color:rgba(255,95,176,.6)}
 .ushd-search input::placeholder{color:${C.text};opacity:.55}
-@media (max-width:768px){.ushd-search-wrap{display:none}}
+@media (max-width:600px){.ushd-search{padding:8px 12px}}
 `;
 
 export default function UniqueStarHeader({
@@ -42,6 +43,7 @@ export default function UniqueStarHeader({
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [q, setQ] = useState("");
+  const { toggle: toggleTheme } = useTheme();
 
   // سبد خرید — اگر Provider در دسترس نبود، هدر نباید بشکند
   let cartCount = 0;
@@ -184,13 +186,27 @@ export default function UniqueStarHeader({
 
         {/* حساب کاربری + سبد */}
         <div style={{ display: "flex", alignItems: "center", gap: "clamp(8px,1.2vw,14px)", flex: "0 0 auto" }}>
-          {/* جستجوی موبایل */}
-          <Link href="/search" title="جستجو" aria-label="جستجو" className="ushd-icon md:hidden" style={iconBox}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round">
-              <circle cx="11" cy="11" r="7" />
-              <line x1="16.5" y1="16.5" x2="21" y2="21" />
+
+
+          {/* حالت روز / شب */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title="تغییر حالت نمایش"
+            aria-label="تغییر حالت نمایش"
+            className="ushd-icon"
+            style={{ ...iconBox, cursor: "pointer" }}
+          >
+            {/* خورشید — در حالت تیره */}
+            <svg className="w-[19px] h-[19px] hidden dark:block" viewBox="0 0 24 24" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4l1.4 1.4m0-14.2l-1.4 1.4M6.3 17.7l-1.4 1.4" />
             </svg>
-          </Link>
+            {/* ماه — در حالت روشن */}
+            <svg className="w-[19px] h-[19px] block dark:hidden" viewBox="0 0 24 24" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          </button>
 
           <Link href="/user" title="حساب کاربری" aria-label="حساب کاربری" className="ushd-icon" style={iconBox}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

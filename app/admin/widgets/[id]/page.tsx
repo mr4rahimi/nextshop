@@ -1977,6 +1977,456 @@ function UniqueStarHeroEditor({
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  این بلوک را در app/admin/widgets/[id]/page.tsx
+//  بلافاصله بعد از پایان تابع UniqueStarHeroEditor و قبل از خط
+//  «// ─── Main Page ───...» بچسبانید.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── DimensionalCardsEditor ───────────────────────────────────────────────────
+type DCTheme = "mint" | "violet" | "solar" | "ocean" | "prism" | "void";
+type DCShape = "rounded" | "chamfer";
+
+interface DCItem {
+  title: string;
+  text: string;
+  imageUrl: string;
+  btnText: string;
+  btnUrl: string;
+  theme: DCTheme;
+  shape: DCShape;
+}
+
+interface DCConfig {
+  heading: string;
+  subheading: string;
+  cards: DCItem[];
+}
+
+const DC_THEMES: { value: DCTheme; label: string; swatch: string }[] = [
+  { value: "mint",   label: "سبز نعنایی", swatch: "linear-gradient(135deg,#00ffd6,#08e260)" },
+  { value: "violet", label: "بنفش",       swatch: "linear-gradient(145deg,#a855f7,#6366f1 40%,#ec4899)" },
+  { value: "solar",  label: "نارنجی",     swatch: "linear-gradient(135deg,#fbbf24,#f97316 45%,#dc2626)" },
+  { value: "ocean",  label: "آبی",        swatch: "linear-gradient(155deg,#22d3ee,#0284c7 50%,#1e3a8a)" },
+  { value: "prism",  label: "رنگین‌کمان", swatch: "conic-gradient(from 200deg at 65% 35%,#22d3ee,#818cf8,#f472b6,#facc15,#22d3ee)" },
+  { value: "void",   label: "تیره",       swatch: "linear-gradient(160deg,#0f172a,#1e1b4b 50%,#312e81)" },
+];
+
+const DC_SHAPES: { value: DCShape; label: string }[] = [
+  { value: "rounded", label: "گوشه گرد" },
+  { value: "chamfer", label: "گوشه پخ" },
+];
+
+const DC_DEFAULT: DCConfig = {
+  heading: "چرا ما را انتخاب کنید؟",
+  subheading: "سه دلیل که کار با ما را متفاوت می‌کند",
+  cards: [
+    { title: "کیفیت شیشه‌ای", text: "بدنه‌ی نرم با لایه‌های شیشه‌ای و عمق حلقوی.", imageUrl: "", btnText: "مشاهده محصولات", btnUrl: "/products", theme: "mint",   shape: "rounded" },
+    { title: "برش دقیق",     text: "گوشه‌های پخ‌دار — روی زمینه‌ی تیره تیز و شفاف دیده می‌شود.", imageUrl: "", btnText: "مشاهده محصولات", btnUrl: "/products", theme: "violet", shape: "chamfer" },
+    { title: "سطح مدرن",     text: "کنتراست بالا، سایه‌ی سخت و ریل رنگی برجسته.", imageUrl: "", btnText: "مشاهده محصولات", btnUrl: "/products", theme: "solar",  shape: "rounded" },
+  ],
+};
+
+function DimensionalCardsEditor({
+  config, setConfig, uploading, setUploading,
+}: {
+  config: DCConfig;
+  setConfig: (c: DCConfig) => void;
+  uploading: boolean[];
+  setUploading: (fn: (prev: boolean[]) => boolean[]) => void;
+}) {
+  const inputCls =
+    "w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white outline-none focus:border-blue-500 transition-colors";
+
+  const setCard = (i: number, patch: Partial<DCItem>) =>
+    setConfig({ ...config, cards: config.cards.map((c, idx) => (idx === i ? { ...c, ...patch } : c)) });
+
+  async function uploadImage(i: number, file: File) {
+    setUploading(prev => prev.map((v, idx) => (idx === i ? true : v)));
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+    const d = await res.json();
+    if (d?.url) setCard(i, { imageUrl: d.url });
+    setUploading(prev => prev.map((v, idx) => (idx === i ? false : v)));
+  }
+
+  return (
+    <div className="space-y-5">
+
+      {/* راهنما */}
+      <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-2xl p-5">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center flex-shrink-0 text-lg">🧊</div>
+          <div>
+            <p className="font-black text-sm text-teal-800 dark:text-teal-200 mb-1">کارت‌های سه‌بعدی</p>
+            <p className="text-xs text-teal-600 dark:text-teal-400 leading-relaxed">
+              سه کارت شیشه‌ای که با حرکت ماوس می‌چرخند. تصویر هر کارت داخل کوچک‌ترین دایره
+              نمایش داده می‌شود — بهترین نتیجه با <b>PNG بدون پس‌زمینه</b> و ابعاد مربعی (مثلاً ۲۰۰×۲۰۰) به‌دست می‌آید.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* سربرگ بخش */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">سربرگ بخش</h3>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">عنوان</label>
+          <input type="text" className={inputCls} placeholder="چرا ما را انتخاب کنید؟"
+            value={config.heading} onChange={e => setConfig({ ...config, heading: e.target.value })} />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">زیرعنوان</label>
+          <input type="text" className={inputCls} placeholder="سه دلیل که کار با ما را متفاوت می‌کند"
+            value={config.subheading} onChange={e => setConfig({ ...config, subheading: e.target.value })} />
+        </div>
+        <p className="text-[11px] text-gray-400">هر دو را خالی بگذارید تا سربرگ اصلاً نمایش داده نشود.</p>
+      </div>
+
+      {/* کارت‌ها */}
+      {config.cards.map((c, i) => (
+        <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-lg text-[11px] font-black text-white flex items-center justify-center"
+              style={{ background: DC_THEMES.find(t => t.value === c.theme)?.swatch }}>
+              {i + 1}
+            </span>
+            <h3 className="font-black text-sm text-gray-900 dark:text-white">کارت {i + 1}</h3>
+          </div>
+
+          {/* تصویر */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">تصویر داخل دایره (PNG شفاف)</label>
+            <div className="flex items-center gap-3">
+              <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-gray-800">
+                {c.imageUrl
+                  ? <img src={c.imageUrl} alt="" className="w-full h-full object-contain" />
+                  : <span className="text-[10px] text-gray-400">بدون تصویر</span>}
+              </div>
+
+              <label className="px-4 py-2 rounded-xl bg-gray-900 dark:bg-white/10 text-white text-xs font-black cursor-pointer hover:opacity-80 transition-opacity">
+                {uploading[i] ? "در حال آپلود..." : c.imageUrl ? "تغییر تصویر" : "آپلود تصویر"}
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(i, f); }} />
+              </label>
+
+              {c.imageUrl && (
+                <button type="button" onClick={() => setCard(i, { imageUrl: "" })}
+                  className="px-3 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-black hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
+                  حذف
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">عنوان</label>
+            <input type="text" className={inputCls} value={c.title}
+              onChange={e => setCard(i, { title: e.target.value })} />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">توضیحات</label>
+            <textarea rows={2} className={inputCls} value={c.text}
+              onChange={e => setCard(i, { text: e.target.value })} />
+            <p className="text-[11px] text-gray-400 mt-1">حداکثر ۳ خط نمایش داده می‌شود؛ متن بلندتر بریده می‌شود.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">متن دکمه</label>
+              <input type="text" className={inputCls} placeholder="مشاهده محصولات" value={c.btnText}
+                onChange={e => setCard(i, { btnText: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">لینک دکمه</label>
+              <input type="text" dir="ltr" className={inputCls} placeholder="/products" value={c.btnUrl}
+                onChange={e => setCard(i, { btnUrl: e.target.value })} />
+            </div>
+          </div>
+
+          {/* تم */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">رنگ‌بندی</label>
+            <div className="flex flex-wrap gap-2">
+              {DC_THEMES.map(t => (
+                <button key={t.value} type="button" onClick={() => setCard(i, { theme: t.value })}
+                  title={t.label}
+                  className={`w-11 h-11 rounded-xl border-2 transition-all ${
+                    c.theme === t.value
+                      ? "border-blue-500 scale-105 shadow-lg"
+                      : "border-transparent hover:border-gray-300 dark:hover:border-white/20"
+                  }`}
+                  style={{ background: t.swatch }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* شکل */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">شکل گوشه‌ها</label>
+            <div className="flex gap-2">
+              {DC_SHAPES.map(s => (
+                <button key={s.value} type="button" onClick={() => setCard(i, { shape: s.value })}
+                  className={`flex-1 py-2 rounded-xl text-xs font-black transition-all ${
+                    c.shape === s.value
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  }`}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  این بلوک را در app/admin/widgets/[id]/page.tsx
+//  بعد از تابع DimensionalCardsEditor و قبل از «// ─── Main Page ───...»
+//  بچسبانید.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── CoverflowGalleryEditor ───────────────────────────────────────────────────
+interface CFItem {
+  imageUrl: string;
+  title: string;
+  linkUrl: string;
+  btnText: string;
+  btnUrl: string;
+}
+
+interface CFConfig {
+  heading: string;
+  subheading: string;
+  items: CFItem[];
+  size: "small" | "medium" | "large";
+  showCaption: boolean;
+  autoplay: boolean;
+  autoplaySeconds: number;
+}
+
+const CF_DEFAULT: CFConfig = {
+  heading: "",
+  subheading: "",
+  items: [],
+  size: "medium",
+  showCaption: true,
+  autoplay: false,
+  autoplaySeconds: 5,
+};
+
+const CF_EMPTY_ITEM: CFItem = { imageUrl: "", title: "", linkUrl: "", btnText: "", btnUrl: "" };
+
+const CF_SIZES: { value: CFConfig["size"]; label: string }[] = [
+  { value: "small",  label: "کوچک" },
+  { value: "medium", label: "متوسط" },
+  { value: "large",  label: "بزرگ" },
+];
+
+function CoverflowGalleryEditor({
+  config, setConfig, uploadingIdx, setUploadingIdx,
+}: {
+  config: CFConfig;
+  setConfig: (c: CFConfig) => void;
+  uploadingIdx: number | null;
+  setUploadingIdx: (v: number | null) => void;
+}) {
+  const inputCls =
+    "w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white outline-none focus:border-blue-500 transition-colors";
+
+  const setItem = (i: number, patch: Partial<CFItem>) =>
+    setConfig({ ...config, items: config.items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)) });
+
+  const addItem = () => setConfig({ ...config, items: [...config.items, { ...CF_EMPTY_ITEM }] });
+
+  const removeItem = (i: number) =>
+    setConfig({ ...config, items: config.items.filter((_, idx) => idx !== i) });
+
+  const moveItem = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= config.items.length) return;
+    const next = [...config.items];
+    [next[i], next[j]] = [next[j], next[i]];
+    setConfig({ ...config, items: next });
+  };
+
+  async function uploadImage(i: number, file: File) {
+    setUploadingIdx(i);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    if (data?.url) setItem(i, { imageUrl: data.url });
+    setUploadingIdx(null);
+  }
+
+  return (
+    <div className="space-y-5">
+
+      {/* راهنما */}
+      <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-2xl p-5">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center flex-shrink-0 text-lg">🖼️</div>
+          <div>
+            <p className="font-black text-sm text-sky-800 dark:text-sky-200 mb-1">گالری کاورفلو</p>
+            <p className="text-xs text-sky-600 dark:text-sky-400 leading-relaxed">
+              تصاویر با افکت سه‌بعدی کنار هم می‌چرخند. بهترین نتیجه با تصاویر <b>مربعی</b> (مثلاً ۸۰۰×۸۰۰).
+              عنوان و دکمه‌ی هر تصویر فقط وقتی همان تصویر فعال است زیر گالری نمایش داده می‌شود.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* سربرگ بخش */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">سربرگ بخش</h3>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">عنوان</label>
+          <input type="text" className={inputCls} value={config.heading}
+            onChange={e => setConfig({ ...config, heading: e.target.value })} />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">زیرعنوان</label>
+          <input type="text" className={inputCls} value={config.subheading}
+            onChange={e => setConfig({ ...config, subheading: e.target.value })} />
+        </div>
+        <p className="text-[11px] text-gray-400">هر دو را خالی بگذارید تا سربرگ نمایش داده نشود.</p>
+      </div>
+
+      {/* تنظیمات نمایش */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white">تنظیمات نمایش</h3>
+
+        <div>
+          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">اندازه تصاویر</label>
+          <div className="flex gap-2">
+            {CF_SIZES.map(s => (
+              <button key={s.value} type="button" onClick={() => setConfig({ ...config, size: s.value })}
+                className={`flex-1 py-2 rounded-xl text-xs font-black transition-all ${
+                  config.size === s.value
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label className="flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+          <span>
+            <span className="block text-xs font-black text-gray-800 dark:text-gray-200">نمایش عنوان و دکمه</span>
+            <span className="block text-[10px] text-gray-400 mt-0.5">زیر گالری، مربوط به تصویر فعال</span>
+          </span>
+          <input type="checkbox" checked={config.showCaption} className="w-4 h-4 rounded flex-shrink-0" style={{ accentColor: "#2563eb" }}
+            onChange={e => setConfig({ ...config, showCaption: e.target.checked })} />
+        </label>
+
+        <label className="flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+          <span>
+            <span className="block text-xs font-black text-gray-800 dark:text-gray-200">چرخش خودکار</span>
+            <span className="block text-[10px] text-gray-400 mt-0.5">با قرار گرفتن ماوس روی گالری متوقف می‌شود</span>
+          </span>
+          <input type="checkbox" checked={config.autoplay} className="w-4 h-4 rounded flex-shrink-0" style={{ accentColor: "#2563eb" }}
+            onChange={e => setConfig({ ...config, autoplay: e.target.checked })} />
+        </label>
+
+        {config.autoplay && (
+          <div>
+            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">فاصله بین تصاویر (ثانیه)</label>
+            <input type="number" min={2} max={30} className={inputCls} value={config.autoplaySeconds}
+              onChange={e => setConfig({ ...config, autoplaySeconds: Math.max(2, Number(e.target.value) || 5) })} />
+          </div>
+        )}
+      </div>
+
+      {/* تصاویر */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-black text-sm text-gray-900 dark:text-white">تصاویر گالری</h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {config.items.length > 0 ? `${config.items.length} تصویر` : "هنوز تصویری اضافه نشده"}
+            </p>
+          </div>
+          <button type="button" onClick={addItem}
+            className="px-4 py-2 rounded-xl bg-gray-900 dark:bg-white/10 text-white text-xs font-black hover:opacity-80 transition-opacity">
+            + افزودن تصویر
+          </button>
+        </div>
+
+        {config.items.length === 0 && (
+          <p className="text-xs text-gray-400 py-6 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl">
+            برای شروع، روی «افزودن تصویر» بزنید
+          </p>
+        )}
+
+        {config.items.map((it, i) => (
+          <div key={i} className="rounded-2xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-gray-700 dark:text-gray-300">تصویر {i + 1}</span>
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={() => moveItem(i, -1)} disabled={i === 0}
+                  className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm font-black disabled:opacity-30 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">↑</button>
+                <button type="button" onClick={() => moveItem(i, 1)} disabled={i === config.items.length - 1}
+                  className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm font-black disabled:opacity-30 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">↓</button>
+                <button type="button" onClick={() => removeItem(i)}
+                  className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 text-sm font-black hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">×</button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-gray-800">
+                {it.imageUrl
+                  ? <img src={it.imageUrl} alt="" className="w-full h-full object-cover" />
+                  : <span className="text-[10px] text-gray-400">بدون تصویر</span>}
+              </div>
+              <label className="px-4 py-2 rounded-xl bg-gray-900 dark:bg-white/10 text-white text-xs font-black cursor-pointer hover:opacity-80 transition-opacity">
+                {uploadingIdx === i ? "در حال آپلود..." : it.imageUrl ? "تغییر تصویر" : "آپلود تصویر"}
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(i, f); }} />
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">عنوان (اختیاری)</label>
+              <input type="text" className={inputCls} value={it.title}
+                onChange={e => setItem(i, { title: e.target.value })} />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">لینک تصویر (اختیاری)</label>
+              <input type="text" dir="ltr" placeholder="/products/example" className={inputCls} value={it.linkUrl}
+                onChange={e => setItem(i, { linkUrl: e.target.value })} />
+              <p className="text-[11px] text-gray-400 mt-1">با کلیک روی تصویرِ فعال باز می‌شود.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">متن دکمه (اختیاری)</label>
+                <input type="text" placeholder="خرید کنید" className={inputCls} value={it.btnText}
+                  onChange={e => setItem(i, { btnText: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">لینک دکمه</label>
+                <input type="text" dir="ltr" placeholder="/products" className={inputCls} value={it.btnUrl}
+                  onChange={e => setItem(i, { btnUrl: e.target.value })} />
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400">دکمه فقط وقتی نمایش داده می‌شود که هم متن و هم لینکش پر باشد.</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function WidgetEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -2067,8 +2517,16 @@ export default function WidgetEditPage() {
   const [dbUploading, setDbUploading] = useState([false, false]);
   // UNIQUE_STAR_HERO
   const [ushConfig, setUshConfig] = useState<USHConfig>({ ...USH_DEFAULT });
+  // DIMENSIONAL_CARDS
+  const [dcConfig, setDcConfig] = useState<DCConfig>({
+    ...DC_DEFAULT,
+    cards: DC_DEFAULT.cards.map(c => ({ ...c })),
+  });
+  const [dcUploading, setDcUploading] = useState([false, false, false]);
+  const [cfConfig, setCfConfig] = useState<CFConfig>({ ...CF_DEFAULT, items: [] });
+  const [cfUploadingIdx, setCfUploadingIdx] = useState<number | null>(null);
 
-const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION", "ADVANCED_SEARCH", "UNIQUE_STAR_HERO"];  useEffect(() => {
+const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION", "ADVANCED_SEARCH", "UNIQUE_STAR_HERO", "DIMENSIONAL_CARDS", "COVERFLOW_GALLERY"];  useEffect(() => {
     fetch("/api/admin/widgets")
       .then(r => r.json())
       .then((widgets: Widget[]) => {
@@ -2164,7 +2622,22 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
               ? w.config.hangingLinks
               : USH_DEFAULT.hangingLinks,
           });
-        } else {
+          } else if (w.type === "DIMENSIONAL_CARDS") {
+          const raw = Array.isArray(w.config.cards) ? w.config.cards : [];
+          setDcConfig({
+            heading:    w.config.heading    ?? DC_DEFAULT.heading,
+            subheading: w.config.subheading ?? DC_DEFAULT.subheading,
+            cards: DC_DEFAULT.cards.map((def, i) => ({ ...def, ...(raw[i] ?? {}) })),
+          });
+        } else if (w.type === "COVERFLOW_GALLERY") {
+          setCfConfig({
+            ...CF_DEFAULT,
+            ...(w.config as Partial<CFConfig>),
+            items: Array.isArray(w.config.items)
+              ? w.config.items.map((it: any) => ({ ...CF_EMPTY_ITEM, ...it }))
+              : [],
+          });
+        }else {
           setSelectedIds(w.config.categoryIds ?? []);
           setPerCategory(w.config.perCategory ?? 3);
         }
@@ -2179,7 +2652,11 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
     setSaving(true);
 
     let config: Record<string, any>;
-    if (widget.type === "UNIQUE_STAR_HERO") {
+     if (widget.type === "COVERFLOW_GALLERY") {
+      config = { ...cfConfig };
+    } else if (widget.type === "DIMENSIONAL_CARDS") {
+      config = { ...dcConfig };
+    } else if (widget.type === "UNIQUE_STAR_HERO") {
       config = { ...ushConfig };
     } else if (widget.type === "ADVANCED_SEARCH") {
       config = { heading: asHeading, subheading: asSubheading, accentColor: asAccentColor, categoryIds: asCategoryIds };
@@ -2259,6 +2736,8 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
     STORY:                "استوری‌ها از صفحه مدیریت استوری‌ها قابل تنظیم هستند",
     LATEST_ARTICLES:      "آخرین مطالب بلاگ به صورت خودکار نمایش داده می‌شوند",
     UNIQUE_STAR_HERO:     "بنر هرو تمام‌عرض با انیمیشن — متن‌ها، رنگ‌ها، لینک‌ها و عناصر قابل تنظیم",
+    DIMENSIONAL_CARDS:    "سه کارت شیشه‌ای با افکت سه‌بعدی — عنوان، توضیح، تصویر، لینک و رنگ‌بندی هر کارت جداگانه",
+    COVERFLOW_GALLERY:    "گالری تصاویر با چرخش سه‌بعدی — هر تصویر لینک و دکمه‌ی اختیاری دارد",
   };
 
   return (
@@ -2620,6 +3099,24 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
 
       {widget.type === "UNIQUE_STAR_HERO" && (
         <UniqueStarHeroEditor config={ushConfig} setConfig={setUshConfig} />
+      )}
+
+      {widget.type === "DIMENSIONAL_CARDS" && (
+        <DimensionalCardsEditor
+          config={dcConfig}
+          setConfig={setDcConfig}
+          uploading={dcUploading}
+          setUploading={setDcUploading}
+        />
+      )}
+
+      {widget.type === "COVERFLOW_GALLERY" && (
+        <CoverflowGalleryEditor
+          config={cfConfig}
+          setConfig={setCfConfig}
+          uploadingIdx={cfUploadingIdx}
+          setUploadingIdx={setCfUploadingIdx}
+        />
       )}
 
      {(widget.type === "HERO_SLIDER" || widget.type === "STORY" || widget.type === "LATEST_ARTICLES") && (
