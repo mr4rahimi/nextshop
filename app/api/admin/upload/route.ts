@@ -51,7 +51,11 @@ export async function POST(req: Request) {
   }
 
   const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
+  let buffer: Buffer<ArrayBufferLike> = Buffer.from(bytes);
+
+  if (type !== "download") {
+    buffer = await downscaleImage(buffer, file.type);
+  }
 
   const ext = path.extname(file.name).toLowerCase().replace(/[^.a-z0-9]/g, "") || (type === "download" ? ".bin" : ".jpg");
   const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
@@ -60,4 +64,50 @@ export async function POST(req: Request) {
   await writeFile(filePath, buffer);
 
   return NextResponse.json({ url: `/uploads/${fileName}` });
+}
+
+/** بزرگ‌ترین ضلع مجاز برای تصاویر آپلودی */
+const MAX_IMAGE_DIMENSION = 1600;
+
+/**
+ * تصاویر بزرگ را به حداکثر ۱۶۰۰ پیکسل کوچک می‌کند.
+ *
+ * چرا لازم است: `next.config.ts` با `unoptimized: true` کار می‌کند (سرور
+ * production از SSE4.2 پشتیبانی نمی‌کند و sharp در runtime بالا نمی‌آید)، پس
+ * هیچ resize خودکاری در زمان نمایش انجام نمی‌شود و هر فایلی که آپلود شود
+ * دقیقاً با همان حجم به کاربر تحویل داده می‌شود.
+ *
+ * `sharp` به‌صورت dynamic ایمپورت می‌شود و **هر خطایی نادیده گرفته می‌شود**:
+ * روی سرورهایی که CPU پشتیبانی نمی‌کند، فایل اصلی بدون تغییر ذخیره می‌شود.
+ * پس این تابع هیچ‌وقت آپلود را نمی‌شکند — فقط وقتی می‌تواند، بهتر می‌کند.
+ *
+ * SVG و GIF دست‌نخورده می‌مانند (برداری / متحرک).
+ */
+async function downscaleImage(buffer: Buffer, mime: string): Promise<Buffer<ArrayBufferLike>> {
+  if (mime === "image/svg+xml" || mime === "image/gif") return buffer;
+
+  try {
+    const sharp = (await import("sharp")).default;
+    const img = sharp(buffer, { failOn: "none" });
+    const meta = await img.metadata();
+
+    const longest = Math.max(meta.width ?? 0, meta.height ?? 0);
+    if (!longest || longest <= MAX_IMAGE_DIMENSION) return buffer;
+
+    // fit:"inside" نسبت ابعاد را حفظ می‌کند و withoutEnlargement تضمین می‌کند
+    // تصویر کوچک هیچ‌وقت بزرگ نشود — برای افقی و عمودی هر دو درست کار می‌کند.
+    const resized = await img
+      .rotate() // اعمال EXIF orientation قبل از اینکه متادیتا از بین برود
+      .resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .toBuffer();
+
+    // اگر به هر دلیلی نتیجه بزرگ‌تر شد، اصل را نگه می‌داریم
+    return resized.length < buffer.length ? resized : buffer;
+  } catch {
+    // sharp در دسترس نیست یا فایل قابل پردازش نبود — همان اصل ذخیره می‌شود
+    return buffer;
+  }
 }

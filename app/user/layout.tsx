@@ -8,6 +8,9 @@ import Footer from "@/components/layout/Footer";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import UserSidebar from "@/components/user/UserSidebar";
 
+// کل پنل کاربر خصوصی است — noindex از اینجا به همه‌ی زیرصفحات کاسکید می‌شود.
+export const metadata = { robots: { index: false, follow: true } };
+
 export default async function UserLayout({ children }: { children: React.ReactNode }) {
   const [user, settings] = await Promise.all([
     getAuthUser(),

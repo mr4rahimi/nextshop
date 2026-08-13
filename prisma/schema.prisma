@@ -102,6 +102,10 @@ model Product {
   slug               String             @unique
   categoryId         String
   brandId            String?
+  // شناسه‌های محصول برای Product schema و Google Merchant Center
+  sku                String?
+  gtin13             String?
+  mpn                String?
   features           Json               @default("[]")
   colors             Json               @default("[]")
   price              BigInt             @default(0)

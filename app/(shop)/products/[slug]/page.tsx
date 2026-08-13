@@ -6,6 +6,8 @@ import ProductDetailClient from "@/components/store/product/ProductDetailClient"
 import {
   SITE_URL,
   canonicalUrl,
+  encodeSlug,
+  externalImageOrigins,
   buildBaseMetadata,
   buildProductSchema,
   buildBreadcrumbSchema,
@@ -272,17 +274,24 @@ export async function generateMetadata({
 
   const inStock = p.isActive && p.stock !== 0;
 
-  return {
-    ...buildBaseMetadata({
-      title: p.seoTitle || `خرید ${p.title}`,
-      description:
+  const base = buildBaseMetadata({
+    title: p.seoTitle || `خرید ${p.title}`,
+    description: buildProductDescription({
+      base:
         p.seoDescription ||
         p.shortDescription ||
         `خرید ${p.title} با بهترین قیمت`,
-      keywords: p.seoKeywords || undefined,
-      image: absoluteImg,
-      path: `/products/${slug}`,
+      price: effectivePrice,
+      inStock,
     }),
+    keywords: p.seoKeywords || undefined,
+    image: absoluteImg,
+    path: `/products/${slug}`,
+    ogType: "product",
+  });
+
+  return {
+    ...base,
     other: {
       product_price: String(effectivePrice),
       availability: inStock ? "instock" : "outofstock",
@@ -291,6 +300,40 @@ export async function generateMetadata({
       ...(p.warranty ? { guarantee: p.warranty } : {}),
     },
   };
+}
+
+/**
+ * `seoSchema` در ادمین به‌صورت متن آزاد وارد می‌شود، پس ممکن است JSON نامعتبر
+ * باشد. اگر parse نشد نادیده گرفته می‌شود تا صفحه نشکند.
+ */
+function parseCustomSchema(raw?: string | null) {
+  if (!raw?.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+const META_DESCRIPTION_MAX = 155;
+
+/**
+ * قیمت و یک CTA کوتاه را به توضیحات متا اضافه می‌کند، ولی فقط اگر بعد از
+ * افزودن هنوز زیر سقف ۱۵۵ کاراکتر باشیم — وگرنه متن پایه دست‌نخورده می‌ماند.
+ */
+function buildProductDescription(opts: {
+  base: string;
+  price: number;
+  inStock: boolean;
+}) {
+  const base = opts.base.trim();
+  if (!opts.inStock || opts.price <= 0) return base;
+
+  const suffix = ` قیمت ${opts.price.toLocaleString("fa-IR")} تومان — همین حالا سفارش دهید.`;
+  return base.length + suffix.length <= META_DESCRIPTION_MAX
+    ? base + suffix
+    : base;
 }
 
 export default async function ProductDetailPage({
@@ -306,7 +349,12 @@ export default async function ProductDetailPage({
 
   // Schema.org
   const productUrl = canonicalUrl(
-    `/products/${slug}`
+    `/products/${encodeSlug(slug)}`
+  );
+
+  // JSON-LD سفارشی که در ادمین روی محصول ذخیره شده
+  const customSchema = parseCustomSchema(
+    product.seoSchema
   );
 
   const images = [
@@ -353,6 +401,10 @@ export default async function ProductDetailPage({
 
       sku: product.sku,
 
+      gtin13: product.gtin13,
+
+      mpn: product.mpn,
+
       brand:
         product.brand?.title,
 
@@ -397,7 +449,7 @@ export default async function ProductDetailPage({
                 product.category
                   .title,
 
-              url: `${SITE_URL}/categories/${product.category.slug}`,
+              url: `${SITE_URL}/categories/${encodeSlug(product.category.slug)}`,
             },
           ]
         : []),
@@ -413,6 +465,16 @@ export default async function ProductDetailPage({
 
   return (
     <>
+      {/* تصاویر محصول معمولاً روی دامنه‌ی دیگری میزبانی می‌شوند؛ گرم کردن زودهنگام
+          اتصال، DNS و TLS را از مسیر بحرانی LCP خارج می‌کند */}
+      {externalImageOrigins(images).map((origin) => (
+        <link key={origin} rel="preconnect" href={origin} crossOrigin="" />
+      ))}
+
+      {/* buildBaseMetadata عمداً og:type را ست نمی‌کند (Next مقدار product را
+          رد می‌کند)، پس اینجا مستقیم ساخته می‌شود و React به head منتقلش می‌کند */}
+      <meta property="og:type" content="product" />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -437,6 +499,17 @@ export default async function ProductDetailPage({
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(
               faqSchema
+            ),
+          }}
+        />
+      )}
+
+      {customSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              customSchema
             ),
           }}
         />

@@ -27,6 +27,7 @@ export interface FormState {
   stock: string; trackStock: boolean; lowStockThreshold: string;
   faq: FaqItem[];
   seoTitle: string; seoDescription: string; seoKeywords: string; seoSchema: string;
+  sku: string; gtin13: string; mpn: string;
   isActive: boolean;
   images: string[]; specs: SpecRow[];
   relatedSettings: RelatedSettings;
@@ -46,6 +47,7 @@ export const EMPTY_FORM: FormState = {
   stock: "", trackStock: false, lowStockThreshold: "3",
   faq: [],
   seoTitle: "", seoDescription: "", seoKeywords: "", seoSchema: "",
+  sku: "", gtin13: "", mpn: "",
   isActive: true,
   images: [], specs: [],
   relatedSettings: { categoryEnabled: false, categorySort: "newest", brandEnabled: false, brandSort: "newest" },
@@ -935,6 +937,27 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
               placeholder={`{\n  "@context": "https://schema.org",\n  "@type": "Product"\n}`}
               onChange={e => set("seoSchema", e.target.value)} />
           </Field>
+
+          <div className="pt-4 mt-4 border-t border-gray-100 dark:border-white/6">
+            <p className="text-xs font-bold text-gray-700 dark:text-gray-200">شناسه‌های محصول</p>
+            <p className="text-[11px] text-gray-400 mt-0.5 mb-3">
+              در Product schema منتشر می‌شوند و برای Google Merchant Center لازم‌اند
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Field label="SKU">
+                <input dir="ltr" value={form.sku} className={inp}
+                  placeholder="HP-M28A-001" onChange={e => set("sku", e.target.value)} />
+              </Field>
+              <Field label="GTIN-13 / بارکد">
+                <input dir="ltr" inputMode="numeric" value={form.gtin13} className={inp}
+                  placeholder="6291041500213" onChange={e => set("gtin13", e.target.value)} />
+              </Field>
+              <Field label="MPN (کد سازنده)">
+                <input dir="ltr" value={form.mpn} className={inp}
+                  placeholder="W2G54A" onChange={e => set("mpn", e.target.value)} />
+              </Field>
+            </div>
+          </div>
         </Section>
 
         {}

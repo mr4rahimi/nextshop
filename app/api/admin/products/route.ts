@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { NextResponse } from "next/server";
+import { submitToIndexNow, productUrl } from "@/lib/indexnow";
  
 // ─── GET /api/admin/products ──────────────────────────────────────────────────
 export const runtime = "nodejs";
@@ -122,6 +123,11 @@ export async function POST(req: Request) {
       seoDescription: body.seoDescription,
       seoKeywords:    body.seoKeywords,
       seoSchema:      body.seoSchema,
+
+      // شناسه‌های محصول برای Product schema / Merchant Center
+      sku:    body.sku    || null,
+      gtin13: body.gtin13 || null,
+      mpn:    body.mpn    || null,
  
       images: {
         create: (body.images || []).map((url: string, index: number) => ({
@@ -143,6 +149,9 @@ export async function POST(req: Request) {
     },
   });
  
+  // اعلام محصول جدید به IndexNow (Bing/Yandex) بدون معطل کردن پاسخ
+  void submitToIndexNow([productUrl(product.slug)]);
+
   return NextResponse.json(serialize(product));
 }
  

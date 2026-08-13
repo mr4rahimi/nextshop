@@ -131,6 +131,7 @@ export default function SearchBox() {
           onKeyDown={handleKeyDown}
           onFocus={() => setOpen(true)}
           placeholder="جستجوی سراسری در محصولات ..."
+          aria-label="جستجو در محصولات"
           className="w-full bg-gray-200/60 dark:bg-primary-950/60 border border-gray-300/30 dark:border-white/5 rounded-2xl py-4 pr-12 pl-14 text-sm font-bold text-right outline-none focus:bg-white dark:focus:bg-primary-950 focus:ring-4 focus:ring-primary-500/30 transition-all placeholder:text-gray-500"
         />
         {}

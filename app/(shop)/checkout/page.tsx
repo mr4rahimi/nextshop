@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import CheckoutClient from "@/components/store/cart/CheckoutClient";
 
-export const metadata = { title: "تکمیل سفارش" };
+// متادیتا (شامل noindex) از app/(shop)/checkout/layout.tsx می‌آید.
 
 export default async function CheckoutPage() {
   const user = await getAuthUser();

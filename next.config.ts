@@ -11,21 +11,70 @@ function h(value: string) {
   return [{ key: "Cache-Control", value }];
 }
 
+/**
+ * هدرهای امنیتی مشترک همه‌ی دیپلوی‌ها.
+ *
+ * عمداً `Content-Security-Policy` اینجا نیست: Next اسکریپت‌های inline تزریق
+ * می‌کند (اسکریپت ضد-flash تم، هیدریشن، و JSON-LD با dangerouslySetInnerHTML)
+ * و یک CSP نادرست همزمان چند سایت production را می‌شکند. اگر CSP خواستید،
+ * اول با `Content-Security-Policy-Report-Only` روی یک سایت تست کنید.
+ *
+ * `Strict-Transport-Security` روی HTTP لوکال توسط مرورگر نادیده گرفته می‌شود،
+ * پس در توسعه بی‌اثر و بی‌خطر است. عمداً بدون `includeSubDomains` و `preload`
+ * است تا اگر ساب‌دامنه‌ای هنوز HTTPS ندارد از کار نیفتد.
+ *
+ * `max-age` پلکانی بالا آمد: اول ۵ دقیقه تا وضعیت گواهی‌ها روشن شود، حالا یک
+ * سال. زمینه‌اش این بود که گواهی همه‌ی دامنه‌ها را CDN صادر می‌کرد و روی سرور
+ * گواهی معتبر و خودتمدیدشونده نبود. اگر گواهی زیر HSTS منقضی شود مرورگر
+ * **هارد-فیل** می‌کند و کاربر حتی نمی‌تواند رد شود.
+ *
+ * حالا bartar-janebi.com و mymonta.ir روی سرور گواهی Let's Encrypt با تمدید
+ * خودکار (webroot + certbot.timer) دارند.
+ *
+ * ⚠️ mahamprint.com هنوز `authenticator = manual` است و **خودکار تمدید
+ * نمی‌شود** (انقضا ۲۰۲۶-۱۰-۳۱). چون CDN آن دامنه درخواست HTTP را در لبه
+ * ریدایرکت می‌کند، HTTP-01 تا وقتی ابر روشن است کار نمی‌کند. بعد از خاموش
+ * کردن ابر، این را اجرا کنید تا آن هم خودکار شود:
+ *
+ *   certbot certonly --webroot -w /var/www/letsencrypt \
+ *     --cert-name mahamprint.com -d mahamprint.com -d www.mahamprint.com \
+ *     --force-renewal --non-interactive --agree-tos
+ */
+const SECURITY_HEADERS = [
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
+  { key: "X-Content-Type-Options",    value: "nosniff" },
+  { key: "X-Frame-Options",           value: "SAMEORIGIN" },
+  { key: "Referrer-Policy",           value: "strict-origin-when-cross-origin" },
+  { key: "X-DNS-Prefetch-Control",    value: "on" },
+  { key: "Permissions-Policy",        value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+];
+
 const nextConfig: NextConfig = {
+  // `X-Powered-By: Next.js` نسخه‌ی فریم‌ورک را لو می‌دهد و هیچ فایده‌ای ندارد.
+  poweredByHeader: false,
+
   images: {
     // Sharp requires x86-64-v2 CPU (SSE4.2) which the production server lacks.
     // unoptimized:true makes next/image render direct <img> tags, bypassing
     // the /_next/image endpoint and never loading sharp at runtime.
     unoptimized: true,
+    // ⚠️ این الگوها فقط تا وقتی بی‌خطرند که `unoptimized: true` باشد، چون
+    // مسیر /_next/image اصلاً استفاده نمی‌شود. اگر روزی unoptimized را
+    // برداشتید، «هر هاستی» به یک سطح حمله‌ی SSRF تبدیل می‌شود — آن موقع
+    // حتماً به دامنه‌های مشخص محدودش کنید.
     remotePatterns: [
       { protocol: "https", hostname: "**" },
       { protocol: "http",  hostname: "**" },
     ],
-    dangerouslyAllowSVG: true,
+    // dangerouslyAllowSVG حذف شد: فقط روی بهینه‌ساز اثر داشت که بای‌پس شده،
+    // پس صرفاً یک ریسک خفته بود. SVGها همچنان به‌صورت <img> رندر می‌شوند.
   },
 
   async headers() {
     return [
+      // ── هدرهای امنیتی روی همه‌ی مسیرها ─────────────────────────────────
+      { source: "/:path*", headers: SECURITY_HEADERS },
+
       // ── Private — never cache ──────────────────────────────────────────
       { source: "/api/auth/:path*",           headers: h(PRIVATE)  },
       { source: "/api/cart/:path*",           headers: h(PRIVATE)  },

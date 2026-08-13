@@ -5,6 +5,69 @@ export const RESERVED_PARAMS = new Set([
   "minPrice", "maxPrice", "attr",
 ]);
 
+/**
+ * سیاست ایندکس صفحات لیستی (دسته‌بندی، برند، همه محصولات).
+ *
+ * یک پیاده‌سازی مشترک تا صفحات مختلف از هم فاصله نگیرند — قبلاً
+ * `/categories/x?brand=y` نو‌ایندکس می‌شد ولی `/products?brand=y` نه.
+ *
+ * - **فیلتر / مرتب‌سازی / قیمت** → `noindex, follow` + canonical به صفحه پایه.
+ *   ترکیب‌های بی‌شمار می‌سازند و محتوای تکراری‌اند.
+ * - **صفحه‌بندی خالص** → `index` + canonical خودارجاع. صفحه ۲ محتوای تکراری
+ *   نیست و کنونیکال کردنش به صفحه ۱ باعث می‌شود محصولات صفحات بعدی کشف نشوند.
+ * - **صفحه پایه** → `index` + canonical خودش.
+ */
+export type ListingIndexPolicy =
+  | { kind: "base";       canonicalPath: string }
+  | { kind: "pagination"; canonicalPath: string; page: number }
+  | { kind: "filtered";   canonicalPath: string; page: number };
+
+export function analyzeListingParams(
+  sp: Record<string, string | string[] | undefined>
+) {
+  const one = (k: string) => {
+    const v = sp[k];
+    return Array.isArray(v) ? v[0] : v;
+  };
+
+  const activeFilters: Record<string, string> = {};
+  for (const [k, v] of Object.entries(sp)) {
+    if (k.startsWith("utm_")) continue;
+    const val = Array.isArray(v) ? v[0] : v;
+    if (!val) continue;
+    // هر پارامتر ناشناخته یک ویژگی (attribute) است و فیلتر حساب می‌شود
+    if (k === "brand" || k === "category" || k === "q" || !RESERVED_PARAMS.has(k)) {
+      activeFilters[k] = val;
+    }
+  }
+
+  const rawPage = parseInt(one("page") ?? "1");
+  const sort = one("sort");
+
+  return {
+    activeFilters,
+    hasFilters: Object.keys(activeFilters).length > 0,
+    hasSort:    !!sort && sort !== "newest",
+    hasPrice:   !!one("minPrice") || !!one("maxPrice"),
+    page:       Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1,
+  };
+}
+
+export function listingIndexPolicy(
+  basePath: string,
+  sp: Record<string, string | string[] | undefined>
+): ListingIndexPolicy {
+  const { hasFilters, hasSort, hasPrice, page } = analyzeListingParams(sp);
+
+  if (hasFilters || hasSort || hasPrice) {
+    return { kind: "filtered", canonicalPath: basePath, page };
+  }
+  if (page > 1) {
+    return { kind: "pagination", canonicalPath: `${basePath}?page=${page}`, page };
+  }
+  return { kind: "base", canonicalPath: basePath };
+}
+
 export const SORTS = ["newest", "popular", "price_asc", "price_desc"] as const;
 export type SortType = (typeof SORTS)[number];
 

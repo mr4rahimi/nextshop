@@ -7,7 +7,39 @@ export function canonicalUrl(path: string) {
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+/**
+ * اسلاگ‌ها ممکن است فارسی باشند (مثل `شیرالات-دوم`). در JSON-LD مقدار `item`
+ * باید URL معتبر باشد، پس قبل از ساخت آدرس percent-encode می‌شوند.
+ * اگر اسلاگ از قبل encode شده باشد دوباره encode نمی‌شود.
+ */
+export function encodeSlug(slug: string) {
+  try {
+    return encodeURIComponent(decodeURIComponent(slug));
+  } catch {
+    return encodeURIComponent(slug);
+  }
+}
+
 function toFa(n: number | string) { return Number(n).toLocaleString("fa-IR"); }
+
+/**
+ * قیمت‌ها در دیتابیس و رابط کاربری به **تومان** ذخیره و نمایش داده می‌شوند،
+ * ولی تومان کد ISO 4217 ندارد و Schema.org فقط کد ISO می‌پذیرد.
+ * پس برای JSON-LD به ریال (IRR) تبدیل می‌کنیم: ۱ تومان = ۱۰ ریال.
+ * بدون این تبدیل، قیمت اعلام‌شده به گوگل ۱۰ برابر کمتر از قیمت واقعی است
+ * که در Merchant Center به‌عنوان price mismatch شناخته می‌شود.
+ */
+export const SCHEMA_CURRENCY = "IRR";
+const TOMAN_TO_IRR = 10;
+export function tomanToIrr(n: number) { return Math.round(n * TOMAN_TO_IRR); }
+
+/**
+ * پایان سال میلادی بعدی. برخلاف `now + 7 روز`، در طول یک سال ثابت می‌ماند
+ * و باعث نمی‌شود خروجی JSON-LD در هر ریکوئست عوض شود.
+ */
+function defaultPriceValidUntil() {
+  return `${new Date().getUTCFullYear() + 1}-12-31`;
+}
 
 // ── Base Metadata ──────────────────────────────────────────────────────────────
 export function buildBaseMetadata(opts: {
@@ -21,7 +53,8 @@ export function buildBaseMetadata(opts: {
   followWhenNoIndex?: boolean;
   /** اگر داده شود، به‌جای path برای canonical استفاده می‌شود */
   canonicalPath?: string;
-  ogType?: "website" | "article";
+  /** `product` مقدار معتبر og است ولی در تایپ‌های Next نیست (پایین cast می‌شود) */
+  ogType?: "website" | "article" | "product";
   siteName?: string;
 }): Metadata {
   const url      = canonicalUrl(opts.path);
@@ -41,7 +74,11 @@ export function buildBaseMetadata(opts: {
       url,
       siteName,
       locale:      "fa_IR",
-      type:        opts.ogType ?? "website",
+      // Next در زمان اجرا هر og:type غیر از مقادیر شناخته‌شدهٔ خودش را رد می‌کند
+      // («Invalid OpenGraph type»)، و تزریق از راه `other` هم `name=` تولید
+      // می‌کند نه `property=`. پس برای product اینجا چیزی ست نمی‌شود و خودِ
+      // صفحه تگ را با JSX می‌سازد (React آن را به head منتقل می‌کند).
+      ...(opts.ogType === "product" ? {} : { type: opts.ogType ?? "website" }),
       images:      opts.image ? [{ url: opts.image, width: 1200, height: 630 }] : [],
     },
     twitter: {
@@ -50,6 +87,50 @@ export function buildBaseMetadata(opts: {
       description: opts.description,
       images:      opts.image ? [opts.image] : [],
     },
+  };
+}
+
+/**
+ * دامنه‌های خارجی یکتای مجموعه‌ای از آدرس تصاویر — برای `<link rel="preconnect">`.
+ *
+ * تصاویر محصولات روی دامنه‌ی دیگری میزبانی می‌شوند و مرورگر تا وقتی خود تگ
+ * `<img>` را نبیند DNS و TLS آن دامنه را شروع نمی‌کند. در صفحات لیستی که ده‌ها
+ * کارت محصول دارند این تأخیر روی LCP می‌نشیند. preconnect اتصال را زودتر
+ * گرم می‌کند.
+ *
+ * سقف دارد چون هر preconnect خودش هزینه دارد؛ بیش از دو تا ضدبهره می‌شود.
+ */
+export function externalImageOrigins(
+  urls: (string | null | undefined)[],
+  limit = 2
+): string[] {
+  const origins = new Set<string>();
+  for (const u of urls) {
+    if (!u || !/^https?:\/\//i.test(u)) continue;
+    try {
+      const { origin } = new URL(u);
+      if (origin && origin !== SITE_URL) origins.add(origin);
+    } catch {
+      // آدرس خراب — نادیده
+    }
+    if (origins.size >= limit) break;
+  }
+  return [...origins];
+}
+
+/**
+ * متادیتای صفحات خصوصی (سبد خرید، تسویه، پنل کاربر، ورود).
+ *
+ * این صفحات در robots.txt **بلاک نشده‌اند** و نباید بشوند: از هدر به همه‌جا
+ * لینک دارند و اگر خزیدنشان را ببندیم گوگل تگ noindex را نمی‌بیند و ممکن است
+ * URL خالی را ایندکس کند. اجازه‌ی خزیدن + noindex حذف قطعی را تضمین می‌کند.
+ *
+ * `follow` روشن می‌ماند تا لینک‌های داخلی همچنان دنبال شوند.
+ */
+export function noIndexMetadata(title: string): Metadata {
+  return {
+    title,
+    robots: { index: false, follow: true },
   };
 }
 
@@ -136,19 +217,27 @@ export function buildProductSchema(opts: {
   image?: string | null;
   images?: string[];
   sku?: string | null;
+  gtin13?: string | null;
+  mpn?: string | null;
   brand?: string | null;
+  /** قیمت به تومان (همان چیزی که در دیتابیس و UI است) */
   price: string | number | bigint;
+  /** قیمت تخفیف‌خورده به تومان */
   salePrice?: string | number | bigint | null;
-  currency?: string;
   inStock: boolean;
   url: string;
   ratingValue?: number;
   ratingCount?: number;
   category?: string | null;
+  /** ISO 8601 (YYYY-MM-DD). پیش‌فرض: پایان سال میلادی بعدی */
+  priceValidUntil?: string;
 }) {
   const price     = Number(opts.price);
   const salePrice = opts.salePrice ? Number(opts.salePrice) : null;
   const offerPrice = salePrice && salePrice < price ? salePrice : price;
+
+  // تومان → ریال، چون priceCurrency باید کد ISO 4217 باشد
+  const offerPriceIrr = tomanToIrr(offerPrice);
 
   const schema: any = {
     "@context": "https://schema.org",
@@ -156,16 +245,19 @@ export function buildProductSchema(opts: {
     name:        opts.name,
     description: opts.description ?? undefined,
     image:       opts.images?.length ? opts.images : (opts.image ? [opts.image] : undefined),
-    sku:         opts.sku ?? undefined,
+    sku:         opts.sku    ?? undefined,
+    gtin13:      opts.gtin13 ?? undefined,
+    mpn:         opts.mpn    ?? undefined,
     brand:       opts.brand ? { "@type": "Brand", name: opts.brand } : undefined,
     category:    opts.category ?? undefined,
     url:         opts.url,
     offers: {
       "@type":         "Offer",
       url:             opts.url,
-      priceCurrency:   opts.currency ?? "IRR",
-      price:           offerPrice,
-      priceValidUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      priceCurrency:   SCHEMA_CURRENCY,
+      price:           offerPriceIrr,
+      // تاریخ ثابت است تا خروجی JSON-LD در هر ریکوئست تغییر نکند
+      priceValidUntil: opts.priceValidUntil ?? defaultPriceValidUntil(),
       availability:    opts.inStock
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
@@ -176,7 +268,7 @@ export function buildProductSchema(opts: {
         shippingRate: {
           "@type": "MonetaryAmount",
           value: "0",
-          currency: opts.currency ?? "IRR",
+          currency: SCHEMA_CURRENCY,
         },
         shippingDestination: {
           "@type": "DefinedRegion",
@@ -201,9 +293,8 @@ export function buildProductSchema(opts: {
 
   if (salePrice && salePrice < price) {
     schema.offers.priceSpecification = [
-      
-      { "@type": "UnitPriceSpecification", price: salePrice, priceCurrency: opts.currency ?? "IRR", priceType: "https://schema.org/SalePrice" },
-      { "@type": "UnitPriceSpecification", price,            priceCurrency: opts.currency ?? "IRR", priceType: "https://schema.org/ListPrice" },
+      { "@type": "UnitPriceSpecification", price: tomanToIrr(salePrice), priceCurrency: SCHEMA_CURRENCY, priceType: "https://schema.org/SalePrice" },
+      { "@type": "UnitPriceSpecification", price: tomanToIrr(price),     priceCurrency: SCHEMA_CURRENCY, priceType: "https://schema.org/ListPrice" },
     ];
   }
 

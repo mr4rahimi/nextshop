@@ -51,6 +51,9 @@ export default function EditProductPage() {
           seoDescription:     product.seoDescription     ?? "",
           seoKeywords:        product.seoKeywords         ?? "",
           seoSchema:          product.seoSchema           ?? "",
+          sku:                product.sku                 ?? "",
+          gtin13:             product.gtin13              ?? "",
+          mpn:                product.mpn                 ?? "",
           isActive:           product.isActive            ?? true,
           images: Array.isArray(product.images)
             ? product.images.sort((a: any, b: any) => a.sortOrder - b.sortOrder).map((img: any) => img.url)

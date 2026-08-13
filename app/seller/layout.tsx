@@ -4,6 +4,9 @@ import SellerHeader from "@/components/seller/SellerHeader";
 
 export const dynamic = "force-dynamic";
 
+// پنل فروشنده خصوصی است.
+export const metadata = { robots: { index: false, follow: true } };
+
 export default async function SellerLayout({
   children,
 }: {

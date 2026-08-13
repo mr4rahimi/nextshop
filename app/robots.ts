@@ -7,6 +7,16 @@ export const dynamic = "force-dynamic";
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
+      /**
+       * فقط یک گروه. گروه جداگانه‌ی Googlebot که قبلاً اینجا بود `/search` را
+       * disallow نمی‌کرد و چون در robots.txt گروه اختصاصی‌تر برنده است،
+       * عملاً قانون گروه `*` برای گوگل بی‌اثر می‌شد.
+       *
+       * `/cart`، `/checkout` و `/search` عمداً disallow نشده‌اند: این صفحات
+       * از هدر به هر صفحه‌ای لینک دارند و اگر خزیدنشان را ببندیم گوگل تگ
+       * `noindex` را نمی‌بیند و ممکن است URL خالی را ایندکس کند. اجازه‌ی خزیدن
+       * + noindex تنها راهی است که حذف قطعی را تضمین می‌کند.
+       */
       {
         userAgent: "*",
         allow: "/",
@@ -14,16 +24,9 @@ export default function robots(): MetadataRoute.Robots {
           "/admin/",
           "/api/",
           "/user/",
-          "/cart",
-          "/checkout",
-          "/search",
+          "/seller/",
           "/auth/",
         ],
-      },
-      {
-        userAgent: "Googlebot",
-        allow: "/",
-        disallow: ["/admin/", "/api/", "/user/", "/cart", "/checkout", "/auth/"],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

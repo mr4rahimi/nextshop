@@ -36,6 +36,10 @@ const EXCLUDES = [
   "public/uploads", "public/upload", "public/products",
   "public/banners", "public/brands", "public/categories", "public/mid-banners",
   "release-keys", "release-out", "scripts/deploy/targets.json",
+  // فقط روی سرور ساخته می‌شود و مبنای تصمیم انتقال node_modules است.
+  // اگر --delete پاکش کند، هر استقرار بی‌دلیل کل node_modules را دوباره
+  // منتقل می‌کند (چند دقیقه) و روی سایت زنده جایگزینش می‌کند.
+  ".deps-hash",
   "*.tar.gz", "*.zip", "backups", "__pycache__",
   "tsconfig.tsbuildinfo", "node_modules", ".next",
   // پیکربندی مخصوص هر سایت — نام و پورت pm2 متفاوت است

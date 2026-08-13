@@ -142,6 +142,36 @@ function Stars({ rating, size = 4 }: { rating: number; size?: number }) {
   );
 }
 
+/**
+ * پنل تب. محتوا همیشه در DOM می‌ماند و فقط با CSS پنهان می‌شود، نه با unmount —
+ * وگرنه گوگل هیچ‌وقت مشخصات فنی، بررسی تخصصی، نظرات و پرسش‌وپاسخ را نمی‌بیند
+ * (و FAQPage schema بدون متن متناظر روی صفحه نامعتبر است).
+ * هر پنل یک H2 واقعی دارد تا ساختار عناوین صفحه کامل باشد.
+ */
+function TabPanel({
+  id,
+  heading,
+  active,
+  children,
+}: {
+  id: string;
+  heading: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      id={`tab-${id}`}
+      role="tabpanel"
+      aria-labelledby={`tab-btn-${id}`}
+      className={active ? undefined : "hidden"}
+    >
+      <h2 className="sr-only">{heading}</h2>
+      {children}
+    </section>
+  );
+}
+
 function RelatedSection({ title, products }: { title: string; products: RelatedProduct[] }) {
   return (
     <div className="space-y-6">
@@ -291,6 +321,10 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                       alt={product.title}
                       fill
                       priority
+                      // با unoptimized:true، `priority` فقط <link rel="preload">
+                      // می‌سازد و fetchpriority را روی خود تگ نمی‌گذارد.
+                      // این تصویر عنصر LCP صفحه محصول است.
+                      fetchPriority="high"
                       className="object-contain transition-transform duration-700"
                       sizes="(max-width: 1024px) 100vw, 42vw"
                     />
@@ -584,7 +618,8 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                     </svg>
                   </div>
                 </div>
-                <h3 className="text-sm font-black text-gray-900 dark:text-white mb-1">{item.label}</h3>
+                {/* بج اعتماد است، نه عنوان بخش — نباید heading باشد */}
+                <p className="text-sm font-black text-gray-900 dark:text-white mb-1">{item.label}</p>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-5 max-w-[140px]">{item.desc}</p>
               </div>
             ))}
@@ -608,6 +643,10 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
               ].filter(tab => tab.show).map((tab) => (
                 <button
                   key={tab.key}
+                  id={`tab-btn-${tab.key}`}
+                  role="tab"
+                  aria-controls={`tab-${tab.key}`}
+                  aria-selected={activeTab === tab.key}
                   onClick={() => setActiveTab(tab.key as typeof activeTab)}
                   className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-black whitespace-nowrap transition-all ${
                     activeTab === tab.key
@@ -626,7 +665,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
             <div className="p-8 lg:p-12">
 
               {/* ── Overview Tab ── */}
-              {activeTab === "overview" && (
+              <TabPanel id="overview" heading={`بررسی اجمالی ${product.title}`} active={activeTab === "overview"}>
                 <div className="space-y-12">
                   {(product.summaryTitle || product.summaryDescription || (product.summaryFeatures as string[]).length > 0) ? (
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
@@ -692,10 +731,10 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                     ))}
                   </div>
                 </div>
-              )}
+              </TabPanel>
 
               {/* ── Expert Tab ── */}
-              {activeTab === "expert" && (
+              <TabPanel id="expert" heading={`بررسی تخصصی ${product.title}`} active={activeTab === "expert"}>
                 <div className="space-y-12">
                   {product.expertTitle || product.expertDescription ? (
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
@@ -729,27 +768,33 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                     </div>
                   )}
                 </div>
-              )}
+              </TabPanel>
 
               {/* ── Specs Tab ── */}
-              {activeTab === "specs" && (
+              <TabPanel id="specs" heading={`مشخصات فنی ${product.title}`} active={activeTab === "specs"}>
                 <div className="space-y-10" dir="rtl">
                   {Object.keys(specGroups).length > 0 ? (
                     Object.entries(specGroups).map(([groupTitle, items]) => (
                       <div key={groupTitle} className="space-y-6">
                         <div className="flex items-center gap-4">
                           <div className="w-1.5 h-8 bg-primary-600 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.6)]" />
-                          <h4 className="text-lg font-black text-zinc-900 dark:text-white">{groupTitle}</h4>
+                          <h3 className="text-lg font-black text-zinc-900 dark:text-white">{groupTitle}</h3>
                         </div>
                         <div className="relative p-8 rounded-[2.5rem] bg-white/30 dark:bg-[#0c0c0c]/40 backdrop-blur-3xl border border-white/50 dark:border-white/10">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
-                            {items.map((item, i) => (
-                              <div key={i} className="flex items-center justify-between pb-4 border-b border-zinc-200/50 dark:border-white/5">
-                                <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">{item.title}</span>
-                                <span className="text-xs font-black text-zinc-900 dark:text-white">{item.value}</span>
-                              </div>
-                            ))}
-                          </div>
+                          {/* جدول واقعی تا گوگل بتواند جفت «ویژگی/مقدار» را استخراج کند */}
+                          <table className="w-full border-collapse">
+                            <caption className="sr-only">{`${groupTitle} — ${product.title}`}</caption>
+                            <tbody className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
+                              {items.map((item, i) => (
+                                <tr key={i} className="flex items-center justify-between pb-4 border-b border-zinc-200/50 dark:border-white/5">
+                                  <th scope="row" className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest text-right">
+                                    {item.title}
+                                  </th>
+                                  <td className="text-xs font-black text-zinc-900 dark:text-white">{item.value}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     ))
@@ -759,19 +804,19 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                     </div>
                   )}
                 </div>
-              )}
+              </TabPanel>
 
               {/* ── Reviews Tab ── */}
-              {activeTab === "reviews" && (
+              <TabPanel id="reviews" heading={`نظرات کاربران درباره ${product.title}`} active={activeTab === "reviews"}>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
                   {/* Summary */}
                   <div className="lg:col-span-4 space-y-6">
                     <div className="relative overflow-hidden p-10 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-3xl border border-white dark:border-white/10 rounded-[3rem] shadow-2xl">
                       <div className="flex flex-col items-center pt-4">
                         <span className="text-[13px] font-black text-zinc-400 mb-3 uppercase tracking-widest">امتیاز کلی</span>
-                        <h4 className="text-7xl font-black text-zinc-900 dark:text-white tracking-tighter mb-4">
+                        <span className="block text-7xl font-black text-zinc-900 dark:text-white tracking-tighter mb-4">
                           {toFarsiNum(product.ratingAvg)}
-                        </h4>
+                        </span>
                         <Stars rating={product.ratingAvg} size={6} />
                         <p className="text-[13px] font-bold text-zinc-500 mt-4">
                           بر اساس {toFarsiNum(product.ratingCount)} نظر ثبت شده
@@ -812,10 +857,10 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                     )}
                   </div>
                 </div>
-              )}
+              </TabPanel>
 
               {/* ── FAQ Tab ── */}
-              {activeTab === "faq" && (
+              <TabPanel id="faq" heading={`پرسش و پاسخ درباره ${product.title}`} active={activeTab === "faq"}>
                 <div className="space-y-6" dir="rtl">
                   {faqItems.length > 0 ? (
                     faqItems.map((item, i) => (
@@ -837,16 +882,19 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                               </svg>
                             </button>
-                            {openFaqIdx === i && (
-                              <div className="relative bg-white/40 dark:bg-zinc-900/60 backdrop-blur-2xl border border-gray-200 dark:border-white/10 rounded-[2.5rem] p-8">
-                                <div className="flex items-center gap-3 mb-4">
-                                  <div className="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[11px] font-black rounded-lg">
-                                    پاسخ
-                                  </div>
+                            {/* پاسخ همیشه در DOM می‌ماند تا با FAQPage schema همخوان باشد */}
+                            <div
+                              className={`relative bg-white/40 dark:bg-zinc-900/60 backdrop-blur-2xl border border-gray-200 dark:border-white/10 rounded-[2.5rem] p-8 ${
+                                openFaqIdx === i ? "" : "hidden"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 mb-4">
+                                <div className="px-4 py-1.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[11px] font-black rounded-lg">
+                                  پاسخ
                                 </div>
-                                <p className="text-[14px] font-bold text-zinc-600 dark:text-zinc-300 leading-8">{item.a}</p>
                               </div>
-                            )}
+                              <p className="text-[14px] font-bold text-zinc-600 dark:text-zinc-300 leading-8">{item.a}</p>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -857,7 +905,7 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
                     </div>
                   )}
                 </div>
-              )}
+              </TabPanel>
 
             </div>
           </div>

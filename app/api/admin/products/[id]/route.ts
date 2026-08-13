@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { NextResponse } from "next/server";
+import { submitToIndexNow, productUrl } from "@/lib/indexnow";
 
 // ─── GET /api/admin/products/[id] ────────────────────────────────────────────
 export async function GET(
@@ -80,6 +81,11 @@ export async function PUT(
       seoKeywords:    body.seoKeywords,
       seoSchema:      body.seoSchema,
 
+      // شناسه‌های محصول برای Product schema / Merchant Center
+      sku:    body.sku    || null,
+      gtin13: body.gtin13 || null,
+      mpn:    body.mpn    || null,
+
       images: {
         create: (body.images || []).map((url: string, index: number) => ({
           url,
@@ -100,6 +106,9 @@ export async function PUT(
     },
   });
 
+  // اعلام به IndexNow (Bing/Yandex). عمداً await نمی‌شود تا پاسخ ادمین معطل نماند.
+  void submitToIndexNow([productUrl(updated.slug)]);
+
   return NextResponse.json(serialize(updated));
 }
 
@@ -109,6 +118,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  // slug قبل از حذف خوانده می‌شود تا بتوانیم حذف را هم اعلام کنیم
+  const existing = await prisma.product.findUnique({ where: { id }, select: { slug: true } });
   await prisma.product.delete({ where: { id } });
+  if (existing) void submitToIndexNow([productUrl(existing.slug)]);
   return NextResponse.json({ success: true });
 }

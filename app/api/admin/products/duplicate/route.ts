@@ -53,6 +53,11 @@ export async function POST(req: Request) {
       seoDescription:     original.seoDescription,
       seoKeywords:        original.seoKeywords,
       seoSchema:          original.seoSchema,
+      // شناسه‌های محصول عمداً کپی نمی‌شوند؛ هر محصول باید SKU/GTIN مخصوص خودش
+      // را داشته باشد و شناسهٔ تکراری بدتر از نبودِ شناسه است.
+      sku:                null,
+      gtin13:             null,
+      mpn:                null,
       relatedSettings:    original.relatedSettings ?? {},
       isActive:           false,
       images: {

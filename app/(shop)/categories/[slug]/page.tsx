@@ -4,8 +4,8 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import CategoryPageClient from "@/components/store/categories/CategoryPageClient";
-import { SITE_URL, buildBaseMetadata, buildBreadcrumbSchema, buildItemListSchema, canonicalUrl } from "@/lib/seo";
-import { parseCatalogQuery, fetchCatalog, RESERVED_PARAMS } from "@/lib/catalog";
+import { SITE_URL, buildBaseMetadata, buildBreadcrumbSchema, buildItemListSchema, canonicalUrl, externalImageOrigins } from "@/lib/seo";
+import { parseCatalogQuery, fetchCatalog, RESERVED_PARAMS, listingIndexPolicy } from "@/lib/catalog";
 import { matchLandingByFilters } from "@/lib/landing-pages";
 import { getCategoryData as getCategory } from "@/lib/category-data";
 
@@ -65,27 +65,18 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 
 
-  // ── فیلتر معمولی / مرتب‌سازی / صفحه‌بندی: noindex, follow + canonical به دسته پایه ──
-  if (hasFilters || hasSort || hasPrice || page > 1) {
-    return buildBaseMetadata({
-      title:       (category.seoTitle || `خرید ${category.title}`) + pageSuffix,
-      description: category.seoDescription || category.description || `بهترین محصولات در دسته ${category.title}`,
-      image:       category.imageUrl || settings?.storeLogo || null,
-      siteName:    settings?.storeName || undefined,
-      path:        basePath,
-      canonicalPath: basePath,
-      noIndex:     true,
-      followWhenNoIndex: true,
-    });
-  }
+  // ── سیاست ایندکس مشترک با /products (lib/catalog.ts) ──
+  const policy = listingIndexPolicy(basePath, sp);
 
-  // ── دسته پایه ──
   return buildBaseMetadata({
-    title:       category.seoTitle       || `خرید ${category.title}`,
+    title:       (category.seoTitle || `خرید ${category.title}`) + pageSuffix,
     description: category.seoDescription || category.description || `بهترین محصولات در دسته ${category.title}`,
-    image:       category.imageUrl       || settings?.storeLogo || null,
-    siteName:    settings?.storeName     || undefined,
-    path:        basePath,
+    image:       category.imageUrl || settings?.storeLogo || null,
+    siteName:    settings?.storeName || undefined,
+    path:        policy.canonicalPath,
+    canonicalPath: policy.canonicalPath,
+    noIndex:     policy.kind === "filtered",
+    followWhenNoIndex: true,
   });
 }
 
@@ -123,8 +114,17 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     }));
   } catch {}
 
+  // تصاویر کارت‌های محصول روی دامنه‌ی خارجی‌اند و برخلاف صفحه محصول preload
+  // نمی‌شوند؛ preconnect اتصال را قبل از پارس شدن کارت‌ها گرم می‌کند.
+  const imageOrigins = externalImageOrigins(
+    (initialData?.items ?? []).slice(0, 12).map((p: any) => p.mainImage)
+  );
+
   return (
     <>
+      {imageOrigins.map(origin => (
+        <link key={origin} rel="preconnect" href={origin} crossOrigin="" />
+      ))}
       {breadcrumbJson && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJson }} />}
       {itemListJson   && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJson }} />}
       <Suspense fallback={null}>

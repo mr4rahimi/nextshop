@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ManaProductCard, { ProductCardItem } from "@/components/store/product/ManaProductCard";
 
@@ -67,6 +67,16 @@ function formatPrice(val: string | number): string {
   const n = Number(val);
   if (isNaN(n)) return "۰";
   return n.toLocaleString("fa-IR");
+}
+
+/** پنجره‌ی متحرک شماره صفحات — همیشه حول صفحه فعلی */
+function pageWindow(current: number, total: number, size = 7): number[] {
+  if (total <= size) return Array.from({ length: total }, (_, i) => i + 1);
+  const half = Math.floor(size / 2);
+  let start = Math.max(1, current - half);
+  const end = Math.min(total, start + size - 1);
+  start = Math.max(1, end - size + 1);
+  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
 }
 
 // ─── Attribute Filters Component ──────────────────────────────────────────────
@@ -359,7 +369,6 @@ export default function CategoryPageClient({
   lockedFilters?: Record<string, string>;
   basePath?: string;
 }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   // ── نگاشت دوطرفه slug ↔ id برای ویژگی‌ها ──
@@ -444,7 +453,9 @@ export default function CategoryPageClient({
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
-  const useInfiniteScroll = page <= INFINITE_SCROLL_LIMIT;
+  // تا رسیدن به صفحه‌ی INFINITE_SCROLL_LIMIT با اسکرول لود می‌شود؛ از آن به بعد
+  // صفحه‌بندی معمولی نمایش داده می‌شود تا DOM بی‌نهایت بزرگ نشود.
+  const useInfiniteScroll = page < INFINITE_SCROLL_LIMIT;
 
   // ── سازنده مشترک پارامترها (هم برای URL هم برای API) ──
   const buildParams = useCallback(
@@ -485,18 +496,30 @@ export default function CategoryPageClient({
 [categorySlug, sort, selectedBrands, selectedAttributes, appliedMin, appliedMax, absMin, absMax, attrMaps, lockedFilters]
   );
 
+  // ── آدرس واقعی هر صفحه — برای <a href> صفحه‌بندی (قابل کراول) ──
+  const hrefFor = useCallback(
+    (p: number) => {
+      const qs = buildParams({ forApi: false, page: p }).toString();
+      const base = basePath ?? `/categories/${categorySlug}`;
+      return `${base}${qs ? `?${qs}` : ""}`;
+    },
+    [buildParams, basePath, categorySlug]
+  );
+
   // ── نوشتن در URL ──
+  // history.replaceState به‌جای router.replace: محصولات از /api/products گرفته
+  // می‌شوند، پس رندر مجدد سرور (و کوئری‌های دیتابیسش) صرفاً هدررفت است — با هر
+  // قدم اسکرول بی‌نهایت یک بار تکرار می‌شد. آدرس همچنان قابل اشتراک/بوکمارک است
+  // و بارگذاری مستقیم همان URL کاملاً SSR می‌شود.
   useEffect(() => {
-    const qs = buildParams({ forApi: false, page }).toString();
-    const base = basePath ?? `/categories/${categorySlug}`;
-    const next = `${base}${qs ? `?${qs}` : ""}`;
+    const next = hrefFor(page);
 
     // اگر آدرس فعلی همین است، ننویس — وگرنه حلقه بی‌نهایت رندر ایجاد می‌شود
     const current = window.location.pathname + window.location.search;
     if (current === next) return;
 
-    router.replace(next, { scroll: false });
-  }, [buildParams, page, categorySlug, router, basePath]);
+    window.history.replaceState(null, "", next);
+  }, [hrefFor, page]);
 
   // ── Fetch ──
   const abortRef = useRef<AbortController | null>(null);
@@ -536,6 +559,34 @@ export default function CategoryPageClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort, selectedBrands, appliedMin, appliedMax, selectedAttributes, categorySlug]);
 
+  // ── Infinite scroll ──
+  // بدون این observer فقط صفحه اول (۱۲ محصول) نمایش داده می‌شد.
+  const loadingRef = useRef(false);
+  loadingRef.current = loading;
+
+  useEffect(() => {
+    if (!useInfiniteScroll || !initialLoaded || page >= totalPages) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    let fired = false;
+    const observer = new IntersectionObserver(
+      entries => {
+        if (!entries[0].isIntersecting || fired || loadingRef.current) return;
+        fired = true;              // هر observer فقط یک بار صفحه بعد را می‌گیرد
+        const next = page + 1;
+        setPage(next);
+        fetchProducts(next, true);
+      },
+      // کمی زودتر از رسیدن به انتها لود کن تا اسکرول بی‌وقفه بماند
+      { rootMargin: "400px 0px", threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+    // `loading` در وابستگی‌هاست تا وقتی فچ تمام شد observer دوباره ساخته شود و
+    // اگر sentinel هنوز در دید است، صفحه بعدی زنجیره‌وار لود شود.
+  }, [useInfiniteScroll, initialLoaded, page, totalPages, loading, fetchProducts]);
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   function handleBrandToggle(slug: string) {
     setSelectedBrands((prev) =>
@@ -548,10 +599,21 @@ export default function CategoryPageClient({
     setAppliedMax(maxPrice);
   }
 
-  function handlePageClick(p: number) {
+  function handlePageClick(e: React.MouseEvent, p: number) {
+    e.preventDefault();
+    if (p < 1 || p > totalPages || p === page) return;
     setPage(p);
     fetchProducts(p, false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  /** «مشاهده بیشتر» — نسخه‌ی کلیک‌شدنیِ همان لینکی که خزنده دنبال می‌کند */
+  function handleLoadMore(e: React.MouseEvent) {
+    e.preventDefault();
+    if (loading || page >= totalPages) return;
+    const next = page + 1;
+    setPage(next);
+    fetchProducts(next, true);
   }
 
   function handleAttributeToggle(attributeId: string, valueId: string) {
@@ -832,69 +894,90 @@ export default function CategoryPageClient({
                     </div>
                   )}
 
-                  {/* Sentinel for infinite scroll */}
+                  {/* Sentinel + لینک واقعیِ صفحه بعد.
+                      لینک برای خزنده و کاربر بدون جاوااسکریپت است؛ با JS همان
+                      کلیک محصولات بعدی را به لیست اضافه می‌کند. */}
                   {useInfiniteScroll && page < totalPages && (
-                    <div ref={sentinelRef} className="h-10 mt-4" />
+                    <div ref={sentinelRef} className="mt-10 flex justify-center">
+                      <Link
+                        href={hrefFor(page + 1)}
+                        rel="next"
+                        onClick={handleLoadMore}
+                        aria-label={`نمایش محصولات بیشتر — صفحه ${toFarsi(page + 1)}`}
+                        className="px-8 py-3.5 rounded-[1.5rem] bg-white/60 dark:bg-white/[0.05] backdrop-blur-2xl border border-white/60 dark:border-white/10 text-xs font-black text-gray-600 dark:text-gray-300 hover:bg-primary-500 hover:text-white transition-all"
+                      >
+                        {loading ? "در حال بارگذاری..." : "نمایش محصولات بیشتر"}
+                      </Link>
+                    </div>
                   )}
 
-                  {}
+                  {/* صفحه‌بندی — بعد از سقف اسکرول بی‌نهایت */}
                   {!useInfiniteScroll && totalPages > 1 && (
-                    <div className="mt-16 flex items-center justify-center">
+                    <nav aria-label="صفحه‌بندی" className="mt-16 flex items-center justify-center">
                       <div className="flex items-center gap-2 bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/40 dark:border-white/10 p-2 rounded-[2rem] shadow-xl shadow-gray-200/40 dark:shadow-none">
                         {/* Prev */}
-                        <button
-                          onClick={() => page > 1 && handlePageClick(page - 1)}
-                          disabled={page === 1}
-                          className="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-primary-500 hover:bg-white dark:hover:bg-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
+                        {page > 1 && (
+                          <Link
+                            href={hrefFor(page - 1)}
+                            rel="prev"
+                            onClick={(e) => handlePageClick(e, page - 1)}
+                            aria-label="صفحه قبل"
+                            className="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-primary-500 hover:bg-white dark:hover:bg-white/10 transition-all"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </Link>
+                        )}
 
                         <div className="flex items-center gap-1.5 px-2">
-                          {Array.from({ length: Math.min(totalPages - INFINITE_SCROLL_LIMIT, 7) }).map((_, i) => {
-                            const p = INFINITE_SCROLL_LIMIT + 1 + i;
-                            if (p > totalPages) return null;
-                            return (
-                              <button
-                                key={p}
-                                onClick={() => handlePageClick(p)}
-                                className={`w-11 h-11 rounded-[1.2rem] flex items-center justify-center text-xs font-black transition-all ${
-                                  page === p
-                                    ? "bg-primary-500 text-white shadow-lg shadow-primary-500/40 ring-4 ring-primary-500/10"
-                                    : "bg-white/60 dark:bg-white/10 border border-white dark:border-white/5 text-gray-600 dark:text-gray-300 hover:bg-primary-500 hover:text-white"
-                                }`}
-                              >
-                                {toFarsi(p)}
-                              </button>
-                            );
-                          })}
-                          {totalPages > INFINITE_SCROLL_LIMIT + 7 && (
+                          {pageWindow(page, totalPages).map((p) => (
+                            <Link
+                              key={p}
+                              href={hrefFor(p)}
+                              onClick={(e) => handlePageClick(e, p)}
+                              aria-label={`صفحه ${toFarsi(p)}`}
+                              aria-current={page === p ? "page" : undefined}
+                              className={`w-11 h-11 rounded-[1.2rem] flex items-center justify-center text-xs font-black transition-all ${
+                                page === p
+                                  ? "bg-primary-500 text-white shadow-lg shadow-primary-500/40 ring-4 ring-primary-500/10"
+                                  : "bg-white/60 dark:bg-white/10 border border-white dark:border-white/5 text-gray-600 dark:text-gray-300 hover:bg-primary-500 hover:text-white"
+                              }`}
+                            >
+                              {toFarsi(p)}
+                            </Link>
+                          ))}
+                          {totalPages > 7 && page < totalPages - 3 && (
                             <>
                               <span className="px-2 text-gray-400 font-black">...</span>
-                              <button
-                                onClick={() => handlePageClick(totalPages)}
+                              <Link
+                                href={hrefFor(totalPages)}
+                                onClick={(e) => handlePageClick(e, totalPages)}
+                                aria-label={`صفحه آخر — ${toFarsi(totalPages)}`}
                                 className="w-11 h-11 rounded-[1.2rem] bg-white/60 dark:bg-white/10 border border-white dark:border-white/5 flex items-center justify-center text-xs font-black text-gray-600 dark:text-gray-300 hover:bg-primary-500 hover:text-white transition-all"
                               >
                                 {toFarsi(totalPages)}
-                              </button>
+                              </Link>
                             </>
                           )}
                         </div>
 
                         {/* Next */}
-                        <button
-                          onClick={() => page < totalPages && handlePageClick(page + 1)}
-                          disabled={page >= totalPages}
-                          className="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-primary-500 hover:bg-white dark:hover:bg-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                          </svg>
-                        </button>
+                        {page < totalPages && (
+                          <Link
+                            href={hrefFor(page + 1)}
+                            rel="next"
+                            onClick={(e) => handlePageClick(e, page + 1)}
+                            aria-label="صفحه بعد"
+                            className="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-primary-500 hover:bg-white dark:hover:bg-white/10 transition-all"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                            </svg>
+                          </Link>
+                        )}
                       </div>
-                    </div>
+                    </nav>
                   )}
                 </>
               )}
