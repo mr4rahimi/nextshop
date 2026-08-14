@@ -24,6 +24,7 @@ const UniqueStarHero     = dynamic(() => import("@/components/store/UniqueStarHe
 const DimensionalCards   = dynamic(() => import("@/components/store/DimensionalCardsSection"));
 const CoverflowGallery   = dynamic(() => import("@/components/store/CoverflowGallerySection"));
 const Spacer             = dynamic(() => import("@/components/store/SpacerSection"));
+const ProductShowcase    = dynamic(() => import("@/components/store/ProductShowcaseSection"));
 
 type WidgetType = string;
 
@@ -69,6 +70,8 @@ function renderWidget(type: WidgetType, config: Record<string, any>, key: string
       return <CoverflowGallery key={key} config={config} />;
     case "SPACER":
       return <Spacer key={key} config={config} />;
+    case "PRODUCT_SHOWCASE":
+      return <ProductShowcase key={key} config={config} />;
     default:
       return null;
   }

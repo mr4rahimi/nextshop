@@ -886,6 +886,7 @@ enum WidgetType {
   DIMENSIONAL_CARDS
   COVERFLOW_GALLERY
   SPACER
+  PRODUCT_SHOWCASE
 }
 
 enum UserRole {

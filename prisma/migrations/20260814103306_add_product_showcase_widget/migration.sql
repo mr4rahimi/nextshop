@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "WidgetType" ADD VALUE 'PRODUCT_SHOWCASE';
