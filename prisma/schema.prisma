@@ -610,6 +610,7 @@ model StoreSettings {
   homeHeaderVariant        String   @default("DEFAULT")
   mobileMenuGlass          Boolean  @default(false)
   headerGlassConfig        Json?
+  productGridMobile        String   @default("single")
   chatSettings             Json?
   updatedAt                DateTime @updatedAt
 

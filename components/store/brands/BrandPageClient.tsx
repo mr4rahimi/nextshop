@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import ManaProductCard, { ProductCardItem } from "@/components/store/product/ManaProductCard";
+import { type ProductCardItem } from "@/components/store/product/ManaProductCard";
+import { ProductCardAuto, useProductGridClass, useProductSkeletonClass } from "@/components/store/product/ProductLayoutContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Category {
@@ -176,6 +177,8 @@ export default function BrandPageClient({
   brand: Brand;
   brandSlug: string;
 }) {
+  const gridCls = useProductGridClass();
+  const skeletonCls = useProductSkeletonClass();
   const [products, setProducts] = useState<ProductCardItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -429,9 +432,9 @@ export default function BrandPageClient({
             {/* Products */}
             <div className="lg:col-span-3">
               {!initialLoaded ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className={gridCls}>
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-96 bg-white/60 dark:bg-white/5 rounded-[3rem] animate-pulse" />
+                    <div key={i} className={skeletonCls} />
                   ))}
                 </div>
               ) : products.length === 0 ? (
@@ -452,9 +455,9 @@ export default function BrandPageClient({
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                  <div className={gridCls}>
                     {products.map((p) => (
-                      <ManaProductCard key={p.id} product={p} />
+                      <ProductCardAuto key={p.id} product={p} />
                     ))}
                   </div>
 

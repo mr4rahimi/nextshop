@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizeGlassConfig, normalizeVariant } from "@/components/layout/headers/registry";
+import { normalizeGridMode } from "@/lib/productGrid";
 
 export const runtime = "nodejs";
 
@@ -71,6 +72,9 @@ export async function PUT(req: Request) {
     updateData.mobileMenuGlass = data.mobileMenuGlass ?? false;
   if (data.headerGlassConfig !== undefined)
     updateData.headerGlassConfig = normalizeGlassConfig(data.headerGlassConfig);
+  // ظاهر — چیدمان لیست محصولات
+  if (data.productGridMobile !== undefined)
+    updateData.productGridMobile = normalizeGridMode(data.productGridMobile);
 
   const s = await prisma.storeSettings.upsert({
     where: { id: "singleton" },

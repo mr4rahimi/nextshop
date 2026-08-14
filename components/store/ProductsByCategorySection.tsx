@@ -172,7 +172,11 @@ export default function ProductsByCategorySection({
   const [loading, setLoading] = useState(true);
   const [swiperReady, setSwiperReady] = useState(false);
   const swiperRef = useRef<any>(null);
-  const uid = useRef(`pbc-${Math.random().toString(36).slice(2, 7)}`);
+  // المان‌ها مستقیم با ref به Swiper داده می‌شوند؛ ساخت کلاس یکتا با
+  // Math.random روی سرور و کلاینت دو مقدار متفاوت می‌داد و hydration mismatch بود.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const prevRef = useRef<HTMLButtonElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (sortMode === "manual") {
@@ -201,18 +205,18 @@ export default function ProductsByCategorySection({
     if (!win.Swiper) return;
 
     const tryInit = () => {
-      const el = document.querySelector(`.${uid.current}`);
+      const el = rootRef.current;
       if (!el) return false;
 
       swiperRef.current?.destroy?.(true, true);
-      swiperRef.current = new win.Swiper(`.${uid.current}`, {
+      swiperRef.current = new win.Swiper(el, {
         rtl: true,
         slidesPerView: 1.3,
         spaceBetween: 20,
         speed: 600,
         navigation: {
-          nextEl: `.${uid.current}-next`,
-          prevEl: `.${uid.current}-prev`,
+          nextEl: nextRef.current,
+          prevEl: prevRef.current,
         },
         breakpoints: {
           640:  { slidesPerView: 2.2 },
@@ -282,7 +286,7 @@ export default function ProductsByCategorySection({
               ))}
             </div>
           ) : (
-            <div className={`swiper ${uid.current} !overflow-visible`}>
+            <div ref={rootRef} className="swiper !overflow-visible">
               <div className="swiper-wrapper">
                 {products.map(p => <ProductSlide key={p.id} product={p} />)}
               </div>
@@ -292,12 +296,12 @@ export default function ProductsByCategorySection({
           {/* Navigation */}
           {!loading && products.length > 0 && (
             <div className="flex justify-center gap-4 mt-10">
-              <button className={`${uid.current}-prev w-14 h-14 rounded-2xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-primary-600 hover:text-white transition-all shadow-lg group`}>
+              <button ref={prevRef} aria-label="اسلاید قبلی" className={`w-14 h-14 rounded-2xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-primary-600 hover:text-white transition-all shadow-lg group`}>
                 <svg className="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeWidth={2.5} d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-              <button className={`${uid.current}-next w-14 h-14 rounded-2xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-primary-600 hover:text-white transition-all shadow-lg group`}>
+              <button ref={nextRef} aria-label="اسلاید بعدی" className={`w-14 h-14 rounded-2xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-primary-600 hover:text-white transition-all shadow-lg group`}>
                 <svg className="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeWidth={2.5} d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>

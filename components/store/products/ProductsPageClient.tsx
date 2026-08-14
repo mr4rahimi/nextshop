@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import ManaProductCard, { ProductCardItem } from "@/components/store/product/ManaProductCard";
+import { type ProductCardItem } from "@/components/store/product/ManaProductCard";
+import { ProductCardAuto, useProductGridClass, useProductSkeletonClass } from "@/components/store/product/ProductLayoutContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Brand { id: string; title: string; slug: string; logoUrl: string | null }
@@ -188,6 +189,8 @@ function FilterSidebar({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function ProductsPageClient() {
+  const gridCls = useProductGridClass();
+  const skeletonCls = useProductSkeletonClass();
   const [meta, setMeta] = useState<Meta | null>(null);
   const [products, setProducts] = useState<ProductCardItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -415,9 +418,9 @@ export default function ProductsPageClient() {
             {/* Products */}
             <div className="lg:col-span-3">
               {!initialLoaded ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className={gridCls}>
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-96 bg-white/60 dark:bg-white/5 rounded-[3rem] animate-pulse" />
+                    <div key={i} className={skeletonCls} />
                   ))}
                 </div>
               ) : products.length === 0 ? (
@@ -434,8 +437,8 @@ export default function ProductsPageClient() {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {products.map(p => <ManaProductCard key={p.id} product={p} />)}
+                  <div className={gridCls}>
+                    {products.map(p => <ProductCardAuto key={p.id} product={p} />)}
                   </div>
 
                   {/* Infinite scroll sentinel */}

@@ -4,7 +4,8 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import ManaProductCard, { ProductCardItem } from "@/components/store/product/ManaProductCard";
+import { type ProductCardItem } from "@/components/store/product/ManaProductCard";
+import { ProductCardAuto, useProductGridClass } from "@/components/store/product/ProductLayoutContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Brand {
@@ -370,6 +371,7 @@ export default function CategoryPageClient({
   basePath?: string;
 }) {
   const searchParams = useSearchParams();
+  const gridCls = useProductGridClass();
 
   // ── نگاشت دوطرفه slug ↔ id برای ویژگی‌ها ──
   const attrMaps = useMemo(() => {
@@ -836,7 +838,7 @@ export default function CategoryPageClient({
             <div className="lg:col-span-3">
               {!initialLoaded ? (
                 /* Skeleton */
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className={gridCls}>
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="relative h-full pt-12">
                       <div className="absolute inset-0 bg-white/50 dark:bg-white/5 rounded-[3rem] animate-pulse" />
@@ -873,15 +875,15 @@ export default function CategoryPageClient({
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                  <div className={gridCls}>
                     {products.map((p) => (
-                      <ManaProductCard key={p.id} product={p} />
+                      <ProductCardAuto key={p.id} product={p} />
                     ))}
                   </div>
 
                   {/* Loading skeleton for new items */}
                   {loading && useInfiniteScroll && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
+                    <div className={`${gridCls} mt-6`}>
                       {Array.from({ length: 3 }).map((_, i) => (
                         <div key={i} className="relative h-full pt-12">
                           <div className="absolute inset-0 bg-white/50 dark:bg-white/5 rounded-[3rem] animate-pulse" />

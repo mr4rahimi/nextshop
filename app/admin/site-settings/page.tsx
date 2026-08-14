@@ -37,6 +37,7 @@ interface SiteSettings {
   homeHeaderVariant: string;
   mobileMenuGlass: boolean;
   headerGlassConfig: GlassHeaderConfig;
+  productGridMobile: string;
   paymentGatewayProvider: string;
   paymentGatewayMerchant: string;
   paymentGatewayActive: boolean;
@@ -61,10 +62,11 @@ const EMPTY: SiteSettings = {
   homeHeaderVariant: "DEFAULT",
   mobileMenuGlass: false,
   headerGlassConfig: { ...DEFAULT_GLASS_CONFIG },
+  productGridMobile: "single",
   paymentGatewayProvider: "", paymentGatewayMerchant: "", paymentGatewayActive: false, paymentGatewaySandbox: false,
 };
 
-type Tab = "general" | "social" | "advanced" | "sms" | "wallet" | "gateway" | "header";
+type Tab = "general" | "social" | "advanced" | "sms" | "wallet" | "gateway" | "header" | "products";
 
 export default function AdminSiteSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings>({ ...EMPTY });
@@ -117,6 +119,7 @@ export default function AdminSiteSettingsPage() {
         homeHeaderVariant: d.homeHeaderVariant ?? "DEFAULT",
         mobileMenuGlass: d.mobileMenuGlass ?? false,
         headerGlassConfig: normalizeGlassConfig(d.headerGlassConfig),
+        productGridMobile: d.productGridMobile === "double" ? "double" : "single",
         paymentGatewayProvider: d.paymentGatewayProvider ?? "",
         paymentGatewayMerchant: d.paymentGatewayMerchant ?? "",
         paymentGatewayActive:   d.paymentGatewayActive   ?? false,
@@ -195,6 +198,7 @@ export default function AdminSiteSettingsPage() {
           { key: "wallet", label: "کیف پول" },
           { key: "gateway", label: "درگاه پرداخت" },
           { key: "header", label: "هدر سایت" },
+          { key: "products", label: "نمایش محصولات" },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as Tab)}
             className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all ${tab === t.key ? "bg-white dark:bg-gray-900 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
@@ -876,6 +880,76 @@ export default function AdminSiteSettingsPage() {
                 (چون این هدر مگامنوی دسکتاپ ندارد). در هدر پیش‌فرض و هدر شیشه‌ای، منوی کشویی فقط در موبایل فعال است.
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "products" && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+            <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
+              <span className="w-1.5 h-5 bg-emerald-600 rounded-full" />
+              چیدمان لیست محصولات
+            </h3>
+            <p className="text-xs text-gray-400 -mt-2 leading-relaxed">
+              این انتخاب روی صفحه‌ی «همه محصولات»، صفحات دسته‌بندی، صفحات برند و ویجت «جدیدترین محصولات»
+              اعمال می‌شود. صفحه‌ی جستجو و علاقه‌مندی‌ها از قبل دوستونه هستند و تغییری نمی‌کنند.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {([
+                {
+                  id: "single",
+                  label: "تک‌ستونه (پیش‌فرض)",
+                  desc: "در موبایل یک محصول در هر ردیف، با همان کارت فعلی. در دسکتاپ سه ستون.",
+                  cols: 1,
+                },
+                {
+                  id: "double",
+                  label: "دوستونه",
+                  desc: "در موبایل دو محصول کنار هم با کارت جمع‌وجور جدید. در دسکتاپ چهار ستون.",
+                  cols: 2,
+                },
+              ]).map(opt => {
+                const active = settings.productGridMobile === opt.id;
+                return (
+                  <button key={opt.id} type="button"
+                    onClick={() => set("productGridMobile", opt.id)}
+                    className={`text-right p-4 rounded-2xl border-2 transition-all ${
+                      active
+                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10"
+                        : "border-gray-100 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/20"
+                    }`}>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="text-sm font-black text-gray-900 dark:text-white">{opt.label}</span>
+                      {active && <span className="text-[10px] font-black text-emerald-600">فعال ✓</span>}
+                    </div>
+                    <p className="text-[11px] text-gray-500 leading-relaxed mb-3">{opt.desc}</p>
+
+                    {/* پیش‌نمایش شماتیک صفحه‌ی موبایل */}
+                    <div className="mx-auto w-[104px] rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-black/20 p-1.5">
+                      <div className="h-1.5 w-8 rounded-full bg-gray-300 dark:bg-white/20 mb-1.5" />
+                      <div className={`grid gap-1.5 ${opt.cols === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+                        {Array.from({ length: opt.cols === 2 ? 4 : 2 }).map((_, i) => (
+                          <div key={i} className={`rounded-lg bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 ${opt.cols === 2 ? "h-11" : "h-8"}`}>
+                            <div className={`m-1 rounded bg-gray-200 dark:bg-white/15 ${opt.cols === 2 ? "h-5" : "h-3"}`} />
+                            <div className="mx-1 h-1 rounded-full bg-gray-200 dark:bg-white/15" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4">
+            <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+              در حالت دوستونه از همان کارت محصولی استفاده می‌شود که در ویجت «نمایش محصولات (کارت جدید)»
+              به کار رفته است؛ کارتی جمع‌وجورتر که دکمه‌ی علاقه‌مندی‌اش در موبایل همیشه در دسترس است.
+              فیلترها، مرتب‌سازی و صفحه‌بندی در هر دو حالت دقیقاً یکسان کار می‌کنند.
+            </p>
           </div>
         </div>
       )}

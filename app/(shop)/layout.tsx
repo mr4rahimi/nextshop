@@ -5,6 +5,8 @@ import { CartProvider } from "@/components/store/cart/CartContext";
 import { WishlistProvider } from "@/components/store/wishlist/WishlistContext";
 import { prisma } from "@/lib/prisma";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
+import { ProductLayoutProvider } from "@/components/store/product/ProductLayoutContext";
+import { normalizeGridMode } from "@/lib/productGrid";
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const [user, settings] = await Promise.all([
@@ -15,12 +17,14 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   return (
     <CartProvider isLoggedIn={!!user}>
       <WishlistProvider isLoggedIn={!!user}>
+        <ProductLayoutProvider mode={normalizeGridMode(settings?.productGridMobile)}>
         <Header />
         <main className="bg-gray-100 dark:bg-[#050505] min-h-screen transition-colors duration-300 overflow-x-hidden pb-24 md:pb-0">
           {children}
         </main>
         <Footer />
         <MobileBottomNav phone={settings?.sitePhone ?? null} />
+        </ProductLayoutProvider>
       </WishlistProvider>
     </CartProvider>
   );

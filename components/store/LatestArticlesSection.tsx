@@ -93,7 +93,11 @@ export default function LatestArticlesSection() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading]   = useState(true);
   const swiperRef = useRef<any>(null);
-  const uid = useRef(`la-${Math.random().toString(36).slice(2, 7)}`);
+  // المان‌ها مستقیم با ref به Swiper داده می‌شوند؛ ساخت کلاس یکتا با
+  // Math.random روی سرور و کلاینت دو مقدار متفاوت می‌داد و hydration mismatch بود.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const prevRef = useRef<HTMLButtonElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     fetch("/api/store/latest-articles")
@@ -107,7 +111,7 @@ export default function LatestArticlesSection() {
     const timer = setTimeout(() => {
       if (typeof window === "undefined" || !(window as any).Swiper) return;
 
-      const sw = new (window as any).Swiper(`.${uid.current}`, {
+      const sw = new (window as any).Swiper(rootRef.current, {
         slidesPerView: 1.2,
         spaceBetween: 16,
         centeredSlides: false,
@@ -118,8 +122,8 @@ export default function LatestArticlesSection() {
           1280: { slidesPerView: 4,   spaceBetween: 24 },
         },
         navigation: {
-          nextEl: `.${uid.current}-next`,
-          prevEl: `.${uid.current}-prev`,
+          nextEl: nextRef.current,
+          prevEl: prevRef.current,
         },
         on: {
           afterInit: (sw: any) => { swiperRef.current = sw; },
@@ -179,12 +183,12 @@ export default function LatestArticlesSection() {
           <div className="flex items-center gap-3">
             {}
             <div className="hidden md:flex gap-2">
-              <button className={`${uid.current}-prev w-10 h-10 rounded-xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all shadow-sm`}>
+              <button ref={prevRef} aria-label="اسلاید قبلی" className={`w-10 h-10 rounded-xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all shadow-sm`}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
-              <button className={`${uid.current}-next w-10 h-10 rounded-xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all shadow-sm`}>
+              <button ref={nextRef} aria-label="اسلاید بعدی" className={`w-10 h-10 rounded-xl bg-white/50 dark:bg-white/5 dark:text-white border border-white dark:border-white/10 flex items-center justify-center cursor-pointer hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all shadow-sm`}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                 </svg>
@@ -202,7 +206,7 @@ export default function LatestArticlesSection() {
         </div>
 
         {/* Swiper */}
-        <div className={`swiper ${uid.current}`}>
+        <div ref={rootRef} className="swiper">
           <div className="swiper-wrapper pb-4">
             {articles.map(article => (
               <div key={article.id} className="swiper-slide h-auto">

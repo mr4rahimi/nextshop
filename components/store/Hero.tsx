@@ -97,7 +97,9 @@ export default function HeroSection() {
   const [swiperReady, setSwiperReady] = useState(false);
   const heroRef = useRef<any>(null);
   const suggRef = useRef<any>(null);
-  const uid = useRef(`sugg-${Math.random().toString(36).slice(2, 6)}`);
+  // المان‌ها مستقیم با ref به Swiper داده می‌شوند؛ ساخت کلاس یکتا با
+  // Math.random روی سرور و کلاینت دو مقدار متفاوت می‌داد و hydration mismatch بود.
+  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/store/hero-slides")
@@ -130,8 +132,8 @@ export default function HeroSection() {
       },
     });
 
-    if (suggestions.length > 1) {
-      suggRef.current = new win.Swiper(`.${uid.current}`, {
+    if (suggestions.length > 1 && rootRef.current) {
+      suggRef.current = new win.Swiper(rootRef.current, {
         rtl: true,
         slidesPerView: 1,
         spaceBetween: 16,
@@ -177,7 +179,7 @@ export default function HeroSection() {
               </div>
             ) : (
               <div className="flex-1 overflow-hidden min-h-0">
-                <div className={`swiper ${uid.current} h-full`}>
+                <div ref={rootRef} className="swiper h-full">
                   <div className="swiper-wrapper">
                     {suggestions.map(p => (
                       <div key={p.id} className="swiper-slide">

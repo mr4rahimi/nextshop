@@ -3,6 +3,7 @@ import Image from "next/image";
 import AddToCartButton from "@/components/store/cart/AddToCartButton";
 
 import { useEffect, useState } from "react";
+import { ProductCardAuto, useProductGridClass, useProductGridMode } from "@/components/store/product/ProductLayoutContext";
 import Link from "next/link";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -141,6 +142,8 @@ function NewestProductCard({ product }: { product: Product }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function NewestProductsSection({ categoryIds = [], perCategory = 3 }: Props) {
+  const gridCls = useProductGridClass("widget");
+  const isDouble = useProductGridMode() === "double";
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string>("all");
@@ -216,15 +219,17 @@ export default function NewestProductsSection({ categoryIds = [], perCategory = 
 
         {/* Grid */}
         {loading ? (
-          <div className="grid pb-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+          <div className={`${gridCls} pb-6`}>
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-[220px] bg-white/60 dark:bg-white/5 rounded-[2.5rem] animate-pulse" />
+              <div key={i} className={isDouble ? "h-64 sm:h-72 bg-white/60 dark:bg-white/5 rounded-3xl animate-pulse" : "h-[220px] bg-white/60 dark:bg-white/5 rounded-[2.5rem] animate-pulse"} />
             ))}
           </div>
         ) : (
-          <div className="grid pb-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+          <div className={`${gridCls} pb-6`}>
             {filtered.map(p => (
-              <NewestProductCard key={p.id} product={p} />
+              isDouble
+                ? <ProductCardAuto key={p.id} product={p as any} variant="widget" />
+                : <NewestProductCard key={p.id} product={p} />
             ))}
           </div>
         )}
