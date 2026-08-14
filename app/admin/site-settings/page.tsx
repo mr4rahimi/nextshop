@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HEADER_VARIANTS } from "@/components/layout/headers/registry";
+import {
+  HEADER_VARIANTS,
+  DEFAULT_GLASS_CONFIG,
+  normalizeGlassConfig,
+  hexToRgbChannels as hexToRgb,
+  type GlassHeaderConfig,
+} from "@/components/layout/headers/registry";
 
 interface SiteSettings {
   storeName: string; storeLogo: string; siteFavicon: string;
@@ -30,6 +36,7 @@ interface SiteSettings {
   walletEnabled: boolean;
   homeHeaderVariant: string;
   mobileMenuGlass: boolean;
+  headerGlassConfig: GlassHeaderConfig;
   paymentGatewayProvider: string;
   paymentGatewayMerchant: string;
   paymentGatewayActive: boolean;
@@ -53,6 +60,7 @@ const EMPTY: SiteSettings = {
   walletEnabled: false,
   homeHeaderVariant: "DEFAULT",
   mobileMenuGlass: false,
+  headerGlassConfig: { ...DEFAULT_GLASS_CONFIG },
   paymentGatewayProvider: "", paymentGatewayMerchant: "", paymentGatewayActive: false, paymentGatewaySandbox: false,
 };
 
@@ -108,6 +116,7 @@ export default function AdminSiteSettingsPage() {
         walletEnabled: d.walletEnabled ?? false,
         homeHeaderVariant: d.homeHeaderVariant ?? "DEFAULT",
         mobileMenuGlass: d.mobileMenuGlass ?? false,
+        headerGlassConfig: normalizeGlassConfig(d.headerGlassConfig),
         paymentGatewayProvider: d.paymentGatewayProvider ?? "",
         paymentGatewayMerchant: d.paymentGatewayMerchant ?? "",
         paymentGatewayActive:   d.paymentGatewayActive   ?? false,
@@ -130,6 +139,11 @@ export default function AdminSiteSettingsPage() {
 
   function set(key: keyof SiteSettings, val: string | boolean) {
     setSettings(s => ({ ...s, [key]: val }));
+  }
+
+  /** تغییر یکی از کلیدهای تنظیمات ظاهری هدر شیشه‌ای */
+  function setGlass<K extends keyof GlassHeaderConfig>(key: K, val: GlassHeaderConfig[K]) {
+    setSettings(s => ({ ...s, headerGlassConfig: { ...s.headerGlassConfig, [key]: val } }));
   }
 
   if (loading) return (
@@ -180,7 +194,7 @@ export default function AdminSiteSettingsPage() {
           { key: "sms", label: "پیامک" },
           { key: "wallet", label: "کیف پول" },
           { key: "gateway", label: "درگاه پرداخت" },
-          { key: "header", label: "هدر صفحه اصلی" },
+          { key: "header", label: "هدر سایت" },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as Tab)}
             className={`px-5 py-2.5 rounded-xl text-sm font-black transition-all ${tab === t.key ? "bg-white dark:bg-gray-900 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
@@ -636,13 +650,14 @@ export default function AdminSiteSettingsPage() {
 
       {tab === "header" && (
         <div className="space-y-6">
+          {/* انتخاب هدر */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
             <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
               <span className="w-1.5 h-5 bg-blue-600 rounded-full" />
-              انتخاب هدر صفحه اصلی
+              انتخاب هدر سایت
             </h3>
             <p className="text-xs text-gray-400 -mt-2">
-              این انتخاب فقط روی صفحه اصلی اعمال می‌شود؛ سایر صفحات همیشه هدر پیش‌فرض را نمایش می‌دهند.
+              هدرهایی که برچسب «کل سایت» دارند روی همه‌ی صفحات اعمال می‌شوند؛ هدرهای «فقط صفحه اصلی» تنها در صفحه‌ی اصلی نمایش داده می‌شوند و سایر صفحات هدر پیش‌فرض را می‌گیرند.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -661,11 +676,20 @@ export default function AdminSiteSettingsPage() {
                       {active && <span className="text-[10px] font-black text-blue-600">فعال ✓</span>}
                     </div>
                     <p className="text-[11px] text-gray-500 leading-relaxed">{v.desc}</p>
-                    {v.overlay && (
-                      <span className="inline-block mt-2 text-[10px] font-black px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
-                        شفاف / روی بنر
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      <span className={`inline-block text-[10px] font-black px-2 py-0.5 rounded-full ${
+                        v.scope === "site"
+                          ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
+                          : "bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300"
+                      }`}>
+                        {v.scope === "site" ? "کل سایت" : "فقط صفحه اصلی"}
                       </span>
-                    )}
+                      {v.overlay && (
+                        <span className="inline-block text-[10px] font-black px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
+                          شفاف / روی بنر
+                        </span>
+                      )}
+                    </div>
                   </button>
                 );
               })}
@@ -676,10 +700,155 @@ export default function AdminSiteSettingsPage() {
                 <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed font-bold">
                   {HEADER_VARIANTS.find(v => v.id === settings.homeHeaderVariant)!.hint}
                 </p>
-                <a href="/admin/widgets" className="inline-block mt-2 text-[11px] font-black text-amber-800 dark:text-amber-200 underline">
-                  رفتن به مدیریت ویجت‌ها ←
-                </a>
-                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+                {settings.homeHeaderVariant === "UNIQUE_STAR" && (
+                  <a href="/admin/widgets" className="inline-block mt-2 text-[11px] font-black text-amber-800 dark:text-amber-200 underline">
+                    رفتن به مدیریت ویجت‌ها ←
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* تنظیمات ظاهری هدر شیشه‌ای */}
+          {settings.homeHeaderVariant === "GLASS" && (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5">
+              <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                <span className="w-1.5 h-5 bg-violet-600 rounded-full" />
+                تنظیمات ظاهری هدر شیشه‌ای
+              </h3>
+              <p className="text-xs text-gray-400 -mt-3">
+                میزان شفافیت و شدت بلور در دو حالت «بالای صفحه» و «بعد از اسکرول» جداگانه تنظیم می‌شود. رنگ متن به‌صورت خودکار بر اساس حالت روز/شب سایت انتخاب می‌گردد.
+              </p>
+
+              {/* پیش‌نمایش زنده */}
+              <div>
+                <span className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-2">پیش‌نمایش</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {([
+                    { label: "بالای صفحه", op: settings.headerGlassConfig.opacityTop, bl: settings.headerGlassConfig.blurTop },
+                    { label: "بعد از اسکرول", op: settings.headerGlassConfig.opacityScrolled, bl: settings.headerGlassConfig.blurScrolled },
+                  ]).flatMap(pv => (
+                    ([
+                      { mode: "روز", tint: settings.headerGlassConfig.tintLight, text: settings.headerGlassConfig.textLight, bg: "linear-gradient(120deg,#dbeafe,#fce7f3,#ede9fe)" },
+                      { mode: "شب",  tint: settings.headerGlassConfig.tintDark,  text: settings.headerGlassConfig.textDark,  bg: "linear-gradient(120deg,#1e293b,#4c1d95,#0f172a)" },
+                    ]).map(th => (
+                      <div key={`${pv.label}-${th.mode}`} className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <div className="relative h-24" style={{ background: th.bg }}>
+                          <div
+                            className="absolute inset-x-0 top-0 flex items-center justify-between px-4 h-12 text-xs font-black"
+                            style={{
+                              background: `rgba(${hexToRgb(th.tint)}, ${pv.op / 100})`,
+                              backdropFilter: `blur(${pv.bl}px) saturate(160%)`,
+                              WebkitBackdropFilter: `blur(${pv.bl}px) saturate(160%)`,
+                              color: th.text,
+                              borderBottom: settings.headerGlassConfig.showBorder
+                                ? `1px solid rgba(${hexToRgb(th.text)}, .16)`
+                                : "none",
+                            }}
+                          >
+                            <span>{settings.storeName || "فروشگاه"}</span>
+                            <span className="opacity-70">جستجو · سبد خرید</span>
+                          </div>
+                          <span className="absolute bottom-1.5 right-3 text-[10px] font-black text-white/80 drop-shadow">
+                            {pv.label} — {th.mode}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ))}
+                </div>
+              </div>
+
+              {/* شفافیت و بلور */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {([
+                  { key: "opacityTop"      as const, label: "شفافیت پس‌زمینه — بالای صفحه", max: 100, unit: "٪", hint: "هرچه کمتر، شفاف‌تر" },
+                  { key: "opacityScrolled" as const, label: "شفافیت پس‌زمینه — بعد از اسکرول", max: 100, unit: "٪", hint: "معمولاً کمی بیشتر از حالت بالا" },
+                  { key: "blurTop"         as const, label: "شدت بلور — بالای صفحه", max: 40, unit: "px", hint: "" },
+                  { key: "blurScrolled"    as const, label: "شدت بلور — بعد از اسکرول", max: 40, unit: "px", hint: "" },
+                ]).map(f => (
+                  <div key={f.key}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-black text-gray-700 dark:text-gray-300">{f.label}</label>
+                      <span className="text-xs font-black text-violet-600 tabular-nums">
+                        {settings.headerGlassConfig[f.key]}{f.unit}
+                      </span>
+                    </div>
+                    <input
+                      type="range" min={0} max={f.max} step={1}
+                      value={settings.headerGlassConfig[f.key]}
+                      onChange={e => setGlass(f.key, Number(e.target.value))}
+                      className="w-full"
+                      style={{ accentColor: "#7c3aed" }}
+                    />
+                    {f.hint && <p className="text-[10px] text-gray-400 mt-1">{f.hint}</p>}
+                  </div>
+                ))}
+              </div>
+
+              {/* رنگ‌بندی */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {([
+                  { key: "tintLight" as const, label: "تینت پس‌زمینه (روز)" },
+                  { key: "tintDark"  as const, label: "تینت پس‌زمینه (شب)" },
+                  { key: "textLight" as const, label: "رنگ متن (روز)" },
+                  { key: "textDark"  as const, label: "رنگ متن (شب)" },
+                ]).map(f => (
+                  <div key={f.key}>
+                    <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">{f.label}</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={settings.headerGlassConfig[f.key]}
+                        onChange={e => setGlass(f.key, e.target.value)}
+                        className="w-10 h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent cursor-pointer flex-shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={settings.headerGlassConfig[f.key]}
+                        onChange={e => setGlass(f.key, e.target.value)}
+                        dir="ltr"
+                        className="w-full min-w-0 px-2 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <label className="flex items-center justify-between gap-4 p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 cursor-pointer hover:border-gray-300 dark:hover:border-white/20 transition-all">
+                <span className="min-w-0">
+                  <span className="block text-sm font-black text-gray-900 dark:text-white">نمایش خط حاشیه‌ی پایین هدر</span>
+                  <span className="block text-[11px] text-gray-500 mt-1 leading-relaxed">
+                    یک خط نازک هم‌رنگ متن، مرز هدر را از محتوای صفحه جدا می‌کند.
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={settings.headerGlassConfig.showBorder}
+                  onChange={e => setGlass("showBorder", e.target.checked)}
+                  className="w-5 h-5 rounded flex-shrink-0"
+                  style={{ accentColor: "#7c3aed" }}
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={() => setSettings(s => ({ ...s, headerGlassConfig: { ...DEFAULT_GLASS_CONFIG } }))}
+                className="text-[11px] font-black text-gray-500 hover:text-violet-600 underline"
+              >
+                بازگرداندن به مقادیر پیش‌فرض
+              </button>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                  در موبایل این هدر ابتدا دو ردیفه است: ردیف دوم یک کادر جستجوی تمام‌عرض. با اسکرول، کادر جستجو با انیمیشن جمع می‌شود و به آیکن جستجو در ردیف اول تبدیل می‌شود تا هدر یک‌ردیفه شود.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* منوی کشویی */}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
             <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
               <span className="w-1.5 h-5 bg-blue-600 rounded-full" />
               منوی کشویی (همبرگری)
@@ -701,15 +870,12 @@ export default function AdminSiteSettingsPage() {
               />
             </label>
 
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
-                  <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-                    در هدر یونیک استار، دکمه‌ی همبرگری در دسکتاپ هم نمایش داده می‌شود و منو از کنار باز می‌شود
-                    (چون این هدر مگامنوی دسکتاپ ندارد). در هدر پیش‌فرض، منوی کشویی فقط در موبایل فعال است.
-                  </p>
-                </div>
-              </div>
-              </div>
-            )}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+              <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                در هدر یونیک استار، دکمه‌ی همبرگری در دسکتاپ هم نمایش داده می‌شود و منو از کنار باز می‌شود
+                (چون این هدر مگامنوی دسکتاپ ندارد). در هدر پیش‌فرض و هدر شیشه‌ای، منوی کشویی فقط در موبایل فعال است.
+              </p>
+            </div>
           </div>
         </div>
       )}

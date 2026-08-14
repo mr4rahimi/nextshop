@@ -5,23 +5,27 @@ import HeaderTop from "./HeaderTop";
 import HeaderMenu from "./HeaderMenu";
 import MobileMenuPortal from "./MobileMenuPortal";
 import UniqueStarHeader from "./headers/UniqueStarHeader";
-import { normalizeVariant } from "./headers/registry";
+import GlassHeader from "./headers/GlassHeader";
+import { normalizeVariant, type GlassHeaderConfig } from "./headers/registry";
 
 export default function HeaderSwitcher({
   logoUrl,
   siteName,
   homeVariant,
   menuGlass = false,
+  glassConfig = null,
 }: {
   logoUrl: string | null;
   siteName: string | null;
   homeVariant: string;
   menuGlass?: boolean;
+  glassConfig?: GlassHeaderConfig | null;
 }) {
   const pathname = usePathname();
   const isHome = pathname === "/";
   const variant = normalizeVariant(homeVariant);
 
+  // هدر یونیک استار — فقط صفحه اصلی (scope: "home")
   if (isHome && variant === "UNIQUE_STAR") {
     return (
       <>
@@ -32,6 +36,16 @@ export default function HeaderSwitcher({
           allowDesktop
           glass={menuGlass}
         />
+      </>
+    );
+  }
+
+  // هدر شیشه‌ای — روی کل سایت (scope: "site")
+  if (variant === "GLASS") {
+    return (
+      <>
+        <GlassHeader logoUrl={logoUrl} siteName={siteName} config={glassConfig} />
+        <MobileMenuPortal logoUrl={logoUrl} siteName={siteName} glass={menuGlass} />
       </>
     );
   }

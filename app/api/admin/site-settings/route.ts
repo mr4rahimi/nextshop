@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeGlassConfig, normalizeVariant } from "@/components/layout/headers/registry";
 
 export const runtime = "nodejs";
 
@@ -63,15 +64,13 @@ export async function PUT(req: Request) {
   if (data.paymentGatewayMerchant  !== undefined) updateData.paymentGatewayMerchant  = data.paymentGatewayMerchant  ?? null;
   if (data.paymentGatewayActive    !== undefined) updateData.paymentGatewayActive    = data.paymentGatewayActive    ?? false;
   if (data.paymentGatewaySandbox   !== undefined) updateData.paymentGatewaySandbox   = data.paymentGatewaySandbox   ?? false;
-  // ظاهر — هدر صفحه اصلی
+  // ظاهر — هدر سایت
   if (data.homeHeaderVariant !== undefined)
-    updateData.homeHeaderVariant = data.homeHeaderVariant || "DEFAULT";
-
-  // ظاهر — هدر صفحه اصلی
-  if (data.homeHeaderVariant !== undefined)
-    updateData.homeHeaderVariant = data.homeHeaderVariant || "DEFAULT";
+    updateData.homeHeaderVariant = normalizeVariant(data.homeHeaderVariant);
   if (data.mobileMenuGlass !== undefined)
     updateData.mobileMenuGlass = data.mobileMenuGlass ?? false;
+  if (data.headerGlassConfig !== undefined)
+    updateData.headerGlassConfig = normalizeGlassConfig(data.headerGlassConfig);
 
   const s = await prisma.storeSettings.upsert({
     where: { id: "singleton" },
