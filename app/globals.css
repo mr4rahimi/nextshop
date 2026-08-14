@@ -1207,3 +1207,18 @@ html {
     object-fit: contain;
     display: block;
 }
+
+/* ─── ویجت فضای خالی ────────────────────────────────────────────────────────
+   ارتفاع از دیتابیس می‌آید و به‌صورت متغیر CSS اینلاین روی خود عنصر ست می‌شود
+   (کامپوننت: components/store/SpacerSection.tsx). مقدار پیش‌فرض متغیرها اینجاست
+   تا اگر ویجت بدون config رندر شد، ارتفاع صفر نشود. */
+.widget-spacer {
+    height: var(--spacer-h-mobile, 32px);
+    flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+    .widget-spacer {
+        height: var(--spacer-h, 64px);
+    }
+}

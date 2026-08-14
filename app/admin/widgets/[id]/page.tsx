@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import {
+  SPACER_DEFAULT, SPACER_MIN, SPACER_MAX,
+  normalizeSpacerConfig, type SpacerConfig,
+} from "@/components/store/SpacerSection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Widget {
@@ -2427,6 +2431,158 @@ function CoverflowGalleryEditor({
   );
 }
 
+// ─── SpacerEditor ─────────────────────────────────────────────────────────────
+/** فاصله‌ی پیش‌فرضی که صفحه اصلی (space-y-12) بین هر دو ویجت می‌گذارد */
+const HOME_GAP = 48;
+
+function SpacerEditor({
+  config, setConfig,
+}: {
+  config: SpacerConfig;
+  setConfig: (c: SpacerConfig) => void;
+}) {
+  const mobileSame = config.heightMobile === null;
+  const mobileValue = config.heightMobile ?? config.height;
+
+  const rows = [
+    {
+      key: "desktop" as const,
+      label: "ارتفاع در دسکتاپ",
+      hint: "عرض صفحه ۷۶۸ پیکسل و بیشتر",
+      value: config.height,
+      onChange: (n: number) => setConfig({ ...config, height: n }),
+    },
+    {
+      key: "mobile" as const,
+      label: "ارتفاع در موبایل",
+      hint: "عرض صفحه کمتر از ۷۶۸ پیکسل",
+      value: mobileValue,
+      onChange: (n: number) => setConfig({ ...config, heightMobile: n }),
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
+          <span className="w-1.5 h-5 bg-gray-500 rounded-full" />
+          ارتفاع فضای خالی
+        </h3>
+
+        {rows.map(r => {
+          const disabled = r.key === "mobile" && mobileSame;
+          return (
+            <div key={r.key} className={disabled ? "opacity-50" : ""}>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-black text-gray-700 dark:text-gray-300">
+                  {r.label}
+                  <span className="font-bold text-gray-400 mr-2">({r.hint})</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={SPACER_MIN}
+                    max={SPACER_MAX}
+                    value={r.value}
+                    disabled={disabled}
+                    onChange={e => {
+                      const n = Number(e.target.value);
+                      if (Number.isFinite(n)) r.onChange(Math.min(SPACER_MAX, Math.max(SPACER_MIN, Math.round(n))));
+                    }}
+                    className="w-20 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs font-black text-center tabular-nums disabled:cursor-not-allowed"
+                  />
+                  <span className="text-[10px] font-black text-gray-400">px</span>
+                </div>
+              </div>
+              <input
+                type="range"
+                min={SPACER_MIN}
+                max={SPACER_MAX}
+                step={4}
+                value={r.value}
+                disabled={disabled}
+                onChange={e => r.onChange(Number(e.target.value))}
+                className="w-full disabled:cursor-not-allowed"
+                style={{ accentColor: "#4b5563" }}
+              />
+            </div>
+          );
+        })}
+
+        <label className="flex items-center justify-between gap-4 p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 cursor-pointer hover:border-gray-300 dark:hover:border-white/20 transition-all">
+          <span className="min-w-0">
+            <span className="block text-sm font-black text-gray-900 dark:text-white">
+              در موبایل هم همان ارتفاع دسکتاپ باشد
+            </span>
+            <span className="block text-[11px] text-gray-500 mt-1 leading-relaxed">
+              اگر روشن باشد، ارتفاع موبایل جداگانه ذخیره نمی‌شود و همیشه از ارتفاع دسکتاپ پیروی می‌کند.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={mobileSame}
+            onChange={e =>
+              setConfig({ ...config, heightMobile: e.target.checked ? null : config.height })
+            }
+            className="w-5 h-5 rounded flex-shrink-0"
+            style={{ accentColor: "#4b5563" }}
+          />
+        </label>
+
+        <button
+          type="button"
+          onClick={() => setConfig({ ...SPACER_DEFAULT })}
+          className="text-[11px] font-black text-gray-500 hover:text-gray-900 dark:hover:text-white underline"
+        >
+          بازگرداندن به مقادیر پیش‌فرض
+        </button>
+      </div>
+
+      {/* پیش‌نمایش */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-3">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
+          <span className="w-1.5 h-5 bg-gray-500 rounded-full" />
+          پیش‌نمایش (مقیاس واقعی — دسکتاپ)
+        </h3>
+        <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-3 overflow-y-auto" style={{ maxHeight: 420 }}>
+          <div className="rounded-xl bg-gray-100 dark:bg-gray-800 py-4 text-center text-[11px] font-black text-gray-500">
+            ویجت قبلی
+          </div>
+          <div style={{ height: HOME_GAP }} className="bg-blue-500/5" />
+          <div
+            style={{ height: config.height }}
+            className="bg-gray-500/10 border-y border-dashed border-gray-400/50 flex items-center justify-center"
+          >
+            <span className="text-[10px] font-black text-gray-500 tabular-nums">
+              فضای خالی — {config.height.toLocaleString("fa-IR")} پیکسل
+            </span>
+          </div>
+          <div style={{ height: HOME_GAP }} className="bg-blue-500/5" />
+          <div className="rounded-xl bg-gray-100 dark:bg-gray-800 py-4 text-center text-[11px] font-black text-gray-500">
+            ویجت بعدی
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 space-y-2">
+        <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed font-bold">
+          صفحه اصلی از قبل بین هر دو ویجت {HOME_GAP.toLocaleString("fa-IR")} پیکسل فاصله می‌گذارد
+          (نواحی آبی‌رنگ در پیش‌نمایش). بنابراین فاصله‌ی نهایی بین ویجت قبلی و بعدی برابر است با:
+        </p>
+        <p className="text-xs text-blue-800 dark:text-blue-200 font-black tabular-nums">
+          دسکتاپ: {(config.height + HOME_GAP * 2).toLocaleString("fa-IR")} پیکسل
+          <span className="mx-2 opacity-40">|</span>
+          موبایل: {(mobileValue + HOME_GAP * 2).toLocaleString("fa-IR")} پیکسل
+        </p>
+        <p className="text-[11px] text-blue-600 dark:text-blue-400 leading-relaxed">
+          این ویجت هیچ عنصر دیده‌شدنی رندر نمی‌کند و برای صفحه‌خوان‌ها نامرئی است؛ فقط جای خالی
+          اشغال می‌کند. می‌توانید چند نمونه از آن را در جاهای مختلف صفحه اصلی قرار دهید.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function WidgetEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -2525,8 +2681,10 @@ export default function WidgetEditPage() {
   const [dcUploading, setDcUploading] = useState([false, false, false]);
   const [cfConfig, setCfConfig] = useState<CFConfig>({ ...CF_DEFAULT, items: [] });
   const [cfUploadingIdx, setCfUploadingIdx] = useState<number | null>(null);
+  // SPACER
+  const [spacerConfig, setSpacerConfig] = useState<SpacerConfig>({ ...SPACER_DEFAULT });
 
-const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION", "ADVANCED_SEARCH", "UNIQUE_STAR_HERO", "DIMENSIONAL_CARDS", "COVERFLOW_GALLERY"];  useEffect(() => {
+const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION", "ADVANCED_SEARCH", "UNIQUE_STAR_HERO", "DIMENSIONAL_CARDS", "COVERFLOW_GALLERY", "SPACER"];  useEffect(() => {
     fetch("/api/admin/widgets")
       .then(r => r.json())
       .then((widgets: Widget[]) => {
@@ -2637,7 +2795,9 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
               ? w.config.items.map((it: any) => ({ ...CF_EMPTY_ITEM, ...it }))
               : [],
           });
-        }else {
+        } else if (w.type === "SPACER") {
+          setSpacerConfig(normalizeSpacerConfig(w.config));
+        } else {
           setSelectedIds(w.config.categoryIds ?? []);
           setPerCategory(w.config.perCategory ?? 3);
         }
@@ -2652,7 +2812,9 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
     setSaving(true);
 
     let config: Record<string, any>;
-     if (widget.type === "COVERFLOW_GALLERY") {
+    if (widget.type === "SPACER") {
+      config = normalizeSpacerConfig(spacerConfig);
+    } else if (widget.type === "COVERFLOW_GALLERY") {
       config = { ...cfConfig };
     } else if (widget.type === "DIMENSIONAL_CARDS") {
       config = { ...dcConfig };
@@ -2738,6 +2900,7 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
     UNIQUE_STAR_HERO:     "بنر هرو تمام‌عرض با انیمیشن — متن‌ها، رنگ‌ها، لینک‌ها و عناصر قابل تنظیم",
     DIMENSIONAL_CARDS:    "سه کارت شیشه‌ای با افکت سه‌بعدی — عنوان، توضیح، تصویر، لینک و رنگ‌بندی هر کارت جداگانه",
     COVERFLOW_GALLERY:    "گالری تصاویر با چرخش سه‌بعدی — هر تصویر لینک و دکمه‌ی اختیاری دارد",
+    SPACER:               "ارتفاع فاصله‌ی خالی را برای دسکتاپ و موبایل تنظیم کنید",
   };
 
   return (
@@ -3117,6 +3280,10 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
           uploadingIdx={cfUploadingIdx}
           setUploadingIdx={setCfUploadingIdx}
         />
+      )}
+
+      {widget.type === "SPACER" && (
+        <SpacerEditor config={spacerConfig} setConfig={setSpacerConfig} />
       )}
 
      {(widget.type === "HERO_SLIDER" || widget.type === "STORY" || widget.type === "LATEST_ARTICLES") && (
