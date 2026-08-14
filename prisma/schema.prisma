@@ -888,6 +888,7 @@ enum WidgetType {
   COVERFLOW_GALLERY
   SPACER
   PRODUCT_SHOWCASE
+  CIRCLE_GALLERY
 }
 
 enum UserRole {
