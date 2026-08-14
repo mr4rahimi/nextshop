@@ -10,7 +10,7 @@ type WidgetType =
   | "FULL_BANNER" | "DOUBLE_BANNER" | "CALL_TO_ACTION"
   | "IMAGE_CONTENT" | "IMAGE_CONTENT_DOUBLE" | "LATEST_ARTICLES"
   | "ADVANCED_SEARCH" | "UNIQUE_STAR_HERO" | "DIMENSIONAL_CARDS"  | "COVERFLOW_GALLERY"
-  | "SPACER" | "PRODUCT_SHOWCASE" | "CIRCLE_GALLERY";
+  | "SPACER" | "PRODUCT_SHOWCASE" | "CIRCLE_GALLERY" | "RECT_BOXES";
 
 interface Widget {
   id: string;
@@ -45,6 +45,7 @@ const WIDGET_META: Record<WidgetType, { label: string; icon: string; color: stri
   COVERFLOW_GALLERY:    { label: "گالری کاورفلو",          icon: "🖼️", color: "bg-sky-50 border-sky-200 dark:bg-sky-900/20 dark:border-sky-800", desc: "گالری تصاویر با افکت چرخش سه‌بعدی" },
   SPACER:               { label: "فضای خالی",              icon: "↕️", color: "bg-gray-50 border-gray-200 dark:bg-gray-900/20 dark:border-gray-700", desc: "فاصله‌ی عمودی خالی با ارتفاع قابل تنظیم" },
   CIRCLE_GALLERY:       { label: "گالری دایره‌ای",            icon: "⭕", color: "bg-pink-50 border-pink-200 dark:bg-pink-900/20 dark:border-pink-800", desc: "تصاویر گرد لینک‌دار با اسلایدر و پس‌زمینه قابل تنظیم" },
+  RECT_BOXES:           { label: "باکس‌های مستطیلی",        icon: "🟦", color: "bg-cyan-50 border-cyan-200 dark:bg-cyan-900/20 dark:border-cyan-800", desc: "باکس‌های افقی با عنوان و تصویری که از کادر بیرون می‌زند" },
   PRODUCT_SHOWCASE:     { label: "نمایش محصولات (کارت جدید)", icon: "✨", color: "bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800", desc: "اسلایدر محصولات یک دسته یا برند — در موبایل دو کارت کنار هم" },
 };
 

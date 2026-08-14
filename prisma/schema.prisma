@@ -889,6 +889,7 @@ enum WidgetType {
   SPACER
   PRODUCT_SHOWCASE
   CIRCLE_GALLERY
+  RECT_BOXES
 }
 
 enum UserRole {

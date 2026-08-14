@@ -26,6 +26,7 @@ const CoverflowGallery   = dynamic(() => import("@/components/store/CoverflowGal
 const Spacer             = dynamic(() => import("@/components/store/SpacerSection"));
 const ProductShowcase    = dynamic(() => import("@/components/store/ProductShowcaseSection"));
 const CircleGallery      = dynamic(() => import("@/components/store/CircleGallerySection"));
+const RectBoxes          = dynamic(() => import("@/components/store/RectBoxesSection"));
 
 type WidgetType = string;
 
@@ -75,6 +76,8 @@ function renderWidget(type: WidgetType, config: Record<string, any>, key: string
       return <ProductShowcase key={key} config={config} />;
     case "CIRCLE_GALLERY":
       return <CircleGallery key={key} config={config} />;
+    case "RECT_BOXES":
+      return <RectBoxes key={key} config={config} />;
     default:
       return null;
   }

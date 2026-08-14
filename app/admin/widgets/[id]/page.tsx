@@ -16,6 +16,12 @@ import {
   normalizeCircleGalleryConfig, circleGalleryBackground, circleGalleryTextColor,
   type CircleGalleryConfig, type CircleGalleryItem,
 } from "@/components/store/CircleGallerySection";
+import {
+  RB_DEFAULT, RB_EMPTY_ITEM, RB_OVERFLOW_MIN, RB_OVERFLOW_MAX,
+  RB_SECONDS_MIN, RB_SECONDS_MAX,
+  normalizeRectBoxesConfig, rectBoxBackground, rectBoxTextColor,
+  type RectBoxesConfig, type RectBoxItem,
+} from "@/components/store/RectBoxesSection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Widget {
@@ -2441,6 +2447,257 @@ function CoverflowGalleryEditor({
   );
 }
 
+// ─── RectBoxesEditor ──────────────────────────────────────────────────────────
+function RectBoxesEditor({
+  config, setConfig, uploadingIdx, setUploadingIdx,
+}: {
+  config: RectBoxesConfig;
+  setConfig: (c: RectBoxesConfig) => void;
+  uploadingIdx: number | null;
+  setUploadingIdx: (i: number | null) => void;
+}) {
+  const patch = (p: Partial<RectBoxesConfig>) => setConfig({ ...config, ...p });
+
+  function setItem(i: number, p: Partial<RectBoxItem>) {
+    patch({ items: config.items.map((it, idx) => (idx === i ? { ...it, ...p } : it)) });
+  }
+  function addItem() { patch({ items: [...config.items, { ...RB_EMPTY_ITEM }] }); }
+  function removeItem(i: number) { patch({ items: config.items.filter((_, idx) => idx !== i) }); }
+  function move(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= config.items.length) return;
+    const a = [...config.items];
+    [a[i], a[j]] = [a[j], a[i]];
+    patch({ items: a });
+  }
+
+  async function upload(i: number, file: File) {
+    setUploadingIdx(i);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.url) setItem(i, { imageUrl: data.url });
+    setUploadingIdx(null);
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* تنظیمات کلی */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
+          <span className="w-1.5 h-5 bg-cyan-600 rounded-full" />
+          تنظیمات کلی
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">عنوان بخش (اختیاری)</label>
+            <input type="text" value={config.heading} onChange={e => patch({ heading: e.target.value })}
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+          </div>
+          <div>
+            <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">زیرعنوان (اختیاری)</label>
+            <input type="text" value={config.subheading} onChange={e => patch({ subheading: e.target.value })}
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white" />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-black text-gray-700 dark:text-gray-300">میزان بیرون‌زدگی تصویر از کف باکس</label>
+            <span className="text-xs font-black text-cyan-600 tabular-nums">
+              {config.imageOverflow.toLocaleString("fa-IR")} پیکسل
+            </span>
+          </div>
+          <input type="range" min={RB_OVERFLOW_MIN} max={RB_OVERFLOW_MAX} step={2}
+            value={config.imageOverflow}
+            onChange={e => patch({ imageOverflow: Number(e.target.value) })}
+            className="w-full" style={{ accentColor: "#0891b2" }} />
+          <p className="text-[10px] text-gray-400 mt-1">
+            مقدار صفر یعنی تصویر کاملاً داخل کادر بماند. فاصله‌ی زیر اسلایدر خودکار به همین اندازه بیشتر می‌شود تا تصویر بریده نشود.
+          </p>
+        </div>
+
+        {([
+          { key: "showArrows" as const, label: "نمایش فلش‌های چپ و راست", desc: "بالای بخش کنار عنوان. بدون فلش هم می‌توان با انگشت کشید." },
+          { key: "autoplay" as const, label: "اسلاید خودکار", desc: "با نگه داشتن اشاره‌گر روی اسلایدر موقتاً متوقف می‌شود" },
+        ]).map(f => (
+          <label key={f.key} className="flex items-center justify-between gap-4 p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 cursor-pointer hover:border-gray-300 dark:hover:border-white/20 transition-all">
+            <span className="min-w-0">
+              <span className="block text-sm font-black text-gray-900 dark:text-white">{f.label}</span>
+              <span className="block text-[11px] text-gray-500 mt-1 leading-relaxed">{f.desc}</span>
+            </span>
+            <input type="checkbox" checked={config[f.key]}
+              onChange={e => patch({ [f.key]: e.target.checked } as Partial<RectBoxesConfig>)}
+              className="w-5 h-5 rounded flex-shrink-0" style={{ accentColor: "#0891b2" }} />
+          </label>
+        ))}
+
+        {config.autoplay && (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-black text-gray-700 dark:text-gray-300">فاصله‌ی بین اسلایدها</label>
+              <span className="text-xs font-black text-cyan-600 tabular-nums">
+                {config.autoplaySeconds.toLocaleString("fa-IR")} ثانیه
+              </span>
+            </div>
+            <input type="range" min={RB_SECONDS_MIN} max={RB_SECONDS_MAX} step={1}
+              value={config.autoplaySeconds}
+              onChange={e => patch({ autoplaySeconds: Number(e.target.value) })}
+              className="w-full" style={{ accentColor: "#0891b2" }} />
+          </div>
+        )}
+      </div>
+
+      {/* پیش‌نمایش */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-3">
+        <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
+          <span className="w-1.5 h-5 bg-cyan-600 rounded-full" />
+          پیش‌نمایش
+        </h3>
+        {config.items.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-6">هنوز باکسی اضافه نشده است</p>
+        ) : (
+          <div className="overflow-x-auto" style={{ paddingBottom: config.imageOverflow + 8 }}>
+            <div className="flex gap-3">
+              {config.items.map((item, i) => (
+                <div key={i} className="relative h-36 w-56 flex-shrink-0 rounded-3xl px-4 py-3 shadow-md"
+                  style={{ background: rectBoxBackground(item), color: rectBoxTextColor(item) }}>
+                  <div className="relative z-10 flex h-full w-[58%] flex-col justify-center">
+                    {item.title && <div className="text-base font-black leading-6 line-clamp-2">{item.title}</div>}
+                    {item.description && <div className="mt-1 text-xs font-bold opacity-80 line-clamp-2">{item.description}</div>}
+                    {item.badge && (
+                      <span className="mt-2 w-fit rounded-lg px-2 py-0.5 text-[10px] font-black"
+                        style={{ backgroundColor: `${rectBoxTextColor(item)}22` }}>{item.badge}</span>
+                    )}
+                  </div>
+                  {item.imageUrl && (
+                    <div className="absolute left-3 z-0 w-[42%]"
+                      style={{ bottom: -config.imageOverflow, height: `calc(100% + ${config.imageOverflow}px)` }}>
+                      <img src={item.imageUrl} alt="" className="h-full w-full object-contain object-bottom" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* باکس‌ها */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-cyan-600 rounded-full" />
+            باکس‌ها ({config.items.length.toLocaleString("fa-IR")})
+          </h3>
+          <button type="button" onClick={addItem}
+            className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-black transition-all">
+            + افزودن باکس
+          </button>
+        </div>
+
+        {config.items.length === 0 && (
+          <div className="text-center py-10 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl">
+            <p className="text-sm text-gray-400 font-bold">هنوز باکسی اضافه نشده</p>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {config.items.map((item, i) => (
+            <div key={i} className="rounded-2xl border border-gray-100 dark:border-white/5 p-4 space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-black text-gray-500">
+                  {(i + 1).toLocaleString("fa-IR")}
+                </span>
+                <label className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-[11px] font-black cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                  {uploadingIdx === i ? "در حال آپلود..." : item.imageUrl ? "تغییر تصویر" : "آپلود تصویر"}
+                  <input type="file" accept="image/*" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) upload(i, f); }} />
+                </label>
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0}
+                  className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 disabled:opacity-30 text-xs font-black">↑</button>
+                <button type="button" onClick={() => move(i, 1)} disabled={i === config.items.length - 1}
+                  className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 disabled:opacity-30 text-xs font-black">↓</button>
+                <button type="button" onClick={() => removeItem(i)}
+                  className="mr-auto px-3 py-1.5 rounded-lg text-[11px] font-black text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all">
+                  حذف
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input type="text" value={item.title} onChange={e => setItem(i, { title: e.target.value })}
+                  placeholder="عنوان — مثلاً: کامپیوتر"
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs bg-white dark:bg-gray-800 dark:text-white" />
+                <input type="text" value={item.description} onChange={e => setItem(i, { description: e.target.value })}
+                  placeholder="توضیح کوتاه — مثلاً: و تجهیزات جانبی"
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs bg-white dark:bg-gray-800 dark:text-white" />
+                <input type="text" value={item.badge} onChange={e => setItem(i, { badge: e.target.value })}
+                  placeholder="برچسب کوچک — مثلاً: تا ۳۰٪ تخفیف"
+                  className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs bg-white dark:bg-gray-800 dark:text-white" />
+              </div>
+
+              <input type="text" dir="ltr" value={item.linkUrl} onChange={e => setItem(i, { linkUrl: e.target.value })}
+                placeholder="لینک (اختیاری) — مثلاً /categories/computer"
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs bg-white dark:bg-gray-800 dark:text-white font-mono" />
+
+              {/* پس‌زمینه‌ی این باکس */}
+              <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] p-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black text-gray-600 dark:text-gray-400">پس‌زمینه:</span>
+                  {([
+                    { v: "solid" as const, label: "رنگ ساده" },
+                    { v: "gradient" as const, label: "گرادینت" },
+                  ]).map(t => (
+                    <button key={t.v} type="button" onClick={() => setItem(i, { bgType: t.v })}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all border-2 ${
+                        item.bgType === t.v
+                          ? "border-cyan-500 bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600"
+                          : "border-gray-100 dark:border-white/5 text-gray-500"
+                      }`}>{t.label}</button>
+                  ))}
+                  <span className="mr-auto text-[10px] font-bold text-gray-400">
+                    رنگ متن خودکار: {rectBoxTextColor(item) === "#111827" ? "تیره" : "روشن"}
+                  </span>
+                </div>
+
+                {item.bgType === "solid" ? (
+                  <div className="flex items-center gap-2 max-w-xs">
+                    <input type="color" value={item.bgColor} onChange={e => setItem(i, { bgColor: e.target.value })}
+                      className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent cursor-pointer flex-shrink-0" />
+                    <input type="text" dir="ltr" value={item.bgColor} onChange={e => setItem(i, { bgColor: e.target.value })}
+                      className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-mono" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {([
+                      { key: "bgGradientFrom" as const, label: "شروع" },
+                      { key: "bgGradientTo" as const, label: "پایان" },
+                    ]).map(f => (
+                      <div key={f.key} className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-gray-400 w-8">{f.label}</span>
+                        <input type="color" value={item[f.key]} onChange={e => setItem(i, { [f.key]: e.target.value })}
+                          className="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent cursor-pointer flex-shrink-0" />
+                        <input type="text" dir="ltr" value={item[f.key]} onChange={e => setItem(i, { [f.key]: e.target.value })}
+                          className="w-full min-w-0 px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-mono" />
+                      </div>
+                    ))}
+                    <select value={item.bgGradientDir} onChange={e => setItem(i, { bgGradientDir: e.target.value })}
+                      className="border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-xs bg-white dark:bg-gray-800 dark:text-white">
+                      {GRAD_DIRS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── CircleGalleryEditor ──────────────────────────────────────────────────────
 function CircleGalleryEditor({
   config, setConfig, uploadingIdx, setUploadingIdx,
@@ -3168,8 +3425,11 @@ export default function WidgetEditPage() {
   // CIRCLE_GALLERY
   const [cgConfig, setCgConfig] = useState<CircleGalleryConfig>({ ...CG_DEFAULT, items: [] });
   const [cgUploadingIdx, setCgUploadingIdx] = useState<number | null>(null);
+  // RECT_BOXES
+  const [rbConfig, setRbConfig] = useState<RectBoxesConfig>({ ...RB_DEFAULT, items: [] });
+  const [rbUploadingIdx, setRbUploadingIdx] = useState<number | null>(null);
 
-const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION", "ADVANCED_SEARCH", "UNIQUE_STAR_HERO", "DIMENSIONAL_CARDS", "COVERFLOW_GALLERY", "SPACER", "PRODUCT_SHOWCASE", "CIRCLE_GALLERY"];  useEffect(() => {
+const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION", "ADVANCED_SEARCH", "UNIQUE_STAR_HERO", "DIMENSIONAL_CARDS", "COVERFLOW_GALLERY", "SPACER", "PRODUCT_SHOWCASE", "CIRCLE_GALLERY", "RECT_BOXES"];  useEffect(() => {
     fetch("/api/admin/widgets")
       .then(r => r.json())
       .then((widgets: Widget[]) => {
@@ -3284,6 +3544,10 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
           setSpacerConfig(normalizeSpacerConfig(w.config));
         } else if (w.type === "PRODUCT_SHOWCASE") {
           setShowcaseConfig(normalizeShowcaseConfig(w.config));
+        } else if (w.type === "RECT_BOXES") {
+          // آیتم‌های ناقص هم نگه داشته می‌شوند تا ادمین بتواند کاملشان کند
+          const n = normalizeRectBoxesConfig(w.config);
+          setRbConfig({ ...n, items: Array.isArray(w.config.items) ? w.config.items.map((it: any) => ({ ...RB_EMPTY_ITEM, ...it })) : [] });
         } else if (w.type === "CIRCLE_GALLERY") {
           // آیتم‌های بدون تصویر هم نگه داشته می‌شوند تا ادمین بتواند کامل‌شان کند
           const n = normalizeCircleGalleryConfig(w.config);
@@ -3305,6 +3569,8 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
     let config: Record<string, any>;
     if (widget.type === "SPACER") {
       config = normalizeSpacerConfig(spacerConfig);
+    } else if (widget.type === "RECT_BOXES") {
+      config = normalizeRectBoxesConfig(rbConfig);
     } else if (widget.type === "CIRCLE_GALLERY") {
       config = normalizeCircleGalleryConfig(cgConfig);
     } else if (widget.type === "PRODUCT_SHOWCASE") {
@@ -3401,6 +3667,7 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
     DIMENSIONAL_CARDS:    "سه کارت شیشه‌ای با افکت سه‌بعدی — عنوان، توضیح، تصویر، لینک و رنگ‌بندی هر کارت جداگانه",
     COVERFLOW_GALLERY:    "گالری تصاویر با چرخش سه‌بعدی — هر تصویر لینک و دکمه‌ی اختیاری دارد",
     SPACER:               "ارتفاع فاصله‌ی خالی را برای دسکتاپ و موبایل تنظیم کنید",
+    RECT_BOXES:           "باکس‌های افقی با عنوان، توضیح و تصویری که پایینش از کادر بیرون می‌زند",
     CIRCLE_GALLERY:       "تصاویر گرد لینک‌دار — قطر دایره، پس‌زمینه، فلش‌ها و اسلاید خودکار قابل تنظیم",
     PRODUCT_SHOWCASE:     "اسلایدر محصولات با کارت جدید — یک دسته یا برند انتخاب کنید و رفتار اسلایدر را تنظیم نمایید",
   };
@@ -3786,6 +4053,15 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
 
       {widget.type === "SPACER" && (
         <SpacerEditor config={spacerConfig} setConfig={setSpacerConfig} />
+      )}
+
+      {widget.type === "RECT_BOXES" && (
+        <RectBoxesEditor
+          config={rbConfig}
+          setConfig={setRbConfig}
+          uploadingIdx={rbUploadingIdx}
+          setUploadingIdx={setRbUploadingIdx}
+        />
       )}
 
       {widget.type === "CIRCLE_GALLERY" && (

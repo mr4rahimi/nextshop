@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
+import { contrastTextColor } from "@/lib/contrastColor";
 
 /**
  * ویجت «گالری دایره‌ای» — مجموعه‌ای از تصاویر گرد لینک‌دار در یک اسلایدر.
@@ -103,31 +104,15 @@ export function circleGalleryBackground(cfg: CircleGalleryConfig): string | unde
   return undefined;
 }
 
-/** روشنایی نسبی sRGB — برای انتخاب خودکار رنگ متن */
-function luminance(hex: string): number {
-  const h = hex.replace("#", "");
-  const ch = [0, 2, 4].map(i => {
-    const v = parseInt(h.slice(i, i + 2), 16) / 255;
-    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
-}
-
 /**
  * رنگ متن روی پس‌زمینه‌ی انتخابی ادمین.
- *
- * وقتی ادمین پس‌زمینه‌ی سفارشی می‌گذارد، رنگ متن دیگر نباید از حالت روز/شب سایت
- * پیروی کند: یک پس‌زمینه‌ی روشن در حالت شب باعث می‌شد متنِ روشن روی زمینه‌ی روشن
- * بیفتد و خوانده نشود. اینجا از روی روشناییِ پس‌زمینه، متن تیره یا روشن انتخاب
- * می‌شود. `undefined` یعنی پس‌زمینه‌ای نیست و همان کلاس‌های تم سایت به کار می‌روند.
+ * `undefined` یعنی پس‌زمینه‌ای نیست و همان کلاس‌های تم سایت به کار می‌روند.
  */
 export function circleGalleryTextColor(cfg: CircleGalleryConfig): string | undefined {
   if (cfg.bgType === "none") return undefined;
-  const l =
-    cfg.bgType === "solid"
-      ? luminance(cfg.bgColor)
-      : (luminance(cfg.bgGradientFrom) + luminance(cfg.bgGradientTo)) / 2;
-  return l > 0.45 ? "#111827" : "#f9fafb";
+  return cfg.bgType === "solid"
+    ? contrastTextColor(cfg.bgColor)
+    : contrastTextColor(cfg.bgGradientFrom, cfg.bgGradientTo);
 }
 
 export default function CircleGallerySection({ config }: { config?: Record<string, any> }) {
