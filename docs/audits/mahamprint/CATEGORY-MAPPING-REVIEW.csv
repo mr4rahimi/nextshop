@@ -1,0 +1,62 @@
+old_id,old_category,impressions,clicks,proposed_new_path,proposed_new_title,confidence,note
+110,لیبل برچسب,10387,157,/categories/label-printer,لیبل پرینتر و فیش پرینتر,medium,لیبل و برچسب مصرفی است نه دستگاه — شاید cartridges-and-consumables بهتر باشد
+138,پد امضاء,4258,157,/categories/store-and-banking-equipment,تجهیزات فروشگاهی و بانکی,medium,معادل دقیق ندارد
+98,رنگی,4053,72,/categories/laser-cartridge,کارتریج,low,«رنگی» زیرشاخه بوده؛ باید مشخص کنی زیرشاخه‌ی چه چیزی
+96,رنگی,3703,101,/categories/laser-cartridge,کارتریج,low,همان مورد بالا با شناسه‌ی دیگر
+115,برد فرمتر,3434,71,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,قطعه‌ی پرینتر
+121,سایر قطعات,2795,63,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,
+105,ریبون,2728,36,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,مصرفی
+95,سیاه و سفید,2367,16,/categories/laser-cartridge,کارتریج,low,زیرشاخه‌ی مبهم
+119,برد پاور,2131,48,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,قطعه
+112,نوار لیبل پرینتر,1760,34,/categories/label-printer,لیبل پرینتر و فیش پرینتر,high,
+97,سیاه و سفید,1713,29,/categories/laser-cartridge,کارتریج,low,
+72,پرینتر جوهر افشان,1522,19,/categories/printer,پرینتر,high,
+131,پیکاپ,1512,21,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,medium,دسته‌ی «پیکاپ» جدید اسلاگ خراب دارد (item-…) — تا اصلاح نشده به قطعات برود
+73,پرینتر سوزنی,1432,17,/categories/printer,پرینتر,high,
+127,هات رول,1368,38,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,
+114,باتری,1289,65,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,medium,دسته‌ی «باتری» جدید اسلاگ خراب دارد (item-…)
+132,فوم رول,1214,28,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,
+59,کارتریج جوهرافشان,1138,17,/categories/ink,جوهر پرینتر,high,
+128,هد پرینتر,1102,14,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,
+108,مرکب ریسوگراف,911,29,/categories/ink,جوهر پرینتر,high,
+129,پرس,881,21,/categories/binding-and-consumer-devices,دستگاه های صحافی و مصرفی,medium,
+139,اسکنر اثر انگشت,664,11,/categories/absence-attendance-device,دستگاه حضور غیاب,high,
+100,رنگی,537,5,/categories/laser-cartridge,کارتریج,low,
+123,سینی ورودی پرینتر,532,37,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,medium,دسته‌ی «سینی ورودی» جدید اسلاگ خراب دارد (--)
+107,دولوپر,516,12,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,
+82,کارت پرینتر,495,0,/categories/printer,پرینتر,medium,
+118,مگنت,474,16,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,
+109,تانک جوهر,372,12,/categories/ink,جوهر پرینتر,high,
+116,درام,350,4,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,
+122,سینی خروجی پرینتر,313,16,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,
+124,فیلم فیوزینگ,308,7,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,
+120,سپریشن پد,263,10,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,
+74,تک کاره,249,7,/categories/printer,پرینتر,high,
+147,کالاهای استوک,225,9,/categories/v,پرینترهای استوک,medium,اسلاگ مقصد «v» است — بهتر است اول اسلاگ اصلاح شود
+134,گوشی موبایل,219,1,/categories/digital,کالای دیجیتال,high,
+136,ایرپاد,200,1,/categories/digital,کالای دیجیتال,medium,دسته‌ی «ایرپاد» جدید اسلاگ خراب دارد (item-…)
+111,نوار لیبل زن دستی,169,5,/categories/label-printer,لیبل پرینتر و فیش پرینتر,high,
+125,فیوزینگ,167,3,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,medium,دسته‌ی «فیوزینگ» جدید اسلاگ خراب دارد (item-…)
+106,کاربن فکس,141,0,/categories/fax,فکس,medium,دسته‌ی «کاربن فکس» جدید اسلاگ خراب دارد (-)
+144,هارد,137,0,/categories/digital,کالای دیجیتال,medium,دسته‌ی «هارد» جدید اسلاگ خراب دارد (item-…)
+140,تجهیزات شبکه,128,0,/categories/digital,کالای دیجیتال,low,معادل ندارد
+126,ناخنک,120,3,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,
+85,بلید,109,3,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,high,
+143,آل این وان,74,1,/categories/printer,پرینتر,medium,
+146,پرده نمایش celexon,56,1,/categories/screens,پرده نمایش,high,
+135,ساعت هوشمند,51,0,/categories/digital,کالای دیجیتال,high,
+90,ویدئو پروژکتور و پرده نمایش,46,1,/categories/video-projector1,ویدئو پروژکتور,high,
+102,رنگی,43,0,/categories/laser-cartridge,کارتریج,low,
+113,کارت پی وی سی,41,0,/categories/cartridges-and-consumables,کارتریج و مواد مصرفی و قطعات,medium,
+141,سیسکو,34,1,/categories/digital,کالای دیجیتال,medium,دسته‌ی «سیسکو» جدید اسلاگ خراب دارد (item-…)
+75,سه کاره,23,0,/categories/printer,پرینتر,high,
+78,چند کاره,20,0,/categories/printer,پرینتر,high,
+142,کارت گرافیک,18,0,/categories/digital,کالای دیجیتال,high,
+101,سیاه و سفید,12,0,/categories/laser-cartridge,کارتریج,low,
+77,تک کاره,10,0,/categories/printer,پرینتر,high,
+76,چهار کاره,9,0,/categories/printer,پرینتر,high,
+104,رنگی,8,0,/categories/laser-cartridge,کارتریج,low,
+148,?,3,1,,,none,در دامپ قدیمی وجود ندارد
+103,سیاه و سفید,2,0,/categories/laser-cartridge,کارتریج,low,
+79,رنگی,2,0,/categories/laser-cartridge,کارتریج,low,
+133,هلی شات,1,0,,,none,محصول نامرتبط با فروشگاه — بهتر است 410 بگیرد

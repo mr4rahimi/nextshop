@@ -1633,3 +1633,50 @@ model LandingPage {
   @@index([categoryId])
   @@index([isActive, isIndexable])
 }
+
+enum RedirectMatch {
+  EXACT   // /old/path            — کل مسیر برابر باشد
+  PREFIX  // /old/*               — مسیر با این شروع شود، دنباله به مقصد چسبانده می‌شود
+  REGEX   // ^/product/(\d+)$     — با $1 … در مقصد
+}
+
+/// ریدایرکت‌های قابل مدیریت از پنل ادمین.
+///
+/// `source` همیشه به شکل نرمال‌شده ذخیره می‌شود: با `/` شروع، بدون دامنه،
+/// بدون query string و بدون `/` انتهایی (به‌جز خود ریشه). نرمال‌سازی در
+/// `lib/redirects.ts` انجام می‌شود تا ادمین و middleware هر دو یک قاعده داشته باشند.
+///
+/// برای مهاجرت‌های بزرگ (چند هزار ریدایرکت) هنوز nginx گزینه‌ی بهتری است؛
+/// این جدول برای ریدایرکت‌های جاری و روزمره است.
+model Redirect {
+  id          String        @id @default(cuid())
+  source      String        @unique
+  destination String
+  statusCode  Int           @default(301) // 301 | 302 | 307 | 308 | 410
+  matchType   RedirectMatch @default(EXACT)
+  isActive    Boolean       @default(true)
+  hits        Int           @default(0)
+  lastHitAt   DateTime?
+  note        String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([isActive, matchType])
+  @@index([hits])
+}
+
+/// آدرس‌هایی که ۴۰۴ گرفته‌اند، برای اینکه ادمین از روی داده‌ی واقعی
+/// ریدایرکت بسازد نه حدس. `path` نرمال‌شده ذخیره می‌شود.
+model NotFoundLog {
+  id        String   @id @default(cuid())
+  path      String   @unique
+  hits      Int      @default(1)
+  referer   String?
+  userAgent String?
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @updatedAt
+  ignored   Boolean  @default(false)
+
+  @@index([ignored, hits])
+  @@index([lastSeen])
+}

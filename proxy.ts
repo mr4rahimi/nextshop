@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { matchPath, shouldSkip, normalizePath } from "@/lib/redirects";
+import { getRules, internalBase, INTERNAL_HEADER, internalToken } from "@/lib/redirectCache";
 
 const SECRET = process.env.JWT_SECRET ?? "";
 
@@ -104,14 +106,79 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  return NextResponse.next();
+  // ── ریدایرکت‌های مدیریت‌شده از پنل ادمین ──────────────────────────
+  // بعد از همه‌ی بررسی‌های احراز هویت می‌آید تا هرگز جلوی صفحه‌ی ورود را نگیرد.
+  return handleRedirects(request);
+}
+
+/**
+ * ریدایرکت‌های تعریف‌شده در `/admin/seo/redirects`.
+ *
+ * قواعد از یک مسیر داخلی گرفته و در حافظه کش می‌شوند (`lib/redirectCache.ts`)،
+ * پس این تابع در حالت عادی هیچ I/O ندارد و فقط یک جستجوی درون‌حافظه‌ای است.
+ *
+ * ریدایرکت‌های حجیم مهاجرت بهتر است در nginx بمانند؛ این لایه برای قواعد
+ * جاری است که ادمین اضافه می‌کند.
+ */
+async function handleRedirects(request: NextRequest) {
+  const { pathname, origin, search } = request.nextUrl;
+
+  if (shouldSkip(pathname)) return NextResponse.next();
+
+  let rules;
+  try {
+    rules = await getRules();
+  } catch {
+    return NextResponse.next(); // هرگز نباید صفحه را بشکند
+  }
+  if (!rules.length) return NextResponse.next();
+
+  const hit = matchPath(pathname, rules);
+  if (!hit) return NextResponse.next();
+
+  if (hit.rule.statusCode === 410) {
+    void countHit(hit.rule.id);
+    return new NextResponse("Gone", { status: 410 });
+  }
+
+  const isExternal = /^https?:\/\//i.test(hit.destination);
+
+  // جلوگیری از حلقه‌ی بی‌نهایت اگر مقصد همان مسیر فعلی باشد
+  if (!isExternal && normalizePath(hit.destination) === normalizePath(pathname)) {
+    return NextResponse.next();
+  }
+
+  const target = isExternal
+    ? hit.destination
+    : new URL(hit.destination + search, origin).toString();
+
+  void countHit(hit.rule.id);
+  return NextResponse.redirect(target, hit.rule.statusCode);
+}
+
+/**
+ * شمارش بازدید هر قاعده. عمداً await نمی‌شود — کاربر نباید منتظر یک UPDATE
+ * آماری بماند و شکست آن نباید جلوی ریدایرکت را بگیرد.
+ */
+function countHit(id: string) {
+  return fetch(`${internalBase()}/api/internal/redirects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", [INTERNAL_HEADER]: internalToken() },
+    body: JSON.stringify({ id }),
+    cache: "no-store",
+  }).catch(() => {});
 }
 
 export const config = {
+  /**
+   * قبلاً فقط مسیرهای ادمین و فروشنده را می‌گرفت؛ حالا برای ریدایرکت‌ها باید
+   * صفحات فروشگاه را هم ببیند. فایل‌های استاتیک و مسیرهای داخلی بیرون نگه
+   * داشته می‌شوند تا proxy بی‌دلیل روی هر تصویر اجرا نشود.
+   *
+   * `shouldSkip` همین را دوباره چک می‌کند: این matcher برای صرفه‌جویی در
+   * فراخوانی است، آن یکی برای درستی.
+   */
   matcher: [
-    "/admin/:path*",
-    "/api/admin/:path*",
-    "/seller/:path*",
-    "/api/seller/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|uploads/|upload/|assets/|api/internal/).*)",
   ],
 };

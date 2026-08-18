@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import NotFoundReporter from "@/components/seo/NotFoundReporter";
 
 export const metadata: Metadata = {
   title: "صفحه یافت نشد",
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-[#050505] flex items-center justify-center px-4">
+      <NotFoundReporter />
       <div className="text-center max-w-md">
         <p className="text-8xl font-black text-primary-500 mb-4 select-none">۴۰۴</p>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">

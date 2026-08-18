@@ -47,13 +47,15 @@ const EXCLUDES = [
   // ابزار توسعه و فایل‌های زائد
   ".claude", ".qodo", "components.backup", "dev-ui",
   "*.bak", "attr-slug-report.txt", "products-without-specs.csv",
-   // مستندات و دیتاست‌های حجیم
-  "list-of-cities-in-Iran-main", "iranpayamak", "hesabanweb_files",
-  "hesabanweb.html", "hesabanweb.json", "Torob-Sync-main",
-  "nodejs_aqayepardakht_sample", "shop-theme", "guid",
+   // دیتاست‌های حجیم و مواد مرجع
+  // (مستندات سرویس‌های خارجی حالا زیر docs/ هستند و با همان یک قاعده مستثنا می‌شوند)
+  "list-of-cities-in-Iran-main", "shop-theme", "guid",
   "schema-engine.tar.gz",
   // راهنماهای توسعه — فقط لوکال
   "*.md", "!README.md",
+  // کل مستندات (شامل خروجی ممیزی‌ها و داده‌ی خامشان) روی سرور کاربردی ندارد.
+  // یک قاعده به‌جای چند الگو، چون همه‌چیز حالا زیر docs/ است.
+  "docs",
 ];
 
 const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");

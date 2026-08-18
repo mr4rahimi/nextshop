@@ -57,4 +57,4 @@
 2. IntegSettings singleton باید وجود داشته باشد وگرنه worker ساکت است
 3. INTEGRATION_ENCRYPTION_KEY در production اجباری است؛ عوض شدنش credentials قبلی را غیرقابل‌خواندن می‌کند (اتصال‌ها باید دوباره ذخیره شوند)
 4. هر کد داخلی که localhost:3000 را پیش‌فرض گرفته (مثل app/api/chat) روی سایت‌هایی با پورت دیگر (3002) می‌شکند — همیشه از env بخوان
-5. مستندات مرجع: torob (پوشه guid/پروژه)، basalam.md، hesabanweb.json، INTEGRATION_HUB.md
+5. مستندات مرجع: torob (پوشه guid/پروژه)، basalam.md، hesabanweb.json، docs/integrations/hub.md

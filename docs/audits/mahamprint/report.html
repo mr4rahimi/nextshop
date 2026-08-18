@@ -1,0 +1,420 @@
+<title>مهام پرینت: گزارش سئو</title>
+<style>
+  :root {
+    --ink:        #1a1714;
+    --ink-soft:   #57504a;
+    --ink-faint:  #8b827a;
+    --ground:     #fbf9f6;
+    --panel:      #ffffff;
+    --rule:       #e6dfd6;
+    --accent:     #9c3a1e;
+    --accent-dim: #c07a5f;
+    --crit:       #a8321a;
+    --warn:       #a8781a;
+    --good:       #3d6b47;
+    --shadow:     0 1px 2px rgba(26,23,20,.05), 0 8px 24px -12px rgba(26,23,20,.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink:        #f2ede7;
+      --ink-soft:   #b3a99f;
+      --ink-faint:  #7d736a;
+      --ground:     #141210;
+      --panel:      #1e1a17;
+      --rule:       #332c26;
+      --accent:     #e08b6a;
+      --accent-dim: #a35f42;
+      --crit:       #e0785e;
+      --warn:       #d9ab52;
+      --good:       #7fae8a;
+      --shadow:     0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink:        #f2ede7;
+    --ink-soft:   #b3a99f;
+    --ink-faint:  #7d736a;
+    --ground:     #141210;
+    --panel:      #1e1a17;
+    --rule:       #332c26;
+    --accent:     #e08b6a;
+    --accent-dim: #a35f42;
+    --crit:       #e0785e;
+    --warn:       #d9ab52;
+    --good:       #7fae8a;
+    --shadow:     0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Vazirmatn", "Segoe UI", Tahoma, system-ui, sans-serif;
+    line-height: 1.75;
+    direction: rtl;
+  }
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 3.5rem 1.5rem 6rem; }
+
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 2rem; margin-bottom: 3rem; }
+  .eyebrow {
+    font-size: .75rem; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin: 0 0 .75rem;
+  }
+  h1 { font-size: clamp(1.9rem, 5vw, 3rem); line-height: 1.15; margin: 0 0 .6rem; text-wrap: balance; font-weight: 800; }
+  .sub { color: var(--ink-soft); font-size: 1.05rem; margin: 0; }
+
+  .score-band {
+    display: grid; grid-template-columns: auto 1fr; gap: 2rem; align-items: center;
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 4px;
+    padding: 1.75rem; margin: 2.5rem 0 3rem; box-shadow: var(--shadow);
+  }
+  .score-num {
+    font-size: 4.5rem; font-weight: 800; line-height: 1; color: var(--crit);
+    font-variant-numeric: tabular-nums;
+  }
+  .score-num small { font-size: 1.25rem; color: var(--ink-faint); font-weight: 500; }
+  .bars { display: grid; gap: .5rem; }
+  .bar-row { display: grid; grid-template-columns: 9.5rem 1fr 2.5rem; gap: .75rem; align-items: center; font-size: .85rem; }
+  .bar-track { background: var(--rule); border-radius: 2px; height: .55rem; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+  .bar-val { text-align: left; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+
+  h2 {
+    font-size: 1.5rem; margin: 3.5rem 0 .35rem; font-weight: 750; text-wrap: balance;
+    padding-top: 1.75rem; border-top: 1px solid var(--rule);
+  }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  h2 .num { color: var(--accent); font-variant-numeric: tabular-nums; margin-left: .5rem; }
+  h3 { font-size: 1.08rem; margin: 2rem 0 .5rem; font-weight: 700; }
+  p { margin: 0 0 1rem; }
+  .lede { color: var(--ink-soft); margin: 0 0 1.5rem; font-size: 1.02rem; }
+
+  .callout {
+    border-right: 3px solid var(--crit); background: var(--panel);
+    padding: 1.1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0;
+    box-shadow: var(--shadow);
+  }
+  .callout.warn { border-right-color: var(--warn); }
+  .callout.good { border-right-color: var(--good); }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout strong { color: var(--ink); }
+
+  .tbl-wrap { overflow-x: auto; margin: 1.25rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .88rem; min-width: 30rem; }
+  th, td { text-align: right; padding: .55rem .7rem; border-bottom: 1px solid var(--rule); }
+  th { font-weight: 700; color: var(--ink-soft); font-size: .76rem; letter-spacing: .05em; text-transform: uppercase; }
+  td.n { font-variant-numeric: tabular-nums; }
+  tr.hi td { background: color-mix(in srgb, var(--crit) 8%, transparent); font-weight: 650; }
+  tr.hi td:first-child { position: relative; }
+
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; direction: ltr; }
+  code { background: var(--panel); border: 1px solid var(--rule); padding: .1rem .35rem; border-radius: 3px; font-size: .85em; }
+  pre {
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 4px;
+    padding: 1rem 1.15rem; overflow-x: auto; font-size: .82rem; line-height: 1.7;
+    text-align: left; margin: 1.25rem 0;
+  }
+  pre code { background: none; border: none; padding: 0; }
+
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .metric {
+    background: var(--panel); border: 1px solid var(--rule); border-radius: 4px;
+    padding: 1rem 1.1rem; box-shadow: var(--shadow);
+  }
+  .metric .v { font-size: 1.8rem; font-weight: 750; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .metric .v.crit { color: var(--crit); }
+  .metric .v.warn { color: var(--warn); }
+  .metric .v.good { color: var(--good); }
+  .metric .k { font-size: .78rem; color: var(--ink-faint); margin-top: .3rem; }
+
+  .pill {
+    display: inline-block; font-size: .7rem; font-weight: 700; padding: .1rem .5rem;
+    border-radius: 999px; letter-spacing: .04em; vertical-align: middle;
+  }
+  .pill.crit { background: color-mix(in srgb, var(--crit) 16%, transparent); color: var(--crit); }
+  .pill.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+  .pill.good { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
+
+  ul, ol { margin: 0 0 1rem; padding-right: 1.3rem; }
+  li { margin-bottom: .4rem; }
+
+  .trend { display: grid; gap: .3rem; margin: 1.5rem 0; }
+  .trend-row { display: grid; grid-template-columns: 5rem 1fr 4rem; gap: .6rem; align-items: center; font-size: .82rem; }
+  .trend-bar { height: 1.1rem; background: var(--accent-dim); border-radius: 2px; min-width: 2px; }
+  .trend-row.break .trend-bar { background: var(--crit); }
+  .trend-row.pre .trend-bar { background: var(--good); }
+  .trend-lbl { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .trend-val { font-variant-numeric: tabular-nums; text-align: left; color: var(--ink-soft); }
+
+  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); color: var(--ink-faint); font-size: .82rem; }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">گزارش سئو · ۱۷ آگوست ۲۰۲۶</p>
+  <h1>مهام پرینت</h1>
+  <p class="sub">فروشگاه ماشین‌های اداری — ۲۷۵۶ محصول — mahamprint.com</p>
+</header>
+
+<div class="callout good" style="margin-top:0">
+  <p><strong>وضعیت اجرا:</strong> ۲,۵۲۰ ریدایرکت ۳۰۱ روی سرور اعمال شد و تست گرفته شد — <strong>۲,۴۳۸ از ۲,۴۴۱ سالم</strong> (سه مورد باقی‌مانده آدرس‌هایی با encoding خرابِ خود گوگل‌اند، هرکدام ۱ ایمپرشن). ریدایرکت <code>www</code> هم اضافه شد. بکاپ کامل دیتابیس و کانفیگ پیش از تغییر گرفته شده است.</p>
+  <p style="margin-top:.6rem">همچنین یک پنل «سئو» در ادمین اضافه شد تا ریدایرکت‌های بعدی بدون نیاز به SSH ساخته شوند، به‌همراه گزارش ۴۰۴ که آدرس‌های شکسته‌ی واقعی را جمع می‌کند.</p>
+  <p style="margin-top:.6rem">جزئیات کامل در <code>DEPLOYED-CHANGES.md</code>. بقیه‌ی یافته‌های این گزارش هنوز اعمال نشده‌اند.</p>
+</div>
+
+<div class="score-band">
+  <div>
+    <div class="score-num">43<small> / 100</small></div>
+    <div class="metric-k" style="font-size:.78rem;color:var(--ink-faint);margin-top:.3rem">امتیاز سلامت</div>
+  </div>
+  <div class="bars">
+    <div class="bar-row"><span>Technical SEO</span><span class="bar-track"><span class="bar-fill" style="width:40%"></span></span><span class="bar-val">40</span></div>
+    <div class="bar-row"><span>محتوا</span><span class="bar-track"><span class="bar-fill" style="width:45%"></span></span><span class="bar-val">45</span></div>
+    <div class="bar-row"><span>On-Page</span><span class="bar-track"><span class="bar-fill" style="width:45%"></span></span><span class="bar-val">45</span></div>
+    <div class="bar-row"><span>Schema</span><span class="bar-track"><span class="bar-fill" style="width:55%"></span></span><span class="bar-val">55</span></div>
+    <div class="bar-row"><span>عملکرد</span><span class="bar-track"><span class="bar-fill" style="width:20%"></span></span><span class="bar-val">20</span></div>
+    <div class="bar-row"><span>جستجوی AI</span><span class="bar-track"><span class="bar-fill" style="width:45%"></span></span><span class="bar-val">45</span></div>
+    <div class="bar-row"><span>تصاویر</span><span class="bar-track"><span class="bar-fill" style="width:50%"></span></span><span class="bar-val">50</span></div>
+  </div>
+</div>
+
+<h2><span class="num">۱</span>مهاجرت ۹۹٪ ترافیک را از بین برد</h2>
+<p class="lede">سایت در مارس ۲۰۲۶ به ساختار جدید منتقل شد، بدون اینکه ریدایرکت ۳۰۱ گذاشته شود.</p>
+
+<div class="trend">
+  <div class="trend-row pre"><span class="trend-lbl">2025-11</span><span class="trend-bar" style="width:100%"></span><span class="trend-val">1,790</span></div>
+  <div class="trend-row pre"><span class="trend-lbl">2025-12</span><span class="trend-bar" style="width:84%"></span><span class="trend-val">1,504</span></div>
+  <div class="trend-row pre"><span class="trend-lbl">2026-01</span><span class="trend-bar" style="width:73%"></span><span class="trend-val">1,306</span></div>
+  <div class="trend-row pre"><span class="trend-lbl">2026-02</span><span class="trend-bar" style="width:85%"></span><span class="trend-val">1,523</span></div>
+  <div class="trend-row break"><span class="trend-lbl">2026-03</span><span class="trend-bar" style="width:0.6%"></span><span class="trend-val">11</span></div>
+  <div class="trend-row"><span class="trend-lbl">2026-04</span><span class="trend-bar" style="width:7%"></span><span class="trend-val">132</span></div>
+  <div class="trend-row"><span class="trend-lbl">2026-05</span><span class="trend-bar" style="width:11%"></span><span class="trend-val">197</span></div>
+  <div class="trend-row"><span class="trend-lbl">2026-06</span><span class="trend-bar" style="width:12%"></span><span class="trend-val">211</span></div>
+  <div class="trend-row"><span class="trend-lbl">2026-07</span><span class="trend-bar" style="width:36%"></span><span class="trend-val">642</span></div>
+  <div class="trend-row"><span class="trend-lbl">2026-08*</span><span class="trend-bar" style="width:35%"></span><span class="trend-val">291</span></div>
+</div>
+<p style="font-size:.8rem;color:var(--ink-faint);margin-top:-.5rem">* تا ۱۴ آگوست. کلیک ارگانیک ماهانه، منبع: Search Console.</p>
+
+<div class="callout">
+  <p><strong>وضعیت فعلی:</strong> میانگین قبل از مهاجرت ~۱۴۰۰ کلیک در ماه بود. سرعت فعلی ~۶۲۰ کلیک در ماه است — یعنی هنوز <strong>۵۶٪ زیر سطح قبل</strong> و ماهانه حدود <strong>۸۰۰ کلیک از دست می‌رود</strong>.</p>
+</div>
+
+<h3>ساختار آدرس‌ها عوض شد</h3>
+<pre><code>قدیم:  /product/147/پرینتر-چند-کاره-لیزری-برند-HP-MFP-M-136-W
+جدید:  /products/----hp-mfp-m-136-w
+
+قدیم:  /category/75/3-job          جدید:  /categories/printer
+قدیم:  /brand/35/plustek           جدید:  /brands/plustek
+قدیم:  /tag/127/پرینتر-ارزان-قیمت  جدید:  معادلی ندارد
+قدیم:  /index.php?productID=2960   جدید:  نسل قبل‌تر</code></pre>
+
+<h3>ابعاد مشکل</h3>
+<div class="metric-grid">
+  <div class="metric"><div class="v crit">۷۳٪</div><div class="k">از آدرس‌های شناخته‌شده‌ی گوگل ۴۰۴ می‌دهند</div></div>
+  <div class="metric"><div class="v crit">۳۳۲,۵۱۳</div><div class="k">ایمپرشن روی آدرس‌های ۴۰۴</div></div>
+  <div class="metric"><div class="v crit">۱۲,۵۰۴</div><div class="k">کلیک تاریخی روی آدرس‌های ۴۰۴</div></div>
+  <div class="metric"><div class="v good">۴,۲۰۱</div><div class="k">آدرس بررسی‌شده (کامل)</div></div>
+</div>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>بخش</th><th>404</th><th>200</th><th>301</th><th>ایمپرشن از‌دست‌رفته</th></tr></thead>
+  <tbody>
+    <tr class="hi"><td><code>/product/</code></td><td class="n">2,455</td><td class="n">0</td><td class="n">1</td><td class="n">213,644</td></tr>
+    <tr class="hi"><td><code>/category/</code></td><td class="n">102</td><td class="n">0</td><td class="n">7</td><td class="n">90,550</td></tr>
+    <tr><td><code>/mag/</code></td><td class="n">54</td><td class="n">39</td><td class="n">0</td><td class="n">16,207</td></tr>
+    <tr><td><code>/brand/</code></td><td class="n">69</td><td class="n">0</td><td class="n">1</td><td class="n">3,788</td></tr>
+    <tr><td><code>index.php</code></td><td class="n">88</td><td class="n">0</td><td class="n">0</td><td class="n">3,511</td></tr>
+    <tr><td><code>/page/</code></td><td class="n">15</td><td class="n">0</td><td class="n">0</td><td class="n">1,719</td></tr>
+    <tr><td><code>/tag/</code></td><td class="n">261</td><td class="n">0</td><td class="n">11</td><td class="n">1,368</td></tr>
+    <tr><td>سایر</td><td class="n">24</td><td class="n">0</td><td class="n">0</td><td class="n">1,717</td></tr>
+    <tr><td><code>/products/</code> <span class="pill good">جدید</span></td><td class="n">3</td><td class="n">967</td><td class="n">0</td><td class="n">9</td></tr>
+  </tbody>
+</table>
+</div>
+<p style="font-size:.8rem;color:var(--ink-faint)">هر ۴,۲۰۱ آدرس شناخته‌شده‌ی گوگل بررسی شد. بخش‌های جدید سالم‌اند — مشکل کاملاً محدود به ساختار قدیمی است.</p>
+
+<div class="callout warn">
+  <p><strong>ریدایرکت‌های موجود اشتباه‌اند.</strong> برای <code>/category/</code> چند ریدایرکت وجود دارد ولی همه به یک مقصد می‌روند:</p>
+  <pre style="margin:.75rem 0 0"><code>/category/75/3-job     → 301 → /categories/printer
+/category/98/رنگی-2    → 301 → /categories/printer   ← مقصد یکسان</code></pre>
+  <p style="margin-top:.75rem">گوگل این «ریدایرکت انبوه به یک صفحه» را معادل soft-404 می‌بیند و ارزش لینک منتقل نمی‌شود.</p>
+</div>
+
+<h2><span class="num">۲</span>نقص سیستمی در تولید اسلاگ</h2>
+<p class="lede">اسکریپت مهاجرت نام فارسی محصول را slugify کرده؛ حروف فارسی حذف شده و فقط خط‌تیره باقی مانده.</p>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>مشکل</th><th>تعداد</th><th>درصد</th></tr></thead>
+  <tbody>
+    <tr class="hi"><td>اسلاگ محصول با <code>-</code> شروع می‌شود</td><td class="n">2,689 / 2,756</td><td class="n">۹۷٪</td></tr>
+    <tr><td>اسلاگ حاوی <code>--</code></td><td class="n">2,262</td><td class="n">۸۲٪</td></tr>
+    <tr><td>اسلاگ فقط خط‌تیره (<code>-----</code>)</td><td class="n">2</td><td class="n">—</td></tr>
+    <tr><td>برخورد اسلاگ پس از حذف خط‌تیره</td><td class="n">65 گروه</td><td class="n">—</td></tr>
+    <tr><td>دسته با اسلاگ خودکار <code>item-&lt;timestamp&gt;</code></td><td class="n">38 / 76</td><td class="n">۵۰٪</td></tr>
+    <tr><td>برند با اسلاگ خودکار یا خالی</td><td class="n">25 / 93</td><td class="n">۲۷٪</td></tr>
+  </tbody>
+</table>
+</div>
+<p>نمونه‌ها: <code>/products/-----</code> · <code>/products/------pr9</code> · <code>/brands/م</code> · <code>/categories/-</code></p>
+<p>برخورد اسلاگ یعنی چند محصول متفاوت آدرس تقریباً یکسان دارند — مثلاً <code>hp-1320</code> پنج بار با تعداد خط‌تیره‌ی متفاوت. گوگل این‌ها را محتوای تکراری می‌بیند.</p>
+
+<h2><span class="num">۳</span>کیفیت داده‌ی محصولات</h2>
+<div class="metric-grid">
+  <div class="metric"><div class="v crit">۸۳٪</div><div class="k">۲,۲۹۰ محصول بدون قیمت</div></div>
+  <div class="metric"><div class="v warn">۶۱۹</div><div class="k">محصول بدون برند</div></div>
+  <div class="metric"><div class="v warn">۱۱۰</div><div class="k">محصول بدون تصویر</div></div>
+  <div class="metric"><div class="v warn">۹۳۹</div><div class="k">محصول با برندِ اسلاگ‌خراب</div></div>
+</div>
+<p>در Product schema برای این محصولات <code>"price": 0</code> همراه با <code>"availability": "InStock"</code> تولید می‌شود. گوگل این ترکیب را نامعتبر می‌داند و rich result نمایش نمی‌دهد.</p>
+
+<div class="callout good">
+  <p><strong>نکته‌ی مثبت:</strong> جایی که قیمت وجود دارد، اسکیما درست کار می‌کند — مقدار تومان را ×۱۰ می‌کند و با <code>priceCurrency: IRR</code> اعلام می‌کند. این منطق صحیح است و نیازی به تغییر ندارد.</p>
+</div>
+
+<h2><span class="num">۴</span>عملکرد</h2>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>سنجه</th><th>مقدار</th><th>وضعیت</th></tr></thead>
+  <tbody>
+    <tr class="hi"><td>TTFB صفحه‌ی محصول</td><td class="n">۶.۰ – ۱۱.۲ ثانیه</td><td><span class="pill crit">بحرانی</span></td></tr>
+    <tr class="hi"><td>TTFB صفحه‌ی اصلی</td><td class="n">۲.۳ – ۵.۸ ثانیه</td><td><span class="pill crit">بحرانی</span></td></tr>
+    <tr><td>دانلود sitemap.xml (۵۳۳KB)</td><td class="n">۳۹ ثانیه</td><td><span class="pill crit">بحرانی</span></td></tr>
+    <tr><td>تصویر محصول</td><td class="n">۱۷۰KB JPEG · ۵.۷ ثانیه</td><td><span class="pill warn">ضعیف</span></td></tr>
+    <tr><td>بهینه‌سازی تصویر Next.js</td><td><code>/_next/image</code> → 404</td><td><span class="pill warn">غیرفعال</span></td></tr>
+    <tr><td>WebP / AVIF</td><td>ارائه نمی‌شود</td><td><span class="pill warn">غیرفعال</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="callout">
+  <p><strong>کش کاملاً خاموش است.</strong> همه‌ی صفحات این هدر را می‌فرستند:</p>
+  <pre style="margin:.75rem 0 0"><code>cache-control: private, no-cache, no-store, max-age=0, must-revalidate</code></pre>
+  <p style="margin-top:.75rem"><code>no-store</code> یعنی هیچ کشی (مرورگر، CDN، واسط) کار نمی‌کند. برای سایتی که محتوایش عمدتاً ثابت است، این بزرگ‌ترین عامل کندی است.</p>
+</div>
+
+<h2><span class="num">۵</span>رندر سمت سرور</h2>
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>صفحه</th><th>لینک محصول در HTML</th><th>کلمات</th><th>H1</th></tr></thead>
+  <tbody>
+    <tr class="hi"><td>صفحه‌ی اصلی</td><td class="n">۰</td><td class="n">۸۵</td><td class="n">۰</td></tr>
+    <tr class="hi"><td><code>/products</code></td><td class="n">۰</td><td class="n">۴۷</td><td class="n">۱</td></tr>
+    <tr><td><code>/categories/printer</code></td><td class="n">۳۶</td><td class="n">۳۸۵</td><td class="n">۱</td></tr>
+    <tr><td><code>/brands/hp</code></td><td class="n">۱۶</td><td class="n">۱۴۲</td><td class="n">۱</td></tr>
+    <tr><td>مقالات <code>/mag/</code></td><td>—</td><td class="n">۱۰۰۰–۱۳۰۰</td><td class="n">۱</td></tr>
+  </tbody>
+</table>
+</div>
+<p>صفحه‌ی اصلی به‌جای محتوا «در حال بارگذاری…» می‌فرستد و همه‌ی ویجت‌ها کلاینت‌ساید لود می‌شوند. مهم‌ترین صفحه‌ی سایت در HTML اولیه نه محصولی دارد، نه قیمتی، نه H1.</p>
+
+<div class="callout good">
+  <p><strong>صفحات دسته، برند و مقالات کاملاً سمت سرور رندر می‌شوند</strong> و ساختارشان سالم است — همان الگو باید در صفحه‌ی اصلی تکرار شود.</p>
+</div>
+
+<h2><span class="num">۶</span>چه چیزی درست کار می‌کند</h2>
+<ul>
+  <li><code>robots.txt</code> تمیز و درست، با اعلام sitemap</li>
+  <li><code>sitemap.xml</code> با ۳,۰۵۱ آدرس معتبر</li>
+  <li>HTTPS با HSTS، به‌علاوه <code>X-Content-Type-Options</code>، <code>X-Frame-Options</code>، <code>Referrer-Policy</code></li>
+  <li>ریدایرکت HTTP → HTTPS برقرار است</li>
+  <li><code>lang="fa"</code> و <code>dir="rtl"</code> درست تنظیم شده</li>
+  <li>JSON-LD کامل: <code>Organization</code>، <code>WebSite</code>، <code>Store</code>، <code>Product</code>، <code>Article</code>، <code>BreadcrumbList</code></li>
+  <li>عنوان و توضیحات متا در صفحات محصول و دسته باکیفیت و اختصاصی است</li>
+  <li>alt تصاویر کامل است</li>
+  <li>صفحه‌ی ۴۰۴ کد ۴۰۴ واقعی برمی‌گرداند (نه soft-404)</li>
+  <li>خزنده‌های هوش مصنوعی (GPTBot، ClaudeBot، PerplexityBot) محدود نشده‌اند</li>
+</ul>
+
+<h3>مشکلات On-Page</h3>
+<ul>
+  <li>صفحه‌ی اصلی <strong>H1 ندارد</strong></li>
+  <li>عنوان صفحه‌ی اصلی فقط «مهام پرینت» است — بدون کلمه‌ی کلیدی</li>
+  <li>توضیحات متای صفحه‌ی اصلی ~۴۰۰ کاراکتر است و در نتایج بریده می‌شود</li>
+  <li><code>https://www.mahamprint.com/</code> کد ۲۰۰ می‌دهد و ریدایرکت نمی‌شود</li>
+  <li><code>Product</code> schema فاقد <code>sku</code>، <code>gtin</code> و <code>aggregateRating</code> است</li>
+</ul>
+
+<h2><span class="num">۷</span>فرصت‌های کلمات کلیدی</h2>
+<p class="lede">در ۹۰ روز اخیر ۳۰۳ کلیک ثبت شده که ۲۰۱ تای آن (۶۶٪) صرفاً برندی است. ترافیک تجاری غیربرندی تقریباً صفر است.</p>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>کوئری</th><th>ایمپرشن</th><th>کلیک</th><th>CTR</th><th>جایگاه</th></tr></thead>
+  <tbody>
+    <tr class="hi"><td>پرینتر لیبل زن رنگی</td><td class="n">282</td><td class="n">6</td><td class="n">۲.۱٪</td><td class="n">10.8</td></tr>
+    <tr class="hi"><td>پرینتر</td><td class="n">226</td><td class="n">4</td><td class="n">۱.۸٪</td><td class="n">16.2</td></tr>
+    <tr class="hi"><td>پرینتر تک کاره</td><td class="n">196</td><td class="n">1</td><td class="n">۰.۵٪</td><td class="n">5.0</td></tr>
+    <tr class="hi"><td>پرینتر سه کاره</td><td class="n">192</td><td class="n">6</td><td class="n">۳.۱٪</td><td class="n">6.4</td></tr>
+    <tr><td>لیبل زن رنگی</td><td class="n">99</td><td class="n">1</td><td class="n">۱.۰٪</td><td class="n">7.7</td></tr>
+    <tr><td>پرینتر hp 136w</td><td class="n">81</td><td class="n">1</td><td class="n">۱.۲٪</td><td class="n">7.8</td></tr>
+    <tr><td>قیمت چاپگر سه کاره</td><td class="n">53</td><td class="n">0</td><td class="n">۰٪</td><td class="n">7.2</td></tr>
+    <tr><td>لیبل پرینتر رنگی</td><td class="n">53</td><td class="n">0</td><td class="n">۰٪</td><td class="n">8.5</td></tr>
+  </tbody>
+</table>
+</div>
+<p>اینها همگی کوئری‌های <strong>دسته‌ای و تجاری</strong> هستند — دقیقاً همان صفحاتی که اسلاگ‌شان خراب است. مجموعاً ۱,۷۱۲ ایمپرشن در «فاصله‌ی ضربه» (جایگاه ۴ تا ۲۰).</p>
+
+<div class="callout warn">
+  <p><strong>یک ناهنجاری:</strong> کوئری «بهترین هلی شات برای فیلمبرداری» با ۴۱۰ ایمپرشن در جایگاه ۷.۶ ولی CTR ۰.۷٪ — موضوعی نامرتبط با فروشگاه ماشین اداری که ترافیک بی‌کیفیت جذب می‌کند.</p>
+</div>
+
+<h2><span class="num">۸</span>ترتیب پیشنهادی اقدام</h2>
+<ol>
+  <li><strong>بکاپ کامل دیتابیس و کانفیگ nginx</strong> — قبل از هر چیز</li>
+  <li><strong>ریدایرکت www → non-www</strong> — ریسک ~صفر، تست ساده</li>
+  <li><strong>بازبینی دستی نگاشت ریدایرکت</strong> — دسته‌های medium و low الزاماً، از high هم نمونه‌گیری</li>
+  <li><strong>اعمال ریدایرکت‌ها روی staging</strong> و تست</li>
+  <li><strong>اعمال روی production</strong> + پایش ۴۸ ساعته در Search Console</li>
+  <li><strong>رفع کش</strong> — بزرگ‌ترین برد عملکردی</li>
+  <li><strong>SSR صفحه‌ی اصلی</strong> + افزودن H1 و اصلاح عنوان</li>
+  <li><strong>اصلاح اسکیمای محصولات بدون قیمت</strong> — حذف <code>offers</code> یا تغییر <code>availability</code></li>
+</ol>
+
+<h3>نگاشت ریدایرکت — اعمال شد</h3>
+<p class="lede">دیتابیس سایت قدیم (دامپ ۲۲ ژوئن) نگاشت را از حدس به قطعیت رساند.</p>
+
+<div class="callout">
+  <p><strong>یک تله‌ی مهم:</strong> شناسه‌ی عددی قدیم مرجع قابل اعتمادی نبود — <strong>۷۷ شناسه در بیش از یک آدرس ایندکس‌شده ظاهر شده بودند</strong>، یعنی شناسه‌ها در طول زمان بازاستفاده شده‌اند:</p>
+  <pre style="margin:.75rem 0 0"><code>/product/3077/لیبل-پرینتر-Gainscha-2408-dc
+   دیتابیس برای شناسه‌ی ۳۰۷۷ می‌گوید:
+   پرینتر چهارکاره لیزری HP MFP 4103fdw   ← محصول کاملاً متفاوت</code></pre>
+  <p style="margin-top:.75rem">پس مرجع، <strong>اسلاگ داخل آدرس ایندکس‌شده</strong> قرار گرفت (چیزی که گوگل واقعاً دیده) و عنوان دیتابیس فقط سیگنال تأییدکننده شد.</p>
+</div>
+
+<div class="tbl-wrap">
+<table>
+  <thead><tr><th>رده</th><th>معنی</th><th>تعداد</th><th>وضعیت</th></tr></thead>
+  <tbody>
+    <tr><td><span class="pill good">certain</span></td><td>اسلاگ آدرس و عنوان دیتابیس هر دو یک محصول</td><td class="n">2,341</td><td>اعمال شد</td></tr>
+    <tr><td><span class="pill good">strong</span></td><td>یک سیگنال با امتیاز بالا</td><td class="n">8</td><td>اعمال شد</td></tr>
+    <tr><td>برند / دسته</td><td>از روی شناسه‌ی قدیم</td><td class="n">92</td><td>اعمال شد</td></tr>
+    <tr><td><code>index.php</code></td><td><code>?productID=N</code></td><td class="n">82</td><td>اعمال شد</td></tr>
+    <tr><td><span class="pill warn">review</span></td><td>دو سیگنال متناقض یا تطبیق ضعیف</td><td class="n">44</td><td>نیاز به بازبینی</td></tr>
+    <tr><td><span class="pill crit">none</span></td><td>نامزدی پیدا نشد</td><td class="n">62</td><td>نیاز به بازبینی</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="metric-grid">
+  <div class="metric"><div class="v good">۲,۵۲۰</div><div class="k">ریدایرکت فعال روی سرور</div></div>
+  <div class="metric"><div class="v good">۲,۴۳۸</div><div class="k">تست‌شده و سالم (از ۲,۴۴۱)</div></div>
+  <div class="metric"><div class="v good">۱</div><div class="k">هاپ تا مقصد — بدون زنجیره</div></div>
+</div>
+
+<p>سه مورد ناموفق آدرس‌هایی با UTF-8 نامعتبرند که خود گوگل ثبت کرده (بایت‌های خراب <code>0x98</code>/<code>0x99</code>)، هرکدام ۱ ایمپرشن.</p>
+
+<div class="callout warn">
+  <p><strong>باقی‌مانده:</strong> ۶۱ دسته‌ی قدیمی با ۵۸,۸۳۹ ایمپرشن معادل مستقیم ندارند — سایت قدیم ۹۶ دسته‌ی ریز داشت و جدید ۳۵ دسته دارد. پیشنهاد نگاشت در <code>CATEGORY-MAPPING-REVIEW.csv</code> آماده است ولی <strong>قضاوت کسب‌وکاری لازم دارد</strong> و اعمال نشده.</p>
+  <p style="margin-top:.6rem">همچنین ۲۶۱ آدرس <code>/tag/</code> معادلی ندارند؛ پیشنهاد: کد ۴۱۰ (Gone) تا گوگل سریع‌تر حذف‌شان کند.</p>
+</div>
+
+<footer>
+  <p>همه‌ی بررسی‌ها فقط خواندنی بوده‌اند: درخواست‌های GET به سایت عمومی و خواندن API سرچ‌کنسول. هیچ تغییری روی سرور، دیتابیس یا فایل‌های سایت انجام نشده است.</p>
+  <p>داده‌های خام: <code>mahamprint.com-audit/data/</code> — وضعیت HTTP آدرس‌ها، نگاشت ریدایرکت، کاتالوگ محصولات، داده‌ی Search Console.</p>
+</footer>
+
+</div>

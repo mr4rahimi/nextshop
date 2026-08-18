@@ -147,6 +147,19 @@ const MENU_GROUPS = [
     ],
   },
   {
+    label: "سئو",
+    items: [
+      {
+        href: "/admin/seo/redirects", label: "سئو", icon: "🔎",
+        children: [
+          { href: "/admin/seo/redirects", label: "ریدایرکت‌ها" },
+          { href: "/admin/seo/not-found", label: "گزارش ۴۰۴" },
+          { href: "/admin/landing-pages", label: "صفحات فرود" },
+        ],
+      },
+    ],
+  },
+  {
     label: "تنظیمات",
     items: [
       {
