@@ -420,37 +420,43 @@ export class SnappShopAdapter extends BaseAdapter {
       const custPhone = c?.phone ?? undefined;
 
       // ترجیح با اقلام جزئیات سفارش؛ اگر در دسترس نبود، اقلام رویداد
+      // اقلام بدون شناسه‌ی محصول حذف نمی‌شوند — با کلید مصنوعی ثبت می‌شوند تا
+      // فروش نامرئی نماند و در «سفارش‌های بازارگاه» قابل رسیدگی دستی باشد.
       const detailItems = detail?.items ?? [];
-      const source: { pid: string; qty: number; unitPrice?: number }[] = detailItems.length
+      const source: { pid: string; key: string; qty: number; unitPrice?: number }[] = detailItems.length
         ? detailItems
             .filter((it) => it.item_status !== "CANCELED")
-            .map((it) => {
+            .map((it, idx) => {
               const pid = it.vendor_product_info_id ?? it.sku ?? "";
               const qty = Math.max(0, (it.quantity ?? 0) - (it.canceled_quantity ?? 0)) || (it.quantity ?? 1);
               // final_price مجموع اقلام باقیمانده است — تقسیم بر تعداد
               const total = typeof it.final_price === "number" ? it.final_price : undefined;
-              return { pid, qty, unitPrice: total != null && qty > 0 ? Math.round(total / qty) : undefined };
+              return {
+                pid,
+                key: pid || `__noId:${idx}`,
+                qty,
+                unitPrice: total != null && qty > 0 ? Math.round(total / qty) : undefined,
+              };
             })
-            .filter((r) => r.pid)
         : (ev.items ?? [])
             .filter((it) => it.item_status !== "CANCELED")
-            .map((it) => {
+            .map((it, idx) => {
               const pid = it.vendor_product_info_id ?? it.sku ?? "";
               const qty = it.deliverable_quantity ?? 1;
               const total = typeof it.final_price === "number" ? it.final_price : undefined;
               return {
                 pid,
+                key: pid || `__noId:${idx}`,
                 qty: qty > 0 ? qty : 1,
                 unitPrice: total != null && qty > 0 ? Math.round(total / qty) : undefined,
               };
-            })
-            .filter((r) => r.pid);
+            });
 
       for (const row of source) {
         items.push({
-          platformOrderId:     `${orderNo}:${row.pid}`,
+          platformOrderId:     `${orderNo}:${row.key}`,
           platformOrderNo:     orderNo,
-          platformOrderItemId: row.pid,
+          platformOrderItemId: row.key,
           platformProductId:   row.pid,
           qty:                 row.qty,
           title:               titleMap.get(row.pid),

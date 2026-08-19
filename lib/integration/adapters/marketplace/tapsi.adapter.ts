@@ -269,48 +269,63 @@ export class TapsiAdapter extends BaseAdapter {
     const orders = list.data?.items ?? [];
 
     const items: OrderItemInfo[] = [];
+    const failedDetails: string[] = [];
+
     for (const o of orders) {
       // جزئیات هر سفارش برای گرفتن اقلام و sku
       const detRes = await fetch(`${BASE}/orders/${o.id}`, { headers: baseHeaders(token) });
-      if (!detRes.ok) continue;
+      if (!detRes.ok) {
+        // سکوت اینجا یعنی سفارش هرگز در پنل دیده نمی‌شود — پس ثبت می‌شود و بالادست لاگ می‌کند
+        failedDetails.push(`${o.orderNumber || o.id} (HTTP ${detRes.status})`);
+        continue;
+      }
       const det = await detRes.json() as TapsiOrderDetail;
       const detItems = det.data?.items ?? [];
       const orderNo  = det.data?.order?.orderNumber || o.orderNumber || o.id;
 
       // تپسی برای هر واحد کالا یک ردیف جدا می‌دهد و فیلد تعداد ندارد؛
       // ردیف‌های هم‌sku را جمع می‌زنیم وگرنه فاکتور به‌جای ۳ عدد، ۳ قلم تک‌عددی می‌شود.
-      const bySku = new Map<string, { sku: string; title: string; qty: number; unitPriceToman?: number }>();
-      for (const it of detItems) {
-        if (it.state === "لغو" || it.cancelReason) continue; // اقلام لغوشده رد می‌شوند
+      const grouped = new Map<string, { sku: string; title: string; qty: number; unitPriceToman?: number }>();
+      detItems.forEach((it, idx) => {
+        if (it.state === "لغو" || it.cancelReason) return; // اقلام لغوشده رد می‌شوند
         const sku = (it.sku ?? "").trim();
-        if (!sku) continue; // بدون sku قابل نگاشت نیست
+        // بدون sku قابل نگاشت نیست، ولی حذفش یعنی فروشِ نامرئی؛
+        // با کلید مصنوعی ثبت می‌شود تا در «سفارش‌های بازارگاه» دیده و دستی رسیدگی شود.
+        const key = sku || `__noSku:${idx}`;
         const priceRial = it.finalPrice ? Number(it.finalPrice) : it.price ? Number(it.price) : NaN;
-        const existing = bySku.get(sku);
+        const existing = grouped.get(key);
         if (existing) {
           existing.qty += 1;
         } else {
-          bySku.set(sku, {
+          grouped.set(key, {
             sku,
-            title: it.name ?? sku,
+            title: it.name ?? sku ?? "(بدون عنوان)",
             qty:   1,
             unitPriceToman: Number.isFinite(priceRial) ? Math.round(priceRial / 10) : undefined,
           });
         }
-      }
+      });
 
-      for (const row of bySku.values()) {
+      for (const [key, row] of grouped) {
         items.push({
           // کلید یکتا بر پایه sku است، نه ایندکس — با ادغام ردیف‌ها ایندکس بی‌ثبات می‌شود
-          platformOrderId:     `${o.id}:${row.sku}`,
+          platformOrderId:     `${o.id}:${key}`,
           platformOrderNo:     orderNo,
-          platformOrderItemId: row.sku,
-          platformProductId:   row.sku,   // تپسی محصول را با sku می‌شناسد
+          platformOrderItemId: row.sku || key,
+          // رشته‌ی خالی یعنی «پلتفرم شناسه‌ای نداد» — نگاشت پیدا نمی‌شود و
+          // ردیف با وضعیت «نیازمند نگاشت» ثبت می‌شود
+          platformProductId:   row.sku,
           qty:                 row.qty,
           title:               row.title,
           unitPrice:           row.unitPriceToman,
         });
       }
       await this.rateLimit(150);
+    }
+
+    if (failedDetails.length) {
+      // بالادست این را در لاگ job می‌نشاند؛ سفارش‌ها در دور بعدی دوباره تلاش می‌شوند
+      console.error("[tapsi-orders] دریافت جزئیات این سفارش‌ها ناموفق بود:", failedDetails.join(", "));
     }
 
     // سفارش‌های تپسی با SKU می‌آیند؛ نگاشت با شناسه محصول ذخیره شده → تبدیل می‌کنیم

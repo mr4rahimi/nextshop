@@ -105,14 +105,15 @@ export async function POST(req: NextRequest) {
     // changeType آیتم اولویت دارد، وگرنه از orderDetail
     const changeType = item.changeType ?? body.orderDetail?.changeType ?? 1;
 
-    if (!sku) { skipped++; continue; }
-
-    const externalId = await resolveExternalId(sku);
+    // بدون sku هم ثبت می‌شود (با کلید ایندکس) تا فروش نامرئی نماند
+    const externalId = sku ? await resolveExternalId(sku) : "";
 
     try {
       if (changeType === 2) {
         // ── لغو: برگرداندن موجودی + علامت‌گذاری سفارش ────────────
-        await restoreMappingStockForCancel(PLATFORM, externalId, qty).catch(() => {});
+        if (externalId) {
+          await restoreMappingStockForCancel(PLATFORM, externalId, qty).catch(() => {});
+        }
         // ردیف سفارش مرتبط را کنسل‌شده علامت بزن (اگر هنوز فاکتور نخورده)
         await prisma.integOrder.updateMany({
           where: {
@@ -131,12 +132,16 @@ export async function POST(req: NextRequest) {
         });
         if (existing) { skipped++; continue; }
 
-        const link = await prisma.integMappingLink.findUnique({
-          where: { platformCode_externalId: { platformCode: PLATFORM, externalId } },
-        });
-        if (!link) unmatched.push(sku);
+        const link = externalId
+          ? await prisma.integMappingLink.findUnique({
+              where: { platformCode_externalId: { platformCode: PLATFORM, externalId } },
+            })
+          : null;
+        if (!link) unmatched.push(sku || "(بدون شناسه)");
 
-        await decrementMappingStockForOrder(PLATFORM, externalId, qty).catch(() => {});
+        if (externalId) {
+          await decrementMappingStockForOrder(PLATFORM, externalId, qty).catch(() => {});
+        }
 
         await prisma.integOrder.create({
           data: {
@@ -145,13 +150,17 @@ export async function POST(req: NextRequest) {
             platformOrderId,
             platformOrderNo:     body.orderDetail?.orderNumber ?? orderId,
             platformOrderItemId: String(item.orderItemId ?? idx),
-            productTitle:        link?.externalTitle ?? sku,
+            productTitle:        link?.externalTitle ?? sku ?? "(بدون عنوان)",
             qty,
             unitPrice:           typeof item.finalPrice === "number" ? Math.round(item.finalPrice / 10) : null, // ریال→تومان
             customerName,
             customerPhone,
             status:              link ? "PENDING" : "NEEDS_MAPPING",
-            blockedReason:       link ? null : `محصول «${sku}» در تپسی‌شاپ به هیچ نگاشتی وصل نیست`,
+            blockedReason:       link
+              ? null
+              : sku
+                ? `محصول «${sku}» در تپسی‌شاپ به هیچ نگاشتی وصل نیست`
+                : "تپسی‌شاپ برای این قلم شناسه‌ی محصول نفرستاد — دستی رسیدگی کنید",
           },
         });
         purchased++;

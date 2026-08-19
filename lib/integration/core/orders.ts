@@ -30,12 +30,19 @@ export async function fetchAndProcessOrders(
       });
       if (existing) { skipped++; continue; }
 
-      const link = await prisma.integMappingLink.findUnique({
-        where: { platformCode_externalId: { platformCode, externalId: item.platformProductId } },
-      });
-      if (!link) unmatched.push(item.platformProductId);
+      // پلتفرم ممکن است اصلاً شناسه‌ی محصول نداده باشد (رشته‌ی خالی) — آن‌وقت
+      // جستجوی نگاشت بی‌معنی است ولی ردیف باید ثبت شود تا فروش نامرئی نماند.
+      const hasProductId = !!item.platformProductId?.trim();
+      const link = hasProductId
+        ? await prisma.integMappingLink.findUnique({
+            where: { platformCode_externalId: { platformCode, externalId: item.platformProductId } },
+          })
+        : null;
+      if (!link) unmatched.push(item.platformProductId || "(بدون شناسه)");
 
-      await decrementMappingStockForOrder(platformCode, item.platformProductId, item.qty).catch(() => {});
+      if (hasProductId) {
+        await decrementMappingStockForOrder(platformCode, item.platformProductId, item.qty).catch(() => {});
+      }
 
       // بدون نگاشت، فاکتور ساخته نمی‌شود. به‌جای اینکه ردیف تا ابد PENDING بماند و
       // هر چرخه دوباره تلاش شود، صریحاً NEEDS_MAPPING می‌شود تا در ادمین دیده شود.
@@ -54,9 +61,11 @@ export async function fetchAndProcessOrders(
           customerName:        item.customerName ?? null,
           customerPhone:       item.customerPhone ?? null,
           status:              needsMapping ? "NEEDS_MAPPING" : "PENDING",
-          blockedReason:       needsMapping
-            ? `محصول «${item.platformProductId}» در این پلتفرم به هیچ نگاشتی وصل نیست`
-            : null,
+          blockedReason:       !needsMapping
+            ? null
+            : hasProductId
+              ? `محصول «${item.platformProductId}» در این پلتفرم به هیچ نگاشتی وصل نیست`
+              : "پلتفرم برای این قلم شناسه‌ی محصول نفرستاد — نگاشت خودکار ممکن نیست، دستی رسیدگی کنید",
         },
       });
 
