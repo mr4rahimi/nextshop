@@ -23,10 +23,21 @@ function deterministicUuid(name: string): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
+export type InvoiceMode = "AUTO" | "MANUAL";
+
 interface InvoiceConfig {
   autoInvoiceEnabled?: boolean;
   invoiceStorageId?:   number;
   autoInvoiceSince?:   string; // ISO — فقط سفارش‌های بعد از فعال‌سازی فاکتور می‌خورند
+  /**
+   * AUTO   = worker خودش ردیف‌های آماده را فاکتور می‌کند (پیش‌فرض، رفتار قبلی)
+   * MANUAL = فاکتور فقط با انتخاب ادمین در «سفارش‌های بازارگاه» ثبت می‌شود
+   */
+  invoiceMode?: InvoiceMode;
+}
+
+function readMode(config: InvoiceConfig): InvoiceMode {
+  return config.invoiceMode === "MANUAL" ? "MANUAL" : "AUTO";
 }
 
 // ثبت ردیف‌های فاکتور برای سفارش سایت (در اولین گذار به CONFIRMED صدا زده می‌شود)
@@ -78,29 +89,77 @@ export async function queueShopOrderForInvoicing(orderId: string): Promise<void>
   }
 }
 
-// در هر چرخه worker: ردیف‌های PENDING را گروهی (هر سفارش = یک فاکتور) به حسابداری می‌زند
-export async function processPendingInvoices(): Promise<void> {
+/**
+ * ردیف‌هایی که قبلاً به‌خاطر نبود نگاشت کنار گذاشته شده‌اند را دوباره می‌سنجد و
+ * آن‌هایی که حالا نگاشت حسابداری دارند به صف فاکتور برمی‌گرداند.
+ * بدون این، ادمین بعد از نگاشت کردن محصول باید دستی «تلاش دوباره» می‌زد.
+ */
+export async function requeueNewlyMappedOrders(): Promise<number> {
+  const blocked = await prisma.integOrder.findMany({
+    where:   { status: "NEEDS_MAPPING", mappingId: { not: null } },
+    select:  { id: true, mappingId: true },
+    take:    200,
+  });
+  if (!blocked.length) return 0;
+
+  const mappingIds = [...new Set(blocked.map((r) => r.mappingId!))];
+  const links = await prisma.integMappingLink.findMany({
+    where:  { mappingId: { in: mappingIds }, platformCode: ACCOUNTING_CODE, isActive: true },
+    select: { mappingId: true },
+  });
+  const ready = new Set(links.map((l) => l.mappingId));
+
+  const ids = blocked.filter((r) => ready.has(r.mappingId!)).map((r) => r.id);
+  if (!ids.length) return 0;
+
+  await prisma.integOrder.updateMany({
+    where: { id: { in: ids } },
+    data:  { status: "PENDING", blockedReason: null },
+  });
+  return ids.length;
+}
+
+// در هر چرخه worker: ردیف‌های PENDING را گروهی (هر سفارش = یک فاکتور) به حسابداری می‌زند.
+// `onlyIds` برای اجرای دستی از صفحه‌ی «سفارش‌های بازارگاه» است — در آن حالت
+// حتی اگر حالت MANUAL باشد هم فاکتور زده می‌شود، چون ادمین صریحاً خواسته.
+export async function processPendingInvoices(
+  onlyIds?: string[],
+): Promise<{ invoiced: number; skipped: string | null }> {
+  const manualRun = Array.isArray(onlyIds);
+
   const connection = await prisma.integConnection.findFirst({
     where: { platformCode: ACCOUNTING_CODE, status: { in: ["CONNECTED", "SYNCING"] } },
   });
-  if (!connection) return;
+  if (!connection) return { invoiced: 0, skipped: "اتصال حسابان برقرار نیست" };
 
   const config = (connection.config ?? {}) as InvoiceConfig;
-  if (!config.autoInvoiceEnabled || !config.invoiceStorageId) return;
+  if (!config.autoInvoiceEnabled) return { invoiced: 0, skipped: "ثبت فاکتور فروش غیرفعال است" };
+  if (!config.invoiceStorageId)   return { invoiced: 0, skipped: "انبار فاکتور انتخاب نشده است" };
+
+  // در حالت دستی، worker خودش چیزی فاکتور نمی‌کند — فقط ادمین
+  if (!manualRun && readMode(config) === "MANUAL") {
+    await requeueNewlyMappedOrders().catch(() => {});
+    return { invoiced: 0, skipped: null };
+  }
 
   const adapter = getAdapter(ACCOUNTING_CODE) as HesabanAdapter | null;
-  if (!adapter?.createSalesInvoice) return;
+  if (!adapter?.createSalesInvoice) return { invoiced: 0, skipped: "آداپتور حسابان فاکتور نمی‌سازد" };
   const credentials = decryptCredentials(connection.credentials);
+
+  if (!manualRun) await requeueNewlyMappedOrders().catch(() => {});
 
   const since = config.autoInvoiceSince ? new Date(config.autoInvoiceSince) : new Date(0);
   // فقط PENDING — ردیف‌های NEEDS_MAPPING عمداً کنار گذاشته می‌شوند تا چرخه‌ی
   // تلاش بی‌نتیجه‌ی هر ۳۰ ثانیه (و سیل لاگ خطا) تکرار نشود.
   const pending = await prisma.integOrder.findMany({
-    where:   { status: "PENDING", platformCode: { not: ACCOUNTING_CODE }, createdAt: { gte: since } },
+    where: manualRun
+      // اجرای دستی: دقیقاً همان ردیف‌های انتخاب‌شده، بدون فیلتر تاریخ
+      ? { id: { in: onlyIds }, status: { in: ["PENDING", "NEEDS_MAPPING"] } }
+      : { status: "PENDING", platformCode: { not: ACCOUNTING_CODE }, createdAt: { gte: since } },
     orderBy: { createdAt: "asc" },
     take:    200,
   });
-  if (!pending.length) return;
+  if (!pending.length) return { invoiced: 0, skipped: manualRun ? "ردیف قابل فاکتوری انتخاب نشد" : null };
 
   const groups = new Map<string, typeof pending>();
   for (const row of pending) {
@@ -111,6 +170,7 @@ export async function processPendingInvoices(): Promise<void> {
   }
 
   let handled = 0;
+  let invoicedCount = 0;
   for (const [key, rows] of groups) {
     if (handled >= MAX_GROUPS_PER_CYCLE) break;
     handled++;
@@ -220,10 +280,15 @@ export async function processPendingInvoices(): Promise<void> {
         });
       }
 
+      // فقط ردیف‌هایی که واقعاً در فاکتور آمدند INVOICED می‌شوند؛
+      // ردیف‌های blocked قبلاً NEEDS_MAPPING شده‌اند و نباید فاکتورشده علامت بخورند
+      const blockedIds = new Set(blocked.map((b) => b.id));
+      const invoicedIds = rows.map((r) => r.id).filter((id) => !blockedIds.has(id));
       await prisma.integOrder.updateMany({
-        where: { id: { in: rows.map((r) => r.id) } },
+        where: { id: { in: invoicedIds } },
         data:  { status: "INVOICED", invoicedAt: new Date() },
       });
+      invoicedCount += invoicedIds.length;
 
       await writeLog({
         platformCode: ACCOUNTING_CODE, operationType: "CREATE_INVOICE", direction: "OUTBOUND",
@@ -238,4 +303,6 @@ export async function processPendingInvoices(): Promise<void> {
       }).catch(() => {});
     }
   }
+
+  return { invoiced: invoicedCount, skipped: null };
 }

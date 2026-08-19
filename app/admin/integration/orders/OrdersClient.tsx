@@ -74,9 +74,10 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
 
   useEffect(() => { void load(); }, [load]);
 
-  async function act(action: "retry" | "cancel") {
+  async function act(action: "retry" | "cancel" | "invoice") {
     if (!selected.size) return;
     if (action === "cancel" && !confirm(`${selected.size} ردیف لغو شود؟ دیگر فاکتور نمی‌خورند.`)) return;
+    if (action === "invoice" && !confirm(`برای ${selected.size} ردیف انتخاب‌شده همین حالا فاکتور فروش در حسابداری ثبت شود؟`)) return;
     setBusy(true); setMsg(null);
     try {
       const res  = await fetch("/api/integration/orders", {
@@ -111,7 +112,8 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
           <h1 className="text-xl font-black text-gray-900 dark:text-white">سفارش‌های بازارگاه</h1>
           <p className="text-xs text-gray-500 mt-1">
             هر ردیف یک قلم از یک سفارش است. ردیف‌های «نیازمند نگاشت» فاکتور نخورده‌اند چون
-            محصولشان به کالای حسابداری وصل نیست.
+            محصولشان به کالای حسابداری وصل نیست. شیوه‌ی ثبت فاکتور (خودکار یا دستی) را از
+            تنظیمات اتصال حسابان انتخاب کنید.
           </p>
         </div>
         <button
@@ -162,13 +164,20 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
         />
 
         {selected.size > 0 && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => void act("invoice")}
+              disabled={busy}
+              className="px-4 py-2 rounded-xl bg-green-600 text-white text-sm font-bold hover:bg-green-700 disabled:opacity-50"
+            >
+              ثبت فاکتور ({selected.size.toLocaleString("fa-IR")})
+            </button>
             <button
               onClick={() => void act("retry")}
               disabled={busy}
               className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-50"
             >
-              تلاش دوباره برای فاکتور ({selected.size.toLocaleString("fa-IR")})
+              بازگرداندن به صف
             </button>
             <button
               onClick={() => void act("cancel")}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { IntegOrderStatus, Prisma } from "@prisma/client";
 import { serialize } from "@/lib/serialize";
+import { processPendingInvoices } from "@/lib/integration/core/invoicing";
 
 export const dynamic = "force-dynamic";
 
@@ -95,6 +96,41 @@ export async function PATCH(req: NextRequest) {
       message: stillUnmapped.length
         ? `${ready.length} ردیف در صف فاکتور قرار گرفت — ${stillUnmapped.length} ردیف هنوز نگاشت حسابداری ندارد`
         : `${ready.length} ردیف در صف فاکتور قرار گرفت`,
+    });
+  }
+
+  // ثبت فاکتور فوری برای ردیف‌های انتخاب‌شده — در هر دو حالت خودکار و دستی کار می‌کند
+  if (action === "invoice") {
+    const rows = await prisma.integOrder.findMany({
+      where:  { id: { in: ids }, status: { in: ["PENDING", "NEEDS_MAPPING"] } },
+      select: { id: true, mappingId: true },
+    });
+
+    const ready: string[] = [];
+    const blocked: string[] = [];
+    for (const r of rows) {
+      if (!r.mappingId) { blocked.push(r.id); continue; }
+      const hesabanLink = await prisma.integMappingLink.findUnique({
+        where:  { mappingId_platformCode: { mappingId: r.mappingId, platformCode: "hesaban" } },
+        select: { isActive: true },
+      });
+      if (hesabanLink?.isActive) ready.push(r.id); else blocked.push(r.id);
+    }
+
+    if (!ready.length) {
+      return NextResponse.json({
+        invoiced: 0,
+        message: "هیچ‌کدام از ردیف‌های انتخاب‌شده نگاشت حسابداری فعال ندارند — اول محصول را نگاشت کنید",
+      });
+    }
+
+    const result = await processPendingInvoices(ready);
+    return NextResponse.json({
+      invoiced: result.invoiced,
+      message: result.skipped
+        ? result.skipped
+        : `${result.invoiced} قلم فاکتور شد` +
+          (blocked.length ? ` — ${blocked.length} ردیف بدون نگاشت حسابداری کنار گذاشته شد` : ""),
     });
   }
 
