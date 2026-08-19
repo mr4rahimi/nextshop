@@ -32,6 +32,17 @@ const STATUS_CFG: Record<OrderRow["status"], { label: string; cls: string }> = {
 
 const STATUS_ORDER: OrderRow["status"][] = ["NEEDS_MAPPING", "PENDING", "INVOICED", "CANCELLED"];
 
+interface InvoiceSettings { enabled: boolean; mode: "AUTO" | "MANUAL"; since: string | null }
+
+/**
+ * ردیفی که قدیمی‌تر از تاریخ فعال‌سازی فاکتور است هرگز خودکار فاکتور نمی‌شود،
+ * ولی وضعیتش PENDING است و بدون این هشدار «در صف» به‌نظر می‌رسد.
+ */
+function isOutsideAutoWindow(row: OrderRow, s: InvoiceSettings | null): boolean {
+  if (!s?.since || row.status !== "PENDING") return false;
+  return new Date(row.createdAt).getTime() < new Date(s.since).getTime();
+}
+
 function toman(v: number | null): string {
   if (v == null) return "—";
   return v.toLocaleString("fa-IR") + " تومان";
@@ -54,6 +65,7 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy,     setBusy]     = useState(false);
   const [msg,      setMsg]      = useState<string | null>(null);
+  const [settings, setSettings] = useState<InvoiceSettings | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,6 +78,7 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
       const data = await res.json();
       setRows(data.rows ?? []);
       setCounts(data.counts ?? {});
+      setSettings(data.invoiceSettings ?? null);
       setSelected(new Set());
     } finally {
       setLoading(false);
@@ -196,6 +209,22 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
         </div>
       )}
 
+      {settings && !settings.enabled && (
+        <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-300 text-sm">
+          ثبت فاکتور فروش غیرفعال است — هیچ سفارشی فاکتور نمی‌خورد.{" "}
+          <Link href="/admin/integration/connections/hesaban" className="underline font-bold">
+            فعال کنید
+          </Link>
+        </div>
+      )}
+
+      {settings?.enabled && settings.mode === "MANUAL" && (
+        <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.03] text-gray-600 dark:text-gray-300 text-sm">
+          شیوه ثبت فاکتور روی <b>دستی</b> است — سفارش‌ها خودکار فاکتور نمی‌شوند.
+          ردیف‌ها را انتخاب کنید و «ثبت فاکتور» بزنید.
+        </div>
+      )}
+
       {/* جدول */}
       <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
         {loading ? (
@@ -248,6 +277,12 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
                             <Link href="/admin/integration/mapping" className="underline font-bold">
                               نگاشت کنید
                             </Link>
+                          </div>
+                        )}
+                        {isOutsideAutoWindow(r, settings) && (
+                          <div className="text-[11px] text-orange-600 dark:text-orange-400 mt-1">
+                            قدیمی‌تر از تاریخ فعال‌سازی فاکتور — خودکار فاکتور نمی‌شود.
+                            برای ثبت، انتخابش کنید و «ثبت فاکتور» بزنید.
                           </div>
                         )}
                         {hesabanLink && (

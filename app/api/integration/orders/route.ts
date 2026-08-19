@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     ];
   }
 
-  const [rows, counts] = await Promise.all([
+  const [rows, counts, hesaban] = await Promise.all([
     prisma.integOrder.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -43,12 +43,29 @@ export async function GET(req: NextRequest) {
       },
     }),
     prisma.integOrder.groupBy({ by: ["status"], _count: { _all: true } }),
+    prisma.integConnection.findFirst({
+      where:  { platformCode: "hesaban" },
+      select: { config: true },
+    }),
   ]);
+
+  // تنظیمات فاکتور را هم می‌فرستیم تا صفحه بتواند ردیف‌هایی که خودکار فاکتور
+  // نمی‌شوند (قدیمی‌تر از تاریخ فعال‌سازی) را از بقیه‌ی PENDINGها تفکیک کند
+  const cfg = (hesaban?.config ?? {}) as {
+    autoInvoiceEnabled?: boolean;
+    autoInvoiceSince?: string;
+    invoiceMode?: string;
+  };
 
   return NextResponse.json(
     serialize({
       rows,
       counts: Object.fromEntries(counts.map((c) => [c.status, c._count._all])),
+      invoiceSettings: {
+        enabled: !!cfg.autoInvoiceEnabled,
+        mode:    cfg.invoiceMode === "MANUAL" ? "MANUAL" : "AUTO",
+        since:   cfg.autoInvoiceSince ?? null,
+      },
     }),
   );
 }
