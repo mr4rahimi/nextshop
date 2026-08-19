@@ -8,18 +8,24 @@ import { applyDiscount } from "@/lib/integration/types";
 
 // تخفیف فعال یک محصول روی پلتفرم — از آخرین snapshot «دریافت محصولات».
 // هدف: وقتی قیمت اصلی عوض می‌شود، تخفیف با همان درصد بازسازی شود نه اینکه پاک شود.
+// null = تخفیفی نیست | "UNKNOWN" = هنوز نمی‌دانیم (snapshot قدیمی است)
 async function loadPlatformDiscount(
   platformCode: string,
   platformProductId: string,
-): Promise<PriceDiscount | null> {
+): Promise<PriceDiscount | null | "UNKNOWN"> {
   const snap = await prisma.integPlatformProduct.findUnique({
     where:  { platformCode_platformProductId: { platformCode, platformProductId } },
     select: {
-      originalPrice: true, discountPercent: true,
+      originalPrice: true, discountPercent: true, discountSynced: true,
       discountStartsAt: true, discountEndsAt: true, discountStock: true,
     },
   });
-  if (!snap?.discountPercent || snap.discountPercent <= 0 || snap.originalPrice == null) return null;
+
+  // snapshot پیش از افزوده‌شدن ردیابی تخفیف گرفته شده — «بدون تخفیف» فرض کردنش
+  // یعنی همان باگی که می‌خواهیم رفع کنیم (پاک شدن تخفیف در اولین ارسال قیمت).
+  if (!snap || !snap.discountSynced) return "UNKNOWN";
+
+  if (!snap.discountPercent || snap.discountPercent <= 0 || snap.originalPrice == null) return null;
   // تخفیفی که تاریخش گذشته نباید دوباره اعمال شود
   if (snap.discountEndsAt && snap.discountEndsAt.getTime() < Date.now()) return null;
   return {
@@ -144,7 +150,20 @@ async function pushMappingPrice(mapping: {
     }
 
     // تخفیف فعلی محصول روی این پلتفرم — با همان درصد روی قیمت جدید بازسازی می‌شود
-    const discount = await loadPlatformDiscount(link.platformCode, link.externalId);
+    const loaded = await loadPlatformDiscount(link.platformCode, link.externalId);
+    if (loaded === "UNKNOWN") {
+      await writeLog({
+        platformCode:  link.platformCode,
+        operationType: "SYNC_PRICE",
+        direction:     "OUTBOUND",
+        entityType:    "PRICE",
+        entityId:      link.externalId,
+        status:        "ERROR",
+        errorMessage:  "وضعیت تخفیف این محصول نامشخص است — ابتدا «دریافت محصولات» را برای این پلتفرم اجرا کنید تا ارسال قیمت، تخفیف موجود را پاک نکند",
+      }).catch(() => {});
+      continue;
+    }
+    const discount = loaded;
 
     const connection = await prisma.integConnection.findFirst({
       where: { platformCode: link.platformCode, status: { in: ["CONNECTED", "SYNCING"] } },

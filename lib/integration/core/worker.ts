@@ -24,6 +24,21 @@ async function ensureScheduledJobs(): Promise<void> {
 
   for (const conn of connections) {
     if (conn.platform.type === "MARKETPLACE") {
+      // اطلاعات تخفیف محصولات هنوز یک‌بار هم دریافت نشده؟ تا وقتی دریافت نشود
+      // ارسال قیمت متوقف است (تا تخفیف پاک نشود)، پس خودمان یک‌بار صف می‌کنیم.
+      const staleDiscounts = await prisma.integPlatformProduct.count({
+        where: { platformCode: conn.platformCode, discountSynced: false },
+      });
+      if (staleDiscounts > 0) {
+        const pendingFetch = await prisma.integJob.findFirst({
+          where:  { platformCode: conn.platformCode, type: "FETCH_PRODUCTS", status: { in: ["PENDING", "PROCESSING"] } },
+          select: { id: true },
+        });
+        if (!pendingFetch) {
+          await enqueue({ type: "FETCH_PRODUCTS", platformCode: conn.platformCode, payload: { page: 1 }, priority: 4 });
+        }
+      }
+
       const adapter = getAdapter(conn.platformCode);
       if (!adapter?.fetchOrders) continue;
 
@@ -314,6 +329,7 @@ async function fetchAndMatch(
           discountStartsAt: item.discountStartsAt ?? null,
           discountEndsAt:   item.discountEndsAt ?? null,
           discountStock:    item.discountStock ?? null,
+          discountSynced:   true,
           purchasePrice: item.purchasePrice ?? null,
           unit:          item.unit ?? null,
           isEnabled:     true,
@@ -333,6 +349,7 @@ async function fetchAndMatch(
           discountStartsAt: item.discountStartsAt ?? null,
           discountEndsAt:   item.discountEndsAt ?? null,
           discountStock:    item.discountStock ?? null,
+          discountSynced:   true,
           purchasePrice: item.purchasePrice ?? null,
           unit:          item.unit ?? null,
           lastFetchedAt: now,

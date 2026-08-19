@@ -1083,6 +1083,10 @@ model IntegPlatformProduct {
   discountStartsAt  DateTime?
   discountEndsAt    DateTime?
   discountStock     Int?      // موجودی اختصاصی تخفیف (اسنپ‌شاپ)
+  // آیا این ردیف بعد از افزوده‌شدن ردیابی تخفیف، تازه‌سازی شده؟
+  // ردیف‌های قدیمی false می‌مانند؛ تا وقتی «دریافت محصولات» اجرا نشود
+  // نمی‌دانیم محصول تخفیف دارد یا نه، پس قیمت برایش ارسال نمی‌شود.
+  discountSynced    Boolean   @default(false)
   purchasePrice     Float?
   unit              String?
   isEnabled         Boolean  @default(true)
