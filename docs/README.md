@@ -42,12 +42,13 @@
 |-------|-----|---------|
 | [باسلام](integrations/vendors/basalam.md) | بازارگاه | متن کامل مستندات رسمی |
 | [تپسی‌شاپ](integrations/vendors/tapsi.md) | بازارگاه | مستندات وندور |
-| [اسنپ‌شاپ](integrations/vendors/snapp.md) | بازارگاه | از روی کد آداپتور |
+| [اسنپ‌شاپ](integrations/vendors/snapp.md) | بازارگاه | مستندات رسمی نسخه ۲.۱.۲ |
 | [ترب](integrations/vendors/torob/) | مقایسه قیمت | ۱۰ سند API |
 | [حسابان وب](integrations/vendors/hesaban/) | حسابداری | OpenAPI + Swagger UI |
 | [ایران پیامک](integrations/vendors/iranpayamak/) | پیامک | ۵۰+ سند، هر endpoint یک فایل |
 | [آقای پرداخت](integrations/vendors/aghayepardakht.md) | درگاه پرداخت | مستندات درگاه |
 | [هاب یکپارچه‌سازی](integrations/hub.md) | — | معماری اتصالات، نگاشت، صف، قوانین قیمت |
+| [سفارش و فاکتور](integrations/orders-and-invoicing.md) | — | مسیر سفارش تا فاکتور، نام مشتری، **حفظ تخفیف هنگام تغییر قیمت** |
 
 نمونه‌کدها در `integrations/samples/`.
 

@@ -1,10 +1,12 @@
 # اسنپ‌شاپ (SnappShop)
 
-> ⚠️ **مستندات رسمی اسنپ‌شاپ در پروژه موجود نیست.** این سند از روی کد آداپتور نوشته شده،
-> پس **منبع حقیقت خود آداپتور است** نه این فایل:
-> `lib/integration/adapters/marketplace/snappshop.adapter.ts`
+> ✅ **مستندات رسمی اسنپ‌شاپ (نسخه ۲.۱.۲) در انتهای همین فایل ضمیمه شده است.**
+> بخش «مستندات بروز شده اسنپ شاپ» را ببینید — منبع حقیقت همان است.
+> خلاصه‌ی زیر برای مرور سریع است.
 >
-> اگر مستندات رسمی را گرفتید، آن را در همین پوشه بگذارید و این هشدار را بردارید.
+> ⚠️ محصولات اسنپ‌شاپ **تخفیف** دارند (`discount.special_price`) و در `PATCH`
+> فیلدهای `price` و `stock` اجباری‌اند — ارسال ناقص، تخفیف را پاک می‌کند.
+> جزئیات در [orders-and-invoicing.md](../orders-and-invoicing.md).
 
 ## اتصال
 
@@ -44,10 +46,15 @@ Content-Type:  application/json
 ## فیلدهای محصول
 
 ```ts
-{ id, sku, product_number, active, stock, warehouse_stock, title, price }
+{ id, sku, product_number, parent_product_number, active, capacity,
+  stock, warehouse_stock, title, price, warranty, promotion,
+  discount: { id, special_price, stock, percent, start_at, end_at } | null,
+  variation_attributes, buy_box, reference_price }
 ```
 
-توجه کنید که هم `stock` و هم `warehouse_stock` وجود دارد.
+- هم `stock` و هم `warehouse_stock` وجود دارد
+- `price` قیمت **پایه** است و `discount.special_price` قیمت بعد از تخفیف
+- قیمت‌ها **تومان** هستند (برخلاف باسلام و تپسی که ریال می‌دهند)
 
 ## قابلیت‌های پیاده‌شده
 
