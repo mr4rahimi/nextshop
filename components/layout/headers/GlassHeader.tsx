@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTheme } from "@/components/layout/ThemeProvider";
 import CartIcon from "@/components/store/cart/CartIcon";
 import WishlistIcon from "@/components/store/wishlist/WishlistIcon";
@@ -121,6 +121,23 @@ html.dark body:has(.ghd-root){background-color:#050505}
   .ghd-searchrow{display:none}
   .ghd-searchbtn{display:none}
 }
+
+/* ── ردیف منوی دسکتاپ: جمع‌شدن با اسکرول رو به پایین ── */
+@media (min-width:1024px){
+  .ghd-nav{
+    height:var(--ghd-navrow-h);
+    opacity:1;
+    transition:height .4s cubic-bezier(.4,0,.2,1), opacity .25s ease;
+  }
+  /* فقط هنگام جمع‌بودن یا در حین انیمیشن کلیپ می‌شود؛
+     در حالت باز باید overflow آزاد بماند تا مگامنو (absolute) بریده نشود */
+  .ghd-nav.ghd-nav-clip{overflow:hidden}
+  .ghd-root[data-navhidden="true"] .ghd-nav{height:0;opacity:0;pointer-events:none}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .ghd-nav{transition-duration:.01ms}
+}
 @media (prefers-reduced-motion:reduce){
   .ghd-root,.ghd-searchrow,.ghd-searchbtn{transition-duration:.01ms}
 }
@@ -138,13 +155,55 @@ export default function GlassHeader({
   const cfg = normalizeGlassConfig(config ?? DEFAULT_GLASS_CONFIG);
   const { toggle } = useTheme();
   const [scrolled, setScrolled] = useState(false);
+  // ردیف منوی دسکتاپ: با اسکرول رو به پایین جمع می‌شود، با اسکرول رو به بالا یا در بالای صفحه برمی‌گردد
+  const [navHidden, setNavHidden] = useState(false);
+  const [navAnimating, setNavAnimating] = useState(false);
+  const [navH, setNavH] = useState<number | null>(null);
+  const lastY = useRef(0);
+  const navWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const SHOW_ABOVE = 90; // بالاتر از این نقطه، منو همیشه باز است
+    const DELTA = 6;       // حداقل جابه‌جایی برای تشخیص جهت (لرزش اسکرول را نادیده می‌گیرد)
+
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 40);
+
+      if (y <= SHOW_ABOVE) {
+        setNavHidden(false);
+        lastY.current = y;
+        return;
+      }
+      const diff = y - lastY.current;
+      if (Math.abs(diff) < DELTA) return;
+      setNavHidden(diff > 0);
+      lastY.current = y;
+    };
+
+    lastY.current = window.scrollY;
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // ارتفاع واقعی نوار منو را اندازه می‌گیریم (محتوای منو با fetch می‌آید و ارتفاعش ثابت نیست)
+  useEffect(() => {
+    const el = navWrapRef.current?.firstElementChild as HTMLElement | null;
+    if (!el) return;
+    const update = () => setNavH(el.offsetHeight || null);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // overflow فقط در حین انیمیشن و در حالت جمع‌شده کلیپ می‌شود
+  useEffect(() => {
+    setNavAnimating(true);
+    const t = setTimeout(() => setNavAnimating(false), 450);
+    return () => clearTimeout(t);
+  }, [navHidden]);
 
   // فقط مقادیر «ورودی» به‌صورت inline ست می‌شوند؛ متغیرهای فعال در CSS مشتق می‌شوند
   // (وگرنه inline style روی قانون [data-scrolled] غالب می‌شد و انیمیشن اسکرول کار نمی‌کرد)
@@ -161,11 +220,12 @@ export default function GlassHeader({
     "--ghd-blur-scrolled": `${cfg.blurScrolled}px`,
     "--ghd-border-alpha": cfg.showBorder ? 0.16 : 0,
     "--ghd-searchrow-h": "3.75rem",
+    "--ghd-navrow-h": navH ? `${navH}px` : "auto",
   } as React.CSSProperties;
 
   return (
     <>
-      <header className="ghd-root" data-scrolled={scrolled} style={vars}>
+      <header className="ghd-root" data-scrolled={scrolled} data-navhidden={navHidden} style={vars}>
         <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
         {/* ── ردیف اول ── */}
@@ -248,7 +308,10 @@ export default function GlassHeader({
         </div>
 
         {/* ── منوی دسکتاپ ── */}
-        <div className="ghd-nav">
+        <div
+          ref={navWrapRef}
+          className={`ghd-nav${navHidden || navAnimating ? " ghd-nav-clip" : ""}`}
+        >
           <HeaderMenu />
         </div>
       </header>
