@@ -12,7 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   try {
-    const [products, categories, brands, posts] = await Promise.all([
+    const [products, categories, brands, posts, pages] = await Promise.all([
       prisma.product.findMany({
         where: { isActive: true },
         select: { slug: true, updatedAt: true },
@@ -31,6 +31,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         where: { status: "PUBLISHED" },
         select: { slug: true, updatedAt: true, publishedAt: true },
         orderBy: { publishedAt: "desc" },
+      }),
+      prisma.page.findMany({
+        where: { isActive: true, isIndexable: true },
+        select: { slug: true, updatedAt: true },
+        orderBy: { sortOrder: "asc" },
       }),
     ]);
 
@@ -87,6 +92,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority:        0.7,
     }));
 
+    // برگه‌های ثابت (تماس با ما، قوانین، ...) روی ریشه‌ی سایت
+    const pageUrls: MetadataRoute.Sitemap = pages.map(p => ({
+      url:             `${SITE_URL}/${encodeSlug(p.slug)}`,
+      lastModified:    p.updatedAt,
+      changeFrequency: "monthly",
+      priority:        0.5,
+    }));
+
     /**
      * `lastModified` صفحات لیستی از جدیدترین محتوای همان لیست می‌آید، نه از
      * `now`. اگر همیشه «الان» باشد، به گوگل می‌گوییم صفحه هر بار عوض شده و
@@ -111,7 +124,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       { url: `${SITE_URL}/mag`,        lastModified: newestPost,     changeFrequency: "daily",  priority: 0.8 },
     ];
 
-    return [...staticPages, ...categoryUrls, ...landingEntries, ...brandUrls, ...productUrls, ...postUrls];
+    return [...staticPages, ...pageUrls, ...categoryUrls, ...landingEntries, ...brandUrls, ...productUrls, ...postUrls];
  } catch (err) {
     console.error("[sitemap] failed to build dynamic entries:", err);
     throw err;   // بهتر است sitemap موقتاً ۵۰۰ بدهد تا اینکه گوگل فکر کند سایت خالی شده

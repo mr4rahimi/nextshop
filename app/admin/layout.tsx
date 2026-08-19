@@ -167,6 +167,7 @@ const MENU_GROUPS = [
         href: "/admin/site-settings", label: "سایت", icon: "settings",
         children: [
           { href: "/admin/site-settings", label: "تنظیمات عمومی" },
+          { href: "/admin/pages", label: "برگه‌ها" },
           { href: "/admin/menu", label: "منوی هدر" },
           { href: "/admin/footer", label: "فوتر" },
           { href: "/admin/appearance", label: "ظاهر سایت", icon: "appearance" },

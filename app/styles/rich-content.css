@@ -1,0 +1,115 @@
+/*
+  استایل محتوای غنی (خروجی ادیتور Tiptap).
+
+  پروژه افزونه‌ی typography تیلویند را ندارد، پس کلاس‌های `prose` بی‌اثرند و
+  محتوای HTML خام با preflight تیلویند کاملاً بی‌استایل رندر می‌شود. این فایل
+  همان نقش را با دامنه‌ی محدود بازی می‌کند: فقط داخل `.rich-content`.
+*/
+
+.rich-content {
+  color: var(--rc-text, #374151);
+  font-size: 0.95rem;
+  line-height: 2.1;
+}
+.dark .rich-content { color: #d1d5db; }
+
+.rich-content > *:first-child { margin-top: 0; }
+.rich-content > *:last-child  { margin-bottom: 0; }
+
+.rich-content h2,
+.rich-content h3,
+.rich-content h4 {
+  font-weight: 900;
+  color: #111827;
+  line-height: 1.7;
+  /* فاصله‌ی بالای سرتیتر بیشتر از پایین آن است تا به متنِ خودش بچسبد */
+  margin: 2.2rem 0 0.9rem;
+  /* لنگر فهرست مطالب زیر هدر چسبان پنهان نشود */
+  scroll-margin-top: 7rem;
+}
+.dark .rich-content h2,
+.dark .rich-content h3,
+.dark .rich-content h4 { color: #f9fafb; }
+
+.rich-content h2 { font-size: 1.35rem; }
+.rich-content h3 { font-size: 1.12rem; }
+.rich-content h4 { font-size: 1rem; }
+
+.rich-content p { margin: 0 0 1.15rem; }
+
+.rich-content a {
+  color: var(--color-primary-600, #1d4ed8);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.rich-content a:hover { opacity: .8; }
+
+.rich-content strong { font-weight: 900; color: #111827; }
+.dark .rich-content strong { color: #fff; }
+
+.rich-content ul,
+.rich-content ol { margin: 0 0 1.15rem; padding-right: 1.4rem; }
+.rich-content ul { list-style: disc; }
+.rich-content ol { list-style: decimal; }
+.rich-content li { margin-bottom: .5rem; }
+.rich-content li::marker { color: var(--color-primary-500, #2563eb); }
+
+.rich-content blockquote {
+  margin: 1.5rem 0;
+  padding: .9rem 1.2rem;
+  border-right: 4px solid var(--color-primary-500, #2563eb);
+  border-radius: 0 1rem 1rem 0;
+  background: rgba(37, 99, 235, .06);
+  font-weight: 700;
+}
+.dark .rich-content blockquote { background: rgba(255, 255, 255, .04); }
+
+.rich-content img,
+.rich-content iframe { max-width: 100%; border-radius: 1.25rem; margin: 1.5rem 0; }
+.rich-content iframe { width: 100%; aspect-ratio: 16 / 9; height: auto; }
+
+.rich-content hr {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, .08);
+}
+.dark .rich-content hr { border-color: rgba(255, 255, 255, .1); }
+
+.rich-content code {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: .85em;
+  padding: .15rem .4rem;
+  border-radius: .4rem;
+  background: rgba(0, 0, 0, .05);
+}
+.dark .rich-content code { background: rgba(255, 255, 255, .08); }
+
+.rich-content pre {
+  margin: 1.5rem 0;
+  padding: 1rem 1.2rem;
+  border-radius: 1rem;
+  overflow-x: auto;
+  background: #111827;
+  color: #e5e7eb;
+  direction: ltr;
+  text-align: left;
+}
+.rich-content pre code { background: transparent; padding: 0; }
+
+/* جدول‌ها در موبایل نباید صفحه را افقی اسکرول کنند */
+.rich-content table {
+  width: 100%;
+  margin: 1.5rem 0;
+  border-collapse: collapse;
+  font-size: .875rem;
+}
+.rich-content th,
+.rich-content td {
+  border: 1px solid rgba(0, 0, 0, .08);
+  padding: .6rem .8rem;
+  text-align: right;
+}
+.dark .rich-content th,
+.dark .rich-content td { border-color: rgba(255, 255, 255, .1); }
+.rich-content th { font-weight: 900; background: rgba(0, 0, 0, .03); }
+.dark .rich-content th { background: rgba(255, 255, 255, .05); }

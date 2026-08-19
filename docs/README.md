@@ -20,6 +20,7 @@
 | [سئو](features/seo.md) | متادیتا، اسکیما، sitemap، robots، صفحات فرود |
 | [چیدمان لیست محصولات](features/product-grid.md) | تک‌ستونه/دوستونه موبایل، `ProductLayoutContext` |
 | [هدر شیشه‌ای](features/glass-header.md) | سیستم هدرها، `registry.ts`، تنظیمات ظاهری |
+| [برگه‌های ثابت](features/pages.md) | پنل `/admin/pages` — قالب‌ها، شروع سریع، مسیر `/{slug}`، استایل محتوا |
 
 ## ویجت‌های صفحه اصلی
 

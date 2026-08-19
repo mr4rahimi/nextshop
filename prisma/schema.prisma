@@ -1693,3 +1693,36 @@ model NotFoundLog {
   @@index([ignored, hits])
   @@index([lastSeen])
 }
+/// برگه‌های ثابت سایت (تماس با ما، درباره ما، قوانین، سوالات متداول، ...)
+/// نشانی برگه در ریشه‌ی سایت است: /{slug}
+model Page {
+  id             String       @id @default(cuid())
+  slug           String       @unique
+  title          String
+  subtitle       String?
+  template       PageTemplate @default(DEFAULT)
+  contentHtml    String?
+  coverImage     String?
+  /// بلوک‌های اختیاری بسته به قالب:
+  /// { contact:{phone,mobile,email,address,postalCode,workHours,mapEmbed,socials:[{label,url}]},
+  ///   faq:[{q,a}], stats:[{value,label}], features:[{icon,title,text}], updatedLabel }
+  blocks         Json?
+  seoTitle       String?
+  seoDescription String?
+  isActive       Boolean      @default(true)
+  isIndexable    Boolean      @default(true)
+  showToc        Boolean      @default(false)
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+enum PageTemplate {
+  DEFAULT /// برگه‌ی ساده: عنوان + متن
+  ABOUT /// درباره ما: آمار + ویژگی‌ها
+  CONTACT /// تماس با ما: کارت‌های تماس + نقشه
+  FAQ /// سوالات متداول: آکاردئون + اسکیمای FAQPage
+  LEGAL /// قوانین/حریم خصوصی: فهرست مطالب چسبان
+}
