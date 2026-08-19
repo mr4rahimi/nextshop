@@ -60,6 +60,7 @@ export async function queueShopOrderForInvoicing(orderId: string): Promise<void>
         mappingId:           link?.mappingId ?? null,
         platformCode:        "shop",
         platformOrderId:     `${order.id}:${item.id}`,
+        platformOrderNo:     order.orderNumber ?? order.id,
         platformOrderItemId: item.id,
         productTitle:        item.titleSnapshot,
         qty:                 item.qty,
@@ -92,6 +93,8 @@ export async function processPendingInvoices(): Promise<void> {
   const credentials = decryptCredentials(connection.credentials);
 
   const since = config.autoInvoiceSince ? new Date(config.autoInvoiceSince) : new Date(0);
+  // فقط PENDING — ردیف‌های NEEDS_MAPPING عمداً کنار گذاشته می‌شوند تا چرخه‌ی
+  // تلاش بی‌نتیجه‌ی هر ۳۰ ثانیه (و سیل لاگ خطا) تکرار نشود.
   const pending = await prisma.integOrder.findMany({
     where:   { status: "PENDING", platformCode: { not: ACCOUNTING_CODE }, createdAt: { gte: since } },
     orderBy: { createdAt: "asc" },
@@ -116,14 +119,23 @@ export async function processPendingInvoices(): Promise<void> {
     const invoiceUniqueId = deterministicUuid(invoiceRef);
 
     try {
-      // اقلام فاکتور — فقط ردیف‌هایی که به کالای حسابداری نگاشت دارند
+      // اقلام فاکتور — هر ردیف باید نگاشت حسابداری و قیمت معتبر داشته باشد.
+      // ردیف‌هایی که شرط را ندارند دلیلشان ثبت می‌شود تا در ادمین قابل رفع باشد.
       const articles: { storageId: number; productCode: string; count: number; amount: number; taxable: boolean; description?: string }[] = [];
+      const blocked: { id: string; reason: string }[] = [];
+
       for (const row of rows) {
-        if (!row.mappingId) continue;
+        if (!row.mappingId) {
+          blocked.push({ id: row.id, reason: "محصول این قلم به هیچ نگاشتی وصل نیست" });
+          continue;
+        }
         const hesabanLink = await prisma.integMappingLink.findUnique({
           where: { mappingId_platformCode: { mappingId: row.mappingId, platformCode: ACCOUNTING_CODE } },
         });
-        if (!hesabanLink?.isActive) continue;
+        if (!hesabanLink?.isActive) {
+          blocked.push({ id: row.id, reason: "نگاشت این محصول به کالای حسابداری (حسابان) وصل نیست یا غیرفعال است" });
+          continue;
+        }
 
         // مبلغ به ریال: قیمت داخلی (تومان)×۱۰ — وگرنه قیمت خود کالای حسابداری (ریال)
         let amountRial: number | null =
@@ -135,7 +147,7 @@ export async function processPendingInvoices(): Promise<void> {
           });
           amountRial = hp?.price != null && hp.price > 0 ? Math.round(hp.price) : null;
         }
-        if (amountRial == null && row.mappingId) {
+        if (amountRial == null) {
           // fallback سوم: قیمت خود کالا در پلتفرم مبدأ سفارش (مثلاً قیمت درج‌شده در باسلام — ریال)
           const srcLink = await prisma.integMappingLink.findUnique({
             where: { mappingId_platformCode: { mappingId: row.mappingId, platformCode } },
@@ -148,7 +160,10 @@ export async function processPendingInvoices(): Promise<void> {
             amountRial = sp?.price != null && sp.price > 0 ? Math.round(sp.price) : null;
           }
         }
-        if (amountRial == null || amountRial < 1) continue; // بدون قیمت معتبر — قلم حذف می‌شود
+        if (amountRial == null || amountRial < 1) {
+          blocked.push({ id: row.id, reason: "قیمت معتبری برای این قلم پیدا نشد (نه در سفارش، نه در حسابداری، نه در پلتفرم مبدأ)" });
+          continue;
+        }
 
         articles.push({
           storageId:   config.invoiceStorageId,
@@ -159,33 +174,49 @@ export async function processPendingInvoices(): Promise<void> {
           description: row.productTitle,
         });
       }
-      if (!articles.length) {
-        // مشکل (نبود نگاشت حسابداری یا قیمت معتبر) باید دیده شود — فقط تا ۵ دقیقه اول لاگ می‌شود
-        const newest = Math.max(...rows.map((r) => r.createdAt.getTime()));
-        if (Date.now() - newest < 5 * 60_000) {
-          await writeLog({
-            platformCode: ACCOUNTING_CODE, operationType: "FETCH_ORDERS", direction: "OUTBOUND",
-            entityType: "ORDER", entityId: invoiceRef, status: "ERROR",
-            errorMessage: "هیچ قلم معتبری برای فاکتور ساخته نشد — نگاشت حسابداری یا قیمت معتبر (بزرگ‌تر از صفر) وجود ندارد",
+
+      // ردیف‌های مشکل‌دار را از حالت PENDING خارج می‌کنیم تا هر ۳۰ ثانیه دوباره
+      // تلاش نشود؛ دلیلش ذخیره می‌شود و در «سفارش‌های بازارگاه» قابل رفع است.
+      if (blocked.length) {
+        for (const b of blocked) {
+          await prisma.integOrder.update({
+            where: { id: b.id },
+            data:  { status: "NEEDS_MAPPING", blockedReason: b.reason },
           }).catch(() => {});
         }
-        continue;
+        await writeLog({
+          platformCode: ACCOUNTING_CODE, operationType: "CREATE_INVOICE", direction: "OUTBOUND",
+          entityType: "ORDER", entityId: invoiceRef, status: articles.length ? "PARTIAL" : "ERROR",
+          errorMessage: `${blocked.length} قلم فاکتور نشد — ${blocked[0].reason}`,
+          responseData: { blocked: blocked.length, invoiced: articles.length, ref: invoiceRef },
+        }).catch(() => {});
       }
+
+      if (!articles.length) continue;
 
       const exists = await adapter.salesInvoiceExists(credentials, invoiceUniqueId);
       if (!exists) {
-        const suffix  = PLATFORM_SUFFIX[platformCode] ?? platformCode;
-        const rawName = rows.find((r) => r.customerName)?.customerName ?? `مشتری ${suffix}`;
+        const suffix = PLATFORM_SUFFIX[platformCode] ?? platformCode;
+        // شماره سفارشِ قابل نمایش (چیزی که در پنل فروشنده دیده می‌شود)، نه شناسه داخلی
+        const orderNo = rows.find((r) => r.platformOrderNo)?.platformOrderNo ?? orderKey;
+        const realName = rows.find((r) => r.customerName?.trim())?.customerName?.trim();
+        const phone    = rows.find((r) => r.customerPhone?.trim())?.customerPhone?.trim();
+        // نام واقعی خریدار در دسترس نبود؟ دست‌کم شماره سفارش را در نام بگذار تا
+        // فاکتورها در حسابداری از هم قابل تفکیک باشند — نه همه «مشتری باسلام».
+        const name = realName
+          ? `${realName} - ${suffix}`
+          : `مشتری ${suffix} - سفارش ${orderNo}`;
+
         await adapter.createSalesInvoice(credentials, {
           id: invoiceUniqueId,
           customer: {
             isRealPerson: true,
             title:        "مشتری",
-            name:         `${rawName} -${suffix}`,
-            phoneNumber:  rows.find((r) => r.customerPhone)?.customerPhone ?? undefined,
+            name,
+            phoneNumber:  phone || undefined,
           },
           articles,
-          description: `ثبت خودکار — ${suffix} — سفارش ${orderKey} — ${invoiceRef}`,
+          description: `ثبت خودکار — ${suffix} — شماره سفارش ${orderNo} — ${invoiceRef}`,
         });
       }
 
@@ -195,13 +226,13 @@ export async function processPendingInvoices(): Promise<void> {
       });
 
       await writeLog({
-        platformCode: ACCOUNTING_CODE, operationType: "FETCH_ORDERS", direction: "OUTBOUND",
+        platformCode: ACCOUNTING_CODE, operationType: "CREATE_INVOICE", direction: "OUTBOUND",
         entityType: "ORDER", entityId: invoiceUniqueId, status: "SUCCESS",
         responseData: { articles: articles.length, platform: platformCode, ref: invoiceRef },
       }).catch(() => {});
     } catch (err) {
       await writeLog({
-        platformCode: ACCOUNTING_CODE, operationType: "FETCH_ORDERS", direction: "OUTBOUND",
+        platformCode: ACCOUNTING_CODE, operationType: "CREATE_INVOICE", direction: "OUTBOUND",
         entityType: "ORDER", entityId: invoiceUniqueId, status: "ERROR",
         errorMessage: err instanceof Error ? err.message : String(err),
       }).catch(() => {});

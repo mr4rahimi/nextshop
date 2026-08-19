@@ -12,7 +12,8 @@ interface Props {
 }
 
 export default function TapsiForm({ existingConnection }: Props) {
-  const [token,      setToken]      = useState("");
+  const [token,        setToken]        = useState("");
+  const [webhookToken, setWebhookToken] = useState("");
   const [syncStock,  setSyncStock]  = useState(existingConnection?.syncStockEnabled ?? true);
   const [syncPrice,  setSyncPrice]  = useState(existingConnection?.syncPriceEnabled ?? false);
   const [interval,   setInterval]   = useState(String(existingConnection?.syncIntervalMin ?? 60));
@@ -41,8 +42,8 @@ export default function TapsiForm({ existingConnection }: Props) {
   }
 
   async function handleSave() {
-    const settingsOnly = !!existingConnection && !token.trim();
-    if (!settingsOnly && !token.trim()) { alert("توکن را وارد کنید"); return; }
+    const settingsOnly = !!existingConnection && !token.trim() && !webhookToken.trim();
+    if (!settingsOnly && !token.trim() && !existingConnection) { alert("توکن را وارد کنید"); return; }
 
     setSaving(true); setSaved(false);
     try {
@@ -52,7 +53,13 @@ export default function TapsiForm({ existingConnection }: Props) {
         syncPriceEnabled: syncPrice,
         syncIntervalMin:  Number(interval) || 60,
       };
-      if (!settingsOnly) body.credentials = { token: token.trim() };
+      // فقط فیلدهای پرشده ارسال می‌شوند؛ سرور بقیه را دست‌نخورده نگه می‌دارد
+      if (!settingsOnly) {
+        const creds: Record<string, string> = {};
+        if (token.trim())        creds.token        = token.trim();
+        if (webhookToken.trim()) creds.webhookToken = webhookToken.trim();
+        body.credentials = creds;
+      }
 
       const res = await fetch("/api/integration/connections", {
         method:  "POST",
@@ -121,6 +128,25 @@ export default function TapsiForm({ existingConnection }: Props) {
           />
           <p className="text-[11px] text-gray-400 mt-1.5">
             از پنل وندور تپسی‌شاپ → بخش «درخواست توکن» → «درخواست توکن جدید» دریافت کنید
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-gray-500 mb-1.5">
+            توکن وب‌هوک تپسی‌شاپ
+          </label>
+          <input
+            type="password"
+            value={webhookToken}
+            onChange={e => setWebhookToken(e.target.value)}
+            placeholder={existingConnection ? "برای تغییر، توکن جدید وارد کنید" : "اگر با توکن API فرق دارد اینجا وارد کنید"}
+            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+            dir="ltr"
+          />
+          <p className="text-[11px] text-gray-400 mt-1.5">
+            تپسی‌شاپ هنگام ثبت سفارش این توکن را در هدر <span dir="ltr" className="font-mono">TapsiShop.Hub.Webhook-Authorization</span> می‌فرستد.
+            نام و شماره‌ی مشتری فقط از همین مسیر می‌آید — API سفارش‌ها اطلاعات خریدار ندارد.
+            اگر خالی بماند، توکن API بررسی می‌شود.
           </p>
         </div>
 

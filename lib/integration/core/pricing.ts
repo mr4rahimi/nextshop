@@ -3,6 +3,32 @@ import type { IntegPriceRule, IntegPriceRuleTier } from "@prisma/client";
 import { getAdapter } from "./adapter-registry";
 import { decryptCredentials } from "./crypto";
 import { writeLog } from "./log";
+import type { PriceDiscount } from "@/lib/integration/types";
+import { applyDiscount } from "@/lib/integration/types";
+
+// تخفیف فعال یک محصول روی پلتفرم — از آخرین snapshot «دریافت محصولات».
+// هدف: وقتی قیمت اصلی عوض می‌شود، تخفیف با همان درصد بازسازی شود نه اینکه پاک شود.
+async function loadPlatformDiscount(
+  platformCode: string,
+  platformProductId: string,
+): Promise<PriceDiscount | null> {
+  const snap = await prisma.integPlatformProduct.findUnique({
+    where:  { platformCode_platformProductId: { platformCode, platformProductId } },
+    select: {
+      originalPrice: true, discountPercent: true,
+      discountStartsAt: true, discountEndsAt: true, discountStock: true,
+    },
+  });
+  if (!snap?.discountPercent || snap.discountPercent <= 0 || snap.originalPrice == null) return null;
+  // تخفیفی که تاریخش گذشته نباید دوباره اعمال شود
+  if (snap.discountEndsAt && snap.discountEndsAt.getTime() < Date.now()) return null;
+  return {
+    percent:  snap.discountPercent,
+    startsAt: snap.discountStartsAt,
+    endsAt:   snap.discountEndsAt,
+    stock:    snap.discountStock,
+  };
+}
 
 type RuleWithTiers = IntegPriceRule & { tiers: IntegPriceRuleTier[] };
 
@@ -117,6 +143,9 @@ async function pushMappingPrice(mapping: {
       continue;
     }
 
+    // تخفیف فعلی محصول روی این پلتفرم — با همان درصد روی قیمت جدید بازسازی می‌شود
+    const discount = await loadPlatformDiscount(link.platformCode, link.externalId);
+
     const connection = await prisma.integConnection.findFirst({
       where: { platformCode: link.platformCode, status: { in: ["CONNECTED", "SYNCING"] } },
     });
@@ -151,10 +180,13 @@ async function pushMappingPrice(mapping: {
     const start = Date.now();
     
     try {
+      const { original, effective } = applyDiscount(price, discount);
       const result = await adapter.updatePrice(credentials, [
         {
           platformProductId: link.externalId,
-          price,
+          price:     original,
+          salePrice: effective,
+          discount,
         },
       ]);
     
@@ -178,9 +210,9 @@ async function pushMappingPrice(mapping: {
           entityType: "PRICE",
           entityId: link.externalId,
           status: "SUCCESS",
-          responseData: {
-            price,
-          },
+          responseData: discount
+            ? { price: original, salePrice: effective, discountPercent: discount.percent }
+            : { price: original },
           durationMs: Date.now() - start,
         }).catch(() => {});
       }

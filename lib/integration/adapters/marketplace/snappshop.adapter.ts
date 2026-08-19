@@ -8,7 +8,10 @@ import type {
   PriceUpdate,
   BatchResult,
   FetchOrdersResult,
+  OrderItemInfo,
+  PriceDiscount,
 } from "@/lib/integration/types";
+import { applyDiscount } from "@/lib/integration/types";
 
 const BASE = "https://apix.snappshop.ir/automation/v1";
 
@@ -23,10 +26,15 @@ function baseHeaders(token: string, uniqueCode: string): HeadersInit {
 }
 
 interface SnappVendor { id: string; title?: string; title_en?: string; status?: string }
+interface SnappDiscount {
+  id?: string; special_price?: number | null; stock?: number | null;
+  percent?: number | null; start_at?: string | null; end_at?: string | null;
+}
 interface SnappProduct {
   id: string; sku: string | null; product_number?: number; active?: boolean;
   stock: number | null; warehouse_stock?: number | null;
   title?: string; price: number | null;
+  discount?: SnappDiscount | null;
 }
 interface SnappPagination {
   total?: number; current_page?: number; total_pages?: number; per_page?: number;
@@ -41,6 +49,21 @@ interface SnappEventItem {
   deliverable_quantity?: number;
   final_price?: number;
   item_status?: string;
+}
+interface SnappOrderDetail {
+  order_number?: number | string;
+  order_status?: string;
+  customer?: { first_name?: string; last_name?: string; phone?: string | null };
+  items?: {
+    sku?: string | null;
+    vendor_product_info_id?: string;
+    item_status?: string;
+    quantity?: number;
+    canceled_quantity?: number;
+    original_price?: number;
+    discount_amount?: number;
+    final_price?: number;
+  }[];
 }
 interface SnappEvent {
   event_type: "NEW_ORDER" | "CANCELLATION" | "CHANGE_STATUS";
@@ -119,13 +142,28 @@ export class SnappShopAdapter extends BaseAdapter {
     const raw  = json.data ?? [];
     const pg   = json.meta?.pagination ?? {};
 
-    const items: IntegProductInfo[] = raw.map((p) => ({
-      platformId: p.id,
-      title:      p.title ?? p.sku ?? p.id,
-      salePrice:  p.price ?? undefined,   // اسنپ‌شاپ تومانی است — بدون تبدیل
-      stock:      p.stock ?? undefined,
-      sku:        p.sku ?? undefined,
-    }));
+    // اسنپ‌شاپ: price = قیمت پایه، discount.special_price = قیمت بعد از تخفیف.
+    // تخفیف باید نگه داشته شود وگرنه PATCH بعدی پاکش می‌کند (price اجباری است).
+    const items: IntegProductInfo[] = raw.map((p) => {
+      const base     = p.price ?? undefined;   // اسنپ‌شاپ تومانی است — بدون تبدیل
+      const special  = p.discount?.special_price ?? undefined;
+      const hasDisc  = base != null && base > 0 && special != null && special > 0 && special < base;
+      const percent  = hasDisc
+        ? (p.discount?.percent ?? Math.round(((base - special) / base) * 10000) / 100)
+        : undefined;
+      return {
+        platformId: p.id,
+        title:      p.title ?? p.sku ?? p.id,
+        salePrice:  hasDisc ? special : base,
+        originalPrice:    hasDisc ? base : undefined,
+        discountPercent:  percent,
+        discountStartsAt: hasDisc && p.discount?.start_at ? new Date(p.discount.start_at) : undefined,
+        discountEndsAt:   hasDisc && p.discount?.end_at   ? new Date(p.discount.end_at)   : undefined,
+        discountStock:    hasDisc ? (p.discount?.stock ?? undefined) : undefined,
+        stock:      p.stock ?? undefined,
+        sku:        p.sku ?? undefined,
+      };
+    });
 
     const current = pg.current_page ?? page;
     const total   = pg.total_pages ?? current;
@@ -134,11 +172,19 @@ export class SnappShopAdapter extends BaseAdapter {
   }
 
   // ── اسنپ‌شاپ در آپدیت، هم stock و هم price را اجباری می‌خواهد ─────
-  private async loadContext(ids: string[]): Promise<Map<string, { price?: number; stock?: number }>> {
+  // و چون فیلدهای special_price در همان PATCH می‌آیند، اگر ارسال نشوند تخفیف
+  // محصول پاک می‌شود. پس هر آپدیت باید کل تصویر (قیمت + موجودی + تخفیف) را ببرد.
+  private async loadContext(
+    ids: string[],
+  ): Promise<Map<string, { basePrice?: number; stock?: number; discount?: PriceDiscount }>> {
     const [snapshots, links] = await Promise.all([
       prisma.integPlatformProduct.findMany({
         where:  { platformCode: this.platformCode, platformProductId: { in: ids } },
-        select: { platformProductId: true, price: true, stock: true },
+        select: {
+          platformProductId: true, price: true, stock: true,
+          originalPrice: true, discountPercent: true,
+          discountStartsAt: true, discountEndsAt: true, discountStock: true,
+        },
       }),
       prisma.integMappingLink.findMany({
         where:  { platformCode: this.platformCode, externalId: { in: ids }, isActive: true },
@@ -146,15 +192,53 @@ export class SnappShopAdapter extends BaseAdapter {
       }),
     ]);
 
-    const map = new Map<string, { price?: number; stock?: number }>();
+    const map = new Map<string, { basePrice?: number; stock?: number; discount?: PriceDiscount }>();
     for (const s of snapshots) {
-      map.set(s.platformProductId, { price: s.price ?? undefined, stock: s.stock ?? undefined });
+      // price ستون «قیمت مؤثر» است؛ قیمت پایه وقتی تخفیف هست در originalPrice می‌نشیند
+      const basePrice = s.originalPrice ?? s.price ?? undefined;
+      const discount =
+        s.discountPercent != null && s.discountPercent > 0 && s.originalPrice != null
+          ? {
+              percent:  s.discountPercent,
+              startsAt: s.discountStartsAt,
+              endsAt:   s.discountEndsAt,
+              stock:    s.discountStock,
+            }
+          : undefined;
+      map.set(s.platformProductId, { basePrice, stock: s.stock ?? undefined, discount });
     }
     for (const l of links) {
       const cur = map.get(l.externalId) ?? {};
       map.set(l.externalId, { ...cur, stock: l.mapping.stock ?? cur.stock });
     }
     return map;
+  }
+
+  private static fmtDate(d?: Date | null): string | undefined {
+    if (!d) return undefined;
+    const t = d.getTime();
+    if (!Number.isFinite(t)) return undefined;
+    return d.toISOString().slice(0, 10); // اسنپ‌شاپ فرمت YYYY-MM-DD می‌خواهد
+  }
+
+  /** بدنه‌ی یک آیتم PATCH — همیشه کامل، تا هیچ فیلدی به‌طور ضمنی پاک نشود. */
+  private static buildPayload(
+    id: string,
+    basePrice: number,
+    stock: number,
+    discount?: PriceDiscount | null,
+  ): Record<string, unknown> {
+    const { original, effective } = applyDiscount(basePrice, discount);
+    const body: Record<string, unknown> = { id, stock, price: original };
+    if (discount && discount.percent > 0 && effective < original) {
+      body.special_price = effective;
+      const start = SnappShopAdapter.fmtDate(discount.startsAt);
+      const end   = SnappShopAdapter.fmtDate(discount.endsAt);
+      if (start) body.special_price_start_at = start;
+      if (end)   body.special_price_end_at   = end;
+      if (discount.stock != null) body.special_price_stock = discount.stock;
+    }
+    return body;
   }
 
   async updateStock(
@@ -167,12 +251,12 @@ export class SnappShopAdapter extends BaseAdapter {
     const failed: { id: string; error: string }[] = [];
 
     for (const u of updates) {
-      const price = ctx.get(u.platformProductId)?.price;
-      if (price == null || price <= 0) {
+      const c = ctx.get(u.platformProductId);
+      if (c?.basePrice == null || c.basePrice <= 0) {
         failed.push({ id: u.platformProductId, error: "قیمت فعلی نامشخص است — ابتدا «دریافت محصولات» را اجرا کنید (اسنپ‌شاپ قیمت را در آپدیت اجباری می‌داند)" });
         continue;
       }
-      products.push({ id: u.platformProductId, stock: u.stock, price: Math.round(price) });
+      products.push(SnappShopAdapter.buildPayload(u.platformProductId, c.basePrice, u.stock, c.discount));
       ids.push(u.platformProductId);
     }
 
@@ -190,14 +274,14 @@ export class SnappShopAdapter extends BaseAdapter {
     const failed: { id: string; error: string }[] = [];
 
     for (const u of updates) {
-      const stock = ctx.get(u.platformProductId)?.stock;
-      if (stock == null) {
+      const c = ctx.get(u.platformProductId);
+      if (c?.stock == null) {
         failed.push({ id: u.platformProductId, error: "موجودی فعلی نامشخص است — ابتدا «دریافت محصولات» را اجرا کنید (اسنپ‌شاپ موجودی را در آپدیت اجباری می‌داند)" });
         continue;
       }
       // قیمت‌های اسنپ‌شاپ به تومان است — بدون ضرب در ۱۰
-      const toman = Math.round(u.salePrice ?? u.price);
-      products.push({ id: u.platformProductId, stock, price: toman });
+      const discount = u.discount !== undefined ? u.discount : c.discount;
+      products.push(SnappShopAdapter.buildPayload(u.platformProductId, u.price, c.stock, discount));
       ids.push(u.platformProductId);
     }
 
@@ -291,22 +375,25 @@ export class SnappShopAdapter extends BaseAdapter {
     const events = json.data ?? [];
     const pg     = json.meta?.pagination ?? {};
 
-    if (events.length > 0) {
-      console.log("[snappshop-orders] raw sample:", JSON.stringify(events[0]).slice(0, 1200));
-    }
-
-    const items: {
-      platformOrderId: string;
-      platformOrderItemId?: string;
-      platformProductId: string;
-      qty: number;
-      title?: string;
-      unitPrice?: number;
-      customerName?: string;
-      customerPhone?: string;
-    }[] = [];
+    const items: OrderItemInfo[] = [];
     const cancelledOrderIds: string[] = [];
-    const customerCache = new Map<string, { name?: string; phone?: string }>();
+
+    // عنوان محصول در فید رویدادها نیست — از snapshot محصولات پلتفرم برمی‌داریم
+    const productIds = new Set<string>();
+    for (const ev of events) {
+      for (const it of ev.items ?? []) {
+        const pid = it.vendor_product_info_id ?? it.sku;
+        if (pid) productIds.add(pid);
+      }
+    }
+    const titleMap = new Map<string, string>();
+    if (productIds.size) {
+      const rows = await prisma.integPlatformProduct.findMany({
+        where:  { platformCode: this.platformCode, platformProductId: { in: [...productIds] } },
+        select: { platformProductId: true, title: true },
+      });
+      for (const r of rows) titleMap.set(r.platformProductId, r.title);
+    }
 
     for (const ev of events) {
       const orderNo = String(ev.order_number);
@@ -317,43 +404,59 @@ export class SnappShopAdapter extends BaseAdapter {
       }
       if (ev.event_type !== "NEW_ORDER") continue;
 
-      // مشخصات خریدار فقط از اندپوینت جزئیات سفارش در دسترس است
-      if (!customerCache.has(orderNo)) {
-        let info: { name?: string; phone?: string } = {};
-        try {
-          await this.rateLimit(150);
-          const dRes = await fetch(`${BASE}/vendors/${vendorId}/orders/${orderNo}`, {
-            headers: baseHeaders(token, uniqueCode),
-          });
-          if (dRes.ok) {
-            const d = await dRes.json() as {
-              data?: { customer?: { first_name?: string; last_name?: string; phone?: string | null } };
-            };
-            const c = d.data?.customer;
-            const name = [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim();
-            info = { name: name || undefined, phone: c?.phone ?? undefined };
-          }
-        } catch { /* بدون مشخصات ادامه می‌دهیم */ }
-        customerCache.set(orderNo, info);
-      }
-      const cust = customerCache.get(orderNo) ?? {};
+      // جزئیات سفارش: مشخصات خریدار + تعداد و قیمت واقعی هر قلم.
+      // فید رویدادها فقط final_price کل را می‌دهد و تعداد را ناقص.
+      let detail: SnappOrderDetail | null = null;
+      try {
+        await this.rateLimit(150);
+        const dRes = await fetch(`${BASE}/vendors/${vendorId}/orders/${orderNo}`, {
+          headers: baseHeaders(token, uniqueCode),
+        });
+        if (dRes.ok) detail = (await dRes.json() as { data?: SnappOrderDetail }).data ?? null;
+      } catch { /* بدون جزئیات، از خود رویداد استفاده می‌کنیم */ }
 
-      for (const it of ev.items ?? []) {
-        if (it.item_status === "CANCELED") continue;
-        const productId = it.vendor_product_info_id ?? it.sku ?? "";
-        if (!productId) continue;
+      const c = detail?.customer;
+      const custName  = [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim() || undefined;
+      const custPhone = c?.phone ?? undefined;
 
-        const qty   = it.deliverable_quantity ?? 1;
-        const total = typeof it.final_price === "number" ? it.final_price : undefined; // تومان
+      // ترجیح با اقلام جزئیات سفارش؛ اگر در دسترس نبود، اقلام رویداد
+      const detailItems = detail?.items ?? [];
+      const source: { pid: string; qty: number; unitPrice?: number }[] = detailItems.length
+        ? detailItems
+            .filter((it) => it.item_status !== "CANCELED")
+            .map((it) => {
+              const pid = it.vendor_product_info_id ?? it.sku ?? "";
+              const qty = Math.max(0, (it.quantity ?? 0) - (it.canceled_quantity ?? 0)) || (it.quantity ?? 1);
+              // final_price مجموع اقلام باقیمانده است — تقسیم بر تعداد
+              const total = typeof it.final_price === "number" ? it.final_price : undefined;
+              return { pid, qty, unitPrice: total != null && qty > 0 ? Math.round(total / qty) : undefined };
+            })
+            .filter((r) => r.pid)
+        : (ev.items ?? [])
+            .filter((it) => it.item_status !== "CANCELED")
+            .map((it) => {
+              const pid = it.vendor_product_info_id ?? it.sku ?? "";
+              const qty = it.deliverable_quantity ?? 1;
+              const total = typeof it.final_price === "number" ? it.final_price : undefined;
+              return {
+                pid,
+                qty: qty > 0 ? qty : 1,
+                unitPrice: total != null && qty > 0 ? Math.round(total / qty) : undefined,
+              };
+            })
+            .filter((r) => r.pid);
+
+      for (const row of source) {
         items.push({
-          platformOrderId:     `${orderNo}:${productId}`,
-          platformOrderItemId: String(it.product_number ?? productId),
-          platformProductId:   productId,
-          qty:                 qty > 0 ? qty : 1,
-          title:               it.sku ?? undefined,
-          unitPrice:           total != null && qty > 0 ? Math.round(total / qty) : undefined,
-          customerName:        cust.name,
-          customerPhone:       cust.phone,
+          platformOrderId:     `${orderNo}:${row.pid}`,
+          platformOrderNo:     orderNo,
+          platformOrderItemId: row.pid,
+          platformProductId:   row.pid,
+          qty:                 row.qty,
+          title:               titleMap.get(row.pid),
+          unitPrice:           row.unitPrice,   // تومان
+          customerName:        custName,
+          customerPhone:       custPhone,
         });
       }
     }

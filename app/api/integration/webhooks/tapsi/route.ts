@@ -56,14 +56,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ succeed: false, message: "اتصال تپسی‌شاپ برقرار نیست" }, { status: 200 });
   }
 
-  // توکن ذخیره‌شده را با توکن ارسالی مقایسه می‌کنیم
-  let expectedToken = "";
-  try { expectedToken = decryptCredentials(connection.credentials).token ?? ""; } catch { /* ignore */ }
+  // توکن وب‌هوک در پنل تپسی جداگانه تعریف می‌شود و لزوماً همان توکن API نیست.
+  // قبلاً فقط با توکن API مقایسه می‌شد و به همین دلیل همه‌ی فراخوانی‌ها رد می‌شدند
+  // (و نام مشتری تپسی هیچ‌وقت ثبت نمی‌شد). حالا هر دو پذیرفته‌اند.
+  let accepted: string[] = [];
+  try {
+    const creds = decryptCredentials(connection.credentials);
+    accepted = [creds.webhookToken, creds.token].filter((t): t is string => !!t?.trim());
+  } catch { /* ignore */ }
 
-  if (!sentToken || sentToken !== expectedToken) {
+  if (!sentToken || !accepted.includes(sentToken)) {
     await writeLog({
       platformCode: PLATFORM, operationType: "FETCH_ORDERS", direction: "INBOUND",
-      entityType: "ORDER", status: "ERROR", errorMessage: "توکن وب‌هوک نامعتبر",
+      entityType: "ORDER", status: "ERROR",
+      errorMessage: accepted.length
+        ? "توکن وب‌هوک نامعتبر — توکن ارسالی تپسی با هیچ‌کدام از توکن API و توکن وب‌هوک نمی‌خواند"
+        : "توکن وب‌هوک تنظیم نشده — از فرم اتصال تپسی‌شاپ مقدار «توکن وب‌هوک» را وارد کنید",
     }).catch(() => {});
     // پاسخ 200 با succeed:false تا تپسی retry بی‌مورد نکند، ولی پردازش نمی‌کنیم
     return NextResponse.json({ succeed: false, message: "unauthorized" }, { status: 200 });
@@ -83,8 +91,9 @@ export async function POST(req: NextRequest) {
   const customerName =
     body.orderDetail?.customerFullName ||
     [body.orderDetail?.customerFirstName, body.orderDetail?.customerLastName].filter(Boolean).join(" ") ||
+    body.orderDetail?.receiverFullName ||
     null;
-  const customerPhone = body.orderDetail?.customerMobile ?? null;
+  const customerPhone = body.orderDetail?.customerMobile ?? body.orderDetail?.receiverMobile ?? null;
 
   let purchased = 0, cancelled = 0, skipped = 0;
   const unmatched: string[] = [];
@@ -106,7 +115,11 @@ export async function POST(req: NextRequest) {
         await restoreMappingStockForCancel(PLATFORM, externalId, qty).catch(() => {});
         // ردیف سفارش مرتبط را کنسل‌شده علامت بزن (اگر هنوز فاکتور نخورده)
         await prisma.integOrder.updateMany({
-          where: { platformCode: PLATFORM, platformOrderId: `${orderId}:${idx}`, status: "PENDING" },
+          where: {
+            platformCode: PLATFORM,
+            platformOrderId: `${orderId}:${idx}`,
+            status: { in: ["PENDING", "NEEDS_MAPPING"] },
+          },
           data:  { status: "CANCELLED" },
         }).catch(() => {});
         cancelled++;
@@ -130,13 +143,15 @@ export async function POST(req: NextRequest) {
             mappingId:           link?.mappingId ?? null,
             platformCode:        PLATFORM,
             platformOrderId,
+            platformOrderNo:     body.orderDetail?.orderNumber ?? orderId,
             platformOrderItemId: String(item.orderItemId ?? idx),
             productTitle:        link?.externalTitle ?? sku,
             qty,
             unitPrice:           typeof item.finalPrice === "number" ? Math.round(item.finalPrice / 10) : null, // ریال→تومان
             customerName,
             customerPhone,
-            status:              "PENDING",
+            status:              link ? "PENDING" : "NEEDS_MAPPING",
+            blockedReason:       link ? null : `محصول «${sku}» در تپسی‌شاپ به هیچ نگاشتی وصل نیست`,
           },
         });
         purchased++;

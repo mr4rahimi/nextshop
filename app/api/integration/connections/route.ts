@@ -44,14 +44,26 @@ export async function POST(req: NextRequest) {
     where: { platformCode: body.platformCode, siteId: null },
   });
 
-  // اگر credentials ارسال نشده و اتصال قبلی وجود دارد، credential قدیمی حفظ می‌شود
-  const hasNewCredentials = body.credentials && Object.values(body.credentials).some((v) => v?.trim());
+  // فقط کلیدهایی که مقدار غیرخالی دارند جایگزین می‌شوند و بقیه دست‌نخورده می‌مانند.
+  // بدون این ادغام، ذخیره‌ی فرم با یک فیلد پرشده بقیه‌ی credentialها را پاک می‌کرد
+  // (مثلاً وارد کردن دوباره‌ی توکن API تپسی، توکن وب‌هوک را از بین می‌برد).
+  const incoming = Object.fromEntries(
+    Object.entries(body.credentials ?? {}).filter(([, v]) => typeof v === "string" && v.trim()),
+  ) as Record<string, string>;
+  const hasNewCredentials = Object.keys(incoming).length > 0;
 
   if (!hasNewCredentials && !existing) {
     return NextResponse.json({ error: "credentials الزامی است" }, { status: 400 });
   }
 
-  const encrypted = hasNewCredentials ? encryptCredentials(body.credentials!) : existing?.credentials;
+  let previous: Record<string, string> = {};
+  if (existing?.credentials) {
+    try { previous = decryptCredentials(existing.credentials); } catch { previous = {}; }
+  }
+
+  const encrypted = hasNewCredentials
+    ? encryptCredentials({ ...previous, ...incoming })
+    : existing?.credentials;
 
   const connection = existing
     ? await prisma.integConnection.update({

@@ -8,7 +8,9 @@ import type {
   PriceUpdate,
   BatchResult,
   FetchOrdersResult,
+  OrderItemInfo,
 } from "@/lib/integration/types";
+import { applyDiscount } from "@/lib/integration/types";
 
 const BASE = "https://vendorgw.tapsi.shop/Web/Hub/vendors/v1";
 
@@ -112,13 +114,22 @@ export class TapsiAdapter extends BaseAdapter {
 
     const { items: rawItems, totalCount, pageSize: ps } = data.data;
 
-    const items: IntegProductInfo[] = rawItems.map((p) => ({
-      platformId: p.id,                          // شناسه تپسی — کلید نگاشت
-      title:      p.sku ?? p.hsin ?? p.id,        // تپسی عنوان ندارد؛ sku/hsin نمایش داده می‌شود
-      salePrice:  p.finalPrice != null ? Math.round(p.finalPrice / 10) : undefined, // ریال→تومان
-      stock:      p.onHandQuantity ?? undefined,
-      sku:        p.sku ?? undefined,
-    }));
+    // تپسی هر دو قیمت را می‌دهد: originalPrice = قیمت اصلی، finalPrice = بعد از تخفیف.
+    // هر دو را نگه می‌داریم وگرنه موقع ارسال قیمت جدید، تخفیف قابل بازسازی نیست.
+    const items: IntegProductInfo[] = rawItems.map((p) => {
+      const original = p.originalPrice != null ? Math.round(p.originalPrice / 10) : undefined; // ریال→تومان
+      const final    = p.finalPrice    != null ? Math.round(p.finalPrice / 10)    : undefined;
+      const hasDiscount = original != null && final != null && original > 0 && final < original;
+      return {
+        platformId: p.id,                          // شناسه تپسی — کلید نگاشت
+        title:      p.sku ?? p.hsin ?? p.id,        // تپسی عنوان ندارد؛ sku/hsin نمایش داده می‌شود
+        salePrice:  final ?? original,
+        originalPrice:   hasDiscount ? original : undefined,
+        discountPercent: hasDiscount ? Math.round(((original! - final!) / original!) * 10000) / 100 : undefined,
+        stock:      p.onHandQuantity ?? undefined,
+        sku:        p.sku ?? undefined,
+      };
+    });
 
     return {
       items,
@@ -157,6 +168,9 @@ export class TapsiAdapter extends BaseAdapter {
   }
 
   // ── ارسال قیمت (تومان×۱۰ = ریال) ─────────────────────────────────
+  // تپسی دو قیمت مجزا می‌گیرد: price = قیمت اصلی، specialPrice = قیمت نهایی.
+  // برابر گذاشتن این دو، تخفیف محصول را پاک می‌کند — پس درصد تخفیف قبلی را
+  // روی قیمت اصلیِ جدید بازسازی می‌کنیم.
   async updatePrice(
     credentials: Record<string, string>,
     updates: PriceUpdate[],
@@ -166,11 +180,11 @@ export class TapsiAdapter extends BaseAdapter {
     return this.bulkUpdate(
       credentials,
       updates.map((u) => {
-        const toman = u.salePrice ?? u.price;
+        const { original, effective } = applyDiscount(u.price, u.discount);
         return {
           id:           skuMap.get(u.platformProductId) ?? u.platformProductId,
-          price:        toman * 10,
-          specialPrice: toman * 10,
+          price:        original  * 10,
+          specialPrice: effective * 10,
         };
       }),
       ids,
@@ -254,33 +268,48 @@ export class TapsiAdapter extends BaseAdapter {
     const list = await listRes.json() as TapsiOrderListResponse;
     const orders = list.data?.items ?? [];
 
-    const items: {
-      platformOrderId: string;
-      platformOrderItemId: string;
-      platformProductId: string;
-      qty: number;
-      title: string;
-      unitPrice?: number;
-    }[] = [];
+    const items: OrderItemInfo[] = [];
     for (const o of orders) {
       // جزئیات هر سفارش برای گرفتن اقلام و sku
       const detRes = await fetch(`${BASE}/orders/${o.id}`, { headers: baseHeaders(token) });
       if (!detRes.ok) continue;
       const det = await detRes.json() as TapsiOrderDetail;
       const detItems = det.data?.items ?? [];
+      const orderNo  = det.data?.order?.orderNumber || o.orderNumber || o.id;
 
-      detItems.forEach((it, idx) => {
-        if (it.state === "لغو" || it.cancelReason) return; // اقلام لغوشده رد می‌شوند
+      // تپسی برای هر واحد کالا یک ردیف جدا می‌دهد و فیلد تعداد ندارد؛
+      // ردیف‌های هم‌sku را جمع می‌زنیم وگرنه فاکتور به‌جای ۳ عدد، ۳ قلم تک‌عددی می‌شود.
+      const bySku = new Map<string, { sku: string; title: string; qty: number; unitPriceToman?: number }>();
+      for (const it of detItems) {
+        if (it.state === "لغو" || it.cancelReason) continue; // اقلام لغوشده رد می‌شوند
+        const sku = (it.sku ?? "").trim();
+        if (!sku) continue; // بدون sku قابل نگاشت نیست
         const priceRial = it.finalPrice ? Number(it.finalPrice) : it.price ? Number(it.price) : NaN;
+        const existing = bySku.get(sku);
+        if (existing) {
+          existing.qty += 1;
+        } else {
+          bySku.set(sku, {
+            sku,
+            title: it.name ?? sku,
+            qty:   1,
+            unitPriceToman: Number.isFinite(priceRial) ? Math.round(priceRial / 10) : undefined,
+          });
+        }
+      }
+
+      for (const row of bySku.values()) {
         items.push({
-          platformOrderId:     `${o.id}:${idx}`,
-          platformOrderItemId: String(idx),
-          platformProductId:   it.sku ?? "",   // تپسی محصول را با sku می‌شناسد
-          qty:                 1,
-          title:               it.name ?? "",
-          unitPrice:           Number.isFinite(priceRial) ? Math.round(priceRial / 10) : undefined,
+          // کلید یکتا بر پایه sku است، نه ایندکس — با ادغام ردیف‌ها ایندکس بی‌ثبات می‌شود
+          platformOrderId:     `${o.id}:${row.sku}`,
+          platformOrderNo:     orderNo,
+          platformOrderItemId: row.sku,
+          platformProductId:   row.sku,   // تپسی محصول را با sku می‌شناسد
+          qty:                 row.qty,
+          title:               row.title,
+          unitPrice:           row.unitPriceToman,
         });
-      });
+      }
       await this.rateLimit(150);
     }
 

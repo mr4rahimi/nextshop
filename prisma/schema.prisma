@@ -1078,6 +1078,11 @@ model IntegPlatformProduct {
   barcode           String?
   stock             Float?
   price             Float?
+  originalPrice     Float?    // قیمت پیش از تخفیف — null یعنی تخفیفی نیست
+  discountPercent   Float?    // درصد تخفیف فعال روی پلتفرم
+  discountStartsAt  DateTime?
+  discountEndsAt    DateTime?
+  discountStock     Int?      // موجودی اختصاصی تخفیف (اسنپ‌شاپ)
   purchasePrice     Float?
   unit              String?
   isEnabled         Boolean  @default(true)
@@ -1203,6 +1208,7 @@ model IntegOrder {
   mappingId           String?
   platformCode        String
   platformOrderId     String
+  platformOrderNo     String?  // شماره سفارش قابل نمایش برای کاربر (نه شناسه داخلی)
   platformOrderItemId String?
   productTitle        String
   qty                 Int
@@ -1210,6 +1216,7 @@ model IntegOrder {
   customerName        String?
   customerPhone       String?
   status              IntegOrderStatus @default(PENDING)
+  blockedReason       String?  // چرا فاکتور نخورد — برای نمایش در ادمین
   invoicedAt          DateTime?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
@@ -1225,6 +1232,7 @@ model IntegOrder {
 
 enum IntegOrderStatus {
   PENDING
+  NEEDS_MAPPING // محصول نگاشت حسابداری ندارد — منتظر اقدام ادمین
   INVOICED
   CANCELLED
 }
@@ -1262,6 +1270,7 @@ enum IntegJobType {
   SYNC_ALL_PRICE
   FETCH_PRODUCTS
   FETCH_ORDERS
+  CREATE_INVOICE // ثبت فاکتور فروش در حسابداری (فقط برای لاگ)
   CREATE_PRODUCT
   TEST_CONNECTION
 }

@@ -118,6 +118,7 @@ const MENU_GROUPS = [
           { href: "/admin/integration",                       label: "داشبورد" },
           { href: "/admin/integration/connections",           label: "اتصالات" },
           { href: "/admin/integration/mapping",               label: "نگاشت محصولات" },
+          { href: "/admin/integration/orders",                label: "سفارش‌های بازارگاه" },
           { href: "/admin/integration/product-suggestions",   label: "پیشنهادات اضافه کردن محصول" },
           { href: "/admin/integration/price-rules",           label: "قوانین قیمت" },
           { href: "/admin/integration/pricing",               label: "مدیریت قیمت خرید" },

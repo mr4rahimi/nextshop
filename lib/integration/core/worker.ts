@@ -173,6 +173,8 @@ async function dispatchJob(job: IntegJob): Promise<void> {
         platformProductId: payload.platformProductId,
         price:             payload.price,
         salePrice:         payload.salePrice,
+        // اگر job تخفیف نداشت، آداپتور خودش از snapshot پلتفرم می‌خواند
+        discount:          payload.discount ?? undefined,
       }]);
       break;
     }
@@ -306,6 +308,12 @@ async function fetchAndMatch(
           barcode:       item.barcode ?? null,
           stock:         item.stock ?? null,
           price:         item.salePrice ?? null,
+          // تخفیف فعال پلتفرم — لازم است تا آپدیت بعدی قیمت آن را پاک نکند
+          originalPrice:    item.originalPrice ?? null,
+          discountPercent:  item.discountPercent ?? null,
+          discountStartsAt: item.discountStartsAt ?? null,
+          discountEndsAt:   item.discountEndsAt ?? null,
+          discountStock:    item.discountStock ?? null,
           purchasePrice: item.purchasePrice ?? null,
           unit:          item.unit ?? null,
           isEnabled:     true,
@@ -320,6 +328,11 @@ async function fetchAndMatch(
           barcode:       item.barcode ?? null,
           stock:         item.stock ?? null,
           price:         item.salePrice ?? null,
+          originalPrice:    item.originalPrice ?? null,
+          discountPercent:  item.discountPercent ?? null,
+          discountStartsAt: item.discountStartsAt ?? null,
+          discountEndsAt:   item.discountEndsAt ?? null,
+          discountStock:    item.discountStock ?? null,
           purchasePrice: item.purchasePrice ?? null,
           unit:          item.unit ?? null,
           lastFetchedAt: now,

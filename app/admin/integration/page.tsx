@@ -25,6 +25,7 @@ export default async function IntegrationDashboardPage() {
     errorCount24h,
     syncCount24h,
     failedJobs,
+    ordersNeedingMapping,
   ] = await Promise.all([
     prisma.integPlatform.findMany({ where: { isActive: true }, orderBy: { type: "asc" } }),
     prisma.integConnection.findMany({ include: { platform: true } }),
@@ -45,6 +46,7 @@ export default async function IntegrationDashboardPage() {
       take:    5,
       include: { platform: { select: { name: true } } },
     }),
+    prisma.integOrder.count({ where: { status: "NEEDS_MAPPING" } }),
   ]);
 
   const connMap = new Map(connections.map(c => [c.platformCode, c]));
@@ -65,6 +67,14 @@ export default async function IntegrationDashboardPage() {
       type:    "error",
       message: `${failedJobs.length} job شکست‌خورده در صف — نیاز به retry`,
       link:    "/admin/integration/queue",
+    });
+  }
+
+  if (ordersNeedingMapping > 0) {
+    alerts.push({
+      type:    "error",
+      message: `${ordersNeedingMapping} قلم سفارش فاکتور نخورده — محصولشان به کالای حسابداری نگاشت ندارد`,
+      link:    "/admin/integration/orders?status=NEEDS_MAPPING",
     });
   }
 

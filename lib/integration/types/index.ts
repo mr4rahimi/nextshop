@@ -8,7 +8,13 @@ export interface IntegProductInfo {
   categoryName?:  string;
   brandName?:     string;
   purchasePrice?: number;  // قیمت خرید (فقط حسابداری)
-  salePrice?:     number;
+  salePrice?:     number;  // قیمت مؤثر (بعد از تخفیف) — همیشه همان چیزی که مشتری می‌پردازد
+  /** قیمت پیش از تخفیف. undefined یعنی محصول تخفیف ندارد و salePrice خودش قیمت اصلی است. */
+  originalPrice?:    number;
+  discountPercent?:  number;
+  discountStartsAt?: Date;
+  discountEndsAt?:   Date;
+  discountStock?:    number;
   stock?:         number;
   unit?:          string;
   weight?:        number;
@@ -30,10 +36,33 @@ export interface StockUpdate {
   stock:             number;
 }
 
+// قرارداد قیمت: `price` همیشه «قیمت اصلی» تازه‌محاسبه‌شده است (تومان).
+// اگر محصول روی پلتفرم تخفیف فعال داشته باشد، `discount` پر می‌شود و آداپتور موظف
+// است تخفیف را با همان درصد روی قیمت جدید بازسازی کند — نه اینکه پاکش کند.
+export interface PriceDiscount {
+  percent:   number;         // درصد تخفیف که باید حفظ شود
+  startsAt?: Date | null;
+  endsAt?:   Date | null;
+  stock?:    number | null;  // موجودی اختصاصی تخفیف (اسنپ‌شاپ)
+}
+
 export interface PriceUpdate {
   platformProductId: string;
-  price:             number;
-  salePrice?:        number;
+  price:             number;         // قیمت اصلی جدید (تومان)
+  salePrice?:        number;         // قیمت مؤثر جدید (تومان) — از discount مشتق می‌شود
+  discount?:         PriceDiscount | null;
+}
+
+/** قیمت اصلی + مؤثر را از یک قیمت پایه و درصد تخفیف می‌سازد. */
+export function applyDiscount(
+  basePrice: number,
+  discount?: PriceDiscount | null,
+): { original: number; effective: number } {
+  const original = Math.round(basePrice);
+  if (!discount || !(discount.percent > 0) || discount.percent >= 100) {
+    return { original, effective: original };
+  }
+  return { original, effective: Math.round(original * (1 - discount.percent / 100)) };
 }
 
 export interface BatchResult {
@@ -62,6 +91,7 @@ export interface SyncPricePayload {
   platformProductId: string;
   price:             number;
   salePrice?:        number;
+  discount?:         PriceDiscount | null;
 }
 
 export interface SyncAllPayload {
@@ -95,6 +125,8 @@ export interface PriceRuleContext {
 
 export interface OrderItemInfo {
   platformOrderId: string;      
+  /** شماره سفارش قابل نمایش (آنچه مشتری و پنل فروشنده می‌بینند) — نه شناسه داخلی */
+  platformOrderNo?: string;
   platformOrderItemId?: string;
   platformProductId: string;    
   qty: number;

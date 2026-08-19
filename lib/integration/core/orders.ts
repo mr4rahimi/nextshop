@@ -37,18 +37,26 @@ export async function fetchAndProcessOrders(
 
       await decrementMappingStockForOrder(platformCode, item.platformProductId, item.qty).catch(() => {});
 
+      // بدون نگاشت، فاکتور ساخته نمی‌شود. به‌جای اینکه ردیف تا ابد PENDING بماند و
+      // هر چرخه دوباره تلاش شود، صریحاً NEEDS_MAPPING می‌شود تا در ادمین دیده شود.
+      const needsMapping = !link;
+
       await prisma.integOrder.create({
         data: {
           mappingId:           link?.mappingId ?? null,
           platformCode,
           platformOrderId:     item.platformOrderId,
+          platformOrderNo:     item.platformOrderNo ?? null,
           platformOrderItemId: item.platformOrderItemId ?? null,
           productTitle:        item.title ?? "(بدون عنوان)",
           qty:                 item.qty,
           unitPrice:           item.unitPrice ?? null,
           customerName:        item.customerName ?? null,
           customerPhone:       item.customerPhone ?? null,
-          status:              "PENDING", 
+          status:              needsMapping ? "NEEDS_MAPPING" : "PENDING",
+          blockedReason:       needsMapping
+            ? `محصول «${item.platformProductId}» در این پلتفرم به هیچ نگاشتی وصل نیست`
+            : null,
         },
       });
 
@@ -67,11 +75,15 @@ export async function fetchAndProcessOrders(
     cursor = result.cursor;
   }
 
-  // لغو سفارش (فید رویدادی) — فقط ردیف‌های PENDING، پس تکرار رویداد بی‌خطر است
+  // لغو سفارش (فید رویدادی) — فقط ردیف‌های فاکتورنخورده، پس تکرار رویداد بی‌خطر است
   let cancelled = 0;
   for (const orderNo of cancelledOrders) {
     const rows = await prisma.integOrder.findMany({
-      where: { platformCode, platformOrderId: { startsWith: `${orderNo}:` }, status: "PENDING" },
+      where: {
+        platformCode,
+        platformOrderId: { startsWith: `${orderNo}:` },
+        status: { in: ["PENDING", "NEEDS_MAPPING"] },
+      },
     });
     for (const row of rows) {
       if (row.mappingId) {
