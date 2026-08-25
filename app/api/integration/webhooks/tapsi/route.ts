@@ -35,6 +35,22 @@ interface TapsiWebhookBody {
 // تپسی توکن را با این هدر می‌فرستد
 const AUTH_HEADER = "tapsishop.hub.webhook-authorization";
 
+// توکن‌ها با فاصله/نیم‌فاصله‌ی چسبیده در فرم ادمین paste می‌شوند و بعضی کلاینت‌ها
+// پیشوند Bearer می‌گذارند — قبل از مقایسه هر دو طرف نرمال می‌شوند.
+function normalizeToken(raw: string | null | undefined): string {
+  if (!raw) return "";
+  return raw.trim().replace(/^Bearer\s+/i, "").trim();
+}
+
+// اثرانگشت ماسک‌شده برای لاگ — خود توکن هرگز ثبت نمی‌شود، ولی طول و
+// چند کاراکتر ابتدا/انتها برای تشخیص «کدام توکن است» کافی است.
+function fingerprint(raw: string | null | undefined): string {
+  if (!raw) return "خالی";
+  const t = raw.trim();
+  if (t.length <= 8) return `طول=${t.length} (کوتاه‌تر از آن است که ماسک شود)`;
+  return `طول=${t.length} ${t.slice(0, 3)}…${t.slice(-3)}`;
+}
+
 // تپسی در وب‌هوک، productId را به‌صورت SKU می‌فرستد؛ نگاشت با شناسه محصول ذخیره شده
 async function resolveExternalId(skuOrId: string): Promise<string> {
   const row = await prisma.integPlatformProduct.findFirst({
@@ -46,7 +62,9 @@ async function resolveExternalId(skuOrId: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   // ── اعتبارسنجی توکن ────────────────────────────────────────────
-  const sentToken = req.headers.get(AUTH_HEADER) ?? req.headers.get("TapsiShop.Hub.Webhook-Authorization");
+  // headers.get خودش case-insensitive است؛ فراخوانی دوم با املای دیگر بی‌اثر بود.
+  const rawToken  = req.headers.get(AUTH_HEADER);
+  const sentToken = normalizeToken(rawToken);
 
   const connection = await prisma.integConnection.findFirst({
     where: { platformCode: PLATFORM, status: { in: ["CONNECTED", "SYNCING"] } },
@@ -59,21 +77,37 @@ export async function POST(req: NextRequest) {
   // توکن وب‌هوک در پنل تپسی جداگانه تعریف می‌شود و لزوماً همان توکن API نیست.
   // قبلاً فقط با توکن API مقایسه می‌شد و به همین دلیل همه‌ی فراخوانی‌ها رد می‌شدند
   // (و نام مشتری تپسی هیچ‌وقت ثبت نمی‌شد). حالا هر دو پذیرفته‌اند.
-  let accepted: string[] = [];
+  const accepted: string[] = [];
+  const acceptedNames: string[] = [];
   try {
     const creds = decryptCredentials(connection.credentials);
-    accepted = [creds.webhookToken, creds.token].filter((t): t is string => !!t?.trim());
+    for (const [name, value] of [["webhookToken", creds.webhookToken], ["token", creds.token]] as const) {
+      const norm = normalizeToken(value);
+      if (!norm) continue;
+      accepted.push(norm);
+      acceptedNames.push(`${name}(${fingerprint(value)})`);
+    }
   } catch { /* ignore */ }
 
   if (!sentToken || !accepted.includes(sentToken)) {
+    // بدون این جزئیات نمی‌شود فهمید تپسی کدام توکن را می‌فرستد — تنها چیزی که
+    // در لاگ می‌ماند طول و سه کاراکتر ابتدا/انتهاست، نه خود توکن.
     await writeLog({
       platformCode: PLATFORM, operationType: "FETCH_ORDERS", direction: "INBOUND",
       entityType: "ORDER", status: "ERROR",
+      requestData: {
+        sent:     fingerprint(rawToken),
+        accepted: acceptedNames,
+        hadBearerPrefix: /^Bearer\s/i.test(rawToken ?? ""),
+        headerPresent:   rawToken !== null,
+      },
       errorMessage: accepted.length
-        ? "توکن وب‌هوک نامعتبر — توکن ارسالی تپسی با هیچ‌کدام از توکن API و توکن وب‌هوک نمی‌خواند"
+        ? `توکن وب‌هوک نامعتبر — ارسالی: ${fingerprint(rawToken)} | پذیرفته‌شده‌ها: ${acceptedNames.join("، ")}`
         : "توکن وب‌هوک تنظیم نشده — از فرم اتصال تپسی‌شاپ مقدار «توکن وب‌هوک» را وارد کنید",
     }).catch(() => {});
-    // پاسخ 200 با succeed:false تا تپسی retry بی‌مورد نکند، ولی پردازش نمی‌کنیم
+    // تپسی تا وقتی succeed:true نگیرد همان سفارش را هر ۳ دقیقه دوباره می‌فرستد.
+    // این عمدی است: سفارش واقعی نباید خاموش دور ریخته شود. ولی یعنی هر خطای
+    // توکن به یک حلقه‌ی retry دائمی تبدیل می‌شود — لاگ بالا تنها راه تشخیص آن است.
     return NextResponse.json({ succeed: false, message: "unauthorized" }, { status: 200 });
   }
 

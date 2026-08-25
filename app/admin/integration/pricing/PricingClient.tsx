@@ -37,8 +37,33 @@ export default function PricingClient({ initialItems, initialTotal }: { initialI
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mappingId: id, ...data }),
       });
-      if (res.ok) {
-        setItems((prev) => prev.map((m) => (m.id === id ? { ...m, ...data } : m)));
+      if (!res.ok) {
+        setMsg("ذخیره نشد");
+        return;
+      }
+
+      setItems((prev) => prev.map((m) => (m.id === id ? { ...m, ...data } : m)));
+
+      // نتیجه‌ی ارسال قیمت به پلتفرم‌ها — بدون این، ویرایش «موفق» به نظر می‌رسید
+      // حتی وقتی هیچ پلتفرمی قیمت جدید را نگرفته بود.
+      const body = await res.json() as {
+        pricePush?: { pushed: number; failed: number; skipped: number } | null;
+        pricePushError?: string;
+      };
+
+      if (body.pricePushError) {
+        setMsg(`ذخیره شد، ولی ارسال قیمت خطا داد: ${body.pricePushError}`);
+      } else if (body.pricePush) {
+        const { pushed, failed } = body.pricePush;
+        setMsg(
+          failed > 0
+            ? `ذخیره شد — ${pushed} پلتفرم بروز شد، ${failed} ناموفق (جزئیات در لاگ‌ها)`
+            : pushed > 0
+              ? `ذخیره شد و روی ${pushed} پلتفرم اعمال شد`
+              : "ذخیره شد — هیچ پلتفرمی برای ارسال نبود",
+        );
+      } else {
+        setMsg("ذخیره شد");
       }
     } finally {
       setSaving(null);

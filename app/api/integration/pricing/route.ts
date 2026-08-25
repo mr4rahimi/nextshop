@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { pushPriceForMapping } from "@/lib/integration/core/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -63,5 +64,26 @@ export async function PATCH(req: NextRequest) {
   if (body.syncPriceEnabled !== undefined) data.syncPriceEnabled = body.syncPriceEnabled;
 
   const mapping = await prisma.integMapping.update({ where: { id: body.mappingId }, data });
-  return NextResponse.json(mapping);
+
+  // قیمت خرید دستی باید همان لحظه به فروشگاه و بازارگاه‌ها برسد. قبلاً فقط در
+  // دیتابیس می‌نشست و تا وقتی کسی دکمه‌ی «همگام‌سازی قیمت» حسابان را نمی‌زد
+  // هیچ پلتفرمی قیمت جدید را نمی‌دید — و آن دکمه هم زمان‌بندی خودکار ندارد.
+  const shouldPush =
+    body.purchasePrice !== undefined ||
+    body.purchasePriceSource !== undefined ||
+    body.syncPriceEnabled === true;
+
+  if (!shouldPush) return NextResponse.json({ ...mapping, pricePush: null });
+
+  try {
+    const pricePush = await pushPriceForMapping(mapping.id);
+    return NextResponse.json({ ...mapping, pricePush });
+  } catch (err) {
+    // ذخیره انجام شده؛ شکست ارسال نباید ویرایش را برگرداند، ولی باید دیده شود.
+    return NextResponse.json({
+      ...mapping,
+      pricePush:      null,
+      pricePushError: err instanceof Error ? err.message : String(err),
+    });
+  }
 }

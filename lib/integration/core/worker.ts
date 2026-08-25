@@ -74,6 +74,48 @@ async function ensureScheduledJobs(): Promise<void> {
 }
 
 
+// ── آزادسازی job‌های راکد ────────────────────────────────────────
+// اگر پروسه وسط اجرای یک job ری‌استارت شود، آن job برای همیشه PROCESSING
+// می‌ماند و چون ensureScheduledJobs وجود PROCESSING را «در حال اجرا» می‌بیند،
+// دیگر هرگز job جدیدی از آن نوع صف نمی‌کند (سینک موجودی حسابداری یک ماه
+// به همین دلیل مرده بود). هر job که بیش از این آستانه در PROCESSING مانده
+// راکد فرض می‌شود و به صف برمی‌گردد.
+const STALE_PROCESSING_MS = 30 * 60_000;
+
+async function reclaimStaleJobs(): Promise<void> {
+  const cutoff = new Date(Date.now() - STALE_PROCESSING_MS);
+  const stale = await prisma.integJob.findMany({
+    where:  { status: "PROCESSING", startedAt: { lt: cutoff } },
+    select: { id: true, type: true, platformCode: true, attempts: true, maxAttempts: true, startedAt: true },
+  });
+  if (!stale.length) return;
+
+  for (const job of stale) {
+    const stuckMin = job.startedAt
+      ? Math.round((Date.now() - job.startedAt.getTime()) / 60_000)
+      : 0;
+    const message = `job پس از ${stuckMin} دقیقه در وضعیت PROCESSING راکد بود (احتمالاً ری‌استارت پروسه) — آزاد شد`;
+    const exhausted = job.attempts >= job.maxAttempts;
+
+    await prisma.integJob.update({
+      where: { id: job.id },
+      data: exhausted
+        ? { status: "FAILED", lastError: message, completedAt: new Date() }
+        : { status: "PENDING", lastError: message, scheduledAt: new Date(), startedAt: null },
+    });
+
+    await writeLog({
+      jobId:         job.id,
+      platformCode:  job.platformCode,
+      operationType: job.type,
+      direction:     "OUTBOUND",
+      entityType:    "PRODUCT",
+      status:        "ERROR",
+      errorMessage:  message,
+    }).catch(() => {});
+  }
+}
+
 // اجرای یک چرخه Worker — فراخوانی هر N ثانیه
 export async function runWorkerCycle(maxJobs = 5): Promise<void> {
   // upsert: اگر رکورد تنظیمات وجود نداشت با مقادیر پیش‌فرض ساخته می‌شود
@@ -83,6 +125,10 @@ export async function runWorkerCycle(maxJobs = 5): Promise<void> {
     create: { id: "singleton" },
   });
   if (!settings.workerEnabled) return;
+
+  // job‌های راکد باید قبل از ensureScheduledJobs آزاد شوند، وگرنه همان چرخه
+  // دوباره آن‌ها را «در حال اجرا» می‌بیند و job جدید صف نمی‌کند.
+  await reclaimStaleJobs().catch((e: unknown) => console.error("[integ] reclaimStaleJobs:", e));
 
   // jobهای زمان‌بندی‌شده (polling سفارش باسلام + سینک دوره‌ای حسابداری) و فاکتورهای معوق
   await ensureScheduledJobs().catch((e: unknown) => console.error("[integ] ensureScheduledJobs:", e));

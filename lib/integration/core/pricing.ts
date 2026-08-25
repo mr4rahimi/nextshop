@@ -102,12 +102,25 @@ async function findApplicableRule(
 
 // ── Push قیمت محاسبه‌شده‌ی یک mapping به همه‌ی لینک‌های فعال ──────────
 
+// آمار واقعی هر ارسال. بدون این، لاگ SYNC_ALL_PRICE حتی وقتی هیچ پلتفرمی
+// قیمت نگرفته «موفق» ثبت می‌شد و خرابی یک ماه دیده نشد.
+export interface PricePushResult {
+  pushed:  number;
+  failed:  number;
+  skipped: number;
+}
+
+function emptyResult(): PricePushResult {
+  return { pushed: 0, failed: 0, skipped: 0 };
+}
+
 async function pushMappingPrice(mapping: {
   id: string;
   purchasePrice: number | null;
   stock: number;
-}): Promise<void> {
-  if (mapping.purchasePrice == null) return;
+}): Promise<PricePushResult> {
+  const tally = emptyResult();
+  if (mapping.purchasePrice == null) return tally;
 
   const links = await prisma.integMappingLink.findMany({
     where: { mappingId: mapping.id, isActive: true },
@@ -123,7 +136,7 @@ async function pushMappingPrice(mapping: {
 
   for (const link of links) {
     const platform = await prisma.integPlatform.findUnique({ where: { code: link.platformCode } });
-    if (platform?.type === "ACCOUNTING") continue; // به حسابداری قیمت پوش نمی‌کنیم
+    if (platform?.type === "ACCOUNTING") { tally.skipped++; continue; } // به حسابداری قیمت پوش نمی‌کنیم
 
     const rule = await findApplicableRule(link.platformCode, shopProduct);
     if (!rule) {
@@ -136,6 +149,7 @@ async function pushMappingPrice(mapping: {
         status:        "ERROR",
         errorMessage:  "هیچ قانون قیمت فعالی برای این پلتفرم/محصول پیدا نشد",
       }).catch(() => {});
+      tally.failed++;
       continue;
     }
 
@@ -146,6 +160,7 @@ async function pushMappingPrice(mapping: {
         where: { id: link.externalId },
         data:  { price: BigInt(Math.round(price)) },
       }).catch(() => {});
+      tally.pushed++;
       continue;
     }
 
@@ -161,6 +176,7 @@ async function pushMappingPrice(mapping: {
         status:        "ERROR",
         errorMessage:  "وضعیت تخفیف این محصول نامشخص است — ابتدا «دریافت محصولات» را برای این پلتفرم اجرا کنید تا ارسال قیمت، تخفیف موجود را پاک نکند",
       }).catch(() => {});
+      tally.failed++;
       continue;
     }
     const discount = loaded;
@@ -178,6 +194,7 @@ async function pushMappingPrice(mapping: {
         status:        "ERROR",
         errorMessage:  "اتصال این پلتفرم برقرار نیست",
       }).catch(() => {});
+      tally.failed++;
       continue;
     }
     if (!connection.syncPriceEnabled) {
@@ -190,11 +207,12 @@ async function pushMappingPrice(mapping: {
         status:        "ERROR",
         errorMessage:  "همگام‌سازی قیمت برای این اتصال غیرفعال است — از صفحه اتصالات فعال کنید",
       }).catch(() => {});
+      tally.failed++;
       continue;
     }
 
     const adapter = getAdapter(link.platformCode);
-    if (!adapter?.updatePrice) continue;
+    if (!adapter?.updatePrice) { tally.skipped++; continue; }
     const credentials = decryptCredentials(connection.credentials);
     const start = Date.now();
     
@@ -221,6 +239,7 @@ async function pushMappingPrice(mapping: {
             result.failed[0]?.error ?? "خطای نامشخص از پلتفرم",
           durationMs: Date.now() - start,
         }).catch(() => {});
+        tally.failed++;
       } else {
         await writeLog({
           platformCode: link.platformCode,
@@ -234,6 +253,7 @@ async function pushMappingPrice(mapping: {
             : { price: original },
           durationMs: Date.now() - start,
         }).catch(() => {});
+        tally.pushed++;
       }
     } catch (err) {
       await writeLog({
@@ -246,9 +266,30 @@ async function pushMappingPrice(mapping: {
         errorMessage: err instanceof Error ? err.message : String(err),
         durationMs: Date.now() - start,
       }).catch(() => {});
+      tally.failed++;
     }
 
   }
+
+  return tally;
+}
+
+// ── اعمال فوری قیمت یک نگاشت (بعد از ویرایش دستی قیمت خرید) ─────────
+// بدون این، ویرایش دستی قیمت خرید فقط در دیتابیس می‌نشیند و تا وقتی کسی
+// دکمه‌ی «همگام‌سازی قیمت» را نزند به هیچ پلتفرمی نمی‌رسد.
+export async function pushPriceForMapping(mappingId: string): Promise<PricePushResult> {
+  const mapping = await prisma.integMapping.findUnique({
+    where:  { id: mappingId },
+    select: { id: true, purchasePrice: true, stock: true, isActive: true, syncPriceEnabled: true },
+  });
+  if (!mapping?.isActive || !mapping.syncPriceEnabled) return emptyResult();
+
+  const result = await pushMappingPrice(mapping);
+  await prisma.integMapping.update({
+    where: { id: mappingId },
+    data:  { lastPriceSyncAt: new Date() },
+  }).catch(() => {});
+  return result;
 }
 
 // ── دکمه‌ی «بروزرسانی قیمت» — خواندن قیمت خرید از حسابداری + push به همه ──
@@ -303,9 +344,17 @@ export async function resyncPricesFromAccounting(
     select: { id: true, purchasePrice: true, stock: true },
   });
 
+  const totals: PricePushResult = { pushed: 0, failed: 0, skipped: 0 };
   for (const m of mappings) {
-    await pushMappingPrice(m);
+    const r = await pushMappingPrice(m);
+    totals.pushed  += r.pushed;
+    totals.failed  += r.failed;
+    totals.skipped += r.skipped;
   }
+
+  // «۵ نگاشت پردازش شد» وقتی هر ۱۴ ارسال رد شده باشد گزارشِ موفقیت نیست.
+  // وضعیت لاگ را از نتیجه‌ی واقعی ارسال‌ها می‌گیریم، نه از تعداد نگاشت‌ها.
+  const status = totals.failed === 0 ? "SUCCESS" : totals.pushed === 0 ? "ERROR" : "PARTIAL";
 
   await writeLog({
     jobId,
@@ -313,8 +362,11 @@ export async function resyncPricesFromAccounting(
     operationType: "SYNC_ALL_PRICE",
     direction:     "INBOUND",
     entityType:    "PRICE",
-    status:        "SUCCESS",
-    responseData:  { updatedFromHesaban, pushedMappings: mappings.length },
+    status,
+    responseData:  { updatedFromHesaban, mappings: mappings.length, ...totals },
+    errorMessage:  totals.failed > 0
+      ? `${totals.failed} ارسال قیمت ناموفق بود — جزئیات هر کدام در لاگ‌های SYNC_PRICE همین بازه`
+      : undefined,
   }).catch(() => {});
 
   return { updatedFromHesaban, pushedMappings: mappings.length };
