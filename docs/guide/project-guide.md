@@ -14,8 +14,11 @@
 - IP سرور: 185.164.73.224
 - مسیر: /var/www/mahamprinter — پروسه pm2: mahamprinter — پورت داخلی: 3002
 - دامنه: mahamprint.com
-- روند آپدیت: git push از لوکال → روی سرور git pull → pnpm install (در صورت نیاز)
-  → npx prisma migrate deploy (در صورت migration جدید) → pnpm build → pm2 restart mahamprinter
+- روند آپدیت: `node scripts/deploy/deploy.mjs <site>` از لوکال — خودش بکاپ
+  دیتابیس و کد می‌گیرد، rsync می‌کند (با `--delete` ولی پوشه‌های تصویر و `.env`
+  مستثنا)، `prisma migrate deploy` و `next build` را روی سرور می‌زند، pm2 را
+  ری‌استارت می‌کند و در صورت شکست health check خودکار برمی‌گرداند.
+  همیشه اول با `--dry-run` اجرا کنید. فهرست سایت‌ها: `scripts/deploy/targets.json`
 - هشدار: چند سایت دیگر روی همین سرور بالاست — هرگز pm2 restart all و دستکاری دیتابیس سایر سایت‌ها انجام نشود.
 
 ## env های حیاتی (هر دیپلوی جدا)

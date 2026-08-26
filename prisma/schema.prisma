@@ -1726,3 +1726,57 @@ enum PageTemplate {
   FAQ /// سوالات متداول: آکاردئون + اسکیمای FAQPage
   LEGAL /// قوانین/حریم خصوصی: فهرست مطالب چسبان
 }
+
+/// ─── گزارش عملکرد ادمین ────────────────────────────────────────────────────
+/// هر تغییری که یک ادمین در پنل انجام می‌دهد اینجا ثبت می‌شود تا بعداً
+/// قابل استناد باشد: «محصول را گذاشتم و نیست» یا «عکس را عوض کردم» با
+/// همین جدول قابل راستی‌آزمایی است.
+///
+/// نام و شماره‌ی ادمین **در لحظه‌ی ثبت** کپی می‌شوند تا اگر بعداً حساب حذف
+/// یا تغییر نام داد، گزارش‌های قدیمی همچنان خوانا بمانند.
+model ActivityLog {
+  id          String         @id @default(cuid())
+  actorId     String?
+  actorName   String
+  actorPhone  String?
+  action      ActivityAction
+  entity      ActivityEntity
+  entityId    String?
+  entityTitle String?
+  /// خلاصه‌ی یک‌خطی و خوانا برای نمایش در فهرست
+  summary     String?
+  /// آرایه‌ی تغییرات: [{ field, label, before, after }]
+  changes     Json?
+  ip          String?
+  createdAt   DateTime       @default(now())
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([entity, entityId])
+  @@index([action, createdAt])
+}
+
+enum ActivityAction {
+  CREATE
+  UPDATE
+  DELETE
+  BULK_UPDATE
+  UPLOAD
+  LOGIN
+}
+
+enum ActivityEntity {
+  PRODUCT
+  CATEGORY
+  BRAND
+  MEDIA
+  WIDGET
+  PAGE
+  ORDER
+  STORY
+  HERO_SLIDE
+  BLOG
+  USER
+  SETTINGS
+  OTHER
+}
