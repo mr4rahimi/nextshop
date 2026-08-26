@@ -138,15 +138,12 @@ export default function BulkEditPage() {
           }),
         });
       } else if (editMode === "status") {
-        await Promise.all(
-          selectedIds.map(id =>
-            fetch(`/api/admin/products/${id}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ isActive: statusValue }),
-            })
-          )
-        );
+        // اندپوینت اختصاصی — PUT محصول گالری و مشخصات فنی را جایگزین می‌کند
+        await fetch("/api/admin/products/bulk-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: selectedIds, isActive: statusValue }),
+        });
       }
 
       alert(`${toFa(selectedIds.length)} محصول با موفقیت بروزرسانی شد`);

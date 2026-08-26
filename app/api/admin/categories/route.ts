@@ -1,5 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logActivityAsync, diffFields, summarizeChanges } from "@/lib/activity";
+
+/** فیلدهای دسته‌بندی که تغییرشان در گزارش ثبت می‌شود */
+const CATEGORY_FIELDS = {
+  title:          { label: "عنوان" },
+  slug:           { label: "نشانی (slug)" },
+  imageUrl:       { label: "تصویر دسته", kind: "image" as const },
+  description:    { label: "توضیحات" },
+  seoTitle:       { label: "عنوان سئو" },
+  seoDescription: { label: "توضیح سئو" },
+  isActive:       { label: "وضعیت نمایش", kind: "bool" as const },
+  parentId:       { label: "دسته‌ی والد" },
+  sortOrder:      { label: "ترتیب" },
+};
+
+
 
 // GET
 export async function GET() {
@@ -25,12 +41,23 @@ export async function POST(req: Request) {
     },
   });
 
+  logActivityAsync({
+    action: "CREATE",
+    entity: "CATEGORY",
+    entityId: category.id,
+    entityTitle: category.title,
+    summary: `دسته‌بندی «${category.title}» ایجاد شد`,
+    changes: [{ field: "imageUrl", label: "تصویر دسته", kind: "image", before: null, after: category.imageUrl }],
+  });
+
   return NextResponse.json(category);
 }
 
 // PUT (Update)
 export async function PUT(req: Request) {
   const data = await req.json();
+
+  const before = await prisma.category.findUnique({ where: { id: data.id } });
 
   const category = await prisma.category.update({
     where: { id: data.id },
@@ -53,6 +80,20 @@ export async function PUT(req: Request) {
         : { disconnect: true },
     },
   });
+
+  if (before) {
+    const changes = diffFields(before as never, data, CATEGORY_FIELDS);
+    if (changes.length > 0) {
+      logActivityAsync({
+        action: "UPDATE",
+        entity: "CATEGORY",
+        entityId: category.id,
+        entityTitle: category.title,
+        summary: summarizeChanges(changes),
+        changes,
+      });
+    }
+  }
 
   return NextResponse.json(category);
 }
@@ -80,6 +121,17 @@ export async function DELETE(req: Request) {
     );
   }
 
+  const before = await prisma.category.findUnique({ where: { id } });
   await prisma.category.delete({ where: { id } });
+
+  logActivityAsync({
+    action: "DELETE",
+    entity: "CATEGORY",
+    entityId: id,
+    entityTitle: before?.title ?? id,
+    summary: `دسته‌بندی «${before?.title ?? id}» حذف شد`,
+    changes: [{ field: "imageUrl", label: "تصویر دسته", kind: "image", before: before?.imageUrl ?? null, after: null }],
+  });
+
   return NextResponse.json({ success: true });
 }

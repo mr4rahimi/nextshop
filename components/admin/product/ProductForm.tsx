@@ -352,6 +352,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
   const [form, setForm]             = useState<FormState>(initialForm ?? EMPTY_FORM);
   const [saving, setSaving]         = useState(false);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [uploadError, setUploadError]   = useState<string | null>(null);
   const [error, setError]           = useState<string | null>(null);
   const [success, setSuccess]       = useState(false);
 
@@ -378,13 +379,51 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
     setForm(prev => ({ ...prev, relatedSettings: { ...prev.relatedSettings, [key]: value } }));
   }
 
+  /**
+   * آپلود یک فایل.
+   *
+   * قبلاً پاسخ بدون بررسی `res.ok` پارس می‌شد؛ هر خطای سرور (فرمت غیرمجاز،
+   * حجم زیاد، ۵۰۰) به `undefined` تبدیل می‌شد و بی‌سروصدا در فرم می‌نشست —
+   * تصویر از فرم غیب می‌شد بدون اینکه کاربر بفهمد چرا. حالا خطا پرتاب می‌شود.
+   */
   async function upload(file: File, key: string): Promise<string> {
     setUploadingKey(key);
     try {
       const fd = new FormData(); fd.append("file", file);
       const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-      return (await res.json()).url as string;
+
+      if (!res.ok) {
+        // بدنه‌ی خطا ممکن است JSON نباشد (مثلاً صفحه‌ی ۴۱۳ خود nginx)
+        let msg = `آپلود ناموفق (کد ${res.status})`;
+        if (res.status === 413) msg = "حجم فایل از سقف مجاز سرور بیشتر است.";
+        try {
+          const body = await res.json();
+          if (body?.error) msg = body.error;
+        } catch {}
+        throw new Error(msg);
+      }
+
+      const body = await res.json();
+      if (typeof body?.url !== "string" || !body.url) {
+        throw new Error("سرور نشانی فایل را برنگرداند — آپلود انجام نشد.");
+      }
+      return body.url as string;
     } finally { setUploadingKey(null); }
+  }
+
+  /**
+   * پوسته‌ی امن `upload` برای هندلرهای onChange.
+   * خطا را روی فرم نشان می‌دهد و `null` برمی‌گرداند تا فراخوان مقدار
+   * نامعتبر را در state ننشاند.
+   */
+  async function tryUpload(file: File, key: string): Promise<string | null> {
+    setUploadError(null);
+    try {
+      return await upload(file, key);
+    } catch (err: any) {
+      setUploadError(err?.message || "آپلود ناموفق بود.");
+      return null;
+    }
   }
 
   function addStr(key: "summaryFeatures" | "features" | "colors" | "images") {
@@ -428,7 +467,14 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error((await res.text()) || `خطا: ${res.status}`);
+      if (!res.ok) {
+        let msg = `ذخیره ناموفق بود (کد ${res.status})`;
+        try {
+          const body = await res.json();
+          if (body?.error) msg = body.error;
+        } catch {}
+        throw new Error(msg);
+      }
       setSuccess(true);
       setTimeout(() => router.push("/admin/products"), 1500);
     } catch (err: any) {
@@ -452,8 +498,8 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
               <input type="file" accept="image/*" className="hidden"
                 onChange={async e => {
                   if (!e.target.files?.[0]) return;
-                  const url = await upload(e.target.files[0], fieldKey);
-                  set(fieldKey as any, url);
+                  const url = await tryUpload(e.target.files[0], fieldKey);
+                  if (url) set(fieldKey as any, url);
                 }} />
             </label>
             {value && (
@@ -513,6 +559,20 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           {error}
+        </div>
+      )}
+      {}
+      {uploadError && (
+        <div
+          role="alert"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-lg w-[calc(100%-2rem)] flex items-start gap-3 p-4 rounded-2xl shadow-xl bg-red-600 text-white text-sm font-bold"
+        >
+          <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="flex-1 leading-6 font-normal">{uploadError}</span>
+          <button type="button" onClick={() => setUploadError(null)}
+            className="flex-shrink-0 w-6 h-6 rounded-lg hover:bg-white/20 transition-colors">×</button>
         </div>
       )}
       {success && (
@@ -625,7 +685,8 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
                     <input type="file" accept="image/*" className="hidden"
                       onChange={async e => {
                         if (!e.target.files?.[0]) return;
-                        updateStr("images", i, await upload(e.target.files[0], `gallery-${i}`));
+                        const url = await tryUpload(e.target.files[0], `gallery-${i}`);
+                        if (url) updateStr("images", i, url);
                       }} />
                   </label>
                   <button type="button" onClick={() => removeStr("images", i)}
@@ -649,7 +710,8 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
                   <input type="file" accept="image/*" className="hidden"
                     onChange={async e => {
                       if (!e.target.files?.[0]) return;
-                      set("images", [...form.images, await upload(e.target.files[0], `gallery-new-${Date.now()}`)]);
+                      const url = await tryUpload(e.target.files[0], `gallery-new-${Date.now()}`);
+                      if (url) set("images", [...form.images, url]);
                     }} />
                 </label>
               </div>
@@ -715,10 +777,18 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
                         fd.append("file", e.target.files[0]);
                         fd.append("type", "download");
                         setUploadingKey("download");
+                        setUploadError(null);
                         try {
                           const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-                          const data = await res.json();
-                          if (data.url) set("downloadUrl", data.url);
+                          let data: any = null;
+                          try { data = await res.json(); } catch {}
+                          if (!res.ok || !data?.url) {
+                            setUploadError(data?.error || `آپلود فایل ناموفق (کد ${res.status})`);
+                          } else {
+                            set("downloadUrl", data.url);
+                          }
+                        } catch {
+                          setUploadError("ارتباط با سرور برقرار نشد — فایل آپلود نشد.");
                         } finally { setUploadingKey(null); }
                       }} />
                   </label>

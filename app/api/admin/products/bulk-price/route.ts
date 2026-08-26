@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { logActivityAsync } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -43,6 +44,15 @@ export async function POST(req: Request) {
       data: { price: newPrice, salePrice: newSalePrice },
     });
   }));
+
+  logActivityAsync({
+    action: "BULK_UPDATE",
+    entity: "PRODUCT",
+    entityTitle: `${products.length} محصول`,
+    summary: `قیمت ${products.length} محصول به‌صورت گروهی تغییر کرد ` +
+      `(${type === "percent" ? `${value}٪` : `${value} تومان`})`,
+    changes: [{ field: "price", label: "قیمت", kind: "price", before: null, after: `${type}: ${value}` }],
+  });
 
   return NextResponse.json({ success: true, count: products.length });
 }

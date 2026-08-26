@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { signToken, setAuthCookie, verifyPassword } from "@/lib/auth";
+import { logActivityAsync } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,21 @@ export async function POST(req: Request) {
     }
     const token = await signToken({ userId: user.id, phone: user.phone, role: user.role });
     await setAuthCookie(token);
+
+    // کوکی تازه ست شده و هنوز در همین درخواست خوانده نمی‌شود — actor دستی می‌رود
+    logActivityAsync({
+      action: "LOGIN",
+      entity: "USER",
+      entityId: user.id,
+      entityTitle: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.phone,
+      summary: "ورود به پنل مدیریت",
+      actor: {
+        id: user.id,
+        name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.phone,
+        phone: user.phone,
+      },
+    });
+
     return NextResponse.json({ success: true });
   } catch (e) {
     return NextResponse.json({ error: "خطای سرور" }, { status: 500 });

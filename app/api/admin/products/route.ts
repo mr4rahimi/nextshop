@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { NextResponse } from "next/server";
 import { submitToIndexNow, productUrl } from "@/lib/indexnow";
+import { logActivityAsync } from "@/lib/activity";
  
 // ─── GET /api/admin/products ──────────────────────────────────────────────────
 export const runtime = "nodejs";
@@ -81,8 +82,21 @@ export async function GET(req: Request) {
 // ─── POST /api/admin/products ─────────────────────────────────────────────────
 export async function POST(req: Request) {
   const body = await req.json();
- 
-  const product = await prisma.product.create({
+
+  // نشانی تصویر باید رشته‌ی ناتهی باشد؛ null در آرایه یعنی آپلود ناتمام
+  const galleryUrls: string[] = (Array.isArray(body.images) ? body.images : []).filter(
+    (u: unknown): u is string => typeof u === "string" && u.trim() !== "",
+  );
+  if (Array.isArray(body.images) && galleryUrls.length !== body.images.length) {
+    return NextResponse.json(
+      { error: "بعضی تصاویر گالری نشانی معتبر ندارند (احتمالاً آپلودشان کامل نشده). محصول ذخیره نشد." },
+      { status: 400 },
+    );
+  }
+
+  let product;
+  try {
+  product = await prisma.product.create({
     data: {
       title:             body.title,
       slug:              body.slug,
@@ -130,7 +144,7 @@ export async function POST(req: Request) {
       mpn:    body.mpn    || null,
  
       images: {
-        create: (body.images || []).map((url: string, index: number) => ({
+        create: galleryUrls.map((url: string, index: number) => ({
           url,
           sortOrder: index,
         })),
@@ -148,9 +162,33 @@ export async function POST(req: Request) {
       specs:  { include: { specItem: true } },
     },
   });
- 
+  } catch (e: any) {
+    console.error("[products POST] ایجاد محصول شکست خورد:", e?.code, e?.message);
+    if (e?.code === "P2002") {
+      return NextResponse.json(
+        { error: "نشانی (slug) این محصول تکراری است. عنوان یا نشانی را تغییر دهید." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: "ایجاد محصول انجام نشد." }, { status: 500 });
+  }
+
   // اعلام محصول جدید به IndexNow (Bing/Yandex) بدون معطل کردن پاسخ
   void submitToIndexNow([productUrl(product.slug)]);
+
+  logActivityAsync({
+    action: "CREATE",
+    entity: "PRODUCT",
+    entityId: product.id,
+    entityTitle: product.title,
+    summary: `محصول «${product.title}» ایجاد شد`
+      + (product.mainImage ? " (با تصویر اصلی)" : " — بدون تصویر اصلی"),
+    changes: [
+      { field: "mainImage", label: "تصویر اصلی", kind: "image", before: null, after: product.mainImage },
+      { field: "images", label: "گالری تصاویر", kind: "images", before: [], after: product.images.map((i) => i.url) },
+      { field: "price", label: "قیمت", kind: "price", before: null, after: product.price.toString() },
+    ],
+  });
 
   return NextResponse.json(serialize(product));
 }

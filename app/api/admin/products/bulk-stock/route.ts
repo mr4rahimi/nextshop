@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { logActivityAsync } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -40,6 +41,15 @@ export async function POST(req: Request) {
       });
     }));
   }
+
+  logActivityAsync({
+    action: "BULK_UPDATE",
+    entity: "PRODUCT",
+    entityTitle: `${ids.length} محصول`,
+    summary: `موجودی ${ids.length} محصول به‌صورت گروهی ` +
+      (type === "set" ? `روی ${value} تنظیم شد` : type === "increase" ? `${value} واحد زیاد شد` : `${value} واحد کم شد`),
+    changes: [{ field: "stock", label: "موجودی", before: null, after: `${type}: ${value}` }],
+  });
 
   return NextResponse.json({ success: true, count: ids.length });
 }

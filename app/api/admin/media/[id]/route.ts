@@ -3,6 +3,7 @@ import { serialize } from "@/lib/serialize";
 import { NextResponse } from "next/server";
 import { unlink } from "fs/promises";
 import path from "path";
+import { logActivityAsync } from "@/lib/activity";
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -27,5 +28,15 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   } catch {}
 
   await prisma.mediaFile.delete({ where: { id } });
+
+  logActivityAsync({
+    action: "DELETE",
+    entity: "MEDIA",
+    entityId: id,
+    entityTitle: media.originalName || media.fileName,
+    summary: `فایل «${media.originalName || media.fileName}» از کتابخانه رسانه حذف شد`,
+    changes: [{ field: "url", label: "فایل", kind: "image", before: media.url, after: null }],
+  });
+
   return NextResponse.json({ success: true });
 }
