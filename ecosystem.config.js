@@ -24,7 +24,8 @@ module.exports = {
     },
     {
       name: "mymonta-worker",
-      script: "node_modules/.bin/tsx",
+      // مسیر مستقیم cli — pm2 اسکریپت پوسته‌ای .bin/tsx را به‌عنوان JS اجرا می‌کند و می‌شکند
+      script: "node_modules/tsx/dist/cli.mjs",
       args: "workers/index.ts",
       cwd: __dirname,
       instances: 1,

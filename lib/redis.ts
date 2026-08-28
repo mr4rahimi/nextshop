@@ -49,6 +49,10 @@ export const isRedisEnabled = redis !== null;
 export async function pingRedis(): Promise<boolean> {
   if (!redis) return false;
   try {
+    // با lazyConnect کلاینت تا اولین connect() در وضعیت "wait" می‌ماند و چون
+    // enableOfflineQueue خاموش است، ping بدون اتصال بلافاصله رد می‌شود —
+    // نتیجه‌اش این بود که ورکر با Redis سالم هم بالا نمی‌آمد.
+    if (redis.status === "wait") await redis.connect();
     return (await redis.ping()) === "PONG";
   } catch {
     return false;
