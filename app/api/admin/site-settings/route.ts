@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizeGlassConfig, normalizeVariant } from "@/components/layout/headers/registry";
 import { normalizeGridMode } from "@/lib/productGrid";
+import { normalizeAnnouncementBar } from "@/lib/announcementBar";
 
 export const runtime = "nodejs";
 
@@ -75,6 +76,9 @@ export async function PUT(req: Request) {
   // ظاهر — چیدمان لیست محصولات
   if (data.productGridMobile !== undefined)
     updateData.productGridMobile = normalizeGridMode(data.productGridMobile);
+  // ظاهر — نوار اعلان بالای سایت
+  if (data.announcementBar !== undefined)
+    updateData.announcementBar = normalizeAnnouncementBar(data.announcementBar);
 
   const s = await prisma.storeSettings.upsert({
     where: { id: "singleton" },

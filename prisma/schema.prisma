@@ -612,6 +612,7 @@ model StoreSettings {
   headerGlassConfig        Json?
   productGridMobile        String   @default("single")
   chatSettings             Json?
+  announcementBar          Json? // نوار اعلان بالای سایت — lib/announcementBar.ts
   updatedAt                DateTime @updatedAt
 
   clubEnabled          Boolean @default(false)

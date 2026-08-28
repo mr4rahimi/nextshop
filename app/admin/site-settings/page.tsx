@@ -8,6 +8,12 @@ import {
   hexToRgbChannels as hexToRgb,
   type GlassHeaderConfig,
 } from "@/components/layout/headers/registry";
+import {
+  DEFAULT_ANNOUNCEMENT_BAR,
+  ANNOUNCEMENT_TEXT_MAX,
+  normalizeAnnouncementBar,
+  type AnnouncementBarConfig,
+} from "@/lib/announcementBar";
 
 interface SiteSettings {
   storeName: string; storeLogo: string; siteFavicon: string;
@@ -37,6 +43,7 @@ interface SiteSettings {
   homeHeaderVariant: string;
   mobileMenuGlass: boolean;
   headerGlassConfig: GlassHeaderConfig;
+  announcementBar: AnnouncementBarConfig;
   productGridMobile: string;
   paymentGatewayProvider: string;
   paymentGatewayMerchant: string;
@@ -62,11 +69,12 @@ const EMPTY: SiteSettings = {
   homeHeaderVariant: "DEFAULT",
   mobileMenuGlass: false,
   headerGlassConfig: { ...DEFAULT_GLASS_CONFIG },
+  announcementBar: { ...DEFAULT_ANNOUNCEMENT_BAR },
   productGridMobile: "single",
   paymentGatewayProvider: "", paymentGatewayMerchant: "", paymentGatewayActive: false, paymentGatewaySandbox: false,
 };
 
-type Tab = "general" | "social" | "advanced" | "sms" | "wallet" | "gateway" | "header" | "products";
+type Tab = "general" | "social" | "advanced" | "sms" | "wallet" | "gateway" | "header" | "announcement" | "products";
 
 export default function AdminSiteSettingsPage() {
   const [settings, setSettings] = useState<SiteSettings>({ ...EMPTY });
@@ -119,6 +127,7 @@ export default function AdminSiteSettingsPage() {
         homeHeaderVariant: d.homeHeaderVariant ?? "DEFAULT",
         mobileMenuGlass: d.mobileMenuGlass ?? false,
         headerGlassConfig: normalizeGlassConfig(d.headerGlassConfig),
+        announcementBar: normalizeAnnouncementBar(d.announcementBar),
         productGridMobile: d.productGridMobile === "double" ? "double" : "single",
         paymentGatewayProvider: d.paymentGatewayProvider ?? "",
         paymentGatewayMerchant: d.paymentGatewayMerchant ?? "",
@@ -142,6 +151,11 @@ export default function AdminSiteSettingsPage() {
 
   function set(key: keyof SiteSettings, val: string | boolean) {
     setSettings(s => ({ ...s, [key]: val }));
+  }
+
+  /** تغییر یکی از کلیدهای نوار اعلان */
+  function setAnn<K extends keyof AnnouncementBarConfig>(key: K, val: AnnouncementBarConfig[K]) {
+    setSettings(s => ({ ...s, announcementBar: { ...s.announcementBar, [key]: val } }));
   }
 
   /** تغییر یکی از کلیدهای تنظیمات ظاهری هدر شیشه‌ای */
@@ -198,6 +212,7 @@ export default function AdminSiteSettingsPage() {
           { key: "wallet", label: "کیف پول" },
           { key: "gateway", label: "درگاه پرداخت" },
           { key: "header", label: "هدر سایت" },
+          { key: "announcement", label: "نوار اعلان" },
           { key: "products", label: "نمایش محصولات" },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as Tab)}
@@ -880,6 +895,182 @@ export default function AdminSiteSettingsPage() {
                 (چون این هدر مگامنوی دسکتاپ ندارد). در هدر پیش‌فرض و هدر شیشه‌ای، منوی کشویی فقط در موبایل فعال است.
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "announcement" && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5">
+            <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
+              <span className="w-1.5 h-5 bg-blue-600 rounded-full" />
+              نوار اعلان بالای سایت
+            </h3>
+            <p className="text-xs text-gray-400 -mt-2 leading-relaxed">
+              یک نوار باریک بالاتر از لوگو و هدر، روی همه‌ی صفحات سایت. مناسب اعلان‌های موقت
+              مثل «قیمت‌ها نوسان دارد، قبل از سفارش تماس بگیرید». کاربر می‌تواند با ضربدر
+              آن را ببندد و تا وقتی متن اعلان را عوض نکنید دیگر به او نشان داده نمی‌شود.
+            </p>
+
+            <label className="flex items-center justify-between gap-4 p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 cursor-pointer hover:border-gray-300 dark:hover:border-white/20 transition-all">
+              <span className="min-w-0">
+                <span className="block text-sm font-black text-gray-900 dark:text-white">نمایش نوار اعلان</span>
+                <span className="block text-[11px] text-gray-500 mt-1 leading-relaxed">
+                  با خاموش کردن این گزینه، نوار از همه‌ی صفحات برداشته می‌شود و متن آن حفظ می‌ماند.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={settings.announcementBar.enabled}
+                onChange={e => setAnn("enabled", e.target.checked)}
+                className="w-5 h-5 rounded flex-shrink-0"
+                style={{ accentColor: "#2563eb" }}
+              />
+            </label>
+
+            <div>
+              <label className={lbl}>متن اعلان</label>
+              <textarea
+                value={settings.announcementBar.text}
+                onChange={e => setAnn("text", e.target.value.slice(0, ANNOUNCEMENT_TEXT_MAX))}
+                rows={2}
+                maxLength={ANNOUNCEMENT_TEXT_MAX}
+                placeholder="مثال: قیمت‌ها نوسان دارد و ممکن است بروز نباشد؛ لطفاً قبل از سفارش تماس بگیرید."
+                className={inp}
+              />
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-[11px] text-gray-400">
+                  متن خالی یعنی نوار نمایش داده نمی‌شود. تغییر متن، نوار را دوباره به کاربرانی که بسته بودند نشان می‌دهد.
+                </p>
+                <span className="text-[11px] text-gray-400 flex-shrink-0">
+                  {settings.announcementBar.text.length} / {ANNOUNCEMENT_TEXT_MAX}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label className={lbl}>لینک (اختیاری)</label>
+              <input
+                type="text"
+                value={settings.announcementBar.linkUrl}
+                onChange={e => setAnn("linkUrl", e.target.value)}
+                placeholder="/contact یا https://..."
+                className={inp}
+                dir="ltr"
+              />
+              <p className="text-[11px] text-gray-400 mt-1">
+                اگر پر باشد، متن اعلان کلیک‌پذیر می‌شود. فقط نشانی داخلی (شروع با /) یا http(s) پذیرفته می‌شود.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {([
+                { key: "bgColor" as const,   label: "رنگ پس‌زمینه" },
+                { key: "textColor" as const, label: "رنگ متن" },
+              ]).map(f => (
+                <div key={f.key}>
+                  <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">{f.label}</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={settings.announcementBar[f.key]}
+                      onChange={e => setAnn(f.key, e.target.value)}
+                      className="w-10 h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent cursor-pointer flex-shrink-0"
+                    />
+                    <input
+                      type="text"
+                      value={settings.announcementBar[f.key]}
+                      onChange={e => setAnn(f.key, e.target.value)}
+                      className={inp}
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: "آبی", bg: "#1e40af", fg: "#ffffff" },
+                { label: "قرمز هشدار", bg: "#b91c1c", fg: "#ffffff" },
+                { label: "کهربایی", bg: "#b45309", fg: "#ffffff" },
+                { label: "سبز", bg: "#047857", fg: "#ffffff" },
+                { label: "مشکی", bg: "#111827", fg: "#ffffff" },
+              ].map(p => (
+                <button key={p.bg} type="button"
+                  onClick={() => { setAnn("bgColor", p.bg); setAnn("textColor", p.fg); }}
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-black border border-gray-200 dark:border-gray-700"
+                  style={{ background: p.bg, color: p.fg }}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            <label className="flex items-center justify-between gap-4 p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 cursor-pointer hover:border-gray-300 dark:hover:border-white/20 transition-all">
+              <span className="min-w-0">
+                <span className="block text-sm font-black text-gray-900 dark:text-white">قابل بستن توسط کاربر</span>
+                <span className="block text-[11px] text-gray-500 mt-1 leading-relaxed">
+                  دکمه‌ی ضربدر کنار نوار نمایش داده می‌شود. اگر خاموش باشد، نوار برای همه باقی می‌ماند.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={settings.announcementBar.dismissible}
+                onChange={e => setAnn("dismissible", e.target.checked)}
+                className="w-5 h-5 rounded flex-shrink-0"
+                style={{ accentColor: "#2563eb" }}
+              />
+            </label>
+
+            <label className="flex items-center justify-between gap-4 p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 cursor-pointer hover:border-gray-300 dark:hover:border-white/20 transition-all">
+              <span className="min-w-0">
+                <span className="block text-sm font-black text-gray-900 dark:text-white">چسبان بالای صفحه</span>
+                <span className="block text-[11px] text-gray-500 mt-1 leading-relaxed">
+                  نوار همراه هدر بالای صفحه می‌ماند و با اسکرول از بین نمی‌رود. اگر خاموش باشد،
+                  فقط در ابتدای صفحه دیده می‌شود و با اسکرول بالا می‌رود.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={settings.announcementBar.sticky}
+                onChange={e => setAnn("sticky", e.target.checked)}
+                className="w-5 h-5 rounded flex-shrink-0"
+                style={{ accentColor: "#2563eb" }}
+              />
+            </label>
+          </div>
+
+          {/* پیش‌نمایش */}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-3">
+            <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
+              <span className="w-1.5 h-5 bg-blue-600 rounded-full" />
+              پیش‌نمایش
+            </h3>
+            <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+              <div
+                className="relative flex items-center justify-center px-10 py-1.5 min-h-9 text-center"
+                style={{ background: settings.announcementBar.bgColor, color: settings.announcementBar.textColor }}
+              >
+                <span className="text-[13px] font-bold">
+                  {settings.announcementBar.text || "متن اعلان اینجا نمایش داده می‌شود"}
+                </span>
+                {settings.announcementBar.dismissible && (
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 opacity-70">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </span>
+                )}
+              </div>
+              <div className="h-14 bg-gray-100 dark:bg-gray-800 flex items-center px-4 text-[11px] font-black text-gray-400">
+                ← اینجا هدر سایت (لوگو، جستجو، سبد خرید) قرار می‌گیرد
+              </div>
+            </div>
+            {!settings.announcementBar.enabled && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold">
+                نوار در حال حاضر خاموش است و روی سایت دیده نمی‌شود.
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -11,6 +11,7 @@
 | سند | محتوا |
 |-----|-------|
 | [راهنمای پروژه](guide/project-guide.md) | معماری کلی، مولتی‌دیپلوی، قراردادهای کد |
+| [استقرار](guide/deployment.md) | فهرست سایت‌ها، روند آپدیت، راه‌اندازی سرور جدید از صفر، SSL، عیب‌یابی |
 
 ## قابلیت‌ها
 
@@ -20,6 +21,7 @@
 | [سئو](features/seo.md) | متادیتا، اسکیما، sitemap، robots، صفحات فرود |
 | [چیدمان لیست محصولات](features/product-grid.md) | تک‌ستونه/دوستونه موبایل، `ProductLayoutContext` |
 | [هدر شیشه‌ای](features/glass-header.md) | سیستم هدرها، `registry.ts`، تنظیمات ظاهری |
+| [نوار اعلان](features/announcement-bar.md) | نوار باریک بالای همه‌ی صفحات، بستن توسط کاربر، ظرف چسبان مشترک با هدر |
 | [برگه‌های ثابت](features/pages.md) | پنل `/admin/pages` — قالب‌ها، شروع سریع، مسیر `/{slug}`، استایل محتوا |
 | [گزارش عملکرد ادمین](features/activity-reports.md) | پنل `/admin/reports` — `ActivityLog`، diff «قبل ← بعد»، نمودارها |
 
