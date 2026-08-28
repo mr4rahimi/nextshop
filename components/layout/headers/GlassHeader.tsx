@@ -49,6 +49,14 @@ const CSS = `
 html body:has(.ghd-root){background-color:#f3f4f6}
 html.dark body:has(.ghd-root){background-color:#050505}
 
+/* جلوگیری از لوپ باز/بسته شدن ردیف دوم:
+   هدر sticky ولی «در جریان صفحه» است؛ با جمع‌شدن ردیف دوم، ارتفاع محتوای بالای ویوپورت کم می‌شود و
+   مرورگر با scroll anchoring مقدار scrollY را به همان اندازه کم می‌کند. کد این را «اسکرول رو به بالا»
+   می‌دید، ردیف را باز می‌کرد، scrollY دوباره زیاد می‌شد و چرخه با سرعت بالا تکرار می‌شد.
+   با خاموش‌کردن anchoring روی صفحه‌ای که هدر شیشه‌ای دارد، موقعیت اسکرول ثابت می‌ماند. */
+html:has(.ghd-root){overflow-anchor:none}
+.ghd-root{overflow-anchor:none}
+
 .ghd-root{
   position:sticky;top:0;z-index:40;
   /* clip (نه hidden) تا سرریز افقی به صفحه منتقل نشود ولی نتایج جستجو بتوانند عمودی بیرون بزنند */
@@ -161,24 +169,62 @@ export default function GlassHeader({
   const [navH, setNavH] = useState<number | null>(null);
   const lastY = useRef(0);
   const navWrapRef = useRef<HTMLDivElement>(null);
+  // آینه‌ی ref از state ها: داخل listener بدون وابستگی و بدون ثبت دوباره خوانده می‌شوند
+  const scrolledRef = useRef(false);
+  const navHiddenRef = useRef(false);
+  // تا این زمان (ms) رویدادهای اسکرول فقط baseline را بروز می‌کنند و حالت را عوض نمی‌کنند
+  const lockUntil = useRef(0);
 
   useEffect(() => {
-    const SHOW_ABOVE = 90; // بالاتر از این نقطه، منو همیشه باز است
-    const DELTA = 6;       // حداقل جابه‌جایی برای تشخیص جهت (لرزش اسکرول را نادیده می‌گیرد)
+    const SHOW_ABOVE = 90;  // بالاتر از این نقطه، منو همیشه باز است
+    const DELTA = 6;        // حداقل جابه‌جایی برای تشخیص جهت (لرزش اسکرول را نادیده می‌گیرد)
+    const ENTER = 72;       // آستانه‌ی رفتن به حالت «اسکرول‌شده»
+    const EXIT = 24;        // آستانه‌ی برگشت به حالت «بالای صفحه» (هیسترزیس، تا دور آستانه نلرزد)
+    const LOCK = 520;       // کمی بیشتر از طول انیمیشن (۴۵۰ms)
+
+    const lock = () => {
+      lockUntil.current = performance.now() + LOCK;
+    };
 
     const onScroll = () => {
       const y = window.scrollY;
-      setScrolled(y > 40);
 
-      if (y <= SHOW_ABOVE) {
-        setNavHidden(false);
+      // در حین انیمیشنِ جمع/باز شدن، ارتفاع هدر عوض می‌شود و مرورگر ممکن است scrollY را جابه‌جا کند؛
+      // این حرکت «مصنوعی» نباید حالت را عوض کند، فقط baseline را بروز می‌کنیم.
+      if (performance.now() < lockUntil.current) {
         lastY.current = y;
         return;
       }
+
+      const nextScrolled = scrolledRef.current ? y > EXIT : y > ENTER;
+      if (nextScrolled !== scrolledRef.current) {
+        scrolledRef.current = nextScrolled;
+        setScrolled(nextScrolled);
+        lastY.current = y;
+        lock();
+        return;
+      }
+
+      if (y <= SHOW_ABOVE) {
+        if (navHiddenRef.current) {
+          navHiddenRef.current = false;
+          setNavHidden(false);
+          lock();
+        }
+        lastY.current = y;
+        return;
+      }
+
       const diff = y - lastY.current;
       if (Math.abs(diff) < DELTA) return;
-      setNavHidden(diff > 0);
       lastY.current = y;
+
+      const next = diff > 0;
+      if (next !== navHiddenRef.current) {
+        navHiddenRef.current = next;
+        setNavHidden(next);
+        lock();
+      }
     };
 
     lastY.current = window.scrollY;
