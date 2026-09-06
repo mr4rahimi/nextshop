@@ -236,7 +236,13 @@ export class SnappShopAdapter extends BaseAdapter {
       const end   = SnappShopAdapter.fmtDate(discount.endsAt);
       if (start) body.special_price_start_at = start;
       if (end)   body.special_price_end_at   = end;
-      if (discount.stock != null) body.special_price_stock = discount.stock;
+      // موجودی تخفیف هرگز نباید از موجودی کل بیشتر باشد؛ اسنپ‌شاپ کل درخواست را
+      // با ۴۲۲ روی `products.N.special_price_stock` رد می‌کند. مقدار از snapshot
+      // قبلی می‌آمد و وقتی موجودی کم می‌شد بزرگ‌تر از stock جدید باقی می‌ماند —
+      // در لاگ پروداکشن ۱۲۵ بار در هفته همین خطا ثبت شده بود.
+      if (discount.stock != null) {
+        body.special_price_stock = Math.max(0, Math.min(discount.stock, stock));
+      }
     }
     return body;
   }
@@ -467,22 +473,28 @@ export class SnappShopAdapter extends BaseAdapter {
       }
     }
 
-    // ذخیره cursor برای دور بعد (فید یک‌طرفه است)
-    const nextCursor = pg.next_cursor;
-    if (nextCursor) {
-      const conn = await prisma.integConnection.findFirst({
-        where:  { platformCode: this.platformCode },
-        select: { id: true, config: true },
-      });
-      if (conn) {
-        const cfg = (conn.config ?? {}) as Record<string, unknown>;
-        await prisma.integConnection.update({
-          where: { id: conn.id },
-          data:  { config: { ...cfg, ordersCursor: nextCursor } as never },
-        }).catch(() => {});
-      }
-    }
+    // مکان‌نما اینجا ذخیره نمی‌شود — فید یک‌طرفه است و اگر پیش از ذخیره‌ی
+    // سفارش‌ها جلو برود، هر شکستی وسط پردازش یعنی گم شدن دائمی آن سفارش‌ها.
+    // هسته بعد از ثبت موفق ردیف‌ها commitOrdersCursor را صدا می‌زند.
+    return { items, hasMore: pg.has_more === true, cursor: pg.next_cursor, cancelledOrderIds };
+  }
 
-    return { items, hasMore: pg.has_more === true, cursor: nextCursor, cancelledOrderIds };
+  /** تثبیت مکان‌نمای فید — بعد از ذخیره‌ی موفق سفارش‌های همان صفحه. */
+  async commitOrdersCursor(
+    _credentials: Record<string, string>,
+    cursor: string,
+  ): Promise<void> {
+    if (!cursor) return;
+    const conn = await prisma.integConnection.findFirst({
+      where:  { platformCode: this.platformCode },
+      select: { id: true, config: true },
+    });
+    if (!conn) return;
+
+    const cfg = (conn.config ?? {}) as Record<string, unknown>;
+    await prisma.integConnection.update({
+      where: { id: conn.id },
+      data:  { config: { ...cfg, ordersCursor: cursor } as never },
+    }).catch(() => {});
   }
 }

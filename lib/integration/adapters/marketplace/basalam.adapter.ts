@@ -1,6 +1,7 @@
 import { BaseAdapter } from "../base.adapter";
 import type { FetchOrdersResult, OrderItemInfo } from "@/lib/integration/types";
 import { applyDiscount } from "@/lib/integration/types";
+import { patchConnectionCredentials } from "@/lib/integration/core/credentials";
 
 import type {
   ConnectionTestResult,
@@ -13,6 +14,7 @@ import type {
 
 const OPENAPI_BASE = "https://openapi.basalam.com";
 const CORE_BASE    = "https://core.basalam.com";
+const AUTH_BASE    = "https://auth.basalam.com";
 
 // ── Basalam API response shapes ──────────────────────────────────────
 
@@ -66,6 +68,103 @@ export class BasalamAdapter extends BaseAdapter {
     };
   }
 
+  // ── تازه‌سازی خودکار Access Token ────────────────────────────────
+  // توکن باسلام انقضا دارد (expires_in). تا پیش از این هیچ‌جا refresh نمی‌شد و
+  // بعد از انقضا همه‌ی فراخوانی‌ها با
+  //   HTTP 401 {"errors":[{"message":"authentication error"}], ...}
+  // شکست می‌خوردند — FETCH_ORDERS، FETCH_PRODUCTS و به‌تبع آن ارسال قیمت.
+  // فرم ادمین refreshToken را می‌گرفت ولی آداپتور هرگز استفاده‌اش نمی‌کرد.
+
+  // refreshهای همزمان نباید هرکدام یک توکن جدید بگیرند — باسلام با هر refresh
+  // توکن قبلی را باطل می‌کند، پس دو job همزمان می‌توانستند توکن هم را بسوزانند.
+  // نتیجه‌ی refresh مشترک، «patch» است نه یک boolean: هر فراخوان باید آن را روی
+  // شیء credentials خودش اعمال کند، وگرنه job دومی که منتظر مانده با توکن
+  // منقضی دوباره تلاش می‌کند.
+  private static refreshInFlight: Promise<Record<string, string> | null> | null = null;
+
+  private async refreshAccessToken(
+    credentials: Record<string, string>,
+    persist = true,
+  ): Promise<boolean> {
+    const patch = await (BasalamAdapter.refreshInFlight ??= (async () => {
+      try {
+        const { refreshToken, clientId, clientSecret } = credentials;
+        if (!refreshToken?.trim() || !clientId?.trim() || !clientSecret?.trim()) return null;
+
+        const res = await fetch(`${AUTH_BASE}/oauth/token`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body:    JSON.stringify({
+            grant_type:    "refresh_token",
+            client_id:     clientId,
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
+          }),
+        }).catch(() => null);
+
+        if (!res?.ok) return null;
+
+        const body = await res.json().catch(() => null) as
+          | { access_token?: string; refresh_token?: string }
+          | null;
+        if (!body?.access_token) return null;
+
+        const next: Record<string, string> = { accessToken: body.access_token };
+        if (body.refresh_token) next.refreshToken = body.refresh_token;
+
+        // در «تست اتصال» اعتبارنامه از فرمِ ذخیره‌نشده می‌آید و ممکن است متعلق
+        // به حساب دیگری باشد — نباید روی اتصال زنده نوشته شود.
+        if (persist) await patchConnectionCredentials(this.platformCode, next).catch(() => {});
+        return next;
+      } finally {
+        // آزادسازی در همین microtask تا refresh بعدی (انقضای بعدی) بلوکه نشود
+        BasalamAdapter.refreshInFlight = null;
+      }
+    })());
+
+    if (!patch) return false;
+
+    // نسخه‌ی در حافظه‌ی همین فراخوان هم باید تازه شود، وگرنه تلاش دوباره‌اش
+    // باز هم با توکن منقضی می‌رود.
+    Object.assign(credentials, patch);
+    return true;
+  }
+
+  /** fetch با هدر احراز هویت؛ روی ۴۰۱ یک‌بار توکن را تازه می‌کند و دوباره تلاش می‌کند. */
+  private async authedFetch(
+    credentials: Record<string, string>,
+    url: string,
+    init: Omit<RequestInit, "headers"> = {},
+    persistRefresh = true,
+  ): Promise<Response> {
+    const res = await fetch(url, { ...init, headers: this.headers(credentials.accessToken) });
+    if (res.status !== 401) return res;
+
+    if (!(await this.refreshAccessToken(credentials, persistRefresh))) return res;
+    return fetch(url, { ...init, headers: this.headers(credentials.accessToken) });
+  }
+
+  /**
+   * شناسه‌ی محصول‌هایی که باسلام در متن خطا مقصر معرفی کرده.
+   * نمونه: «... قابل ویرایش نیستند. شناسه: 13088017»
+   */
+  private static blamedIds(detail: string): string[] {
+    const ids = new Set<string>();
+    for (const m of detail.matchAll(/شناسه\s*:?\s*(\d+)/g)) ids.add(m[1]);
+    return [...ids];
+  }
+
+  /** پیام خطای ۴۰۱ با راهنمای عملی — نه فقط بدنه‌ی خام باسلام. */
+  private static authErrorHint(credentials: Record<string, string>): string {
+    const missing: string[] = [];
+    if (!credentials.refreshToken?.trim()) missing.push("Refresh Token");
+    if (!credentials.clientId?.trim())     missing.push("Client ID");
+    if (!credentials.clientSecret?.trim()) missing.push("Client Secret");
+    return missing.length
+      ? ` — توکن باسلام منقضی شده و تجدید خودکار ممکن نیست چون ${missing.join("، ")} در فرم اتصال باسلام وارد نشده است`
+      : " — توکن منقضی شده و تجدید خودکار هم ناموفق بود؛ Refresh Token را در فرم اتصال باسلام دوباره وارد کنید";
+  }
+
   // ── تست اتصال + دریافت vendorId ──────────────────────────────────
 
   async testConnection(
@@ -75,13 +174,12 @@ export class BasalamAdapter extends BaseAdapter {
     if (!accessToken?.trim()) return { success: false, message: "Access Token وارد نشده" };
 
     try {
-      const res = await fetch(`${OPENAPI_BASE}/v1/users/me`, {
-        headers: this.headers(accessToken),
-      });
+      const res = await this.authedFetch(credentials, `${OPENAPI_BASE}/v1/users/me`, {}, false);
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({})) as { message?: string };
-        return { success: false, message: body.message ?? `HTTP ${res.status}` };
+        const hint = res.status === 401 ? BasalamAdapter.authErrorHint(credentials) : "";
+        return { success: false, message: `${body.message ?? `HTTP ${res.status}`}${hint}` };
       }
 
       const info: BasalamUserInfo = await res.json();
@@ -112,16 +210,17 @@ export class BasalamAdapter extends BaseAdapter {
     page = 1,
     pageSize = 50,
   ): Promise<PaginatedProducts> {
-    const { accessToken, vendorId } = credentials;
+    const { vendorId } = credentials;
 
     if (!vendorId) throw new Error("vendorId تنظیم نشده — اتصال را دوباره تست کنید");
 
     const url = `${OPENAPI_BASE}/v1/vendors/${vendorId}/products?page=${page}&per_page=${pageSize}`;
-    const res = await fetch(url, { headers: this.headers(accessToken) });
+    const res = await this.authedFetch(credentials, url);
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({})) as { message?: string };
-      throw new Error(body.message ?? `HTTP ${res.status}`);
+      const hint = res.status === 401 ? BasalamAdapter.authErrorHint(credentials) : "";
+      throw new Error(`${body.message ?? `HTTP ${res.status}`}${hint}`);
     }
 
     const data: BasalamProductsResponse = await res.json();
@@ -219,7 +318,7 @@ export class BasalamAdapter extends BaseAdapter {
     platformProductId: string,
     discount: { percent: number; endsAt?: Date | null },
   ): Promise<void> {
-    const { accessToken, vendorId } = credentials;
+    const { vendorId } = credentials;
     if (!vendorId) return;
 
     const percent = Math.round(discount.percent);
@@ -233,9 +332,8 @@ export class BasalamAdapter extends BaseAdapter {
     }
 
     await this.rateLimit(200);
-    const res = await fetch(`${CORE_BASE}/v3/vendors/${vendorId}/discounts`, {
+    const res = await this.authedFetch(credentials, `${CORE_BASE}/v3/vendors/${vendorId}/discounts`, {
       method:  "POST",
-      headers: this.headers(accessToken),
       body:    JSON.stringify({
         product_filter:   { product_ids: [parseInt(platformProductId, 10)] },
         discount_percent: percent,
@@ -253,8 +351,6 @@ export class BasalamAdapter extends BaseAdapter {
   credentials: Record<string, string>,
   cursor?: string,
 ): Promise<FetchOrdersResult> {
-  const { accessToken } = credentials;
-
   const params = new URLSearchParams({
     statuses: "3739", // فقط سفارش‌های جدید
     per_page: "30",
@@ -262,14 +358,13 @@ export class BasalamAdapter extends BaseAdapter {
   });
   if (cursor) params.set("cursor", cursor);
 
-  const res = await fetch(`${OPENAPI_BASE}/v1/vendor-parcels?${params}`, {
-    headers: this.headers(accessToken),
-  });
+  const res = await this.authedFetch(credentials, `${OPENAPI_BASE}/v1/vendor-parcels?${params}`);
 
   if (!res.ok) {
     const rawText = await res.text().catch(() => "");
     // بدنه کامل خطا برای دیباگ — در لاگ ادمین دیده می‌شود
-    throw new Error(`HTTP ${res.status}: ${rawText.slice(0, 400) || "(بدون بدنه)"}`);
+    const hint = res.status === 401 ? BasalamAdapter.authErrorHint(credentials) : "";
+    throw new Error(`HTTP ${res.status}: ${rawText.slice(0, 400) || "(بدون بدنه)"}${hint}`);
   }
 
   const data = await res.json() as {
@@ -336,7 +431,7 @@ export class BasalamAdapter extends BaseAdapter {
     data: Record<string, unknown>[],
     ids: string[],
   ): Promise<BatchResult> {
-    const { accessToken, vendorId } = credentials;
+    const { vendorId } = credentials;
     if (!vendorId) throw new Error("vendorId تنظیم نشده");
 
     const success: string[] = [];
@@ -349,11 +444,11 @@ export class BasalamAdapter extends BaseAdapter {
       try {
         await this.rateLimit(200);
 
-        const res = await fetch(
+        const res = await this.authedFetch(
+          credentials,
           `${CORE_BASE}/v3/vendors/${vendorId}/products`,
           {
             method:  "PATCH",
-            headers: this.headers(accessToken),
             body:    JSON.stringify({ data: chunk }),
           },
         );
@@ -363,11 +458,14 @@ export class BasalamAdapter extends BaseAdapter {
           let detail = `HTTP ${res.status}`;
           try {
             const body = JSON.parse(rawText) as {
-              message?: string;
-              errors?: { message?: string; fields?: string[] }[];
+              message?:  string;
+              errors?:   { message?: string; fields?: string[] }[];
+              // ۴۲۲ باسلام پیام‌ها را زیر `messages` می‌فرستد نه `errors`
+              messages?: { message?: string; fields?: string[] }[];
             };
-            if (body.errors?.length) {
-              detail = body.errors
+            const list = body.errors?.length ? body.errors : body.messages;
+            if (list?.length) {
+              detail = list
                 .map((e) => `${e.message ?? ""}${e.fields?.length ? ` [${e.fields.join(", ")}]` : ""}`)
                 .join(" | ");
             } else if (body.message) {
@@ -380,6 +478,23 @@ export class BasalamAdapter extends BaseAdapter {
           if (detail === `HTTP ${res.status}` && rawText) {
             detail = `HTTP ${res.status}: ${rawText.slice(0, 400)}`;
           }
+          if (res.status === 401) detail += BasalamAdapter.authErrorHint(credentials);
+
+          // باسلام کل دسته را به‌خاطر یک قلم رد می‌کند و پیام، شناسه‌ی همان قلم را
+          // نام می‌برد (مثلاً محصولی که «تخفیف زمانمند» دارد و با این نسخه‌ی API
+          // قابل ویرایش نیست). بدون جداسازی، ۴۹ محصول سالم هم قربانی می‌شدند.
+          const blamed = BasalamAdapter.blamedIds(detail).filter((id) => chunkIds.includes(id));
+          const rest   = chunkIds.filter((id) => !blamed.includes(id));
+
+          if (blamed.length && rest.length) {
+            failed.push(...blamed.map((id) => ({ id, error: detail })));
+            const restData = rest.map((id) => chunk[chunkIds.indexOf(id)]);
+            const retry = await this.bulkUpdate(credentials, restData, rest);
+            success.push(...retry.success);
+            failed.push(...retry.failed);
+            continue;
+          }
+
           failed.push(...chunkIds.map((id) => ({ id, error: detail })));
           continue;
         }

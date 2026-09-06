@@ -18,10 +18,30 @@ export async function fetchAndProcessOrders(
   let hasMore = true;
   let processed = 0;
   let skipped = 0;
+  let pages = 0;
   const unmatched: string[] = [];
   const cancelledOrders = new Set<string>();
+  const seenCursors = new Set<string>();
+
+  // سقف سخت روی تعداد صفحه‌ها: اگر پلتفرم hasMore=true بدهد ولی مکان‌نما جلو
+  // نرود، این حلقه تا ابد می‌چرخید و job در PROCESSING گیر می‌کرد.
+  const MAX_PAGES = 200;
 
   while (hasMore) {
+    if (pages >= MAX_PAGES) {
+      await writeLog({
+        jobId,
+        platformCode,
+        operationType: "FETCH_ORDERS",
+        direction:     "INBOUND",
+        entityType:    "ORDER",
+        status:        "PARTIAL",
+        errorMessage:  `دریافت سفارش‌ها پس از ${MAX_PAGES} صفحه متوقف شد — باقی سفارش‌ها در اجرای بعدی دریافت می‌شوند`,
+      }).catch(() => {});
+      break;
+    }
+    pages++;
+
     const result = await adapter.fetchOrders(credentials, cursor);
 
     for (const item of result.items) {
@@ -80,8 +100,24 @@ export async function fetchAndProcessOrders(
 
     for (const c of result.cancelledOrderIds ?? []) cancelledOrders.add(c);
 
+    // سفارش‌های این صفحه ثبت شدند — حالا مکان‌نما را تثبیت کن.
+    // فید اسنپ‌شاپ یک‌طرفه است: اگر مکان‌نما پیش از ثبت جلو می‌رفت، هر شکستی
+    // وسط پردازش یعنی گم شدن دائمی همان سفارش‌ها.
+    if (result.cursor && adapter.commitOrdersCursor) {
+      await adapter.commitOrdersCursor(credentials, result.cursor).catch(() => {});
+    }
+
     hasMore = result.hasMore;
     cursor = result.cursor;
+
+    // مکان‌نما تکراری یا خالی در حالی که hasMore هنوز true است = حلقه‌ی بی‌پایان
+    if (hasMore) {
+      if (!cursor || seenCursors.has(cursor)) {
+        hasMore = false;
+      } else {
+        seenCursors.add(cursor);
+      }
+    }
   }
 
   // لغو سفارش (فید رویدادی) — فقط ردیف‌های فاکتورنخورده، پس تکرار رویداد بی‌خطر است
@@ -115,6 +151,6 @@ export async function fetchAndProcessOrders(
     direction:     "INBOUND",
     entityType:    "ORDER",
     status:        "SUCCESS",
-    responseData:  { processed, skipped, cancelled, unmatchedCount: unmatched.length, unmatched: unmatched.slice(0, 10) },
+    responseData:  { processed, skipped, cancelled, pages, unmatchedCount: unmatched.length, unmatched: unmatched.slice(0, 10) },
   }).catch(() => {});
 }

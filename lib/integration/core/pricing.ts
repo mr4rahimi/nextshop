@@ -5,6 +5,7 @@ import { decryptCredentials } from "./crypto";
 import { writeLog } from "./log";
 import type { PriceDiscount } from "@/lib/integration/types";
 import { applyDiscount } from "@/lib/integration/types";
+import { recordPushedPrice } from "./snapshot";
 
 // تخفیف فعال یک محصول روی پلتفرم — از آخرین snapshot «دریافت محصولات».
 // هدف: وقتی قیمت اصلی عوض می‌شود، تخفیف با همان درصد بازسازی شود نه اینکه پاک شود.
@@ -241,6 +242,11 @@ async function pushMappingPrice(mapping: {
         }).catch(() => {});
         tally.failed++;
       } else {
+        // snapshot باید همین‌جا تازه شود؛ وگرنه سینک موجودیِ بعدی (که در
+        // اسنپ‌شاپ قیمت را هم می‌فرستد) قیمت قدیمی را برمی‌گرداند.
+        await recordPushedPrice(link.platformCode, link.externalId, original, discount)
+          .catch(() => {});
+
         await writeLog({
           platformCode: link.platformCode,
           operationType: "SYNC_PRICE",

@@ -48,6 +48,14 @@ export abstract class BaseAdapter {
     cursor?: string
   ): Promise<FetchOrdersResult>;
 
+  // تثبیت مکان‌نمای فید سفارش‌ها — فقط بعد از اینکه سفارش‌های آن صفحه واقعاً
+  // ذخیره شدند صدا زده می‌شود. فیدهای یک‌طرفه (اسنپ‌شاپ) اگر مکان‌نما را پیش از
+  // پردازش جلو ببرند، شکستِ وسط کار یعنی از دست رفتن دائمی آن سفارش‌ها.
+  commitOrdersCursor?(
+    credentials: Record<string, string>,
+    cursor: string
+  ): Promise<void>;
+
   // Rate limiting — هر Adapter می‌تواند override کند
   protected async rateLimit(_ms = 0): Promise<void> {
     if (_ms > 0) await new Promise(r => setTimeout(r, _ms));

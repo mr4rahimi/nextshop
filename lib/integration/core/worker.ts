@@ -12,6 +12,7 @@ import { resyncStockFromAccounting } from "./inventory";
 import { fetchAndProcessOrders } from "./orders";
 import { enqueue } from "./queue";
 import { processPendingInvoices } from "./invoicing";
+import { recordPushedPrice, recordPushedStock } from "./snapshot";
 
 // ── jobهای زمان‌بندی‌شده خودکار (خودترمیم) ─────────────────────────
 // - هر مارکت‌پلیس متصل که fetchOrders دارد: حلقه FETCH_ORDERS همیشه زنده می‌ماند
@@ -221,22 +222,34 @@ async function dispatchJob(job: IntegJob): Promise<void> {
     }
 
     case "SYNC_STOCK": {
-      await adapter.updateStock(credentials, [{
+      const res = await adapter.updateStock(credentials, [{
         platformProductId: payload.platformProductId,
         stock:             payload.stock,
       }]);
+      if (res.failed.length) throw new Error(res.failed[0].error);
+      // snapshot باید با آنچه واقعاً روی پلتفرم نشست هم‌راست بماند
+      await recordPushedStock(job.platformCode, payload.platformProductId, payload.stock)
+        .catch(() => {});
       break;
     }
 
     case "SYNC_PRICE": {
       if (!adapter.updatePrice) throw new Error(`${job.platformCode} does not support price sync`);
-      await adapter.updatePrice(credentials, [{
+      const res = await adapter.updatePrice(credentials, [{
         platformProductId: payload.platformProductId,
         price:             payload.price,
         salePrice:         payload.salePrice,
         // اگر job تخفیف نداشت، آداپتور خودش از snapshot پلتفرم می‌خواند
         discount:          payload.discount ?? undefined,
       }]);
+      if (res.failed.length) throw new Error(res.failed[0].error);
+      // بدون این، اولین سینک موجودیِ بعدی قیمت قدیمی را دوباره می‌فرستد
+      await recordPushedPrice(
+        job.platformCode,
+        payload.platformProductId,
+        payload.price,
+        payload.discount ?? undefined,
+      ).catch(() => {});
       break;
     }
 
@@ -322,6 +335,13 @@ async function syncAllStock(
       credentials,
       pairs.map((p) => ({ platformProductId: p.platformProductId, stock: stockMap.get(p.shopProductId) ?? 0 })),
     );
+
+    const sentStock = new Map(
+      pairs.map((p) => [p.platformProductId, stockMap.get(p.shopProductId) ?? 0]),
+    );
+    for (const id of result.success) {
+      await recordPushedStock(platformCode, id, sentStock.get(id) ?? 0).catch(() => {});
+    }
 
     await writeLog({
       jobId,

@@ -25,6 +25,8 @@ interface Props {
 export default function BasalamForm({ existingConnection }: Props) {
   const [accessToken,   setAccessToken]   = useState("");
   const [refreshToken,  setRefreshToken]  = useState("");
+  const [clientId,      setClientId]      = useState("");
+  const [clientSecret,  setClientSecret]  = useState("");
   const [vendorId,      setVendorId]      = useState("");
   const [syncStock,     setSyncStock]     = useState(existingConnection?.syncStockEnabled ?? true);
   const [syncPrice,     setSyncPrice]     = useState(existingConnection?.syncPriceEnabled ?? false);
@@ -38,6 +40,8 @@ export default function BasalamForm({ existingConnection }: Props) {
 
   const credentials: Record<string, string> = { accessToken };
   if (refreshToken.trim()) credentials.refreshToken = refreshToken.trim();
+  if (clientId.trim())     credentials.clientId     = clientId.trim();
+  if (clientSecret.trim()) credentials.clientSecret = clientSecret.trim();
   if (vendorId.trim())     credentials.vendorId     = vendorId.trim();
 
   async function handleTest() {
@@ -171,18 +175,59 @@ export default function BasalamForm({ existingConnection }: Props) {
           </p>
         </div>
 
-        <div>
-          <label className="block text-xs font-bold text-gray-500 mb-1.5">
-            Refresh Token (اختیاری)
-          </label>
-          <input
-            type="password"
-            value={refreshToken}
-            onChange={e => setRefreshToken(e.target.value)}
-            placeholder="برای تجدید خودکار توکن"
-            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
-            dir="ltr"
-          />
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800/40 bg-amber-50/60 dark:bg-amber-900/10 p-4 space-y-4">
+          <p className="text-[11px] leading-5 text-amber-800 dark:text-amber-300">
+            <b>تجدید خودکار توکن.</b> توکن باسلام منقضی می‌شود و بعد از انقضا همه‌ی عملیات با خطای
+            <span className="font-mono" dir="ltr"> 401 authentication error </span>
+            متوقف می‌شود. اگر هر سه فیلد زیر پر باشند، سیستم خودش توکن را تازه می‌کند و
+            دیگر نیازی به وارد کردن دستی توکن نیست.
+          </p>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-500 mb-1.5">
+              Refresh Token
+            </label>
+            <input
+              type="password"
+              value={refreshToken}
+              onChange={e => setRefreshToken(e.target.value)}
+              placeholder="برای تجدید خودکار توکن"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+              dir="ltr"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-500 mb-1.5">
+              Client ID
+            </label>
+            <input
+              type="text"
+              value={clientId}
+              onChange={e => setClientId(e.target.value)}
+              placeholder="شناسه کلاینت از پنل توسعه‌دهندگان باسلام"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+              dir="ltr"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-500 mb-1.5">
+              Client Secret
+            </label>
+            <input
+              type="password"
+              value={clientSecret}
+              onChange={e => setClientSecret(e.target.value)}
+              placeholder="کلید محرمانه کلاینت"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+              dir="ltr"
+            />
+          </div>
+
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            فیلدهای خالی ذخیره نمی‌شوند و مقدار قبلی‌شان دست‌نخورده می‌ماند — برای تغییر یکی، فقط همان را پر کنید.
+          </p>
         </div>
 
         <div>

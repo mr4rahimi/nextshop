@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getAdapter } from "./adapter-registry";
 import { decryptCredentials } from "./crypto";
 import { writeLog } from "./log";
+import { recordPushedStock } from "./snapshot";
 
 async function getPlatformType(platformCode: string): Promise<"ACCOUNTING" | "MARKETPLACE" | null> {
   const p = await prisma.integPlatform.findUnique({ where: { code: platformCode }, select: { type: true } });
@@ -94,6 +95,9 @@ async function pushMappingStock(
           durationMs:    Date.now() - start,
         }).catch(() => {});
       } else {
+        await recordPushedStock(link.platformCode, link.externalId, Math.max(0, Math.floor(stock)))
+          .catch(() => {});
+
         await writeLog({
           platformCode:  link.platformCode,
           operationType: "SYNC_STOCK",

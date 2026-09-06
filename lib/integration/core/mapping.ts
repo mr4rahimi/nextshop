@@ -42,6 +42,30 @@ interface ShopProductForMatch {
   title:           string;
   normalizedTitle: string;
   brandName:       string | null;
+  sku:             string | null;
+}
+
+// شناسه‌های قطعی (بارکد/SKU) با هم مقایسه می‌شوند بدون حساسیت به بزرگی حروف و فاصله
+function normalizeCode(code?: string | null): string | null {
+  const c = code?.trim().toLowerCase();
+  return c ? c : null;
+}
+
+/**
+ * نگاشت «کد قطعی → شناسه محصول فروشگاه».
+ * کدی که بین چند محصول تکراری است حذف می‌شود — نگاشت خودکار روی کد مبهم
+ * یعنی وصل کردن محصول به کالای اشتباه، که از نگاشت‌نشدن بدتر است.
+ */
+function buildCodeIndex(shopList: ShopProductForMatch[]): Map<string, string> {
+  const seen = new Map<string, string | null>();
+  for (const sp of shopList) {
+    const code = normalizeCode(sp.sku);
+    if (!code) continue;
+    seen.set(code, seen.has(code) ? null : sp.id);   // null = مبهم
+  }
+  const index = new Map<string, string>();
+  for (const [code, id] of seen) if (id) index.set(code, id);
+  return index;
 }
 
 // ── بهترین match برای یک محصول پلتفرم ───────────────────────────────
@@ -55,7 +79,24 @@ interface BestMatch {
 function findBestMatch(
   hp: IntegProductInfo,
   shopList: ShopProductForMatch[],
+  codeIndex: Map<string, string>,
 ): BestMatch | null {
+  // ── شناسه‌های قطعی، طبق سند: بارکد ۱.۰ و SKU ۰.۹۵ ────────────────
+  // بدون این دو قانون، سقف confidence برابر ۰.۸۵ (عنوان دقیق) می‌ماند و
+  // شرط auto-approve (>= 0.95) هرگز برقرار نمی‌شد — یعنی نگاشت خودکار
+  // عملاً مرده بود و همه‌چیز به تأیید دستی می‌افتاد.
+  const barcode = normalizeCode(hp.barcode);
+  if (barcode) {
+    const hit = codeIndex.get(barcode);
+    if (hit) return { shopProductId: hit, confidence: 1.0, reason: "barcode_exact" };
+  }
+
+  const sku = normalizeCode(hp.sku);
+  if (sku) {
+    const hit = codeIndex.get(sku);
+    if (hit) return { shopProductId: hit, confidence: 0.95, reason: "sku_exact" };
+  }
+
   const hNorm  = normalizeText(hp.title);
   const hBrand = hp.brandName ? normalizeText(hp.brandName) : null;
 
@@ -100,7 +141,7 @@ export async function runAutoMatch(
   // بارگذاری محصولات فروشگاه
   const raw = await prisma.product.findMany({
     where:  { isActive: true },
-    select: { id: true, title: true, brand: { select: { title: true } } },
+    select: { id: true, title: true, sku: true, brand: { select: { title: true } } },
   });
 
   const shopList: ShopProductForMatch[] = raw.map((p) => ({
@@ -108,7 +149,11 @@ export async function runAutoMatch(
     title:           p.title,
     normalizedTitle: normalizeText(p.title),
     brandName:       p.brand?.title ?? null,
+    sku:             p.sku ?? null,
   }));
+
+  const codeIndex = buildCodeIndex(shopList);
+  const shopTitleById = new Map(shopList.map((p) => [p.id, p.title]));
 
   // محصولاتی که قبلاً لینک یا پیشنهاد دارند
   const [existingLinks, existingSugs] = await Promise.all([
@@ -135,7 +180,7 @@ export async function runAutoMatch(
       continue;
     }
 
-    const best = findBestMatch(hp, shopList);
+    const best = findBestMatch(hp, shopList, codeIndex);
     if (!best) { skipped++; continue; }
 
     if (best.confidence >= 0.95) {
@@ -151,7 +196,8 @@ export async function runAutoMatch(
               mappingId:     mapping.id,
               platformCode:  "shop",
               externalId:    best.shopProductId,
-              externalTitle: hp.title,
+              // عنوان خود محصول فروشگاه، نه عنوان پلتفرم
+              externalTitle: shopTitleById.get(best.shopProductId) ?? null,
             },
             {
               mappingId:     mapping.id,
