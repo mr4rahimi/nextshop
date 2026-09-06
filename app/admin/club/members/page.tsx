@@ -2,12 +2,20 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { JALALI_MONTH_OPTIONS, formatJalaliShort, toJalali } from "@/lib/club/jalali";
+import SendMessagePanel from "@/components/admin/club/SendMessagePanel";
 
 interface Member {
   id: string;
   source: string;
   sourcePlatform: string | null;
   smsConsent: boolean;
+  consentAt: string | null;
+  consentEvents: {
+    granted: boolean;
+    source: string;
+    ip: string | null;
+    createdAt: string;
+  }[];
   birthDate: string | null;
   birthMonth: number | null;
   birthDay: number | null;
@@ -32,8 +40,25 @@ interface Stats {
   consent: number;
   withBirth: number;
   buyers: number;
+  /** اعضایی که شناسه‌ی فعال پیام‌رسان دارند (بله/تلگرام) */
+  messenger: number;
+  /** واقعاً قابل ارسال: رضایت پیامک یا شناسه‌ی پیام‌رسان، و مسدود نشده */
+  reachable: number;
   bySource: Record<string, number>;
+  /** رضایت‌های ۳۰ روز اخیر به تفکیک منبع */
+  consentBySource: Record<string, number>;
 }
+
+const CONSENT_SOURCE_FA: Record<string, string> = {
+  CHECKOUT: "تسویه‌حساب",
+  LANDING: "صفحه فرود / QR",
+  SMS_REPLY: "پاسخ پیامکی",
+  PROFILE: "پنل کاربری",
+  MESSENGER: "ربات پیام‌رسان",
+  SELLER: "فروشنده",
+  ADMIN: "ادمین",
+  IMPORT: "ورود فایل",
+};
 
 const SOURCE_FA: Record<string, string> = {
   ONLINE: "سایت",
@@ -60,6 +85,8 @@ function toFa(n: number | string) {
 export default function AdminClubMembersPage() {
   const [items, setItems] = useState<Member[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sendOpen, setSendOpen] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -142,9 +169,40 @@ export default function AdminClubMembersPage() {
         </a>
       </div>
 
+      {/* نوار انتخاب */}
+      {selected.size > 0 && (
+        <div className="sticky top-2 z-30 flex items-center justify-between gap-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl px-4 py-3">
+          <span className="text-[11px] font-black">
+            {toFa(selected.size)} عضو انتخاب شده
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSendOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-white/15 dark:bg-gray-900/10 text-[11px] font-black"
+            >
+              ارسال پیام
+            </button>
+            <button
+              onClick={() => setSelected(new Set())}
+              className="px-3 py-1.5 rounded-xl text-[11px] font-black opacity-70"
+            >
+              لغو انتخاب
+            </button>
+          </div>
+        </div>
+      )}
+
+      {sendOpen && (
+        <SendMessagePanel
+          profileIds={[...selected]}
+          onClose={() => setSendOpen(false)}
+          onSent={() => setSelected(new Set())}
+        />
+      )}
+
       {/* آمار */}
       {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <StatCard label="کل اعضا" value={stats.all} />
           <StatCard
             label="رضایت پیامک تبلیغاتی"
@@ -153,11 +211,35 @@ export default function AdminClubMembersPage() {
             tone={stats.consent === 0 ? "warn" : "ok"}
           />
           <StatCard
-            label="دارای تاریخ تولد"
-            value={stats.withBirth}
-            hint={stats.all ? `${Math.round((stats.withBirth / stats.all) * 100)}٪` : undefined}
+            label="قابل ارسال پیام"
+            value={stats.reachable}
+            hint={stats.all ? `${Math.round((stats.reachable / stats.all) * 100)}٪` : undefined}
+            tone={stats.reachable === 0 ? "warn" : "ok"}
           />
           <StatCard label="دارای خرید" value={stats.buyers} />
+          <StatCard label="دارای تاریخ تولد" value={stats.withBirth} />
+          <StatCard label="عضو ربات پیام‌رسان" value={stats.messenger} />
+        </div>
+      )}
+
+      {/* رضایت‌های ۳۰ روز اخیر — کدام مسیر جواب می‌دهد */}
+      {stats && Object.keys(stats.consentBySource).length > 0 && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+          <p className="text-[10px] font-bold text-gray-400 mb-3">
+            رضایت‌های ۳۰ روز اخیر — از کدام مسیر
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(stats.consentBySource)
+              .sort((a, b) => b[1] - a[1])
+              .map(([src, n]) => (
+                <span
+                  key={src}
+                  className="text-[11px] font-black px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                >
+                  {CONSENT_SOURCE_FA[src] ?? src}: {toFa(n)}
+                </span>
+              ))}
+          </div>
         </div>
       )}
 
@@ -264,6 +346,23 @@ export default function AdminClubMembersPage() {
             <table className="w-full text-right hidden md:table">
               <thead className="bg-gray-50 dark:bg-gray-800/50">
                 <tr className="text-[11px] font-black text-gray-400">
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={items.length > 0 && items.every((m) => selected.has(m.id))}
+                      onChange={(e) =>
+                        setSelected((prev) => {
+                          const next = new Set(prev);
+                          for (const m of items) {
+                            if (e.target.checked) next.add(m.id);
+                            else next.delete(m.id);
+                          }
+                          return next;
+                        })
+                      }
+                      className="w-4 h-4 accent-primary-600 cursor-pointer"
+                    />
+                  </th>
                   <th className="px-6 py-3">مشتری</th>
                   <th className="px-3 py-3">منبع</th>
                   <th className="px-3 py-3">پیامک</th>
@@ -279,6 +378,21 @@ export default function AdminClubMembersPage() {
                     key={m.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
                   >
+                    <td className="px-4 py-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(m.id)}
+                        onChange={(e) =>
+                          setSelected((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(m.id);
+                            else next.delete(m.id);
+                            return next;
+                          })
+                        }
+                        className="w-4 h-4 accent-primary-600 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-6 py-3.5">
                       <p className="text-xs font-black text-gray-900 dark:text-white">
                         {[m.user.firstName, m.user.lastName].filter(Boolean).join(" ") || "بدون نام"}
@@ -310,6 +424,13 @@ export default function AdminClubMembersPage() {
                       >
                         {m.smsConsent ? "دارد" : "ندارد"}
                       </span>
+                      {m.consentEvents[0] && (
+                        <span className="block text-[9px] font-bold text-gray-400 mt-0.5">
+                          {CONSENT_SOURCE_FA[m.consentEvents[0].source] ?? m.consentEvents[0].source}
+                          {" · "}
+                          {formatJalaliShort(new Date(m.consentEvents[0].createdAt))}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-3.5">
                       <span className="text-[11px] font-bold text-gray-500">

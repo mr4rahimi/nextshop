@@ -1,13 +1,24 @@
 import { prisma } from "@/lib/prisma";
 
+/** اولین مقدار غیرتهی — رشته‌ی خالی و فاصله «تنظیم نشده» حساب می‌شود */
+function pick(...vals: (string | null | undefined)[]): string | undefined {
+  for (const v of vals) {
+    const t = v?.trim();
+    if (t) return t;
+  }
+  return undefined;
+}
+
 async function getSmsConfig() {
   const settings = await prisma.storeSettings.findUnique({ where: { id: "singleton" } });
   return {
-    apiKey:     settings?.smsApiKey     ?? process.env.IRANPAYAMAK_API_KEY,
-    lineNumber: settings?.smsLineNumber ?? process.env.IRANPAYAMAK_LINE_NUMBER,
+    // ⚠️ `??` کافی نیست: فیلدی که ادمین پر و بعد خالی کرده `""` است نه null و
+    //    جلوی fallback را می‌گیرد. مقدار تهی باید مثل «تنظیم نشده» رفتار کند.
+    apiKey:     pick(settings?.smsApiKey,     process.env.IRANPAYAMAK_API_KEY),
+    lineNumber: pick(settings?.smsLineNumber, process.env.IRANPAYAMAK_LINE_NUMBER),
     enabled:    settings?.smsEnabled    ?? true,
     patterns: {
-      otp:      settings?.smsPatternOtp          ?? process.env.IRANPAYAMAK_PATTERN_CODE,
+      otp:      pick(settings?.smsPatternOtp, process.env.IRANPAYAMAK_PATTERN_CODE),
       orderNew:      settings?.smsPatternOrderNew,
       orderPaid:     settings?.smsPatternOrderPaid,
       orderConfirm:  settings?.smsPatternOrderConfirm,

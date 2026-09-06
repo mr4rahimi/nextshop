@@ -79,6 +79,26 @@ export interface SmsBatchJob {
   automationId?: string;
 }
 
+/**
+ * دسته‌ی ارسال چندکاناله
+ *
+ * ⚠️ برخلاف `SmsBatchJob` که شماره‌ی موبایل حمل می‌کند، اینجا فقط
+ *    `profileIds` می‌آید: انتخاب کانال هر عضو در لحظه‌ی ارسال انجام می‌شود،
+ *    نه هنگام ساخت صف. عضوی که بین صف و ارسال در بله عضو شده باید همان‌جا
+ *    پیام بگیرد، نه با پیامک.
+ */
+export interface MultiChannelBatchJob {
+  profileIds: string[];
+  kind: "TRANSACTIONAL" | "MARKETING";
+  /** متن هر کانال — کلید نام کانال (`SMS`, `BALE`, ...) */
+  bodyByChannel: Record<string, string>;
+  /** متغیرهای شخصی‌سازی هر عضو — `Map` در صف سریالایز نمی‌شود */
+  varsByProfile?: Record<string, Record<string, string>>;
+  templateKey?: string;
+  campaignId?: string;
+  automationId?: string;
+}
+
 export interface SmsStatusJob {
   providerRequestIds: number[];
 }
@@ -88,6 +108,17 @@ export async function enqueueSmsBatch(
   opts: { jobId?: string; delay?: number } = {}
 ) {
   return smsSendQueue().add("send-batch", data, {
+    jobId: opts.jobId,
+    delay: opts.delay,
+  });
+}
+
+export async function enqueueMultiChannelBatch(
+  data: MultiChannelBatchJob,
+  opts: { jobId?: string; delay?: number } = {}
+) {
+  // همان صف، نام کار متفاوت — ورکر بر اساس `job.name` تفکیک می‌کند
+  return smsSendQueue().add("send-multi", data, {
     jobId: opts.jobId,
     delay: opts.delay,
   });

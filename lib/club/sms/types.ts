@@ -102,10 +102,37 @@ export interface InboxMessage {
 }
 
 export interface Balance {
-  /** اعتبار ریالی/تومانی */
+  /** اعتبار تومانی */
   amount: number;
-  /** تعداد پیامک باقی‌مانده */
+  /**
+   * تعداد پیامک باقی‌مانده — گِرد نشده.
+   * پنل مقدار کسری برمی‌گرداند (مثلاً 5410.84)؛ گِرد کردن به عهده نمایش است.
+   */
   count?: number;
+  /** ریز اعتبار به تفکیک تعرفه — روی پکیج‌های چندنرخی پر می‌شود */
+  details?: BalanceDetail[];
+}
+
+export interface BalanceDetail {
+  /** تعداد پیامک */
+  count: number;
+  /** تعرفه هر پیامک (تومان) */
+  rate: number;
+  /** موجودی تومانی این ردیف */
+  amount: number;
+}
+
+/**
+ * مشخصات حساب پنل — برای اینکه ادمین ببیند کلیدی که ثبت کرده به کدام
+ * حساب وصل است. بدون این، اشتباه گرفتن کلید دو کسب‌وکار دیده نمی‌شود.
+ */
+export interface AccountProfile {
+  displayName: string;
+  mobile: string;
+  verified: boolean;
+  blocked: boolean;
+  planTitle?: string;
+  planExpiryDate?: string;
 }
 
 export interface SmsProvider {
@@ -144,8 +171,11 @@ export interface SmsProvider {
   /** ارسال آزمایشی به شماره مالک حساب */
   sendSample(lineNumber: string, text: string): Promise<SendResult>;
 
-  /** اعتبار حساب */
-  getBalance(): Promise<Balance | null>;
+  /** اعتبار حساب — در خطا `SmsApiError` پرتاب می‌کند، نه null */
+  getBalance(): Promise<Balance>;
+
+  /** مشخصات حساب — برای تشخیص اینکه کلید به کدام پنل وصل است */
+  getProfile(): Promise<AccountProfile>;
 
   /** وضعیت کلی یک درخواست ارسال به‌همراه شمارنده‌ها */
   getSendRequest(requestId: number): Promise<SendRequestInfo | null>;

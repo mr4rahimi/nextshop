@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { TEMPLATE_VARIABLES, previewTemplate, countSmsParts } from "@/lib/club/sms/render";
+import ChannelBodyEditor from "@/components/admin/club/ChannelBodyEditor";
 
 interface Template {
   id: string;
@@ -476,6 +477,11 @@ function TemplateModal({
                   </p>
                 )}
               </div>
+            )}
+
+            {/* متن اختصاصی هر کانال — فقط برای قالب ذخیره‌شده */}
+            {template?.id && (
+              <ChannelBodyEditor templateId={template.id} variables={[...TEMPLATE_VARIABLES]} />
             )}
           </div>
         )}

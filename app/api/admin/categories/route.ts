@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logActivityAsync, diffFields, summarizeChanges } from "@/lib/activity";
+import { faqForPrisma } from "@/lib/faq-db";
 
 /** فیلدهای دسته‌بندی که تغییرشان در گزارش ثبت می‌شود */
 const CATEGORY_FIELDS = {
   title:          { label: "عنوان" },
   slug:           { label: "نشانی (slug)" },
   imageUrl:       { label: "تصویر دسته", kind: "image" as const },
-  description:    { label: "توضیحات" },
+  description:    { label: "توضیحات (پایین گرید)" },
+  descriptionTop: { label: "توضیحات (بالای گرید)" },
+  faq:            { label: "سوالات متداول" },
   seoTitle:       { label: "عنوان سئو" },
   seoDescription: { label: "توضیح سئو" },
   isActive:       { label: "وضعیت نمایش", kind: "bool" as const },
@@ -38,6 +41,9 @@ export async function POST(req: Request) {
     data: {
       ...data,
       parentId: data.parentId ? data.parentId : null,
+      // `...data` مقدار خام را می‌نوشت؛ ستون Json باید همیشه نرمال‌شده باشد
+      // وگرنه ردیف ناقص به `Question` بدون پاسخ در اسکیما تبدیل می‌شود.
+      faq: faqForPrisma(data.faq),
     },
   });
 
@@ -67,6 +73,14 @@ export async function PUT(req: Request) {
 
       description: data.description,
       imageUrl: data.imageUrl,
+
+      /**
+       * فقط وقتی نوشته می‌شود که کلید در بدنه باشد.
+       * `data.faq` مطلق یعنی یک بدنه‌ی ناقص (مثلاً از فرمی که این تب را
+       * ندارد) سوالات متداول موجود را پاک می‌کند.
+       */
+      ...("descriptionTop" in data ? { descriptionTop: data.descriptionTop } : {}),
+      ...("faq" in data ? { faq: faqForPrisma(data.faq) } : {}),
 
       seoTitle: data.seoTitle,
       seoDescription: data.seoDescription,

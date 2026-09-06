@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { type ProductCardItem } from "@/components/store/product/ManaProductCard";
 import { ProductCardAuto, useProductGridClass } from "@/components/store/product/ProductLayoutContext";
+import FaqSection from "@/components/store/FaqSection";
+import { normalizeFaq } from "@/lib/faq";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Brand {
@@ -20,6 +22,10 @@ interface Category {
   title: string;
   slug: string;
   description: string | null;
+  /** متن معرفی بالای گرید */
+  descriptionTop: string | null;
+  /** سوالات متداول — با normalizeFaq امن می‌شود */
+  faq?: unknown;
   imageUrl: string | null;
   seoDescription: string | null;
   children: { id: string; title: string; slug: string; imageUrl: string | null }[];
@@ -685,6 +691,14 @@ export default function CategoryPageClient({
                 </p>
               )}
 
+              {/* متن معرفی بالای گرید — روی صفحه‌ی فرود نمایش داده نمی‌شود
+                  چون landingIntro خودش همان نقش را دارد */}
+              {!landingIntro && category.descriptionTop && (
+                <div className="mt-4 max-w-3xl text-sm leading-8 text-gray-600 dark:text-gray-300 text-justify whitespace-pre-line">
+                  {category.descriptionTop}
+                </div>
+              )}
+
                {!basePath && (category.landings?.length ?? 0) > 0 && (
                 <nav aria-label="دسته‌بندی‌های مرتبط" className="mt-5 -mx-4 lg:mx-0">
                   <div className="relative">
@@ -1019,11 +1033,17 @@ export default function CategoryPageClient({
                   درباره دسته‌بندی {category.title}
                 </h2>
               </div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 leading-9 text-justify">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400 leading-9 text-justify whitespace-pre-line">
                 {category.description}
               </p>
             </div>
           )}
+
+          {/* سوالات متداول — اسکیمای FAQPage در page.tsx سرور منتشر می‌شود */}
+          <FaqSection
+            items={normalizeFaq(category.faq)}
+            heading={`سوالات متداول درباره ${category.title}`}
+          />
 
         </div>
       </section>

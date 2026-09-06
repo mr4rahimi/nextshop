@@ -121,7 +121,7 @@ export async function PATCH(req: Request) {
       req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
       req.headers.get("x-real-ip") ??
       null;
-    await setSmsConsent(user.id, body.smsConsent, ip);
+    await setSmsConsent(user.id, body.smsConsent, ip, "PROFILE");
   }
 
   return NextResponse.json({ success: true });

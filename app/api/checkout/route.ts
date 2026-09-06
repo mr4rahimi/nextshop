@@ -3,6 +3,10 @@ import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { deductStockForOrderItems } from "@/lib/order-stock";
+import { quoteRedeem, loadPointRules, redeemPointsForOrder } from "@/lib/club/points";
+import { validateCoupon, consumeCoupon } from "@/lib/club/coupons";
+import { setClubConsent } from "@/lib/club/consent";
+import { ensureClubProfile } from "@/lib/club/profile";
 
 export const runtime = "nodejs";
 
@@ -16,7 +20,8 @@ export async function POST(req: Request) {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "احراز هویت نشده" }, { status: 401 });
 
-  const { addressId, shippingMethodId, paymentMethod, items, useWallet } = await req.json();
+  const { addressId, shippingMethodId, paymentMethod, items, useWallet, usePoints, couponCode, smsConsent } =
+    await req.json();
 
   if (!addressId || !shippingMethodId || !items?.length)
     return NextResponse.json({ error: "اطلاعات ناقص است" }, { status: 400 });
@@ -52,11 +57,70 @@ export async function POST(req: Request) {
     };
   });
 
-  const shippingFee = shipping.fee;
-  const grandTotal = itemsTotal + shippingFee;
+  let shippingFee = shipping.fee;
+
+  // ── کد تخفیف ────────────────────────────────────────────────────
+  // ⚠️ فقط خودِ کد از کلاینت گرفته می‌شود؛ مبلغ تخفیف همیشه اینجا محاسبه
+  //    می‌شود. اعتماد به مبلغ ارسالی کلاینت یعنی هر کسی هر تخفیفی بگیرد.
+  let couponDiscount = BigInt(0);
+  let appliedCoupon: { id: string; code: string } | null = null;
+
+  if (typeof couponCode === "string" && couponCode.trim()) {
+    const result = await validateCoupon({
+      code: couponCode,
+      userId: user.id,
+      itemsTotal,
+      shippingFee,
+    });
+
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+
+    if (result.freeShipping) shippingFee = 0n;
+    couponDiscount = result.discount;
+    appliedCoupon = { id: result.coupon!.id, code: result.coupon!.code };
+  }
+
+  const grandTotal = itemsTotal + shippingFee - couponDiscount;
+
+  let finalGrandTotal = grandTotal;
+
+  // ── امتیاز باشگاه ───────────────────────────────────────────────
+  // ⚠️ پیش از کیف پول اعمال می‌شود: امتیاز اعتبار سوختنی است ولی کیف پول پول
+  //    واقعی مشتری است. برعکسش یعنی پول مشتری خرج شود و امتیازش بسوزد.
+  //
+  // ⚠️ مقدار درخواستی کلاینت اینجا فقط یک «درخواست» است؛ سقف واقعی را
+  //    redeemPointsForOrder از روی موجودی و تنظیمات تعیین می‌کند.
+  let pointsDiscount = BigInt(0);
+  let pointsSpent = 0;
+  let clubProfileId: string | null = null;
+
+  if (usePoints) {
+    const profile = await prisma.clubProfile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+
+    if (profile) {
+      clubProfileId = profile.id;
+      const quote = await quoteRedeem(profile.id, grandTotal);
+
+      if (quote.allowed) {
+        const wanted =
+          usePoints === true ? quote.maxPoints : Math.floor(Number(usePoints) || 0);
+        pointsSpent = Math.min(Math.max(wanted, 0), quote.maxPoints);
+        // مبلغ واقعی بعد از ثبت سفارش قطعی می‌شود؛ اینجا فقط برای محاسبه‌ی جمع
+        const rules = await loadPointRules();
+        pointsDiscount = BigInt(Math.floor(pointsSpent * rules.redeemRate));
+        if (pointsDiscount > finalGrandTotal) pointsDiscount = finalGrandTotal;
+        finalGrandTotal -= pointsDiscount;
+      }
+    }
+  }
 
   let walletDiscount = BigInt(0);
-  let finalGrandTotal = grandTotal;
+  const afterPoints = finalGrandTotal;
 
   if (useWallet) {
     const settings = await prisma.storeSettings.findUnique({
@@ -71,8 +135,8 @@ export async function POST(req: Request) {
       });
       const balance = userData?.walletBalance ?? 0n;
       if (balance > 0n) {
-        walletDiscount = balance >= grandTotal ? grandTotal : balance;
-        finalGrandTotal = grandTotal - walletDiscount;
+        walletDiscount = balance >= afterPoints ? afterPoints : balance;
+        finalGrandTotal = afterPoints - walletDiscount;
       }
     }
   }
@@ -83,10 +147,14 @@ export async function POST(req: Request) {
         userId: user.id,
         addressId,
         orderNumber: generateOrderNumber(),
-        status: walletDiscount > 0n && finalGrandTotal === 0n ? "PAID" : "PENDING_PAYMENT",
+        status:
+          finalGrandTotal === 0n && (walletDiscount > 0n || pointsDiscount > 0n)
+            ? "PAID"
+            : "PENDING_PAYMENT",
         itemsTotal,
         shippingFee,
-        discountTotal: walletDiscount,
+        discountTotal: walletDiscount + pointsDiscount + couponDiscount,
+        couponCode: appliedCoupon?.code ?? null,
         grandTotal: finalGrandTotal,
         items: { create: orderItems },
         payments: {
@@ -125,6 +193,49 @@ export async function POST(req: Request) {
         },
       }),
     ]);
+  }
+
+  if (appliedCoupon) {
+    await consumeCoupon({
+      couponId: appliedCoupon.id,
+      userId: user.id,
+      orderId: order.id,
+      discount: couponDiscount,
+    });
+  }
+
+  // برداشت امتیاز بعد از ساخت سفارش — تراکنش باید به سفارش گره بخورد تا اگر
+  // سفارش لغو شد بتوان امتیاز را برگرداند
+  if (clubProfileId && pointsSpent > 0) {
+    await redeemPointsForOrder({
+      profileId: clubProfileId,
+      orderId: order.id,
+      orderTotal: grandTotal,
+      requested: pointsSpent,
+    }).catch((e: unknown) => console.error("[club] برداشت امتیاز ناموفق:", e));
+  }
+
+  // ── رضایت دریافت پیام ───────────────────────────────────────────
+  // ⚠️ فقط «دادن» رضایت از اینجا پذیرفته می‌شود، نه پس گرفتن آن: نبودِ تیک
+  //    یعنی مشتری کاری نکرده، نه اینکه لغو کرده. لغو مسیر خودش را دارد.
+  if (smsConsent === true) {
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+      req.headers.get("x-real-ip") ??
+      null;
+
+    // خریدار اولی هنوز پروفایل باشگاه ندارد (در گذار وضعیت سفارش ساخته
+    // می‌شود). بدون این، رضایتش بی‌صدا گم می‌شود.
+    await ensureClubProfile(user.id, { source: "ONLINE" }).catch(() => {});
+
+    await setClubConsent({
+      userId: user.id,
+      granted: true,
+      source: "CHECKOUT",
+      ip,
+      userAgent: req.headers.get("user-agent"),
+      note: `سفارش ${order.orderNumber}`,
+    });
   }
 
   const cart = await prisma.cart.findUnique({ where: { userId: user.id } });

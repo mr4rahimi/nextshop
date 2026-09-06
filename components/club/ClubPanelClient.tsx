@@ -29,6 +29,8 @@ const SOURCE_LABELS: Record<string, string> = {
   CALLER_ID: "تماس تلفنی",
   IMPORT: "افزوده‌شده توسط فروشگاه",
   MARKETPLACE: "خرید از مارکت‌پلیس",
+  MESSAGING: "عضویت از پیام‌رسان",
+  REFERRAL: "معرفی دوستان",
 };
 
 export default function ClubPanelClient() {
@@ -177,6 +179,8 @@ export default function ClubPanelClient() {
           small
         />
       </section>
+
+      <ReferralCard />
 
       {message && (
         <div
@@ -329,6 +333,165 @@ function Field({
       />
     </div>
   );
+}
+
+/**
+ * کارت معرفی دوستان
+ *
+ * ⚠️ اگر ادمین امتیاز معرف و معرفی‌شده را صفر گذاشته باشد، API با
+ *    `enabled: false` پاسخ می‌دهد و این کارت اصلاً رندر نمی‌شود — نمایش
+ *    قابلیتی که پاداشی ندارد فقط مشتری را سردرگم می‌کند.
+ */
+function ReferralCard() {
+  const [data, setData] = useState<{
+    enabled: boolean;
+    code: string | null;
+    invited: number;
+    purchased: number;
+    rewardReferrer: number;
+    rewardReferee: number;
+    referred: boolean;
+    canEnterCode: boolean;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [entry, setEntry] = useState("");
+  const [entryMsg, setEntryMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [entryBusy, setEntryBusy] = useState(false);
+
+  const reload = () =>
+    fetch("/api/club/referral")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setData(d))
+      .catch(() => {});
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/club/referral")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (alive && d) setData(d);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!data?.enabled || !data.code) return null;
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(data!.code!);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // مرورگرهای بدون دسترسی کلیپ‌بورد — کد روی صفحه قابل انتخاب است
+    }
+  }
+
+  return (
+    <section className="bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-3xl p-5 space-y-4">
+      <div>
+        <h2 className="text-sm font-black text-gray-900 dark:text-white">معرفی دوستان</h2>
+        <p className="text-[11px] font-bold text-gray-400 mt-1 leading-relaxed">
+          کدتان را به دوستانتان بدهید. با اولین خرید آن‌ها، شما{" "}
+          <span className="text-primary-600 dark:text-primary-400">
+            {toPersianDigits(data.rewardReferrer)}
+          </span>{" "}
+          و آن‌ها{" "}
+          <span className="text-primary-600 dark:text-primary-400">
+            {toPersianDigits(data.rewardReferee)}
+          </span>{" "}
+          امتیاز می‌گیرید.
+        </p>
+      </div>
+
+      <button
+        onClick={copy}
+        className="w-full py-4 rounded-2xl border-2 border-dashed border-primary-300 dark:border-primary-500/40 bg-primary-50/50 dark:bg-primary-500/5 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors"
+      >
+        <span className="block text-2xl font-black text-primary-600 dark:text-primary-400 tracking-[0.3em]" dir="ltr">
+          {data.code}
+        </span>
+        <span className="block text-[10px] font-bold text-gray-400 mt-1.5">
+          {copied ? "کپی شد ✓" : "برای کپی کردن بزنید"}
+        </span>
+      </button>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Stat label="دعوت‌شده" value={toPersianDigits(data.invited)} />
+        <Stat label="خرید کرده" value={toPersianDigits(data.purchased)} />
+      </div>
+
+      {data.canEnterCode && (
+        <div className="pt-4 border-t border-gray-100 dark:border-white/5 space-y-2">
+          <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 leading-relaxed">
+            کسی شما را معرفی کرده؟ کدش را پیش از اولین خرید وارد کنید.
+          </p>
+          <div className="flex gap-2">
+            <input
+              value={entry}
+              onChange={(e) => {
+                setEntry(e.target.value.toUpperCase());
+                setEntryMsg(null);
+              }}
+              placeholder="کد معرف"
+              dir="ltr"
+              className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-800 dark:text-white outline-none focus:border-primary-500 text-center tracking-widest"
+            />
+            <button
+              onClick={submitCode}
+              disabled={entryBusy || !entry.trim()}
+              className="px-5 py-2.5 rounded-xl bg-primary-600 text-white text-[11px] font-black disabled:opacity-40 shrink-0"
+            >
+              {entryBusy ? "..." : "ثبت"}
+            </button>
+          </div>
+          {entryMsg && (
+            <p
+              className={`text-[10px] font-bold leading-relaxed ${
+                entryMsg.ok ? "text-emerald-600" : "text-red-500"
+              }`}
+            >
+              {entryMsg.text}
+            </p>
+          )}
+        </div>
+      )}
+
+      {data.referred && (
+        <p className="pt-4 border-t border-gray-100 dark:border-white/5 text-[10px] font-bold text-gray-400 leading-relaxed">
+          شما با کد معرفی یکی از اعضا عضو شده‌اید.
+        </p>
+      )}
+    </section>
+  );
+
+  async function submitCode() {
+    setEntryBusy(true);
+    setEntryMsg(null);
+
+    try {
+      const res = await fetch("/api/club/referral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: entry.trim() }),
+      });
+      const d = await res.json();
+
+      if (!res.ok) {
+        setEntryMsg({ text: d.error ?? "کد معرف ثبت نشد", ok: false });
+      } else {
+        setEntryMsg({ text: "کد معرف ثبت شد — با اولین خریدتان امتیاز می‌گیرید", ok: true });
+        setEntry("");
+        await reload();
+      }
+    } catch {
+      setEntryMsg({ text: "ارتباط با سرور برقرار نشد", ok: false });
+    } finally {
+      setEntryBusy(false);
+    }
+  }
 }
 
 function Stat({

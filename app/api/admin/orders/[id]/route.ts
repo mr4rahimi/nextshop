@@ -4,6 +4,9 @@ import { deductStockForOrderItems } from "@/lib/order-stock";
 import { queueShopOrderForInvoicing } from "@/lib/integration/core/invoicing";
 import { serialize } from "@/lib/serialize";
 import { sendOrderSms, OrderSmsEvent } from "@/lib/sms";
+import { processOrderForClub } from "@/lib/club/rewards";
+import { refundOrderPoints } from "@/lib/club/points";
+import { releaseCoupon } from "@/lib/club/coupons";
 
 export const runtime = "nodejs";
 
@@ -100,6 +103,22 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
       where: { orderId: id, status: "PENDING" },
       data:  { status: "SUCCEEDED", providerRef: `manual-admin-${Date.now()}` },
     }).catch((e: unknown) => console.error("[order] تسویه پرداخت دستی ناموفق:", e));
+  }
+
+  // باشگاه مشتریان — آمار خرید، امتیاز و سطح
+  //
+  // ⚠️ در هر گذار وضعیت صدا زده می‌شود، نه فقط یک وضعیت خاص: سفارش ممکن است
+  //    مستقیم به DELIVERED برود و گذار به PAID را جا بیندازد. خودِ
+  //    processOrderForClub تکرار را بی‌اثر می‌کند، پس صدا زدن مکرر بی‌خطر است.
+  if (prevOrder && data.status && data.status !== prevOrder.status) {
+    void processOrderForClub(id);
+
+    // سفارش لغو یا مرجوع شد → امتیاز خرج‌شده برگردد.
+    // بدون این، مشتری هم سفارشش لغو می‌شود هم امتیازش می‌سوزد.
+    if (data.status === "CANCELED" || data.status === "REFUNDED") {
+      void refundOrderPoints(id);
+      void releaseCoupon(id);
+    }
   }
 
   // ثبت ردیف‌های فاکتور خودکار حسابداری — فقط در اولین گذار به CONFIRMED

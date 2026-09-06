@@ -47,6 +47,14 @@ export async function GET(_req: Request, { params }: Ctx) {
         orderBy: { createdAt: "desc" },
         take: 20,
       },
+      // سند رضایت — بدون دیدنش در پرونده‌ی عضو، دفتر ثبت عملاً بی‌فایده است
+      consentEvents: {
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      },
+      identities: {
+        select: { channel: true, username: true, isActive: true, subscribedAt: true },
+      },
     },
   });
 

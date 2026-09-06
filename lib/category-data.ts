@@ -61,6 +61,8 @@ export async function getCategoryData(slug: string) {
     title: category.title,
     slug: category.slug,
     description: category.description,
+    descriptionTop: category.descriptionTop,
+    faq: category.faq,
     imageUrl: category.imageUrl,
     seoTitle: category.seoTitle,
     seoDescription: category.seoDescription,

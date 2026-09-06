@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import FaqSection from "@/components/store/FaqSection";
+import { normalizeFaq } from "@/lib/faq";
 
 interface Product {
   id: string; title: string; slug: string; mainImage: string | null;
@@ -20,6 +22,8 @@ interface Post {
   category: { title: string; slug: string } | null;
   tags: { tag: { title: string; slug: string } }[];
   relatedProducts: { product: Product }[];
+  /** سوالات متداول — با normalizeFaq امن می‌شود */
+  faq?: unknown;
   comments: Comment[];
   _count: { comments: number };
 }
@@ -240,6 +244,14 @@ export default function MagPostClient({ post, related }: { post: Post; related: 
                     #{tag.title}
                   </Link>
                 ))}
+              </div>
+            )}
+
+            {/* سوالات متداول — اسکیمای FAQPage در page.tsx سرور منتشر می‌شود.
+                سطح تیتر h2 است چون تیترهای داخل متن مقاله از h2 شروع می‌شوند. */}
+            {normalizeFaq(post.faq).length > 0 && (
+              <div className="bg-white dark:bg-gray-900/60 rounded-[2.5rem] p-6 sm:p-8">
+                <FaqSection items={normalizeFaq(post.faq)} className="mt-0" />
               </div>
             )}
 

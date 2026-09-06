@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { Prisma, ClubSource } from "@prisma/client";
+import type { Prisma, ClubSource, ClubChannel } from "@prisma/client";
 
 /**
  * موتور بخش‌بندی مشتریان
@@ -38,6 +38,15 @@ export interface Segment {
   tags?: string[];
   /** سطوح عضویت */
   tierIds?: string[];
+  /**
+   * فهرست صریح اعضا — برای «ارسال انتخابی»
+   *
+   * ⚠️ وقتی پر باشد، بقیه‌ی شرط‌ها هم اعمال می‌شوند (نه به‌جای آن‌ها): ادمینی
+   *    که ۱۰ نفر را دستی انتخاب کرده، هنوز نباید به عضو مسدود پیام بدهد.
+   */
+  profileIds?: string[];
+  /** فقط اعضایی که در این کانال‌ها شناسه‌ی فعال دارند */
+  channels?: ClubChannel[];
 }
 
 export interface SegmentSummary {
@@ -64,6 +73,20 @@ export function buildSegmentWhere(segment: Segment): Prisma.ClubProfileWhereInpu
 
   if (segment.onlyConsented) {
     and.push({ smsConsent: true });
+  }
+
+  if (segment.profileIds?.length) {
+    and.push({ id: { in: segment.profileIds } });
+  }
+
+  if (segment.channels?.length) {
+    // ⚠️ پیامک شناسه‌ی جدا ندارد؛ «کانال پیامک» یعنی رضایت پیامک
+    const or: Prisma.ClubProfileWhereInput[] = [];
+    for (const ch of segment.channels) {
+      if (ch === "SMS") or.push({ smsConsent: true });
+      else or.push({ identities: { some: { channel: ch, isActive: true } } });
+    }
+    and.push({ OR: or });
   }
 
   if (segment.birthMonth) {
@@ -159,6 +182,7 @@ export async function summarizeSegment(segment: Segment): Promise<SegmentSummary
 }
 
 export interface SegmentRecipient {
+  profileId: string;
   userId: string;
   phone: string;
   firstName: string | null;
@@ -171,8 +195,12 @@ export interface SegmentRecipient {
 /**
  * دریافت گیرندگان یک بخش برای ساخت دسته‌های ارسال
  *
- * فقط اعضای دارای رضایت برگردانده می‌شوند — چون این تابع در مسیر ارسال
- * واقعی استفاده می‌شود. نگهبان‌ها بعداً دوباره بررسی می‌کنند (دفاع لایه‌ای).
+ * فقط اعضای قابل‌دسترس برگردانده می‌شوند — چون این تابع در مسیر ارسال واقعی
+ * استفاده می‌شود. نگهبان‌ها بعداً دوباره بررسی می‌کنند (دفاع لایه‌ای).
+ *
+ * ⚠️ «قابل دسترس» یعنی رضایت پیامک **یا** شناسه‌ی فعال در یک پیام‌رسان.
+ *    فیلتر کردن صرفاً روی `smsConsent` عضوی را که فقط در ربات بله عضو شده
+ *    از همه‌ی کمپین‌ها حذف می‌کند — دقیقاً کسی که ارزان‌ترین کانال را دارد.
  */
 export async function fetchSegmentRecipients(
   segment: Segment,
@@ -181,7 +209,17 @@ export async function fetchSegmentRecipients(
   const { requireConsent = true, limit = 50_000 } = options;
 
   const where: Prisma.ClubProfileWhereInput = requireConsent
-    ? { AND: [buildSegmentWhere(segment), { smsConsent: true }] }
+    ? {
+        AND: [
+          buildSegmentWhere(segment),
+          {
+            OR: [
+              { smsConsent: true },
+              { identities: { some: { isActive: true, channel: { not: "SMS" } } } },
+            ],
+          },
+        ],
+      }
     : buildSegmentWhere(segment);
 
   const profiles = await prisma.clubProfile.findMany({
@@ -210,6 +248,7 @@ export async function fetchSegmentRecipients(
   );
 
   return profiles.map((p) => ({
+    profileId: p.id,
     userId: p.user.id,
     phone: p.user.phone,
     firstName: p.user.firstName,

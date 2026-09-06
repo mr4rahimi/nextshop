@@ -104,6 +104,29 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
     storeSettings.paymentGatewayActive ? "online" : "card"
   );
   const [useWallet, setUseWallet] = useState(false);
+
+  // ── کد تخفیف ──────────────────────────────────────────────────
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<{
+    code: string;
+    discount: number;
+    freeShipping: boolean;
+    title: string | null;
+  } | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [couponBusy, setCouponBusy] = useState(false);
+
+  // ── امتیاز باشگاه ─────────────────────────────────────────────
+  const [club, setClub] = useState<{
+    balance: number;
+    enabled: boolean;
+    rate: number;
+    quote: { allowed: boolean; maxPoints: number; maxDiscount: number; reason?: string } | null;
+    consent?: { given: boolean; points: number };
+  } | null>(null);
+  const [usePoints, setUsePoints] = useState(false);
+  // ⚠️ پیش‌فرض خاموش — تیکِ از پیش‌خورده رضایت معتبر نیست
+  const [smsConsent, setSmsConsent] = useState(false);
   const walletBalanceNum = Number(walletBalance ?? "0");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -124,6 +147,25 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
     if (count === 0) router.push("/cart");
     }, [count]);
 
+  // موجودی امتیاز و سقف استفاده — با تغییر مبلغ سبد دوباره پرسیده می‌شود،
+  // چون سقف درصدی به مبلغ سفارش بستگی دارد
+  useEffect(() => {
+    if (count === 0 || total <= 0) return;
+
+    const controller = new AbortController();
+    fetch(`/api/club/points?total=${total}`, { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d) return;
+        setClub(d);
+        // اگر سقف صفر شد، تیک روشن‌مانده معنی ندارد
+        if (!d.quote?.allowed) setUsePoints(false);
+      })
+      .catch(() => {});
+
+    return () => controller.abort();
+  }, [total, count]);
+
     if (count === 0) return null;
 
   const shippingFee = selectedShipping ? Number(selectedShipping.fee) : 0;
@@ -132,8 +174,52 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
     const sale = Number(i.product.salePrice ?? i.product.price);
     return s + (orig - sale) * i.qty;
   }, 0);
-  const walletDiscount = useWallet ? Math.min(walletBalanceNum, total + shippingFee) : 0;
-  const grandTotal = total + shippingFee - walletDiscount;
+  // ترتیب اعمال با سمت سرور یکی است: کد تخفیف ← امتیاز ← کیف پول.
+  // اختلاف بین این عدد و عدد سرور یعنی مشتری چیزی می‌بیند که پرداخت نمی‌کند.
+  const effectiveShipping = coupon?.freeShipping ? 0 : shippingFee;
+  const couponDiscount = Math.min(coupon?.discount ?? 0, total);
+  const afterCoupon = total + effectiveShipping - couponDiscount;
+
+  const maxPointDiscount = club?.quote?.allowed ? club.quote.maxDiscount : 0;
+  const pointsDiscount = usePoints ? Math.min(maxPointDiscount, afterCoupon) : 0;
+  const afterPoints = afterCoupon - pointsDiscount;
+
+  const walletDiscount = useWallet ? Math.min(walletBalanceNum, afterPoints) : 0;
+  const grandTotal = afterPoints - walletDiscount;
+
+  async function applyCoupon() {
+    const code = couponInput.trim();
+    if (!code) return;
+
+    setCouponBusy(true);
+    setCouponError("");
+
+    try {
+      const res = await fetch("/api/club/coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, itemsTotal: String(total), shippingFee: String(shippingFee) }),
+      });
+      const d = await res.json();
+
+      if (!res.ok) {
+        setCouponError(d.error ?? "کد تخفیف معتبر نیست");
+        setCoupon(null);
+      } else {
+        setCoupon({
+          code: d.code,
+          discount: Number(d.discount ?? 0),
+          freeShipping: Boolean(d.freeShipping),
+          title: d.title ?? null,
+        });
+        setCouponInput("");
+      }
+    } catch {
+      setCouponError("ارتباط با سرور برقرار نشد");
+    } finally {
+      setCouponBusy(false);
+    }
+  }
 
   async function handleSaveAddress() {
     if (!newAddr.receiver || !newAddr.phone || !newAddr.province || !newAddr.city || !newAddr.addressLine) {
@@ -167,6 +253,10 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
         shippingMethodId: selectedShipping.id,
         paymentMethod,
         useWallet,
+        // فقط کد و «آیا امتیاز خرج شود» فرستاده می‌شود؛ مبلغ را سرور حساب می‌کند
+        ...(coupon ? { couponCode: coupon.code } : {}),
+        ...(usePoints ? { usePoints: true } : {}),
+        ...(smsConsent ? { smsConsent: true } : {}),
         items: items.map(i => ({ productId: i.productId, qty: i.qty })),
       }),
     });
@@ -458,12 +548,121 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-bold text-gray-500 dark:text-gray-400">هزینه ارسال</span>
                       <div className="flex-1 border-b border-dashed border-gray-300 dark:border-white/10 mx-3 mb-1" />
-                      {shippingFee === 0
+                      {effectiveShipping === 0
                         ? <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-lg">رایگان</span>
-                        : <span className="text-sm font-black text-gray-900 dark:text-white tabular-nums">{toFa(shippingFee)}</span>
+                        : <span className="text-sm font-black text-gray-900 dark:text-white tabular-nums">{toFa(effectiveShipping)}</span>
                       }
                     </div>
                   </div>
+
+                  {/* کد تخفیف */}
+                  <div className="space-y-2">
+                    {coupon ? (
+                      <div className="flex justify-between items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[10px] font-black text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-lg shrink-0" dir="ltr">
+                            {coupon.code}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => { setCoupon(null); setCouponError(""); }}
+                            className="text-[10px] font-bold text-gray-400 hover:text-red-500 shrink-0"
+                          >
+                            حذف
+                          </button>
+                        </div>
+                        <div className="flex-1 border-b border-dashed border-gray-300 dark:border-white/10 mx-1 mb-1" />
+                        <span className="text-sm font-black text-emerald-600 tabular-nums shrink-0">
+                          {coupon.freeShipping ? "ارسال رایگان" : `-${toFa(couponDiscount)}`}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input
+                          value={couponInput}
+                          onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(""); }}
+                          onKeyDown={(e) => { if (e.key === "Enter") applyCoupon(); }}
+                          placeholder="کد تخفیف"
+                          dir="ltr"
+                          className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-white/60 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-800 dark:text-white outline-none focus:border-primary-500 text-center"
+                        />
+                        <button
+                          type="button"
+                          onClick={applyCoupon}
+                          disabled={couponBusy || !couponInput.trim()}
+                          className="px-4 py-2 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[11px] font-black disabled:opacity-40 transition-opacity shrink-0"
+                        >
+                          {couponBusy ? "..." : "اعمال"}
+                        </button>
+                      </div>
+                    )}
+                    {couponError && (
+                      <p className="text-[10px] font-bold text-red-500 leading-relaxed">{couponError}</p>
+                    )}
+                  </div>
+
+                  {/* امتیاز باشگاه */}
+                  {club?.enabled && club.balance > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={!club.quote?.allowed}
+                            onClick={() => setUsePoints(!usePoints)}
+                            className={`w-9 h-5 rounded-full transition-colors relative disabled:opacity-40 ${usePoints ? "bg-primary-600" : "bg-gray-200 dark:bg-white/10"}`}
+                          >
+                            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${usePoints ? "-translate-x-4" : "translate-x-0.5"}`} />
+                          </button>
+                          <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                            استفاده از امتیاز باشگاه
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-lg shrink-0">
+                          {toFa(club.balance)} امتیاز
+                        </span>
+                      </div>
+
+                      {!club.quote?.allowed && club.quote?.reason && (
+                        <p className="text-[10px] font-bold text-gray-400 leading-relaxed">
+                          {club.quote.reason}
+                        </p>
+                      )}
+
+                      {usePoints && pointsDiscount > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">تخفیف امتیاز</span>
+                          <div className="flex-1 border-b border-dashed border-gray-300 dark:border-white/10 mx-3 mb-1" />
+                          <span className="text-sm font-black text-amber-600 dark:text-amber-400 tabular-nums">
+                            -{toFa(pointsDiscount)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* رضایت دریافت پیام — فقط وقتی هنوز نداده */}
+                  {club && club.consent && !club.consent.given && (
+                    <label className="flex items-start gap-2.5 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={smsConsent}
+                        onChange={(e) => setSmsConsent(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 shrink-0 accent-primary-600 cursor-pointer"
+                      />
+                      <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 leading-relaxed">
+                        از تخفیف‌ها و جشنواره‌ها باخبرم کنید
+                        {club.consent.points > 0 && (
+                          <span className="text-amber-600 dark:text-amber-400">
+                            {" "}(+{toFa(club.consent.points)} امتیاز)
+                          </span>
+                        )}
+                        <span className="block text-[10px] font-medium text-gray-400 dark:text-gray-500 mt-0.5">
+                          هر زمان بخواهید می‌توانید لغو کنید.
+                        </span>
+                      </span>
+                    </label>
+                  )}
 
                   {}
                   {storeSettings.walletEnabled && walletBalanceNum > 0 && (

@@ -40,7 +40,7 @@ async function main() {
 
   const config = await loadSmsConfig();
   const guards = await loadGuardSettings();
-  const provider = getProvider();
+  const provider = await getProvider();
 
   console.log("پیکربندی:");
   console.log(`   خط خدماتی:    ${config.serviceLine || "❌ تنظیم نشده"}`);

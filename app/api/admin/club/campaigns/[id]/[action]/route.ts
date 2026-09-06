@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
-import { enqueueSmsBatch, makeJobId } from "@/lib/club/queue";
+import { enqueueMultiChannelBatch, makeJobId } from "@/lib/club/queue";
 import { loadSmsConfig } from "@/lib/club/sms";
 import {
   loadGuardSettings,
@@ -9,6 +9,7 @@ import {
   delayUntilAllowedHours,
 } from "@/lib/club/sms/guards";
 import { fetchSegmentRecipients, recipientVars, type Segment } from "@/lib/club/segment";
+import { getTemplateBody, getChannelPriority } from "@/lib/club/channels";
 
 export const runtime = "nodejs";
 
@@ -90,7 +91,27 @@ export async function POST(_req: Request, { params }: Ctx) {
 
   const config = await loadSmsConfig();
 
-  if (template.kind === "MARKETING" && !config.marketingLine) {
+  // ── متن هر کانال ────────────────────────────────────────────────
+  // ⚠️ کانالی که متن ندارد اصلاً در فهرست نمی‌آید. متن پیامک روی بله بد
+  //    خوانده می‌شود، پس نبودِ متن یعنی «این قالب روی این کانال نرود» —
+  //    نه «همان متن پیامک را بفرست».
+  const priority = await getChannelPriority();
+  const bodyByChannel: Record<string, string> = {};
+
+  for (const channel of priority) {
+    const body = await getTemplateBody(template.id, channel);
+    if (body?.body) bodyByChannel[channel] = body.body;
+  }
+
+  if (Object.keys(bodyByChannel).length === 0) {
+    return NextResponse.json(
+      { error: "برای هیچ کانالی متن تعریف نشده است" },
+      { status: 400 }
+    );
+  }
+
+  // خط تبلیغاتی فقط وقتی لازم است که پیامک واقعاً یکی از کانال‌ها باشد
+  if (template.kind === "MARKETING" && bodyByChannel.SMS && !config.marketingLine) {
     return NextResponse.json(
       {
         error:
@@ -139,22 +160,26 @@ export async function POST(_req: Request, { params }: Ctx) {
   });
 
   for (let index = 0; index < batches.length; index++) {
-    await enqueueSmsBatch(
+    const batch = batches[index];
+
+    await enqueueMultiChannelBatch(
       {
         templateKey: template.key,
-        text: template.body,
         kind: template.kind,
         campaignId: campaign.id,
-        recipients: batches[index].map((r) => ({
-          mobile: r.phone,
-          userId: r.userId,
-          vars: recipientVars(r, config.storeName),
-        })),
+        bodyByChannel,
+        // ⚠️ فقط شناسه‌ی پروفایل می‌رود؛ انتخاب کانال در لحظه‌ی ارسال انجام
+        //    می‌شود، نه حالا. عضوی که تا آن موقع در بله عضو شده باید از بله
+        //    پیام بگیرد.
+        profileIds: batch.map((r) => r.profileId),
+        varsByProfile: Object.fromEntries(
+          batch.map((r) => [r.profileId, recipientVars(r, config.storeName)])
+        ),
       },
       {
         // jobId یکتا — اجرای دوباره کمپین پیام تکراری نمی‌فرستد
         jobId: makeJobId("campaign", campaign.id, index),
-        // فاصله بین دسته‌ها تا فشار روی پنل نیاید
+        // فاصله بین دسته‌ها تا فشار روی ارائه‌دهنده نیاید
         delay: baseDelay + index * 2_000,
       }
     );
@@ -164,6 +189,7 @@ export async function POST(_req: Request, { params }: Ctx) {
     success: true,
     recipients: recipients.length,
     batches: batches.length,
+    channels: Object.keys(bodyByChannel),
     delayedUntilAllowedHours: baseDelay > 0,
     note:
       baseDelay > 0

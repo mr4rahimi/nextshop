@@ -62,6 +62,12 @@ export const MEMBER_SELECT = {
   sourcePlatform: true,
   smsConsent: true,
   consentAt: true,
+  // آخرین رویداد رضایت — ادمین باید ببیند رضایت از کجا آمده، نه فقط اینکه هست
+  consentEvents: {
+    orderBy: { createdAt: "desc" },
+    take: 1,
+    select: { granted: true, source: true, ip: true, createdAt: true },
+  },
   birthDate: true,
   birthMonth: true,
   birthDay: true,
@@ -111,26 +117,57 @@ export async function GET(req: Request) {
   );
 }
 
-/** آمار کلی — همیشه روی کل اعضا، مستقل از فیلتر فعلی */
+/**
+ * آمار کلی — همیشه روی کل اعضا، مستقل از فیلتر فعلی
+ *
+ * ⚠️ «قابل دسترس» با «رضایت پیامک» یکی نیست: عضوی که در ربات بله عضو است
+ *    بدون رضایت پیامک هم پیام می‌گیرد. نمایش تنها نرخ رضایت پیامک، با آمدن
+ *    کانال‌های پیام‌رسان تصویر غلط می‌دهد.
+ */
 async function buildStats() {
-  const [all, consent, withBirth, buyers, bySource] = await Promise.all([
-    prisma.clubProfile.count(),
-    prisma.clubProfile.count({ where: { smsConsent: true } }),
-    prisma.clubProfile.count({ where: { birthDate: { not: null } } }),
-    prisma.clubProfile.count({ where: { orderCount: { gt: 0 } } }),
-    prisma.clubProfile.groupBy({
-      by: ["source"],
-      _count: { _all: true },
-    }),
-  ]);
+  const since = new Date(Date.now() - 30 * 86_400_000);
+
+  const [all, consent, withBirth, buyers, bySource, messenger, reachable, recentConsent] =
+    await Promise.all([
+      prisma.clubProfile.count(),
+      prisma.clubProfile.count({ where: { smsConsent: true } }),
+      prisma.clubProfile.count({ where: { birthDate: { not: null } } }),
+      prisma.clubProfile.count({ where: { orderCount: { gt: 0 } } }),
+      prisma.clubProfile.groupBy({
+        by: ["source"],
+        _count: { _all: true },
+      }),
+      prisma.clubProfile.count({
+        where: { identities: { some: { isActive: true, channel: { not: "SMS" } } } },
+      }),
+      prisma.clubProfile.count({
+        where: {
+          isBlocked: false,
+          OR: [
+            { smsConsent: true },
+            { identities: { some: { isActive: true, channel: { not: "SMS" } } } },
+          ],
+        },
+      }),
+      prisma.clubConsentEvent.groupBy({
+        by: ["source"],
+        where: { granted: true, createdAt: { gte: since } },
+        _count: { _all: true },
+      }),
+    ]);
 
   return {
     all,
     consent,
     withBirth,
     buyers,
+    messenger,
+    reachable,
     bySource: Object.fromEntries(
       bySource.map((r) => [r.source, r._count._all])
+    ) as Record<string, number>,
+    consentBySource: Object.fromEntries(
+      recentConsent.map((r) => [r.source, r._count._all])
     ) as Record<string, number>,
   };
 }

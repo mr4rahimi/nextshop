@@ -210,6 +210,17 @@ export function buildBreadcrumbSchema(items: { name: string; url: string }[]) {
   };
 }
 
+/**
+ * رشته‌ی خالی یا فقط-فاصله را به `undefined` تبدیل می‌کند.
+ *
+ * `?? undefined` جلوی `null` را می‌گیرد ولی `""` را رد می‌کند و نتیجه‌اش
+ * فیلد خالی در JSON-LD است — گوگل آن را ناقص می‌شمارد.
+ */
+function blankToUndefined(v?: string | null): string | undefined {
+  const t = v?.trim();
+  return t ? t : undefined;
+}
+
 /** Product schema */
 export function buildProductSchema(opts: {
   name: string;
@@ -236,14 +247,24 @@ export function buildProductSchema(opts: {
   const salePrice = opts.salePrice ? Number(opts.salePrice) : null;
   const offerPrice = salePrice && salePrice < price ? salePrice : price;
 
+  /**
+   * قیمت صفر یعنی «قیمت ثبت نشده»، نه «رایگان».
+   *
+   * اگر `price: 0` همراه `availability: InStock` منتشر شود، گوگل آفر را نامعتبر
+   * می‌داند: نه rich result قیمتی می‌دهد و در Search Console خطای
+   * «Invalid object» ثبت می‌کند. در mahamprint این حالت روی اکثر محصولات فعال
+   * بود. راه درست حذف کامل `offers` است — محصول بدون آفر اسکیمای معتبری است.
+   */
+  const hasPrice = Number.isFinite(offerPrice) && offerPrice > 0;
+
   // تومان → ریال، چون priceCurrency باید کد ISO 4217 باشد
-  const offerPriceIrr = tomanToIrr(offerPrice);
+  const offerPriceIrr = hasPrice ? tomanToIrr(offerPrice) : null;
 
   const schema: any = {
     "@context": "https://schema.org",
     "@type": "Product",
     name:        opts.name,
-    description: opts.description ?? undefined,
+    description: blankToUndefined(opts.description),
     image:       opts.images?.length ? opts.images : (opts.image ? [opts.image] : undefined),
     sku:         opts.sku    ?? undefined,
     gtin13:      opts.gtin13 ?? undefined,
@@ -251,7 +272,7 @@ export function buildProductSchema(opts: {
     brand:       opts.brand ? { "@type": "Brand", name: opts.brand } : undefined,
     category:    opts.category ?? undefined,
     url:         opts.url,
-    offers: {
+    offers: hasPrice ? {
       "@type":         "Offer",
       url:             opts.url,
       priceCurrency:   SCHEMA_CURRENCY,
@@ -288,10 +309,10 @@ export function buildProductSchema(opts: {
         returnMethod: "https://schema.org/ReturnByMail",
         returnFees: "https://schema.org/FreeReturn",
       },
-    },
+    } : undefined,
   };
 
-  if (salePrice && salePrice < price) {
+  if (hasPrice && salePrice && salePrice < price) {
     schema.offers.priceSpecification = [
       { "@type": "UnitPriceSpecification", price: tomanToIrr(salePrice), priceCurrency: SCHEMA_CURRENCY, priceType: "https://schema.org/SalePrice" },
       { "@type": "UnitPriceSpecification", price: tomanToIrr(price),     priceCurrency: SCHEMA_CURRENCY, priceType: "https://schema.org/ListPrice" },

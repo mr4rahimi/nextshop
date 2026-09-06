@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { IranPayamakProvider } from "./providers/iranpayamak";
+import { SmsPanel } from "./panel";
 import { applyGuards, loadGuardSettings, type GuardCandidate } from "./guards";
+import { noApiKeyError } from "./errors";
 import { appendOptOut, toProviderSyntax, renderTemplate } from "./render";
 import type { SmsProvider, Recipient } from "./types";
 import type { SmsKind } from "@prisma/client";
@@ -13,16 +15,59 @@ const DRY_RUN = process.env.CLUB_SMS_DRY_RUN === "1";
  * صفحات و Worker فقط با این فایل کار می‌کنند، نه مستقیم با درایور.
  */
 
-let cached: SmsProvider | null = null;
+/**
+ * کش درایور بر اساس خودِ کلید، نه یک نمونه‌ی سراسری.
+ *
+ * ⚠️ کش کردن بدون کلید غلط است: هر کسب‌وکار پنل ایران‌پیامک جداگانه دارد و
+ *    ادمین می‌تواند کلید را هر لحظه از تنظیمات عوض کند. نمونه‌ی سراسری یعنی
+ *    تا ری‌استارت شدن پروسه، کلید قدیمی استفاده می‌شود.
+ */
+const providerCache = new Map<string, SmsProvider>();
+const panelCache = new Map<string, SmsPanel>();
 
-export function getProvider(): SmsProvider {
-  if (cached) return cached;
+/**
+ * کلید API این کسب‌وکار
+ *
+ * ترتیب: تنظیمات فروشگاه (اختصاصی هر سایت) ← متغیر محیطی (فقط fallback توسعه).
+ * منبع حقیقت همان جایی است که ادمین در `/admin/site-settings` وارد می‌کند.
+ */
+export async function resolveApiKey(): Promise<string> {
+  const s = await prisma.storeSettings.findUnique({
+    where: { id: "singleton" },
+    select: { smsApiKey: true },
+  });
 
-  const apiKey = process.env.IRANPAYAMAK_API_KEY ?? "";
-  if (!apiKey) throw new Error("IRANPAYAMAK_API_KEY تنظیم نشده است");
+  return s?.smsApiKey?.trim() || process.env.IRANPAYAMAK_API_KEY?.trim() || "";
+}
 
-  cached = new IranPayamakProvider(apiKey);
-  return cached;
+/**
+ * پوسته‌ی مدیریتی پنل — همان کلید، همان قاعده‌ی کش
+ *
+ * جدا از `getProvider()` نگه داشته شده تا مسیرهای ارسال (که در Worker اجرا
+ * می‌شوند) سطح مدیریتی را با خودشان حمل نکنند.
+ */
+export async function getPanel(): Promise<SmsPanel> {
+  const apiKey = await resolveApiKey();
+  if (!apiKey) throw noApiKeyError();
+
+  const hit = panelCache.get(apiKey);
+  if (hit) return hit;
+
+  const panel = new SmsPanel(apiKey);
+  panelCache.set(apiKey, panel);
+  return panel;
+}
+
+export async function getProvider(): Promise<SmsProvider> {
+  const apiKey = await resolveApiKey();
+  if (!apiKey) throw noApiKeyError();
+
+  const hit = providerCache.get(apiKey);
+  if (hit) return hit;
+
+  const provider = new IranPayamakProvider(apiKey);
+  providerCache.set(apiKey, provider);
+  return provider;
 }
 
 export interface SmsConfig {
@@ -172,7 +217,7 @@ export async function dispatchBatch(input: DispatchInput): Promise<DispatchResul
     return { sentCount: 0, skippedCount: skipped.length + allowed.length };
   }
 
-  const provider = getProvider();
+  const provider = await getProvider();
 
   const recipients: Recipient[] = allowed.map((c) => ({
     mobile: c.phone,
@@ -224,5 +269,8 @@ export async function dispatchBatch(input: DispatchInput): Promise<DispatchResul
 }
 
 export { applyGuards, loadGuardSettings } from "./guards";
+export { SmsApiError, noApiKeyError, httpStatusFor, type SmsErrorCode } from "./errors";
+export { SmsPanel, MAX_BULK_CONTACTS } from "./panel";
+export type * from "./panel-types";
 export * from "./render";
 export type { SmsProvider } from "./types";

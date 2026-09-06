@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { slugify } from "@/lib/slugify";
+import { faqForPrisma } from "@/lib/faq-db";
 
 export const runtime = "nodejs";
 
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
       seoTitle:       data.seoTitle       ?? null,
       seoDescription: data.seoDescription ?? null,
       seoKeywords:    data.seoKeywords    ?? null,
+      faq:            faqForPrisma(data.faq),
       readingTime,
       tags: data.tags?.length ? {
         create: data.tags.map((tagId: string) => ({ tag: { connect: { id: tagId } } })),

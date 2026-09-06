@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
-import { getProvider } from "@/lib/club/sms";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,8 +14,20 @@ const SELECT = {
   smsAllowedHourEnd: true,
   smsMonthlyCapPerUser: true,
   smsOptOutText: true,
+  smsOptInText: true,
   pointPerToman: true,
   pointExpiryDays: true,
+  pointOnSignup: true,
+  pointOnBirthday: true,
+  pointOnReview: true,
+  pointOnConsent: true,
+  pointOnReferrer: true,
+  pointOnReferee: true,
+  pointRedeemEnabled: true,
+  pointRedeemRate: true,
+  pointRedeemMin: true,
+  pointRedeemMaxPct: true,
+  channelPriority: true,
   storeName: true,
 } as const;
 
@@ -37,18 +48,9 @@ export async function GET() {
     select: SELECT,
   });
 
-  // اعتبار پنل — اگر در دسترس نبود، صفحه نباید بشکند
-  let balance: { amount: number; count?: number } | null = null;
-  let balanceError: string | null = null;
-
-  try {
-    balance = await getProvider().getBalance();
-    if (!balance) balanceError = "پاسخ پنل نامعتبر بود";
-  } catch (err) {
-    balanceError = err instanceof Error ? err.message : "خطای نامشخص";
-  }
-
-  return NextResponse.json({ settings, balance, balanceError });
+  // اعتبار پنل از `/api/admin/sms/account` گرفته می‌شود — جداگانه، تا کندی یا
+  // خرابی پنل پیامک بارگذاری تنظیمات را عقب نیندازد
+  return NextResponse.json({ settings });
 }
 
 export async function PATCH(req: Request) {
@@ -75,6 +77,10 @@ export async function PATCH(req: Request) {
 
   if (typeof body.smsOptOutText === "string") {
     data.smsOptOutText = body.smsOptOutText.trim() || null;
+  }
+
+  if (typeof body.smsOptInText === "string") {
+    data.smsOptInText = body.smsOptInText.trim() || null;
   }
 
   // ── ساعت مجاز ───────────────────────────────────────────────────
@@ -127,6 +133,60 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "مدت انقضا نامعتبر است" }, { status: 400 });
     }
     data.pointExpiryDays = expiry;
+  }
+
+  // ── امتیاز رویدادها ─────────────────────────────────────────────
+  // ⚠️ همه اختیاری‌اند و ۰ یعنی «آن رویداد امتیاز نمی‌دهد» — نه «تنظیم نشده».
+  const EVENT_POINTS = [
+    ["pointOnSignup", "امتیاز عضویت"],
+    ["pointOnBirthday", "امتیاز تولد"],
+    ["pointOnReview", "امتیاز ثبت نظر"],
+    ["pointOnConsent", "امتیاز رضایت دریافت پیام"],
+    ["pointOnReferrer", "امتیاز معرف"],
+    ["pointOnReferee", "امتیاز معرفی‌شده"],
+    ["pointRedeemMin", "حداقل امتیاز قابل استفاده"],
+  ] as const;
+
+  for (const [field, label] of EVENT_POINTS) {
+    const v = intOrNull(body[field]);
+    if (v === null) continue;
+    if (v < 0 || v > 1_000_000) {
+      return NextResponse.json({ error: `${label} نامعتبر است` }, { status: 400 });
+    }
+    data[field] = v;
+  }
+
+  // ── خرج کردن امتیاز ─────────────────────────────────────────────
+  if (typeof body.pointRedeemEnabled === "boolean") {
+    data.pointRedeemEnabled = body.pointRedeemEnabled;
+  }
+
+  if (body.pointRedeemRate !== undefined) {
+    const rate = Number(body.pointRedeemRate);
+    if (!Number.isFinite(rate) || rate < 0) {
+      return NextResponse.json({ error: "ارزش هر امتیاز نامعتبر است" }, { status: 400 });
+    }
+    data.pointRedeemRate = rate;
+  }
+
+  const maxPct = intOrNull(body.pointRedeemMaxPct);
+  if (maxPct !== null) {
+    if (maxPct < 0 || maxPct > 100) {
+      return NextResponse.json(
+        { error: "سقف درصدی باید بین ۰ تا ۱۰۰ باشد" },
+        { status: 400 }
+      );
+    }
+    data.pointRedeemMaxPct = maxPct;
+  }
+
+  // ── اولویت کانال‌ها ─────────────────────────────────────────────
+  if (Array.isArray(body.channelPriority)) {
+    const VALID = ["SMS", "TELEGRAM", "BALE"];
+    const clean = body.channelPriority
+      .map((v) => String(v).toUpperCase())
+      .filter((v, i, a) => VALID.includes(v) && a.indexOf(v) === i);
+    if (clean.length > 0) data.channelPriority = clean;
   }
 
   const settings = await prisma.storeSettings.update({

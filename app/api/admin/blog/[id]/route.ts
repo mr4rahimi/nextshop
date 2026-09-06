@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
+import { faqForPrisma } from "@/lib/faq-db";
 
 export const runtime = "nodejs";
 
@@ -47,6 +48,9 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
       seoTitle:       data.seoTitle       ?? null,
       seoDescription: data.seoDescription ?? null,
       seoKeywords:    data.seoKeywords    ?? null,
+      // فقط وقتی نوشته می‌شود که کلید در بدنه باشد — بدنه‌ی ناقص نباید
+      // سوالات متداول موجود را پاک کند.
+      ...("faq" in data ? { faq: faqForPrisma(data.faq) } : {}),
       readingTime,
       tags: data.tags?.length ? {
         create: data.tags.map((tagId: string) => ({ tag: { connect: { id: tagId } } })),

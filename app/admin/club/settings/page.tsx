@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import SmsAccountCard from "@/components/admin/sms/SmsAccountCard";
 
 interface Settings {
   clubEnabled: boolean;
@@ -11,10 +12,28 @@ interface Settings {
   smsAllowedHourEnd: number;
   smsMonthlyCapPerUser: number;
   smsOptOutText: string | null;
+  smsOptInText: string | null;
   pointPerToman: number;
   pointExpiryDays: number;
+  pointOnSignup: number;
+  pointOnBirthday: number;
+  pointOnReview: number;
+  pointOnConsent: number;
+  pointOnReferrer: number;
+  pointOnReferee: number;
+  pointRedeemEnabled: boolean;
+  pointRedeemRate: number;
+  pointRedeemMin: number;
+  pointRedeemMaxPct: number;
+  channelPriority: string[];
   storeName: string | null;
 }
+
+const CHANNEL_FA: Record<string, string> = {
+  SMS: "پیامک",
+  BALE: "بله",
+  TELEGRAM: "تلگرام",
+};
 
 function toFa(n: number | string) {
   return Number(n).toLocaleString("fa-IR");
@@ -22,8 +41,6 @@ function toFa(n: number | string) {
 
 export default function ClubSettingsPage() {
   const [s, setS] = useState<Settings | null>(null);
-  const [balance, setBalance] = useState<{ amount: number; count?: number } | null>(null);
-  const [balanceError, setBalanceError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
@@ -32,8 +49,6 @@ export default function ClubSettingsPage() {
     const res = await fetch("/api/admin/club/settings");
     const d = await res.json();
     setS(d.settings);
-    setBalance(d.balance);
-    setBalanceError(d.balanceError);
     setLoading(false);
   }
 
@@ -113,32 +128,8 @@ export default function ClubSettingsPage() {
         </div>
       )}
 
-      {/* اعتبار پنل */}
-      <Card>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-sm font-black text-gray-900 dark:text-white">اعتبار پنل پیامک</h2>
-            {balanceError ? (
-              <p className="text-[11px] font-bold text-red-500 mt-1.5">{balanceError}</p>
-            ) : (
-              <p className="text-[11px] font-bold text-gray-400 mt-1.5">
-                حدود {toFa(balance?.count ?? 0)} پیامک باقی‌مانده
-              </p>
-            )}
-          </div>
-          <div className="text-left">
-            <p className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
-              {balance ? toFa(balance.amount) : "—"}
-            </p>
-            <button
-              onClick={load}
-              className="text-[10px] font-black text-primary-600 hover:underline"
-            >
-              بروزرسانی
-            </button>
-          </div>
-        </div>
-      </Card>
+      {/* اعتبار پنل — کارت مشترک با /admin/sms */}
+      <SmsAccountCard compact />
 
       {/* عمومی */}
       <Card title="عمومی">
@@ -229,6 +220,64 @@ export default function ClubSettingsPage() {
           onChange={(v) => set("smsOptOutText", v)}
           placeholder="لغو۱۱"
         />
+
+        <Field
+          label="کلمه‌ی کلیدی رضایت"
+          hint="مشتری این را به خط خدماتی پیامک می‌کند تا عضو شود. «۱»، «عضویت»، «بله» و «ok» همیشه پذیرفته می‌شوند."
+          value={s.smsOptInText ?? ""}
+          onChange={(v) => set("smsOptInText", v)}
+          placeholder="عضویت"
+        />
+      </Card>
+
+      {/* اولویت کانال‌ها */}
+      <Card title="ترتیب کانال‌ها">
+        <p className="text-[10px] font-bold text-gray-400 leading-relaxed">
+          هر عضو فقط از <b>اولین</b> کانالی که در دسترسش باشد پیام می‌گیرد، نه از
+          همه — وگرنه یک نفر چند بار یک پیام می‌گیرد. کانال‌های رایگان را بالاتر
+          بگذارید. پیامک همیشه آخرین پناهگاه است، حتی اگر از فهرست برداریدش.
+        </p>
+
+        <div className="space-y-2">
+          {(s.channelPriority ?? ["SMS"]).map((c, i) => (
+            <div
+              key={c}
+              className="flex items-center gap-2 bg-gray-50 dark:bg-white/5 rounded-xl px-3 py-2"
+            >
+              <span className="text-[10px] font-black text-gray-400 w-5">{toFa(i + 1)}</span>
+              <span className="flex-1 text-[11px] font-black text-gray-700 dark:text-gray-300">
+                {CHANNEL_FA[c] ?? c}
+              </span>
+              <button
+                type="button"
+                disabled={i === 0}
+                onClick={() => {
+                  const next = [...s.channelPriority];
+                  [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                  set("channelPriority", next);
+                }}
+                className="px-2 py-1 rounded-lg bg-white dark:bg-white/10 text-[10px] font-black text-gray-600 dark:text-gray-300 disabled:opacity-25"
+              >
+                بالا
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {Object.keys(CHANNEL_FA)
+            .filter((c) => !(s.channelPriority ?? []).includes(c))
+            .map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => set("channelPriority", [...(s.channelPriority ?? []), c])}
+                className="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-white/5 text-[10px] font-black text-gray-600 dark:text-gray-300"
+              >
+                + {CHANNEL_FA[c]}
+              </button>
+            ))}
+        </div>
       </Card>
 
       {/* امتیاز */}
@@ -261,6 +310,118 @@ export default function ClubSettingsPage() {
             value={s.pointExpiryDays}
             min={0}
             onChange={(v) => set("pointExpiryDays", v)}
+          />
+        </div>
+      </Card>
+
+      {/* امتیاز رویدادها */}
+      <Card title="امتیاز رویدادها">
+        <p className="text-[10px] font-bold text-gray-400 leading-relaxed">
+          مقدار ۰ یعنی آن رویداد امتیازی نمی‌دهد. هیچ‌کدام از این اعداد در کد ثابت
+          نیست — هر کسب‌وکار مقدار خودش را تعیین می‌کند.
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <NumberField
+            label="امتیاز عضویت"
+            hint="یک بار، هنگام پیوستن به باشگاه"
+            value={s.pointOnSignup}
+            min={0}
+            onChange={(v) => set("pointOnSignup", v)}
+          />
+          <NumberField
+            label="امتیاز تولد"
+            hint="سالانه، در روز تولد عضو"
+            value={s.pointOnBirthday}
+            min={0}
+            onChange={(v) => set("pointOnBirthday", v)}
+          />
+          <NumberField
+            label="امتیاز ثبت نظر"
+            hint="برای هر نظر تأییدشده روی محصول"
+            value={s.pointOnReview}
+            min={0}
+            onChange={(v) => set("pointOnReview", v)}
+          />
+          <NumberField
+            label="امتیاز رضایت دریافت پیام"
+            hint="یک بار، وقتی عضو اجازه‌ی ارسال پیام می‌دهد"
+            value={s.pointOnConsent}
+            min={0}
+            onChange={(v) => set("pointOnConsent", v)}
+          />
+          <NumberField
+            label="امتیاز معرف"
+            hint="به کسی که دوستش را معرفی کرده"
+            value={s.pointOnReferrer}
+            min={0}
+            onChange={(v) => set("pointOnReferrer", v)}
+          />
+          <NumberField
+            label="امتیاز معرفی‌شده"
+            hint="به کسی که با معرفی عضو شده"
+            value={s.pointOnReferee}
+            min={0}
+            onChange={(v) => set("pointOnReferee", v)}
+          />
+        </div>
+      </Card>
+
+      {/* خرج کردن امتیاز */}
+      <Card title="استفاده از امتیاز">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={s.pointRedeemEnabled}
+            onChange={(e) => set("pointRedeemEnabled", e.target.checked)}
+            className="mt-0.5 w-4 h-4 accent-primary-600"
+          />
+          <span>
+            <span className="block text-xs font-black text-gray-800 dark:text-gray-100">
+              مشتری بتواند امتیازش را خرج کند
+            </span>
+            <span className="block text-[10px] font-bold text-gray-400 mt-1 leading-relaxed">
+              بدون این، امتیاز فقط یک عدد نمایشی است و انگیزه‌ای برای مشتری نمی‌سازد
+            </span>
+          </span>
+        </label>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[10px] font-black text-gray-500 mb-2">
+              ارزش هر امتیاز (تومان)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min={0}
+              value={s.pointRedeemRate}
+              onChange={(e) => set("pointRedeemRate", Number(e.target.value))}
+              className={inputCls}
+              dir="ltr"
+            />
+            <p className="text-[10px] font-bold text-gray-400 mt-2">
+              ۱۰۰۰ امتیاز ={" "}
+              <span className="font-black text-gray-600 dark:text-gray-300">
+                {toFa(Math.floor(1000 * s.pointRedeemRate))}
+              </span>{" "}
+              تومان تخفیف
+            </p>
+          </div>
+
+          <NumberField
+            label="حداقل امتیاز قابل استفاده"
+            hint="زیر این مقدار، امتیاز قابل خرج کردن نیست"
+            value={s.pointRedeemMin}
+            min={0}
+            onChange={(v) => set("pointRedeemMin", v)}
+          />
+
+          <NumberField
+            label="سقف درصدی از سفارش"
+            hint="حداکثر چند درصد مبلغ سفارش با امتیاز پرداخت شود"
+            value={s.pointRedeemMaxPct}
+            min={0}
+            onChange={(v) => set("pointRedeemMaxPct", Math.min(v, 100))}
           />
         </div>
       </Card>

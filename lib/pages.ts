@@ -144,7 +144,7 @@ export function normalizeTemplate(v: unknown): PageTemplate {
 export const RESERVED_PAGE_SLUGS = new Set([
   "admin", "api", "auth", "account", "user", "seller", "cart", "checkout",
   "products", "categories", "brands", "collections", "search", "mag",
-  "configurator", "warranty", "torob-products", "sitemap.xml", "robots.txt",
+  "configurator", "warranty", "torob-products", "club", "sitemap.xml", "robots.txt",
 ]);
 
 // ── فهرست مطالب ────────────────────────────────────────────────────────────

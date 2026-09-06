@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getProvider } from "./index";
 import { normalizePhone } from "../phone";
+import { setClubConsent } from "../consent";
+import type { ConsentSource } from "@prisma/client";
 import type { ProviderItemStatus, SendRequestStatus } from "./types";
 
 /**
@@ -54,7 +56,7 @@ export interface SyncResult {
 
 /** همگام‌سازی یک درخواست ارسال */
 export async function syncSendRequest(requestId: number): Promise<SyncResult> {
-  const provider = getProvider();
+  const provider = await getProvider();
   const result: SyncResult = {
     requestId,
     requestStatus: null,
@@ -216,9 +218,42 @@ export function isOptOutMessage(text: string, optOutText?: string | null): boole
   return false;
 }
 
+/**
+ * آیا این پیام درخواست *عضویت* است؟
+ *
+ * مؤثرترین راه برای بالا بردن نرخ رضایت روی اعضای موجود: یک پیامک خدماتی
+ * «برای دریافت تخفیف‌ها عدد ۱ را بفرستید». بدون این، تنها راه رضایت گرفتن،
+ * خریدِ بعدی مشتری است.
+ *
+ * ⚠️ ابتدا «لغو» بررسی می‌شود، نه این — پیام «لغو عضویت» هر دو کلمه را دارد
+ *    و اگر ترتیب برعکس شود، لغو به رضایت تعبیر می‌شود.
+ */
+export function isOptInMessage(text: string, optInText?: string | null): boolean {
+  const normalized = digitsToLatin(text).replace(/\s+/g, "").trim();
+  if (!normalized) return false;
+
+  const configured = optInText ? digitsToLatin(optInText).replace(/\s+/g, "").trim() : "";
+  if (configured && normalized === configured) return true;
+
+  if (/^(عضویت|بله|تایید|تأیید|موافقم|میخوام|می‌خوام)$/.test(normalized)) return true;
+  if (/^(ok|yes|start|join|subscribe|on)$/i.test(normalized)) return true;
+
+  // عدد خالص ۱ — رایج‌ترین پاسخ به «عدد ۱ را بفرستید»
+  if (normalized === "1") return true;
+
+  return false;
+}
+
+function digitsToLatin(text: string): string {
+  return text
+    .replace(/[\u06F0-\u06F9]/g, (d) => String("\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9".indexOf(d)))
+    .replace(/[\u0660-\u0669]/g, (d) => String("\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669".indexOf(d)));
+}
+
 export interface InboxResult {
   scanned: number;
   optedOut: number;
+  optedIn: number;
   lastId: number | null;
 }
 
@@ -229,15 +264,15 @@ export interface InboxResult {
  * پردازش نشوند.
  */
 export async function pollInbox(maxPages = 5): Promise<InboxResult> {
-  const provider = getProvider();
+  const provider = await getProvider();
 
   const settings = await prisma.storeSettings.findUnique({
     where: { id: "singleton" },
-    select: { smsInboxCursor: true, smsOptOutText: true },
+    select: { smsInboxCursor: true, smsOptOutText: true, smsOptInText: true },
   });
 
   const cursor = settings?.smsInboxCursor ?? 0;
-  const result: InboxResult = { scanned: 0, optedOut: 0, lastId: null };
+  const result: InboxResult = { scanned: 0, optedOut: 0, optedIn: 0, lastId: null };
 
   let highestId = cursor;
 
@@ -257,15 +292,32 @@ export async function pollInbox(maxPages = 5): Promise<InboxResult> {
       result.scanned++;
       if (msg.id > highestId) highestId = msg.id;
 
-      if (!isOptOutMessage(msg.text, settings?.smsOptOutText)) continue;
+      const optOut = isOptOutMessage(msg.text, settings?.smsOptOutText);
+      const optIn = !optOut && isOptInMessage(msg.text, settings?.smsOptInText);
+      if (!optOut && !optIn) continue;
 
       const phone = normalizePhone(msg.from);
       if (!phone) continue;
 
-      const created = await addOptOut(phone, "sms_reply", msg.text.slice(0, 100));
-      if (created) {
-        result.optedOut++;
-        console.log(`[sms:inbox] لغو عضویت: ${maskPhone(phone)}`);
+      if (optOut) {
+        const created = await addOptOut(phone, "sms_reply", msg.text.slice(0, 100));
+        if (created) {
+          result.optedOut++;
+          console.log(`[sms:inbox] لغو عضویت: ${maskPhone(phone)}`);
+        }
+        continue;
+      }
+
+      const granted = await setClubConsent({
+        phone,
+        granted: true,
+        source: "SMS_REPLY",
+        note: msg.text.slice(0, 100),
+      });
+
+      if (granted.changed) {
+        result.optedIn++;
+        console.log(`[sms:inbox] رضایت: ${maskPhone(phone)}`);
       }
     }
 
@@ -304,12 +356,15 @@ export async function addOptOut(
     data: { phone: normalized, source, reason: reason ?? null },
   });
 
-  await prisma.clubProfile
-    .updateMany({
-      where: { user: { phone: normalized } },
-      data: { smsConsent: false, consentAt: null },
-    })
-    .catch(() => {});
+  const consentSource: ConsentSource =
+    source === "sms_reply" ? "SMS_REPLY" : "ADMIN";
+
+  await setClubConsent({
+    phone: normalized,
+    granted: false,
+    source: consentSource,
+    note: reason ?? null,
+  });
 
   return true;
 }

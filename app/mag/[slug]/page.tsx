@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import MagPostClient from "@/components/blog/MagPostClient";
-import { SITE_URL, canonicalUrl, buildBaseMetadata, buildArticleSchema, buildBreadcrumbSchema } from "@/lib/seo";
+import { SITE_URL, canonicalUrl, buildBaseMetadata, buildArticleSchema, buildBreadcrumbSchema, buildFAQSchema } from "@/lib/seo";
+import { normalizeFaq } from "@/lib/faq";
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -80,6 +81,8 @@ export default async function MagPostPage({ params }: Props) {
     publisherLogo:  settings?.storeLogo  ?? null,
   });
 
+  const faqSchema = buildFAQSchema(normalizeFaq(post.faq));
+
   const breadcrumb = buildBreadcrumbSchema([
     { name: "خانه", url: SITE_URL },
     { name: "مجله", url: `${SITE_URL}/mag` },
@@ -91,6 +94,9 @@ export default async function MagPostPage({ params }: Props) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
+      {faqSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
       <MagPostClient post={serialize(post)} related={serialize(related)} />
     </>
   );

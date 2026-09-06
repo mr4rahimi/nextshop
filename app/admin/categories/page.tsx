@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { slugify } from "@/lib/slugify";
+import FaqEditor from "@/components/admin/FaqEditor";
+import { normalizeFaq } from "@/lib/faq";
 
 const EMPTY_FORM = {
-  title: "", slug: "", parentId: "", description: "",
+  title: "", slug: "", parentId: "", description: "", descriptionTop: "",
   imageUrl: "", seoTitle: "", seoDescription: "",
   seoKeywords: "", sortOrder: 0, isActive: true,
+  faq: [] as { question: string; answer: string }[],
 };
 
 // ── Tree builder ──────────────────────────────────────────────────────────────
@@ -300,7 +303,13 @@ export default function CategoriesPage() {
 
   function handleEdit(cat: any) {
     setEditing(cat);
-    setForm({ ...cat, parentId: cat.parentId || "" });
+    setForm({
+      ...cat,
+      parentId: cat.parentId || "",
+      descriptionTop: cat.descriptionTop ?? "",
+      // ستون Json می‌تواند null باشد؛ ادیتور همیشه آرایه می‌خواهد
+      faq: normalizeFaq(cat.faq),
+    });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -417,13 +426,39 @@ export default function CategoriesPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">توضیحات</label>
+              <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">
+                توضیحات بالای گرید
+              </label>
+              <textarea
+                value={form.descriptionTop}
+                onChange={e => handleChange("descriptionTop", e.target.value)}
+                rows={3}
+                placeholder="۱۵۰ تا ۲۰۰ کلمه: این دسته چیست و برای چه کسی است. بالای فهرست محصولات دیده می‌شود."
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all resize-none"
+              />
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 leading-5">
+                زیر عنوان صفحه و <b>قبل از</b> محصولات نمایش داده می‌شود.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">
+                توضیحات پایین گرید
+              </label>
               <textarea
                 value={form.description}
                 onChange={e => handleChange("description", e.target.value)}
-                rows={2}
-                placeholder="توضیح کوتاه درباره دسته‌بندی..."
+                rows={3}
+                placeholder="۳۰۰ تا ۴۰۰ کلمه: راهنمای انتخاب. بعد از فهرست محصولات دیده می‌شود."
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all resize-none"
+              />
+            </div>
+
+            <div className="pt-2 border-t border-gray-200 dark:border-white/10">
+              <FaqEditor
+                items={form.faq ?? []}
+                onChange={v => handleChange("faq", v)}
+                hint="پایین صفحه‌ی دسته‌بندی نمایش داده می‌شود و اسکیمای FAQPage را خودکار می‌سازد. فقط روی نسخه‌ی بدون فیلتر منتشر می‌شود."
               />
             </div>
 

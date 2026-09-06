@@ -1,3 +1,12 @@
+import { SmsApiError } from "../errors";
+import {
+  IranPayamakHttp,
+  asRecord,
+  num,
+  maybeNum,
+  truthy,
+  type ApiResult,
+} from "./http";
 import type {
   SmsProvider,
   SendResult,
@@ -7,6 +16,8 @@ import type {
   DeliveryItem,
   InboxMessage,
   Balance,
+  BalanceDetail,
+  AccountProfile,
   ProviderItemStatus,
 } from "../types";
 
@@ -16,7 +27,9 @@ import type {
  * ساختار پاسخ‌ها بر اساس خروجی واقعی پنل تنظیم شده است:
  *
  *   ارسال:      { status, message, data: { id, type, status, metadata, schedule } }
- *   اعتبار:     { data: { balance_amount: "54230", balance_count: "361.53" } }   ← رشته‌اند
+ *   اعتبار:     { data: { balance_amount: "995595", balance_count: "5410.84" } }  ← رشته‌اند
+ *               مستند رسمی نام‌ها را camelCase (balanceAmount) می‌دهد؛ هر دو
+ *               حالت پذیرفته می‌شود تا تغییر پنل بی‌صدا صفر برنگرداند.
  *   جزئیات:     { data: { sendRequest: { id, status, snapshot: {...} } } }
  *   آیتم‌ها:     { data: { data: [{ destination, status, text, error, pages }] } }  ← Laravel paginator
  *   ورودی:      { data: { data: [...] } }
@@ -26,20 +39,14 @@ import type {
  *    `sendPattern` استفاده کنید.
  */
 
-const BASE = "https://api.iranpayamak.com";
-const TIMEOUT_MS = 20_000;
-
-interface ApiEnvelope {
-  status?: string;
-  message?: string;
-  data?: unknown;
-}
-
 export class IranPayamakProvider implements SmsProvider {
   readonly name = "iranpayamak";
 
-  constructor(private readonly apiKey: string) {
-    if (!apiKey) throw new Error("IRANPAYAMAK_API_KEY تنظیم نشده است");
+  private readonly http: IranPayamakHttp;
+
+  constructor(apiKey: string) {
+    if (!apiKey) throw new Error("کلید API پنل پیامک تنظیم نشده است");
+    this.http = new IranPayamakHttp(apiKey);
   }
 
   // ── ارسال ────────────────────────────────────────────────────────
@@ -99,20 +106,63 @@ export class IranPayamakProvider implements SmsProvider {
 
   // ── خواندن ───────────────────────────────────────────────────────
 
-  async getBalance(): Promise<Balance | null> {
+  async getBalance(): Promise<Balance> {
     const res = await this.request("GET", "/ws/v1/account/balance");
-    if (!res.ok) return null;
+    if (!res.ok) throw res.apiError;
 
     const d = asRecord(res.body?.data);
-    if (!d) return null;
+    if (!d) {
+      throw new SmsApiError("BAD_RESPONSE", "پاسخ اعتبار از پنل ساختار شناخته‌شده‌ای نداشت");
+    }
 
-    // مقادیر به‌صورت رشته برمی‌گردند
-    const amount = Number(d.balance_amount ?? 0);
-    const count = Number(d.balance_count ?? NaN);
+    // پنل امروز snake_case و رشته می‌دهد، مستند رسمی camelCase و عدد
+    const amount = maybeNum(d.balance_amount ?? d.balanceAmount);
+    const count = maybeNum(d.balance_count ?? d.balanceCount);
+
+    if (amount === undefined && count === undefined) {
+      throw new SmsApiError("BAD_RESPONSE", "پاسخ اعتبار از پنل ساختار شناخته‌شده‌ای نداشت");
+    }
+
+    const rawDetails = Array.isArray(d.details) ? d.details : [];
+    const details: BalanceDetail[] = [];
+
+    for (const raw of rawDetails) {
+      const row = asRecord(raw);
+      if (!row) continue;
+      details.push({
+        count: num(row.count),
+        rate: num(row.rate),
+        amount: num(row.amount),
+      });
+    }
 
     return {
-      amount: Number.isFinite(amount) ? amount : 0,
-      count: Number.isFinite(count) ? Math.floor(count) : undefined,
+      amount: amount ?? 0,
+      // عمداً گِرد نمی‌شود؛ 0.29 پیامک نباید به «۰» تبدیل شود و مثل «بدون اعتبار» دیده شود
+      count,
+      ...(details.length > 0 ? { details } : {}),
+    };
+  }
+
+  async getProfile(): Promise<AccountProfile> {
+    const res = await this.request("GET", "/ws/v1/account/profile");
+    if (!res.ok) throw res.apiError;
+
+    const d = asRecord(res.body?.data);
+    if (!d) {
+      throw new SmsApiError("BAD_RESPONSE", "پاسخ مشخصات حساب ساختار شناخته‌شده‌ای نداشت");
+    }
+
+    const plan = asRecord(d.plan);
+
+    return {
+      displayName: String(d.displayName ?? d.display_name ?? ""),
+      mobile: String(d.mobile ?? ""),
+      // پنل گاهی "1"/"0" رشته‌ای می‌دهد نه boolean
+      verified: truthy(d.verified),
+      blocked: truthy(d.blocked),
+      ...(plan?.title ? { planTitle: String(plan.title) } : {}),
+      ...(plan?.expiryDate ? { planExpiryDate: String(plan.expiryDate) } : {}),
     };
   }
 
@@ -269,89 +319,11 @@ export class IranPayamakProvider implements SmsProvider {
     };
   }
 
-  private async request(
+  private request(
     method: "GET" | "POST",
     path: string,
     body?: unknown
-  ): Promise<{ ok: boolean; body?: ApiEnvelope; error?: string }> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-    try {
-      const res = await fetch(`${BASE}${path}`, {
-        method,
-        headers: {
-          "Api-Key": this.apiKey,
-          Accept: "application/json",
-          ...(body ? { "Content-Type": "application/json" } : {}),
-        },
-        ...(body ? { body: JSON.stringify(body) } : {}),
-        signal: controller.signal,
-      });
-
-      const raw = await res.text();
-      let parsed: ApiEnvelope | undefined;
-      try {
-        parsed = raw ? (JSON.parse(raw) as ApiEnvelope) : undefined;
-      } catch {
-        // پاسخ JSON نبود
-      }
-
-      if (!res.ok || parsed?.status === "error") {
-        return { ok: false, body: parsed, error: describeError(res.status, parsed, raw) };
-      }
-
-      return { ok: true, body: parsed };
-    } catch (err) {
-      const msg =
-        err instanceof Error && err.name === "AbortError"
-          ? "پاسخ پنل پیامک در زمان مجاز دریافت نشد"
-          : err instanceof Error
-            ? err.message
-            : "خطای نامشخص";
-      return { ok: false, error: msg };
-    } finally {
-      clearTimeout(timer);
-    }
+  ): Promise<ApiResult> {
+    return this.http.request(method, path, body);
   }
-}
-
-// ─── کمکی‌ها ────────────────────────────────────────────────────────
-
-function asRecord(v: unknown): Record<string, unknown> | null {
-  return v && typeof v === "object" && !Array.isArray(v)
-    ? (v as Record<string, unknown>)
-    : null;
-}
-
-function num(v: unknown): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function describeError(
-  httpStatus: number,
-  parsed: ApiEnvelope | undefined,
-  raw: string
-): string {
-  const candidates = [
-    parsed?.message,
-    (parsed as Record<string, unknown> | undefined)?.messages,
-  ];
-
-  for (const m of candidates) {
-    if (typeof m === "string" && m.trim()) return m;
-    if (Array.isArray(m)) return m.join(" — ");
-    if (m && typeof m === "object") {
-      // { code: ["تکمیل گزینه code الزامی است"], recipient: [...] }
-      return Object.entries(m as Record<string, unknown>)
-        .map(([field, msgs]) => {
-          const t = Array.isArray(msgs) ? msgs.join("، ") : String(msgs);
-          return `${field}: ${t}`;
-        })
-        .join(" | ");
-    }
-  }
-
-  return `HTTP ${httpStatus}: ${raw.slice(0, 200) || "(بدون بدنه)"}`;
 }

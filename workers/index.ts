@@ -19,9 +19,11 @@ import {
   clubCronQueue,
   enqueueStatusCheck,
   type SmsBatchJob,
+  type MultiChannelBatchJob,
   type SmsStatusJob,
 } from "../lib/club/queue";
 import { dispatchBatch } from "../lib/club/sms";
+import { dispatchMultiChannel } from "../lib/club/channels";
 import {
   syncSendRequest,
   syncPendingDeliveries,
@@ -73,6 +75,54 @@ async function registerCronJobs() {
   console.log(`[worker] ${CRON_JOBS.length} کرون ثبت شد`);
 }
 
+/**
+ * اجرای یک دسته‌ی چندکاناله
+ *
+ * ⚠️ شمارش کمپین از `totalSent`/`totalFailed` می‌آید، نه از تعداد گیرنده‌ها:
+ *    عضوی که هیچ کانال قابل‌استفاده‌ای ندارد نه ارسال شده نه شکست خورده —
+ *    «رد شده» است و باید در `skippedCount` بیفتد.
+ */
+async function runMultiChannel(job: Job<MultiChannelBatchJob>) {
+  const { profileIds, kind, bodyByChannel, varsByProfile, campaignId, templateKey } =
+    job.data;
+
+  console.log(`[worker:multi] ${job.id} — ${profileIds.length} عضو — ${kind}`);
+
+  const result = await dispatchMultiChannel({
+    profileIds,
+    kind,
+    bodyByChannel,
+    ...(varsByProfile
+      ? { varsByProfile: new Map(Object.entries(varsByProfile)) }
+      : {}),
+    extra: {
+      ...(templateKey ? { templateKey } : {}),
+      ...(campaignId ? { campaignId } : {}),
+    },
+  });
+
+  if (campaignId) {
+    await prisma.smsCampaign
+      .update({
+        where: { id: campaignId },
+        data: {
+          sentCount: { increment: result.totalSent },
+          failedCount: { increment: result.totalFailed },
+          skippedCount: { increment: result.unreachable },
+        },
+      })
+      .catch(() => {});
+  }
+
+  console.log(
+    `[worker:multi] کانال‌ها: ${Object.entries(result.byChannel)
+      .map(([c, r]) => `${c}=${r.sentCount}/${r.sentCount + r.failedCount}`)
+      .join(" · ")}`
+  );
+
+  return { sentCount: result.totalSent, skippedCount: result.unreachable };
+}
+
 // ─── راه‌اندازی ──────────────────────────────────────────────────────
 
 async function main() {
@@ -83,10 +133,19 @@ async function main() {
   console.log("[worker] اتصال Redis برقرار است");
 
   // ── ۱. ارسال پیامک ──────────────────────────────────────────────
-  const smsWorker = new Worker<SmsBatchJob>(
+  const smsWorker = new Worker<SmsBatchJob | MultiChannelBatchJob>(
     QUEUE_NAMES.SMS_SEND,
-    async (job: Job<SmsBatchJob>) => {
-      const { recipients, kind, text, templateKey, campaignId, automationId } = job.data;
+    async (job: Job<SmsBatchJob | MultiChannelBatchJob>) => {
+      // ── دسته‌ی چندکاناله ────────────────────────────────────────
+      // یک صف، دو نوع کار. کمپین‌های تازه از این مسیر می‌آیند؛ مسیر قدیمی
+      // برای OTP و پیامک سفارش دست‌نخورده می‌ماند.
+      if (job.name === "send-multi") {
+        return runMultiChannel(job as Job<MultiChannelBatchJob>);
+      }
+
+      const { recipients, kind, text, templateKey, campaignId, automationId } = (
+        job as Job<SmsBatchJob>
+      ).data;
 
       console.log(`[worker:sms] ${job.id} — ${recipients.length} گیرنده — ${kind}`);
 
@@ -140,10 +199,17 @@ async function main() {
 
     const isFinal = job && job.attemptsMade >= (job.opts.attempts ?? 1);
     if (isFinal && job?.data.campaignId) {
+      // هر دو نوع کار شمارنده‌ی خودشان را دارند: پیامکی گیرنده‌ی شماره‌ای،
+      // چندکاناله فهرست پروفایل
+      const count =
+        "recipients" in job.data
+          ? job.data.recipients.length
+          : job.data.profileIds.length;
+
       await prisma.smsCampaign
         .update({
           where: { id: job.data.campaignId },
-          data: { failedCount: { increment: job.data.recipients.length } },
+          data: { failedCount: { increment: count } },
         })
         .catch(() => {});
     }

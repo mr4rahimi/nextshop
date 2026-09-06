@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const provider = getProvider();
+  const provider = await getProvider();
 
   try {
     // ── حالت پترن ────────────────────────────────────────────────

@@ -63,6 +63,10 @@ model Category {
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   description     String?
+  /// متن معرفی بالای گرید محصولات. `description` پایین گرید می‌آید.
+  descriptionTop  String?
+  /// سوالات متداول — آرایه‌ی [{question, answer}]. با `normalizeFaq()` امن شود.
+  faq             Json?
   imageUrl        String?
   seoDescription  String?
   seoKeywords     String?
@@ -208,6 +212,8 @@ model Order {
   itemsTotal    BigInt      @default(0)
   shippingFee   BigInt      @default(0)
   discountTotal BigInt      @default(0)
+  /// کد تخفیف اعمال‌شده روی این سفارش — برای نمایش و گزارش
+  couponCode    String?
   grandTotal    BigInt      @default(0)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -622,9 +628,53 @@ model StoreSettings {
   smsAllowedHourEnd    Int     @default(21)
   smsMonthlyCapPerUser Int     @default(4)
   smsOptOutText        String? @default("لغو۱۱")
+  /// امتیاز به‌ازای هر تومان خرید
   pointPerToman        Float   @default(0.001)
   pointExpiryDays      Int     @default(365)
+  /// امتیاز رویدادها — ۰ یعنی آن رویداد امتیاز نمی‌دهد.
+  /// ⚠️ هیچ‌کدام در کد ثابت نیست؛ همه از همین‌جا خوانده می‌شوند.
+  pointOnSignup        Int     @default(0)
+  pointOnBirthday      Int     @default(0)
+  pointOnReview        Int     @default(0)
+  /// امتیاز تشویقی برای دادن رضایت دریافت پیام — کلید حل نرخ پایین رضایت
+  pointOnConsent       Int     @default(0)
+  /// معرفی دوستان — امتیاز معرف و معرفی‌شده جدا تنظیم می‌شود
+  pointOnReferrer      Int     @default(0)
+  pointOnReferee       Int     @default(0)
+  /// خرج کردن امتیاز
+  pointRedeemEnabled   Boolean @default(false)
+  /// ارزش هر امتیاز هنگام استفاده (تومان)
+  pointRedeemRate      Float   @default(1)
+  /// حداقل امتیاز لازم برای استفاده
+  pointRedeemMin       Int     @default(0)
+  /// سقف درصدی از مبلغ سفارش که با امتیاز قابل پرداخت است (۰ تا ۱۰۰)
+  pointRedeemMaxPct    Int     @default(100)
+  /// ترتیب اولویت کانال‌ها هنگام ارسال — آرایه‌ای از ClubChannel
+  /// مثلاً ["TELEGRAM","BALE","SMS"] یعنی اول رایگان‌ها، بعد پیامک
+  channelPriority      Json    @default("[\"SMS\"]")
   smsInboxCursor       Int?
+
+  // ── ربات بله ────────────────────────────────────────────────────
+  // ⚠️ مثل smsApiKey، اختصاصی هر کسب‌وکار است. هر سایت ربات خودش را دارد،
+  //    پس منبع حقیقت دیتابیس همان سایت است نه متغیر محیطی.
+  baleBotToken         String?
+  /// نام کاربری ربات بدون @ — برای ساخت لینک /start و QR
+  baleBotUsername      String?
+  /// رشته‌ی تصادفی در مسیر وب‌هوک. بله `secret_token` ندارد، پس تنها راه
+  /// محافظت، غیرقابل‌حدس بودن خودِ آدرس است.
+  baleWebhookSecret    String?
+  /// API کسب‌وکاری بله (سهمیه‌ی نرخ بالاتر، هزینه‌دار) به‌جای API معمولی
+  baleBusinessApi      Boolean @default(false)
+  /// نشانگر getUpdates — فقط برای حالت بدون وب‌هوک (توسعه‌ی لوکال)
+  baleUpdateOffset     Int?
+  /// کلید سفیر — ارسال با «شماره تلفن» بدون اینکه کاربر /start زده باشد.
+  /// ⚠️ این کلید با توکن ربات فرق دارد؛ از پنل کسب‌وکار بله گرفته می‌شود و
+  ///    ارسال از آن هزینه‌دار است.
+  baleSafirKey         String?
+  baleSafirEnabled     Boolean @default(false)
+
+  /// کلمه/عدد کلیدی رضایت با پاسخ پیامکی — مشتری این را به خط خدماتی می‌فرستد
+  smsOptInText         String? @default("عضویت")
 }
 
 model MenuItem {
@@ -705,6 +755,8 @@ model BlogPost {
   seoTitle        String?
   seoDescription  String?
   seoKeywords     String?
+  /// سوالات متداول — آرایه‌ی [{question, answer}]. با `normalizeFaq()` امن شود.
+  faq             Json?
   viewCount       Int               @default(0)
   readingTime     Int               @default(0)
   category        BlogCategory?     @relation(fields: [categoryId], references: [id])
@@ -1403,12 +1455,25 @@ enum IntegPurchasePriceSource {
 // CUSTOMER CLUB — باشگاه مشتریان
 // ═══════════════════════════════════════════════════════════════════
 
+/// منبع *جذب* عضو — از کجا آمد. با «کانال ارتباطی» (ClubChannel) فرق دارد:
+/// یکی می‌گوید از کجا آمد، دیگری می‌گوید از چه راهی به او برسیم.
 enum ClubSource {
   ONLINE        // ثبت‌نام از سایت
   IN_STORE      // ثبت توسط فروشنده
   CALLER_ID     // دستگاه شماره‌گیر
   IMPORT        // ورود از فایل
-  MARKETPLACE   // سفارش‌های باسلام / تپسی‌شاپ
+  MARKETPLACE   // باسلام / تپسی‌شاپ / اسنپ‌شاپ / دیجی‌کالا / دیوار
+  MESSAGING     // تلگرام / بله — عضویت از ربات پیام‌رسان
+  REFERRAL      // معرفی توسط عضو دیگر
+}
+
+/// کانال ارتباطی — از چه راهی می‌شود به عضو پیام رساند.
+/// ⚠️ عمداً از ClubSource جداست: عضوی که از باسلام آمده ممکن است بعداً در
+///    تلگرام هم عضو شود؛ با یک enum مشترک یکی از این دو گم می‌شد.
+enum ClubChannel {
+  SMS
+  TELEGRAM
+  BALE
 }
 
 enum PointReason {
@@ -1418,6 +1483,7 @@ enum PointReason {
   BIRTHDAY
   REFERRAL
   REVIEW
+  CONSENT
   REDEEM
   EXPIRE
   ADJUST
@@ -1432,6 +1498,16 @@ model ClubProfile {
   gender         String?
   source         ClubSource @default(ONLINE)
   sourcePlatform String?    // وقتی source = MARKETPLACE → "basalam" | "tapsi_shop"
+  /// کد معرفی اختصاصی این عضو — با اولین درخواست ساخته می‌شود
+  referralCode   String?    @unique
+  /// عضوی که این شخص را معرفی کرده
+  referredById   String?
+  referredAt     DateTime?
+  /// اولین نقطه‌ی تماس — ⚠️ هرگز بازنویسی نمی‌شود. مبنای گزارش «جذب از هر
+  /// پلتفرم» است؛ `source` می‌تواند با فعالیت بعدی عضو عوض شود ولی این نه.
+  firstSource    ClubSource?
+  firstPlatform  String?
+  firstSeenAt    DateTime?
   registeredById String?    // شناسه فروشنده‌ای که ثبت کرده
   tierId         String?
   totalSpent     BigInt     @default(0)
@@ -1449,8 +1525,13 @@ model ClubProfile {
   user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   tier           ClubTier?          @relation(fields: [tierId], references: [id])
   points         PointTransaction[]
+  touchpoints    ClubTouchpoint[]
+  identities     ClubChannelIdentity[]
+  consentEvents  ClubConsentEvent[]
 
   @@index([tierId])
+  @@index([firstSource, firstPlatform])
+  @@index([referredById])
   @@index([birthMonth, birthDay])
   @@index([lastPurchaseAt])
   @@index([smsConsent])
@@ -1475,6 +1556,186 @@ model ClubTier {
 
   @@index([isActive])
   @@index([sortOrder])
+}
+
+/// تاریخچه‌ی نقاط تماس عضو
+///
+/// یک ردیف به‌ازای هر بار که عضو از یک منبع دیده شد. بدون این، فقط «اولین» و
+/// «آخرین» منبع را می‌دانیم و گزارش مسیر مشتری (باسلام ← سایت ← تلگرام)
+/// ممکن نیست.
+model ClubTouchpoint {
+  id         String       @id @default(cuid())
+  profileId  String
+  source     ClubSource
+  /// کد پلتفرم — "basalam" | "tapsi_shop" | "telegram" | "bale" | ...
+  platform   String?
+  /// اگر این تماس از یک کانال پیام‌رسان بود
+  channel    ClubChannel?
+  /// شناسه‌ی عضو در آن پلتفرم (chat_id تلگرام، شناسه‌ی خریدار باسلام و ...)
+  externalId String?
+  meta       Json?
+  occurredAt DateTime     @default(now())
+
+  profile    ClubProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, occurredAt])
+  @@index([source, platform])
+  @@index([occurredAt])
+}
+
+/// شناسه‌ی عضو در هر کانال ارتباطی
+///
+/// برای پیامک شماره‌ی موبایل روی `User` کافی است، ولی تلگرام و بله شناسه‌ی
+/// اختصاصی خودشان (chat_id) را دارند که فقط بعد از استارت زدن کاربر به دست
+/// می‌آید. بدون این جدول، ارسال چندکاناله ممکن نیست.
+model ClubChannelIdentity {
+  id          String      @id @default(cuid())
+  profileId   String
+  channel     ClubChannel
+  /// chat_id تلگرام / شناسه‌ی بله / شماره برای SMS
+  externalId  String
+  /// نام کاربری قابل نمایش در آن پلتفرم
+  username    String?
+  /// کاربر می‌تواند در همان پلتفرم لغو کند بدون اینکه رکورد حذف شود
+  isActive    Boolean     @default(true)
+  subscribedAt DateTime   @default(now())
+  lastSeenAt  DateTime?
+  meta        Json?
+
+  profile     ClubProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([channel, externalId])
+  @@index([profileId, channel])
+  @@index([channel, isActive])
+}
+
+/// منبعی که رضایت از آن گرفته شد — برای اثبات در صورت شکایت
+enum ConsentSource {
+  CHECKOUT      // تیک در صفحه تسویه‌حساب
+  LANDING       // صفحه فرود عمومی / QR فروش حضوری
+  SMS_REPLY     // پاسخ پیامکی با کلمه کلیدی
+  PROFILE       // کلید در پنل کاربری خود مشتری
+  MESSENGER     // /start در ربات بله یا تلگرام
+  SELLER        // ثبت توسط فروشنده
+  ADMIN         // تغییر دستی ادمین
+  IMPORT        // ورود از فایل
+}
+
+/// دفتر تاریخچه‌ی رضایت — هر بار دادن یا پس‌گرفتن رضایت یک ردیف
+///
+/// ⚠️ `ClubProfile.smsConsent` فقط «وضعیت فعلی» است. بدون این دفتر، اگر
+///    مشتری شکایت کند هیچ سندی از اینکه کِی و از کجا رضایت داده وجود ندارد.
+///    بند ۷ سند باشگاه صراحتاً ثبت تاریخ و IP را لازم می‌داند.
+model ClubConsentEvent {
+  id        String        @id @default(cuid())
+  profileId String
+  /// کانالی که رضایت برای آن است — پیامک، بله، تلگرام
+  channel   ClubChannel   @default(SMS)
+  /// true = رضایت داد، false = لغو کرد
+  granted   Boolean
+  source    ConsentSource
+  ip        String?
+  userAgent String?
+  note      String?
+  createdAt DateTime      @default(now())
+
+  profile ClubProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt])
+  @@index([channel, granted])
+  @@index([createdAt])
+}
+
+/// متن قالب برای هر کانال
+///
+/// ⚠️ متن پیامک با متن تلگرام یکی نیست: پیامک کوتاه و بدون قالب‌بندی است،
+///    تلگرام Markdown و دکمه دارد. یک متن مشترک یعنی هر دو بد می‌شوند.
+///    نبود ردیف برای یک کانال = آن قالب روی آن کانال ارسال نمی‌شود
+///    (به‌جز SMS که به `SmsTemplate.body` برمی‌گردد).
+model TemplateChannelBody {
+  id         String      @id @default(cuid())
+  templateId String
+  channel    ClubChannel
+  body       String
+  /// داده‌ی مخصوص کانال — مثل دکمه‌های تلگرام
+  extra      Json?
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  template   SmsTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, channel])
+  @@index([channel])
+}
+
+enum CouponType {
+  PERCENT   // درصدی
+  FIXED     // مبلغ ثابت
+  FREE_SHIP // ارسال رایگان
+}
+
+/// کد تخفیف
+///
+/// جدا از تخفیف محصول (`salePrice`) است: آن روی کالا اعمال می‌شود، این روی
+/// سبد. برای هدیه‌ی تولد، بازگرداندن مشتری خوابیده و مزایای سطح لازم است.
+model Coupon {
+  id             String     @id @default(cuid())
+  code           String     @unique
+  title          String?
+  type           CouponType @default(PERCENT)
+  /// درصد (۱ تا ۱۰۰) یا مبلغ ثابت به تومان — بسته به `type`
+  value          BigInt     @default(0)
+  /// سقف تخفیف برای نوع درصدی — ۰ یعنی بی‌سقف
+  maxDiscount    BigInt     @default(0)
+  /// حداقل مبلغ سبد برای اعتبار کد
+  minOrderTotal  BigInt     @default(0)
+
+  startsAt       DateTime?
+  expiresAt      DateTime?
+  /// سقف کل استفاده — ۰ یعنی نامحدود
+  usageLimit     Int        @default(0)
+  /// سقف استفاده به‌ازای هر کاربر — ۰ یعنی نامحدود
+  perUserLimit   Int        @default(1)
+  usedCount      Int        @default(0)
+
+  /// اگر پر باشد، فقط همین کاربر می‌تواند استفاده کند (کد اختصاصی تولد و ...)
+  userId         String?
+  /// اگر پر باشد، فقط اعضای این سطوح
+  tierIds        String[]   @default([])
+  /// فقط اعضایی که رضایت باشگاه دارند
+  clubOnly       Boolean    @default(false)
+
+  isActive       Boolean    @default(true)
+  note           String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  redemptions    CouponRedemption[]
+
+  @@index([isActive, expiresAt])
+  @@index([userId])
+}
+
+/// مصرف یک کد تخفیف روی یک سفارش
+///
+/// ⚠️ `@@unique([couponId, orderId])` جلوی احتساب دوباره روی یک سفارش را
+///    می‌گیرد، و شمارش `perUserLimit` از همین جدول خوانده می‌شود نه از یک
+///    شمارنده‌ی جدا که ممکن است ناهمگام شود.
+model CouponRedemption {
+  id         String   @id @default(cuid())
+  couponId   String
+  userId     String
+  orderId    String
+  /// مبلغ تخفیف واقعی اعمال‌شده (تومان)
+  discount   BigInt   @default(0)
+  createdAt  DateTime @default(now())
+
+  coupon     Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, orderId])
+  @@index([userId])
+  @@index([orderId])
 }
 
 model PointTransaction {
@@ -1527,6 +1788,7 @@ model SmsTemplate {
   updatedAt   DateTime    @updatedAt
 
   campaigns   SmsCampaign[]
+  channelBodies TemplateChannelBody[]
   automations ClubAutomation[]
 }
 
@@ -1571,6 +1833,10 @@ model SmsMessage {
   automationId     String?
   templateKey      String?
   kind             SmsKind   @default(MARKETING)
+  /// کانالی که پیام از آن رفت. پیش‌فرض SMS تا ردیف‌های موجود معنا داشته باشند.
+  channel          ClubChannel @default(SMS)
+  /// شناسه‌ی گیرنده در آن کانال — برای SMS همان `phone` است
+  destination      String?
   body             String?
   lineNumber       String?
   provider         String    @default("iranpayamak")
@@ -1592,6 +1858,7 @@ model SmsMessage {
   @@index([campaignId])
   @@index([providerRequestId])
   @@index([queuedAt])
+  @@index([channel, status])
 }
 
 model SmsOptOut {

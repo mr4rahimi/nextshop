@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { slugify } from "@/lib/slugify";
+import FaqEditor from "@/components/admin/FaqEditor";
+import { normalizeFaq, type FaqItem } from "@/lib/faq";
 
 const BlogEditor = dynamic(() => import("@/components/blog/BlogEditor"), { ssr: false });
 
@@ -21,6 +23,7 @@ const EMPTY = {
   status: "DRAFT" as "DRAFT" | "PUBLISHED" | "SCHEDULED",
   seoTitle: "", seoDescription: "", seoKeywords: "",
   tagIds: [] as string[], productIds: [] as string[],
+  faq: [] as FaqItem[],
   newTag: "",
 };
 
@@ -36,7 +39,7 @@ export default function BlogPostForm({ postId }: Props) {
   const [productResults, setProductResults] = useState<Product[]>([]);
   const [loading, setLoading]   = useState(isEdit);
   const [saving, setSaving]     = useState(false);
-  const [tab, setTab]           = useState<"content" | "seo" | "products">("content");
+  const [tab, setTab]           = useState<"content" | "seo" | "faq" | "products">("content");
 
   function set(key: keyof typeof EMPTY, val: any) {
     setForm(f => ({ ...f, [key]: val }));
@@ -61,6 +64,8 @@ export default function BlogPostForm({ postId }: Props) {
         seoTitle:       data.seoTitle      ?? "",
         seoDescription: data.seoDescription ?? "",
         seoKeywords:    data.seoKeywords   ?? "",
+        // ستون Json می‌تواند null باشد؛ ادیتور همیشه آرایه می‌خواهد
+        faq:            normalizeFaq(data.faq),
         tagIds:         data.tags?.map((t: any) => t.tag.id) ?? [],
         productIds:     data.relatedProducts?.map((p: any) => p.productId) ?? [],
         newTag:         "",
@@ -180,7 +185,7 @@ export default function BlogPostForm({ postId }: Props) {
 
           {}
           <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-2xl w-fit">
-            {[{ k: "content", l: "محتوا" }, { k: "seo", l: "سئو" }, { k: "products", l: "محصولات" }].map(t => (
+            {[{ k: "content", l: "محتوا" }, { k: "seo", l: "سئو" }, { k: "faq", l: "سوالات متداول" }, { k: "products", l: "محصولات" }].map(t => (
               <button key={t.k} onClick={() => setTab(t.k as any)}
                 className={`px-5 py-2 rounded-xl text-sm font-black transition-all ${tab === t.k ? "bg-white dark:bg-gray-900 text-primary-600 shadow-sm" : "text-gray-500 hover:text-gray-900 dark:hover:text-white"}`}>
                 {t.l}
@@ -231,6 +236,16 @@ export default function BlogPostForm({ postId }: Props) {
           )}
 
           {}
+          {tab === "faq" && (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+              <FaqEditor
+                items={form.faq}
+                onChange={v => set("faq", v)}
+                hint="بعد از متن مطلب نمایش داده می‌شود و اسکیمای FAQPage را خودکار می‌سازد."
+              />
+            </div>
+          )}
+
           {tab === "products" && (
             <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
               <h3 className="font-black text-sm text-gray-900 dark:text-white">محصولات مرتبط با این مطلب</h3>

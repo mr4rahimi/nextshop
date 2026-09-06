@@ -4,7 +4,8 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import CategoryPageClient from "@/components/store/categories/CategoryPageClient";
-import { SITE_URL, buildBaseMetadata, buildBreadcrumbSchema, buildItemListSchema, canonicalUrl, externalImageOrigins } from "@/lib/seo";
+import { SITE_URL, buildBaseMetadata, buildBreadcrumbSchema, buildItemListSchema, buildFAQSchema, canonicalUrl, externalImageOrigins } from "@/lib/seo";
+import { normalizeFaq } from "@/lib/faq";
 import { parseCatalogQuery, fetchCatalog, RESERVED_PARAMS, listingIndexPolicy } from "@/lib/catalog";
 import { matchLandingByFilters } from "@/lib/landing-pages";
 import { getCategoryData as getCategory } from "@/lib/category-data";
@@ -85,7 +86,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const category = await getCategory(slug);
   if (!category) notFound();
 
-  const { activeFilters, hasSort, hasPrice } = analyzeFilters(sp);
+  const { activeFilters, hasFilters, hasSort, hasPrice, page } = analyzeFilters(sp);
   const landing = hasSort || hasPrice ? null : await matchLandingByFilters(slug, activeFilters);
   // ترکیب فیلتر منطبق با یک صفحه فرود → ریدایرکت دائم به نسخه canonical
   if (landing) redirect(`/collections/${landing.slug}`);
@@ -97,8 +98,18 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   const h1 = category.title;
 
+  /**
+   * سوالات متداول فقط روی نسخه‌ی بدون فیلتر و صفحه‌ی اول منتشر می‌شود.
+   * صفحه‌ی `?brand=hp&page=3` همان FAQ را دارد ولی canonical نیست؛ تکرار
+   * `FAQPage` روی ده‌ها آدرس، از نظر گوگل اسپم اسکیماست.
+   */
+  const faqItems = hasFilters || hasSort || hasPrice || page > 1
+    ? []
+    : normalizeFaq((category as any).faq);
+
   let breadcrumbJson = "";
   let itemListJson = "";
+  let faqJson = "";
   try {
     breadcrumbJson = JSON.stringify(buildBreadcrumbSchema([
       { name: "خانه", url: SITE_URL },
@@ -112,6 +123,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         position: i + 1, name: p.title, url: `${SITE_URL}/products/${p.slug}`, image: p.mainImage,
       })),
     }));
+    const faqSchema = buildFAQSchema(faqItems);
+    if (faqSchema) faqJson = JSON.stringify(faqSchema);
   } catch {}
 
   // تصاویر کارت‌های محصول روی دامنه‌ی خارجی‌اند و برخلاف صفحه محصول preload
@@ -127,6 +140,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       ))}
       {breadcrumbJson && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: breadcrumbJson }} />}
       {itemListJson   && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: itemListJson }} />}
+      {faqJson        && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqJson }} />}
       <Suspense fallback={null}>
         <CategoryPageClient
           category={category}

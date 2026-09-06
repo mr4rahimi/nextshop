@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "./phone";
 import { toJalali } from "./jalali";
-import type { ClubSource, Prisma } from "@prisma/client";
+import type { ClubSource, ConsentSource, Prisma } from "@prisma/client";
+import { recordTouchpoint } from "./touchpoints";
+import { grantPoints } from "./points";
+import { setClubConsent } from "./consent";
 
 /**
  * سرویس پروفایل باشگاه مشتریان
@@ -35,21 +38,50 @@ export async function ensureClubProfile(
   if (existing) return existing;
 
   const birth = opts.birthDate ? jalaliFields(opts.birthDate) : {};
+  const source = opts.source ?? "ONLINE";
 
-  return prisma.clubProfile.create({
+  const profile = await prisma.clubProfile.create({
     data: {
       userId,
-      source: opts.source ?? "ONLINE",
+      source,
       sourcePlatform: opts.sourcePlatform ?? null,
       registeredById: opts.registeredById ?? null,
       gender: opts.gender ?? null,
       birthDate: opts.birthDate ?? null,
       ...birth,
-      smsConsent: opts.smsConsent ?? false,
-      consentAt: opts.smsConsent ? new Date() : null,
-      consentIp: opts.smsConsent ? opts.consentIp ?? null : null,
+      // ⚠️ رضایت اینجا نوشته نمی‌شود؛ چند سطر پایین‌تر از مسیر واحد
+      // `setClubConsent()` می‌آید تا سابقه و امتیاز تشویقی هم ثبت شود.
+      // اولین منبع همین‌جا قطعی می‌شود — پروفایل تازه است، پس تماس دیگری نبوده
+      firstSource: source,
+      firstPlatform: opts.sourcePlatform ?? null,
+      firstSeenAt: new Date(),
     },
   });
+
+  await recordTouchpoint({
+    profileId: profile.id,
+    source,
+    platform: opts.sourcePlatform ?? null,
+  });
+
+  if (opts.smsConsent) {
+    await setClubConsent({
+      profileId: profile.id,
+      granted: true,
+      source: consentSourceFor(source),
+      ip: opts.consentIp ?? null,
+    });
+  }
+
+  // امتیاز خوش‌آمد — مقدارش از تنظیمات می‌آید؛ ۰ یعنی این قابلیت خاموش است
+  await grantPoints({
+    profileId: profile.id,
+    reason: "SIGNUP",
+    refType: "profile",
+    refId: profile.id,
+  });
+
+  return profile;
 }
 
 export interface UpsertCustomerInput {
@@ -117,7 +149,23 @@ export async function upsertClubCustomer(
 
     // اگر پروفایل از قبل بود ولی رضایت پیامک تازه داده شده، ثبتش کن
     if (existingUser.clubProfile && input.smsConsent) {
-      await setSmsConsent(existingUser.id, true, input.consentIp ?? null);
+      await setClubConsent({
+        userId: existingUser.id,
+        granted: true,
+        source: consentSourceFor(input.source),
+        ip: input.consentIp ?? null,
+      });
+    }
+
+    // پروفایل تازه، نقطه‌ی تماسش را در ensureClubProfile گرفته. اینجا فقط
+    // برخورد *مجدد* با عضو موجود ثبت می‌شود — همان چیزی که گزارش مسیر مشتری
+    // (باسلام ← سایت ← تلگرام) به آن نیاز دارد.
+    if (existingUser.clubProfile) {
+      await recordTouchpoint({
+        profileId: profile.id,
+        source: input.source,
+        platform: input.sourcePlatform ?? null,
+      });
     }
 
     return {
@@ -148,18 +196,45 @@ export async function upsertClubCustomer(
         create: {
           source: input.source,
           sourcePlatform: input.sourcePlatform ?? null,
+          firstSource: input.source,
+          firstPlatform: input.sourcePlatform ?? null,
+          firstSeenAt: new Date(),
           registeredById: input.registeredById ?? null,
           gender: input.gender ?? null,
           birthDate: input.birthDate ?? null,
           ...birth,
-          smsConsent: input.smsConsent ?? false,
-          consentAt: input.smsConsent ? new Date() : null,
-          consentIp: input.smsConsent ? input.consentIp ?? null : null,
+          // رضایت پس از ساخت، از مسیر واحد ثبت می‌شود
         },
       },
     },
     select: { id: true, firstName: true, lastName: true, clubProfile: { select: { id: true } } },
   });
+
+  await recordTouchpoint({
+    profileId: user.clubProfile!.id,
+    source: input.source,
+    platform: input.sourcePlatform ?? null,
+  });
+
+  // ⚠️ امتیاز عضویت اینجا هم لازم است. پروفایل در همان `user.create` تودرتو
+  //    ساخته می‌شود، پس `ensureClubProfile()` — که تنها جای دیگر این امتیاز
+  //    است — اصلاً صدا زده نمی‌شود. بدون این، هر عضوی که از ثبت فروشنده،
+  //    ورود فایل، مارکت‌پلیس یا صفحه‌ی QR بیاید امتیاز عضویتش را نمی‌گیرد.
+  await grantPoints({
+    profileId: user.clubProfile!.id,
+    reason: "SIGNUP",
+    refType: "profile",
+    refId: user.clubProfile!.id,
+  });
+
+  if (input.smsConsent) {
+    await setClubConsent({
+      profileId: user.clubProfile!.id,
+      granted: true,
+      source: consentSourceFor(input.source),
+      ip: input.consentIp ?? null,
+    });
+  }
 
   return {
     userId: user.id,
@@ -181,20 +256,20 @@ export async function setBirthDate(userId: string, birthDate: Date | null) {
   });
 }
 
-/** ثبت رضایت یا لغو رضایت دریافت پیامک تبلیغاتی */
+/**
+ * ثبت رضایت یا لغو رضایت دریافت پیامک تبلیغاتی
+ *
+ * ⚠️ پوسته‌ای روی `setClubConsent()` است و عمداً خودش چیزی نمی‌نویسد: تنها
+ *    آنجاست که سابقه در `ClubConsentEvent` ثبت می‌شود، `SmsOptOut` پاک
+ *    می‌شود و امتیاز تشویقی داده می‌شود.
+ */
 export async function setSmsConsent(
   userId: string,
   consent: boolean,
-  ip: string | null = null
+  ip: string | null = null,
+  source: ConsentSource = "ADMIN"
 ) {
-  return prisma.clubProfile.update({
-    where: { userId },
-    data: {
-      smsConsent: consent,
-      consentAt: consent ? new Date() : null,
-      consentIp: consent ? ip : null,
-    },
-  });
+  return setClubConsent({ userId, granted: consent, source, ip });
 }
 
 /**
@@ -232,6 +307,26 @@ export async function getPointsBalance(profileId: string): Promise<number> {
 }
 
 // ─── کمکی‌ها ────────────────────────────────────────────────────
+
+/**
+ * منبع جذب (`ClubSource`) → منبع رضایت (`ConsentSource`)
+ *
+ * ⚠️ این دو enum عمداً جدا هستند (بخش ۰.۱ سند باشگاه). این تابع فقط برای
+ *    مسیرهایی است که رضایت را همراه ثبت‌نام می‌گیرند؛ جای دیگری نباید یکی
+ *    فرض شوند.
+ */
+function consentSourceFor(source: ClubSource): ConsentSource {
+  switch (source) {
+    case "IN_STORE":
+      return "SELLER";
+    case "IMPORT":
+      return "IMPORT";
+    case "MESSAGING":
+      return "MESSENGER";
+    default:
+      return "LANDING";
+  }
+}
 
 function jalaliFields(date: Date) {
   const { month, day } = toJalali(date);
