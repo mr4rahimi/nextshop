@@ -12,9 +12,11 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import QuickTaskForm from "./QuickTaskForm";
 import TaskCard from "./TaskCard";
 import NotesPanel from "./NotesPanel";
+import ReferDialog from "./ReferDialog";
 import { DOMAIN_LABELS } from "@/lib/worklist/types";
 import type { StaffDomain } from "@/lib/worklist/types";
 import type { TaskItem, WorklistCounts } from "./types";
@@ -22,6 +24,7 @@ import type { TaskItem, WorklistCounts } from "./types";
 const TABS = [
   { key: "today", label: "امروز" },
   { key: "overdue", label: "عقب‌افتاده" },
+  { key: "referred", label: "ارجاع به من" },
   { key: "upcoming", label: "پیش رو" },
   { key: "unlogged", label: "بدون نتیجه" },
   { key: "open", label: "باز" },
@@ -42,7 +45,13 @@ interface Props {
 }
 
 export default function WorklistClient({ scope }: Props) {
-  const [tab, setTab] = useState<TabKey>(scope === "all" ? "open" : "today");
+  // پاپ‌آپ ارجاع فوری به `?tab=referred` می‌فرستد، پس آدرس باید تب اولیه را تعیین کند
+  const searchParams = useSearchParams();
+  const initialTab = TABS.find((t) => t.key === searchParams.get("tab"))?.key;
+
+  const [tab, setTab] = useState<TabKey>(
+    initialTab ?? (scope === "all" ? "open" : "today"),
+  );
   const [domain, setDomain] = useState<StaffDomain | "">("");
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -60,6 +69,7 @@ export default function WorklistClient({ scope }: Props) {
 
   const [formOpen, setFormOpen] = useState(false);
   const [notesTask, setNotesTask] = useState<TaskItem | null>(null);
+  const [referTask, setReferTask] = useState<TaskItem | null>(null);
 
   useEffect(() => {
     const h = setTimeout(() => setDebouncedQuery(query.trim()), 300);
@@ -150,17 +160,45 @@ export default function WorklistClient({ scope }: Props) {
     loadCounts();
   }
 
-  function onNoteAdded(taskId: string) {
-    // یادداشت کارِ باز را IN_PROGRESS می‌کند؛ از سرور تازه‌اش را می‌گیریم
-    fetch(`/api/admin/worklist/tasks/${taskId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!d?.task) return;
-        setItems((prev) => prev.map((t) => (t.id === taskId ? d.task : t)));
-        setNotesTask((cur) => (cur?.id === taskId ? d.task : cur));
-      })
-      .catch(() => {});
-  }
+  /**
+   * کارِ تغییرکرده را از سرور تازه می‌گیرد.
+   *
+   * لازم است چون هم یادداشت و هم ارجاع، وضعیت را سمت سرور عوض می‌کنند
+   * (`IN_PROGRESS`) و ارجاع حتی مسئولِ کار را هم جابه‌جا می‌کند.
+   */
+  const refreshTask = useCallback(
+    (taskId: string) => {
+      fetch(`/api/admin/worklist/tasks/${taskId}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!d?.task) return;
+          const fresh: TaskItem = d.task;
+          setItems((prev) => {
+            // در صفحه‌ی شخصی، کاری که به دیگری ارجاع شده دیگر مال من نیست
+            const goneFromMyList = scope === "me" && fresh.ownerId !== d.task.ownerId;
+            const next = prev.map((t) => (t.id === taskId ? fresh : t));
+            return goneFromMyList ? next.filter((t) => t.id !== taskId) : next;
+          });
+          setNotesTask((cur) => (cur?.id === taskId ? fresh : cur));
+        })
+        .catch(() => {});
+      loadCounts();
+    },
+    [scope, loadCounts],
+  );
+
+  /** بعد از ارجاع، اگر کار از فهرست شخصی خارج شده باشد حذفش می‌کنیم */
+  const onReferred = useCallback(
+    (taskId: string) => {
+      if (scope === "me") {
+        setItems((prev) => prev.filter((t) => t.id !== taskId));
+        loadCounts();
+      } else {
+        refreshTask(taskId);
+      }
+    },
+    [scope, loadCounts, refreshTask],
+  );
 
   const fa = (n: number) => n.toLocaleString("fa-IR");
 
@@ -267,6 +305,7 @@ export default function WorklistClient({ scope }: Props) {
               showOwner={scope === "all"}
               onChanged={onTaskChanged}
               onOpenNotes={setNotesTask}
+              onOpenRefer={setReferTask}
             />
           ))}
         </div>
@@ -299,7 +338,12 @@ export default function WorklistClient({ scope }: Props) {
       <NotesPanel
         task={notesTask}
         onClose={() => setNotesTask(null)}
-        onNoteAdded={onNoteAdded}
+        onNoteAdded={refreshTask}
+      />
+      <ReferDialog
+        task={referTask}
+        onClose={() => setReferTask(null)}
+        onReferred={onReferred}
       />
     </div>
   );

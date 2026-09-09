@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import WorklistClient from "@/components/admin/worklist/WorklistClient";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,10 @@ export default function MyWorklistPage() {
           کارهای امروز، عقب‌افتاده و پیش رو. نتیجه را همین‌جا ثبت کنید تا کار بسته شود.
         </p>
       </div>
-      <WorklistClient scope="me" />
+      {/* `useSearchParams` داخل کلاینت مرز Suspense می‌خواهد */}
+      <Suspense fallback={<p className="text-xs text-gray-500">در حال بارگذاری...</p>}>
+        <WorklistClient scope="me" />
+      </Suspense>
     </div>
   );
 }

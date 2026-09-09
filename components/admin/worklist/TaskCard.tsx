@@ -30,9 +30,16 @@ interface Props {
   showOwner?: boolean;
   onChanged: (task: TaskItem) => void;
   onOpenNotes?: (task: TaskItem) => void;
+  onOpenRefer?: (task: TaskItem) => void;
 }
 
-export default function TaskCard({ task, showOwner = false, onChanged, onOpenNotes }: Props) {
+export default function TaskCard({
+  task,
+  showOwner = false,
+  onChanged,
+  onOpenNotes,
+  onOpenRefer,
+}: Props) {
   const [busy, setBusy] = useState(false);
   const [editingOutcome, setEditingOutcome] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -229,6 +236,19 @@ export default function TaskCard({ task, showOwner = false, onChanged, onOpenNot
             {task._count.notes > 0 && (
               <span className="mr-1 text-blue-600 dark:text-blue-400">
                 {task._count.notes.toLocaleString("fa-IR")}
+              </span>
+            )}
+          </button>
+        )}
+        {onOpenRefer && (
+          <button
+            onClick={() => onOpenRefer(task)}
+            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 text-[11px] font-bold transition"
+          >
+            ارجاع
+            {task._count.referrals > 0 && (
+              <span className="mr-1 text-violet-600 dark:text-violet-400">
+                {task._count.referrals.toLocaleString("fa-IR")}
               </span>
             )}
           </button>

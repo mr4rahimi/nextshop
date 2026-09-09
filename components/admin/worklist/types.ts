@@ -63,7 +63,50 @@ export interface TaskItem {
     icon: string | null;
     outcomes: unknown;
   };
-  _count: { notes: number };
+  _count: { notes: number; referrals: number };
+}
+
+export interface TaskReferral {
+  id: string;
+  taskId: string;
+  fromId: string | null;
+  fromName: string;
+  toId: string;
+  toName: string;
+  note: string | null;
+  isUrgent: boolean;
+  seenAt: string | null;
+  createdAt: string;
+}
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  phone: string;
+  role: string;
+  roleTitle: string | null;
+  isMe: boolean;
+}
+
+/** ارجاع فوریِ دیده‌نشده، همان‌طور که مسیر صندوق ورودی برمی‌گرداند */
+export interface UrgentReferral {
+  id: string;
+  taskId: string;
+  fromName: string;
+  note: string | null;
+  createdAt: string;
+  task: {
+    id: string;
+    title: string;
+    contactName: string | null;
+    contactPhone: string | null;
+  };
+}
+
+export interface InboxCounts {
+  unseenReferrals: number;
+  overdue: number;
+  todayOpen: number;
 }
 
 export interface TaskNote {

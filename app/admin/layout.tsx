@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ThemeProvider, useTheme } from "@/components/layout/ThemeProvider";
 import { Target } from "lucide-react";
+import WorklistNotifier from "@/components/admin/worklist/WorklistNotifier";
 
 function Icon({ path, className = "w-4 h-4" }: { path: string; className?: string }) {
   return (
@@ -440,6 +441,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </main>
       </div>
+
+      {/* پاپ‌آپ ارجاع فوری و نشان کارتابل — در همه‌ی صفحات ادمین زنده است.
+          بدون دسترسی یا بدون داده، هیچ‌چیز رندر نمی‌کند. */}
+      <WorklistNotifier />
     </div>
    </ThemeProvider>
   );

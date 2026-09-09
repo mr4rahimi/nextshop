@@ -48,7 +48,7 @@ export const TASK_SELECT = {
   type: {
     select: { id: true, slug: true, title: true, icon: true, outcomes: true },
   },
-  _count: { select: { notes: true } },
+  _count: { select: { notes: true, referrals: true } },
 } satisfies Prisma.StaffTaskSelect;
 
 export interface CreateTaskInput {
@@ -317,6 +317,119 @@ export async function listNotes(taskId: string) {
     where: { taskId },
     orderBy: { createdAt: "asc" },
   });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ارجاع
+// ─────────────────────────────────────────────────────────────────
+
+export interface ReferInput {
+  toId: string;
+  note?: string | null;
+  isUrgent?: boolean;
+}
+
+/**
+ * ارجاع کار به کارمند دیگر.
+ *
+ * سه اثر همزمان، همه در یک تراکنش:
+ *  ۱. ردیف تازه در `StaffTaskReferral` — تاریخچه هیچ‌وقت پاک نمی‌شود
+ *  ۲. `ownerId` کار به گیرنده منتقل می‌شود
+ *  ۳. کارِ بسته دوباره باز می‌شود
+ *
+ * اثر سوم عمدی است: ارجاعِ تازه یعنی کسی هنوز کار دارد. اگر `DONE` بماند، از
+ * صف گیرنده بیرون می‌افتد و ارجاع بی‌اثر می‌شود.
+ *
+ * **یادداشت اجباری نیست.** سناریوی واقعی «الف تماس را به ب ارجاع می‌دهد چون
+ * پرونده دست ب است» توضیح لازم ندارد، و اجباری‌کردنش یعنی ارجاع انجام نمی‌شود.
+ */
+export async function referTask(
+  taskId: string,
+  input: ReferInput,
+  access: StaffAccess,
+) {
+  const task = await prisma.staffTask.findUnique({
+    where: { id: taskId },
+    select: { id: true, title: true, status: true, ownerId: true },
+  });
+  if (!task) throw new Error("کار پیدا نشد");
+
+  if (input.toId === task.ownerId) {
+    throw new Error("این کار همین حالا به همین نفر سپرده شده است");
+  }
+
+  const to = await prisma.user.findUnique({
+    where: { id: input.toId },
+    select: { id: true, firstName: true, lastName: true, phone: true, isActive: true, role: true },
+  });
+  if (!to || !to.isActive) throw new Error("گیرنده پیدا نشد یا غیرفعال است");
+  if (to.role !== "ADMIN" && to.role !== "SELLER") {
+    throw new Error("کار فقط به کارکنان ارجاع می‌شود");
+  }
+
+  const toName =
+    [to.firstName, to.lastName].filter(Boolean).join(" ").trim() || to.phone || "بدون نام";
+
+  const [referral] = await prisma.$transaction([
+    prisma.staffTaskReferral.create({
+      data: {
+        taskId,
+        fromId: access.userId,
+        fromName: access.name,
+        toId: to.id,
+        toName,
+        note: trimOrNull(input.note),
+        isUrgent: input.isUrgent === true,
+      },
+    }),
+    prisma.staffTask.update({
+      where: { id: taskId },
+      data: {
+        ownerId: to.id,
+        ownerName: toName,
+        // ارجاعِ تازه کارِ بسته را دوباره باز می‌کند
+        status: "IN_PROGRESS",
+        doneAt: null,
+      },
+    }),
+  ]);
+
+  logActivityAsync({
+    action: "UPDATE",
+    entity: "STAFF_TASK",
+    entityId: taskId,
+    entityTitle: task.title,
+    summary: `ارجاع کار «${task.title}» به ${toName}`,
+  });
+
+  return referral;
+}
+
+/** تاریخچه‌ی ارجاع یک کار، قدیمی‌ترین اول */
+export async function listReferrals(taskId: string) {
+  return prisma.staffTaskReferral.findMany({
+    where: { taskId },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+/**
+ * پاک‌کردن نشان «جدید» برای بیننده.
+ *
+ * ⚠️ فقط از مسیرهایی صدا زده می‌شود که کاربر **عملاً ردیف را باز کرده**:
+ * خواندن تاریخچه‌ی ارجاع، یا زدن دکمه‌ی «دیدم» روی پاپ‌آپ. هرگز از رندر فهرست.
+ */
+export async function markReferralsSeen(
+  userId: string,
+  opts: { taskId?: string; referralIds?: string[] },
+) {
+  const where: Prisma.StaffTaskReferralWhereInput = { toId: userId, seenAt: null };
+  if (opts.taskId) where.taskId = opts.taskId;
+  if (opts.referralIds?.length) where.id = { in: opts.referralIds };
+  // بدون هیچ شرطی، همه‌ی ارجاع‌های کاربر پاک می‌شد — این را نمی‌خواهیم
+  if (!opts.taskId && !opts.referralIds?.length) return { count: 0 };
+
+  return prisma.staffTaskReferral.updateMany({ where, data: { seenAt: new Date() } });
 }
 
 /**

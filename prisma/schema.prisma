@@ -2241,6 +2241,7 @@ model StaffTask {
   parent        StaffTask?      @relation("StaffTaskChildren", fields: [parentId], references: [id])
   children      StaffTask[]     @relation("StaffTaskChildren")
   notes         StaffTaskNote[]
+  referrals     StaffTaskReferral[]
 
   @@index([ownerId, status, dueAt])
   @@index([status, dueAt])
@@ -2270,4 +2271,35 @@ model StaffTaskNote {
 
   @@index([taskId, createdAt])
   @@index([authorId, createdAt])
+}
+
+/// تاریخچه‌ی دست‌به‌دست شدن یک کار.
+///
+/// جدول جداست نه یک ستون، چون یک کار ممکن است چند بار ارجاع شود
+/// («علیزاده به صادقی به امیری») و تاریخچه باید کنار یادداشت‌ها دیده شود.
+/// `StaffTask.ownerId` فقط **آخرین** گیرنده است؛ ردیف‌های قبلی سر جایشان می‌مانند.
+///
+/// ⚠️ `isUrgent` خصیصه‌ی **ارجاع** است نه کار: یک ارجاع می‌تواند فوری باشد و
+/// ارجاع بعدیِ همان کار عادی. اولویت کار (`StaffTask.priority`) چیز دیگری است.
+model StaffTaskReferral {
+  id        String    @id @default(cuid())
+  taskId    String
+  fromId    String?
+  fromName  String
+  toId      String
+  toName    String
+  note      String?
+  /// فوری = پاپ‌آپ برای گیرنده
+  isUrgent  Boolean   @default(false)
+  /// ⚠️ وقتی گیرنده عملاً ردیف را **باز کند** پر می‌شود، نه وقتی فهرست رندر
+  /// شود. اگر موقع رندر علامت بزنیم، اولین refetch نشان را پیش از دیده‌شدن
+  /// پاک می‌کند — این اشتباه یک بار در برتر انجام شد و در تست گرفته شد.
+  seenAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  task      StaffTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([toId, seenAt])
+  @@index([toId, createdAt])
+  @@index([taskId, createdAt])
 }

@@ -21,6 +21,7 @@ const TABS = [
   "today",
   "overdue",
   "upcoming",
+  "referred",
   "open",
   "done",
   "unlogged",
@@ -28,12 +29,17 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number];
 
-function tabFilter(tab: Tab): Prisma.StaffTaskWhereInput {
+function tabFilter(tab: Tab, userId: string): Prisma.StaffTaskWhereInput {
   const openish: Prisma.StaffTaskWhereInput = {
     status: { in: ["OPEN", "IN_PROGRESS"] },
   };
 
   switch (tab) {
+    case "referred":
+      // «ارجاع به من» = دست‌کم یک ارجاع به من خورده و هنوز مسئولش خودم هستم.
+      // کاری که دوباره به دیگری ارجاع شده از این صف می‌رود ولی ردیف ارجاع
+      // قبلی سر جایش می‌ماند.
+      return { ...openish, ownerId: userId, referrals: { some: { toId: userId } } };
     case "today":
       // کارِ امروز = مهلتش امروز است، یا مهلت ندارد و امروز ساخته شده
       return {
@@ -77,14 +83,15 @@ export async function GET(req: Request) {
   const rawTab = sp.get("tab");
   const tab: Tab = TABS.includes(rawTab as Tab) ? (rawTab as Tab) : "today";
 
-  const where: Prisma.StaffTaskWhereInput = { ...tabFilter(tab) };
+  const where: Prisma.StaffTaskWhereInput = { ...tabFilter(tab, access.userId) };
 
-  // کسی که فقط WORK_VIEW_OWN دارد، هرچه بخواهد باز هم کار خودش را می‌بیند
+  // کسی که فقط WORK_VIEW_OWN دارد، هرچه بخواهد باز هم کار خودش را می‌بیند.
+  // تب «ارجاع به من» همیشه شخصی است و با ownerId دیگری بازنویسی نمی‌شود.
   const canViewAll = can(access, "WORK_VIEW_ALL");
   const ownerParam = sp.get("ownerId");
   if (!canViewAll) {
     where.ownerId = access.userId;
-  } else if (ownerParam) {
+  } else if (ownerParam && tab !== "referred") {
     where.ownerId = ownerParam === "me" ? access.userId : ownerParam;
   }
 
