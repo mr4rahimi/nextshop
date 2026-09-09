@@ -34,6 +34,7 @@ model User {
   staffRoleId   String?
   staffRole     StaffRole?          @relation(fields: [staffRoleId], references: [id])
   staffOrders   Order[]             @relation("OrderCreatedByStaff")
+  staffTasksAsCustomer StaffTask[]  @relation("StaffTaskCustomer")
 
   @@index([role])
   @@index([isActive])
@@ -2161,6 +2162,7 @@ model StaffTaskType {
   updatedAt     DateTime        @updatedAt
 
   tasks         StaffTask[]
+  rules         StaffRecurringRule[]
 
   @@index([domain, isActive])
   @@index([source])
@@ -2206,8 +2208,11 @@ model StaffTask {
   status        StaffTaskStatus @default(OPEN)
   priority      StaffPriority   @default(NORMAL)
 
-  /// طرف مقابل — عضو باشگاه، یا فقط یک شماره، یا یک تأمین‌کننده
+  /// طرف مقابل — عضو باشگاه، یا فقط یک شماره، یا یک تأمین‌کننده.
+  /// رابطه‌ی واقعی است تا پرونده‌ی مشتری و محافظِ فاصله‌ی قواعد تکرارشونده
+  /// بدون کوئری دستی کار کنند. حذف کاربر فقط این فیلد را خالی می‌کند.
   customerId    String?
+  customer      User?           @relation("StaffTaskCustomer", fields: [customerId], references: [id], onDelete: SetNull)
   contactName   String?
   contactPhone  String?
   supplierName  String?
@@ -2225,8 +2230,12 @@ model StaffTask {
 
   /// کار فرزند: تماس فروشی که به کار خرید منجر شد
   parentId      String?
-  /// قاعده‌ی تکرارشونده‌ای که این ردیف را ساخت — فاز ۳
+  /// قاعده‌ی تکرارشونده‌ای که این ردیف را ساخت
   ruleId        String?
+  /// کلید یکتاییِ ساخت خودکار — `ruleId:روز` یا `ruleId:مشتری:روز`.
+  /// ⚠️ ایندکس یکتا تنها چیزی است که جلوی دوباره‌ساخته‌شدن را حتی در اجرای
+  /// هم‌زمان می‌گیرد. شرط `findFirst` قبل از `create` کافی نیست.
+  runKey        String?         @unique
 
   dueAt         DateTime?
   /// کِی اتفاق افتاد — قابل عقب‌بردن توسط کارمند
@@ -2302,4 +2311,56 @@ model StaffTaskReferral {
   @@index([toId, seenAt])
   @@index([toId, createdAt])
   @@index([taskId, createdAt])
+}
+
+enum StaffScheduleKind {
+  DAILY // هر روز کاری
+  WEEKLY // روزهای مشخصی از هفته
+  MONTHLY // روز مشخصی از ماه
+  CUSTOMER_IDLE // به‌ازای هر مشتری که N روز از آخرین خریدش گذشته
+}
+
+/// قاعده‌ی ساخت خودکار کار.
+///
+/// این قلبِ «کارشان راحت‌تر شود» است: کارمند برای کار تکراری هیچ‌وقت رکورد
+/// نمی‌سازد، فقط رکوردِ از پیش ساخته‌شده را می‌بندد. ردیفِ باز خودش فرمِ
+/// نیمه‌پرشده است.
+///
+/// ⚠️ سه محافظ اجباری‌اند و بدون هرکدام این قابلیت به فاجعه تبدیل می‌شود:
+/// یکتایی (`StaffTask.runKey`)، سقف (`maxPerRun`) و فاصله (`idleDays`).
+model StaffRecurringRule {
+  id          String            @id @default(cuid())
+  typeId      String
+  title       String
+  /// کارمند ثابتِ این قاعده — `null` یعنی بین اعضای نقش نوبتی توزیع می‌شود
+  ownerId     String?
+  ownerName   String?
+  /// وقتی `ownerId` خالی است: بین دارندگان این نقش گردشی
+  roleId      String?
+  schedule    StaffScheduleKind
+  /// برای WEEKLY — شنبه = ۰، مطابق تقویم ایران
+  daysOfWeek  Int[]             @default([])
+  /// برای MONTHLY — روز ماه شمسی
+  dayOfMonth  Int?
+  /// "09:00" — فقط ترتیب نمایش در کارتابل، نه زمان دقیق اجرا
+  timeOfDay   String?
+  /// برای CUSTOMER_IDLE: چند روز از آخرین خرید گذشته باشد.
+  /// همین عدد **فاصله‌ی محافظ** هم هست: مشتری‌ای که در این بازه با او تماس
+  /// گرفته شده دوباره انتخاب نمی‌شود.
+  idleDays    Int?
+  /// شرط اضافه‌ی انتخاب مشتری — رزرو برای اتصال به سگمنت باشگاه
+  segmentJson Json?
+  /// سقف ردیف در هر اجرا. اولین اجرای «مشتریان بیش از نود روز» هزاران نفر
+  /// واجد شرایط دارد؛ بدون سقف کارتابل یک نفر پر می‌شود و دیگر بازش نمی‌کند.
+  maxPerRun   Int               @default(20)
+  isActive    Boolean           @default(true)
+  lastRunAt   DateTime?
+  /// تعداد کارِ ساخته‌شده در آخرین اجرا — برای صفحه‌ی تنظیمات
+  lastRunCount Int              @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  type        StaffTaskType     @relation(fields: [typeId], references: [id])
+
+  @@index([isActive, schedule])
 }

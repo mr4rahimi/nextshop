@@ -246,7 +246,8 @@ export async function updateTask(
   });
   if (!before) throw new Error("کار پیدا نشد");
 
-  const data: Prisma.StaffTaskUpdateInput = {};
+  // Unchecked چون `customerId` و `ownerId` را مستقیم می‌نویسیم، نه از راه رابطه
+  const data: Prisma.StaffTaskUncheckedUpdateInput = {};
   const has = (k: keyof UpdateTaskInput) => Object.prototype.hasOwnProperty.call(input, k);
 
   // ⚠️ فقط فیلدهایی نوشته می‌شوند که واقعاً در بدنه آمده‌اند. یک PATCH ناقص

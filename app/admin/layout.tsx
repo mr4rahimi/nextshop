@@ -69,6 +69,7 @@ const MENU_GROUPS = [
         children: [
           { href: "/admin/worklist", label: "کارهای من" },
           { href: "/admin/worklist/tasks", label: "همه‌ی کارها" },
+          { href: "/admin/worklist/settings", label: "قواعد تکرارشونده" },
         ],
       },
     ],
