@@ -68,6 +68,7 @@ const MENU_GROUPS = [
         href: "/admin/worklist", label: "کارتابل", icon: "worklist",
         children: [
           { href: "/admin/worklist", label: "کارهای من" },
+          { href: "/admin/worklist/calls", label: "تماس‌ها" },
           { href: "/admin/worklist/tasks", label: "همه‌ی کارها" },
           { href: "/admin/worklist/settings", label: "قواعد تکرارشونده" },
         ],

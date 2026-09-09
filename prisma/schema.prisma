@@ -1102,6 +1102,9 @@ model CallbackRequest {
   phone          String
   status         String   @default("pending") // pending | contacted | done
   note           String?
+  /// کارِ کارتابل که از این درخواست ساخته شد.
+  /// رابطه نیست تا حذف کار، درخواست را نشکند — درخواست تماس سند مشتری است.
+  taskId         String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

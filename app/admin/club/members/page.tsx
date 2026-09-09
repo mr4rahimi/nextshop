@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { JALALI_MONTH_OPTIONS, formatJalaliShort, toJalali } from "@/lib/club/jalali";
 import SendMessagePanel from "@/components/admin/club/SendMessagePanel";
+import CustomerTimeline from "@/components/admin/worklist/CustomerTimeline";
 
 interface Member {
   id: string;
@@ -86,6 +87,8 @@ export default function AdminClubMembersPage() {
   const [items, setItems] = useState<Member[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  /** پرونده‌ی تماس‌های یک عضو — تاریخچه‌ی کارتابل */
+  const [timelineFor, setTimelineFor] = useState<Member | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -453,12 +456,20 @@ export default function AdminClubMembersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-3.5 text-left">
-                      <button
-                        onClick={() => setEditing(m)}
-                        className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-[11px] font-black text-gray-600 dark:text-gray-300 hover:bg-primary-500 hover:text-white transition-all"
-                      >
-                        ویرایش
-                      </button>
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <button
+                          onClick={() => setTimelineFor(m)}
+                          className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-[11px] font-black text-gray-600 dark:text-gray-300 hover:bg-blue-500 hover:text-white transition-all"
+                        >
+                          تماس‌ها
+                        </button>
+                        <button
+                          onClick={() => setEditing(m)}
+                          className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-[11px] font-black text-gray-600 dark:text-gray-300 hover:bg-primary-500 hover:text-white transition-all"
+                        >
+                          ویرایش
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -521,6 +532,19 @@ export default function AdminClubMembersPage() {
           </div>
         )}
       </div>
+
+      {timelineFor && (
+        <CustomerTimeline
+          customerId={timelineFor.user.id}
+          customerName={
+            [timelineFor.user.firstName, timelineFor.user.lastName]
+              .filter(Boolean)
+              .join(" ") || "بدون نام"
+          }
+          customerPhone={timelineFor.user.phone}
+          onClose={() => setTimelineFor(null)}
+        />
+      )}
 
       {editing && (
         <EditModal

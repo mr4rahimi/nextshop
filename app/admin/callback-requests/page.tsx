@@ -13,6 +13,8 @@ interface CallbackItem {
   note: string | null;
   createdAt: string;
   user: { name: string; phone: string } | null;
+  /** کارِ کارتابل که از این درخواست ساخته شده */
+  taskId?: string | null;
 }
 
 const STATUS_META: Record<Status, { label: string; color: string; bg: string; dot: string }> = {
@@ -83,6 +85,24 @@ export default function CallbackRequestsPage() {
     setSaving(false);
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, note: noteInput } : i));
     if (selected?.id === id) setSelected((s) => s ? { ...s, note: noteInput } : s);
+  }
+
+  /** تبدیل درخواست به کار کارتابل — تا در گزارش عملکرد و مهلت‌ها دیده شود */
+  async function toTask(id: string) {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/callback-requests/${id}/to-task`, { method: "POST" });
+      const d = await res.json();
+      if (!res.ok) {
+        alert(d.error ?? "تبدیل ناموفق بود");
+        return;
+      }
+      const taskId = d.task?.id ?? null;
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, taskId, status: "contacted" } : i)));
+      setSelected((cur) => (cur?.id === id ? { ...cur, taskId, status: "contacted" } : cur));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function deleteItem(id: string) {
@@ -245,10 +265,28 @@ export default function CallbackRequestsPage() {
                       {selected.siteId && <span className="mr-3">🌐 {selected.siteId}</span>}
                     </p>
                   </div>
-                  <button onClick={() => deleteItem(selected.id)}
-                    className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-black hover:bg-red-100 transition-all">
-                    حذف
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {selected.taskId ? (
+                      <a
+                        href="/admin/worklist/calls"
+                        className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-black hover:bg-emerald-100 transition-all"
+                      >
+                        در کارتابل ثبت شد
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => toTask(selected.id)}
+                        disabled={saving}
+                        className="px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-black hover:bg-blue-100 disabled:opacity-50 transition-all"
+                      >
+                        ثبت در کارتابل
+                      </button>
+                    )}
+                    <button onClick={() => deleteItem(selected.id)}
+                      className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-black hover:bg-red-100 transition-all">
+                      حذف
+                    </button>
+                  </div>
                 </div>
 
                 {/* Status changer */}
