@@ -51,6 +51,38 @@ export const TASK_SELECT = {
   _count: { select: { notes: true, referrals: true } },
 } satisfies Prisma.StaffTaskSelect;
 
+/**
+ * کارهایی که این کاربر «درگیرشان» بوده — مبنای دسترسی برای کسی که
+ * `WORK_VIEW_ALL` ندارد.
+ *
+ * ⚠️ فقط «مالکِ فعلی» کافی نیست. کسی که کاری را ارجاع می‌دهد بلافاصله
+ * مالکیتش را از دست می‌دهد، و اگر دسترسی هم از دست بدهد دیگر نمی‌تواند
+ * پیگیری کند که گیرنده انجامش داد یا نه. همین باعث می‌شود ارجاع را اصلاً
+ * نزند و کار را خودش نگه دارد.
+ *
+ * این با فیلترِ **نمایشِ** «کارهای من» فرق دارد: آن `ownerId` است و همان
+ * می‌ماند. این فقط مرز دسترسی است.
+ */
+export function involvedFilter(userId: string): Prisma.StaffTaskWhereInput {
+  return {
+    OR: [
+      { ownerId: userId },
+      { createdById: userId },
+      { referrals: { some: { fromId: userId } } },
+      { referrals: { some: { toId: userId } } },
+    ],
+  };
+}
+
+/** آیا این کاربر حق دیدن این کار را دارد (وقتی `WORK_VIEW_ALL` ندارد) */
+export async function isInvolved(taskId: string, userId: string): Promise<boolean> {
+  const hit = await prisma.staffTask.findFirst({
+    where: { id: taskId, ...involvedFilter(userId) },
+    select: { id: true },
+  });
+  return !!hit;
+}
+
 export interface CreateTaskInput {
   typeId: string;
   title?: string | null;

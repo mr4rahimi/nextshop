@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { formatDateTime } from "@/lib/worklist/types";
 import type { TaskItem, TaskNote } from "./types";
+import HelpButton from "./HelpButton";
 
 interface Props {
   task: TaskItem | null;
@@ -91,7 +92,10 @@ export default function NotesPanel({ task, onClose, onNoteAdded }: Props) {
             <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate">
               {task.title}
             </h2>
-            <p className="text-[11px] text-gray-500">یادداشت‌ها</p>
+            <p className="text-[11px] text-gray-500 flex items-center gap-1.5">
+              یادداشت‌ها
+              <HelpButton topic="notes" size="sm" />
+            </p>
           </div>
           <button
             onClick={onClose}

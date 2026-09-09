@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { formatDateTime } from "@/lib/worklist/types";
 import type { TaskItem, TaskReferral, StaffMember } from "./types";
+import HelpButton from "./HelpButton";
 
 interface Props {
   task: TaskItem | null;
@@ -105,8 +106,9 @@ export default function ReferDialog({ task, onClose, onReferred }: Props) {
       <div className="w-full sm:max-w-lg max-h-[85vh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/10">
           <div className="min-w-0">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate flex items-center gap-1.5">
               ارجاع کار
+              <HelpButton topic="refer" size="sm" />
             </h2>
             <p className="text-[11px] text-gray-500 truncate">{task.title}</p>
           </div>

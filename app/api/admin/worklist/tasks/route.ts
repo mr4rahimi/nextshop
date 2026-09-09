@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { requirePermission, can } from "@/lib/permissions";
-import { createTask, TASK_SELECT } from "@/lib/worklist/task-service";
+import { createTask, TASK_SELECT, involvedFilter } from "@/lib/worklist/task-service";
 import { startOfToday, endOfToday } from "@/lib/worklist/types";
 import type { Prisma } from "@prisma/client";
 
@@ -85,14 +85,17 @@ export async function GET(req: Request) {
 
   const where: Prisma.StaffTaskWhereInput = { ...tabFilter(tab, access.userId) };
 
-  // کسی که فقط WORK_VIEW_OWN دارد، هرچه بخواهد باز هم کار خودش را می‌بیند.
-  // تب «ارجاع به من» همیشه شخصی است و با ownerId دیگری بازنویسی نمی‌شود.
+  // مرز دسترسی: بدون WORK_VIEW_ALL فقط کارهایی که کاربر درگیرشان بوده.
+  // «درگیر» شامل کاری است که خودش ارجاع داده — وگرنه بعد از ارجاع دیگر
+  // نمی‌تواند پیگیری کند و در عمل ارجاع نمی‌دهد.
   const canViewAll = can(access, "WORK_VIEW_ALL");
+  const scoped: Prisma.StaffTaskWhereInput[] = [];
+  if (!canViewAll) scoped.push(involvedFilter(access.userId));
+
+  // فیلترِ نمایش، جدا از مرز دسترسی. تب «ارجاع به من» همیشه شخصی است.
   const ownerParam = sp.get("ownerId");
-  if (!canViewAll) {
-    where.ownerId = access.userId;
-  } else if (ownerParam && tab !== "referred") {
-    where.ownerId = ownerParam === "me" ? access.userId : ownerParam;
+  if (ownerParam && tab !== "referred") {
+    scoped.push({ ownerId: ownerParam === "me" ? access.userId : ownerParam });
   }
 
   const typeId = sp.get("typeId");
@@ -110,20 +113,23 @@ export async function GET(req: Request) {
   const customerId = sp.get("customerId");
   if (customerId) where.customerId = customerId;
 
+  // ⚠️ جستجو هم مثل مرز دسترسی داخل همان آرایه‌ی AND می‌رود. اگر هرکدام
+  // مستقیم `where.AND` را بنویسند، دیگری را پاک می‌کنند و فیلتر دسترسی
+  // بی‌سروصدا از بین می‌رود.
   const q = sp.get("q")?.trim();
   if (q) {
-    where.AND = [
-      {
-        OR: [
-          { title: { contains: q, mode: "insensitive" } },
-          { contactName: { contains: q, mode: "insensitive" } },
-          { contactPhone: { contains: q } },
-          { supplierName: { contains: q, mode: "insensitive" } },
-          { note: { contains: q, mode: "insensitive" } },
-        ],
-      },
-    ];
+    scoped.push({
+      OR: [
+        { title: { contains: q, mode: "insensitive" } },
+        { contactName: { contains: q, mode: "insensitive" } },
+        { contactPhone: { contains: q } },
+        { supplierName: { contains: q, mode: "insensitive" } },
+        { note: { contains: q, mode: "insensitive" } },
+      ],
+    });
   }
+
+  if (scoped.length) where.AND = scoped;
 
   const cursor = sp.get("cursor");
 

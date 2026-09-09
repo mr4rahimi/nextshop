@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DOMAIN_LABELS, CARRIERS, parseOutcomes } from "@/lib/worklist/types";
 import type { StaffDomain } from "@/lib/worklist/types";
 import type { TaskTypeLite, ContactSuggestion, TaskItem } from "./types";
+import HelpButton from "./HelpButton";
 
 interface Props {
   open: boolean;
@@ -212,7 +213,10 @@ export default function QuickTaskForm({
     >
       <div className="w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 shadow-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-white/10">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white">ثبت کار</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white">ثبت کار</h2>
+            <HelpButton topic="quickForm" size="sm" />
+          </div>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10"
@@ -417,8 +421,9 @@ export default function QuickTaskForm({
               {/* نتیجه */}
               {outcomes.length > 0 && (
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">
                     نتیجه — خالی بگذارید تا کار باز بماند
+                    <HelpButton topic="outcome" size="sm" />
                   </label>
                   <div className="flex flex-wrap gap-1.5">
                     {outcomes.map((o) => (

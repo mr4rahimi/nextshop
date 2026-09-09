@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 import WorklistClient from "@/components/admin/worklist/WorklistClient";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,10 @@ export default function AllTasksPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-black text-gray-900 dark:text-white">همه‌ی کارها</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-black text-gray-900 dark:text-white">همه‌ی کارها</h1>
+          <HelpButton topic="allTasks" />
+        </div>
         <p className="text-xs text-gray-500 mt-1">
           کارهای همه‌ی اعضای تیم. اگر دسترسی دیدن کار همه را نداشته باشید، فقط
           کارهای خودتان نشان داده می‌شود.

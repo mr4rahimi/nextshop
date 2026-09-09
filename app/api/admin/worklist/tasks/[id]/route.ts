@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { requirePermission, can } from "@/lib/permissions";
-import { updateTask, listNotes, TASK_SELECT } from "@/lib/worklist/task-service";
+import { updateTask, listNotes, isInvolved, TASK_SELECT } from "@/lib/worklist/task-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +20,11 @@ export async function GET(_req: Request, { params }: Params) {
   const task = await prisma.staffTask.findUnique({ where: { id }, select: TASK_SELECT });
   if (!task) return NextResponse.json({ error: "کار پیدا نشد" }, { status: 404 });
 
-  if (!can(guard.access, "WORK_VIEW_ALL") && task.ownerId !== guard.access.userId) {
+  // «درگیر بودن» نه «مالک فعلی بودن» — کسی که ارجاع داده باید بتواند پیگیری کند
+  if (
+    !can(guard.access, "WORK_VIEW_ALL") &&
+    !(await isInvolved(id, guard.access.userId))
+  ) {
     return NextResponse.json({ error: "به این کار دسترسی ندارید" }, { status: 403 });
   }
 
@@ -42,6 +46,9 @@ export async function PATCH(req: Request, { params }: Params) {
   });
   if (!existing) return NextResponse.json({ error: "کار پیدا نشد" }, { status: 404 });
 
+  // ویرایش سخت‌گیرانه‌تر از دیدن است: فقط مالکِ فعلی، یا WORK_EDIT_ALL.
+  // کسی که کار را ارجاع داده می‌تواند ببیند و یادداشت بگذارد، ولی نتیجه‌اش
+  // را عوض نکند — وگرنه دو نفر هم‌زمان روی یک کار می‌نویسند.
   const canEditAll = can(guard.access, "WORK_EDIT_ALL");
   if (!canEditAll && existing.ownerId !== guard.access.userId) {
     return NextResponse.json({ error: "این کار مال شما نیست" }, { status: 403 });

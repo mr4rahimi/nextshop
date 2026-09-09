@@ -1,4 +1,8 @@
-import "dotenv/config";
+import { config } from "dotenv";
+
+// ترتیب مثل خود Next و `lib/load-env.ts`: `.env.local` اولویت دارد.
+config({ path: ".env.local" });
+config({ path: ".env" });
 
 /** @type {import("prisma/config").PrismaConfig} */
 export default {
