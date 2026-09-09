@@ -91,10 +91,13 @@ export default function WorklistNotifier() {
   if (!current) {
     // نشان بی‌صدا: فقط وقتی چیزی هست دیده می‌شود
     if (!counts || (counts.unseenReferrals === 0 && counts.overdue === 0)) return null;
+    // ⚠️ سمت چپ و بالای دکمه‌ی «ثبت کار»، نه پایین‌راست: آنجا حباب چت و دکمه‌ی
+    // «مشاهده سایت» می‌نشینند و نشان زیرشان گم می‌شد.
+    // `bottom-24` دقیقاً بالای دکمه‌ی `bottom-6 h-14` قرار می‌گیرد.
     return (
       <button
         onClick={() => router.push("/admin/worklist")}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold shadow-xl transition hover:opacity-90"
+        className="fixed bottom-24 left-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold shadow-xl transition hover:opacity-90"
       >
         {counts.overdue > 0 && (
           <span className="text-red-400 dark:text-red-500">
