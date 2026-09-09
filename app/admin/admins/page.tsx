@@ -11,12 +11,22 @@ interface AdminUser {
   role: string;
   isActive: boolean;
   createdAt: string;
+  /** نقش کارتابل — `null` یعنی دسترسی کامل (رفتار پیش‌فرض) */
+  staffRoleId: string | null;
+  staffRole: { id: string; title: string } | null;
+}
+
+interface StaffRoleOption {
+  id: string;
+  title: string;
 }
 
 function fa(n: number) { return n.toLocaleString("fa-IR"); }
 
 export default function AdminsPage() {
   const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [roles, setRoles] = useState<StaffRoleOption[]>([]);
+  const [savingRole, setSavingRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
@@ -33,6 +43,40 @@ export default function AdminsPage() {
   }
 
   useEffect(() => { fetchAdmins(); }, []);
+
+  // فهرست نقش‌های کارتابل — اگر ماژول روشن نباشد یا دسترسی نباشد، خالی
+  // می‌ماند و ستون نقش اصلاً نشان داده نمی‌شود.
+  useEffect(() => {
+    fetch("/api/admin/worklist/roles")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setRoles(d.roles ?? []))
+      .catch(() => {});
+  }, []);
+
+  /** تخصیص نقش کارتابل — خالی یعنی «بدون نقش» که دسترسی کامل می‌دهد */
+  async function assignRole(adminId: string, staffRoleId: string) {
+    setSavingRole(adminId);
+    try {
+      const res = await fetch(`/api/admin/users/${adminId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ staffRoleId: staffRoleId || null }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "ذخیره نشد");
+      setAdmins((prev) =>
+        prev.map((a) =>
+          a.id === adminId
+            ? { ...a, staffRoleId: d.staffRoleId ?? null, staffRole: d.staffRole ?? null }
+            : a,
+        ),
+      );
+    } catch {
+      alert("تغییر نقش ذخیره نشد");
+    } finally {
+      setSavingRole(null);
+    }
+  }
 
   function openAdd() {
     setEditingAdmin(null);
@@ -146,6 +190,9 @@ export default function AdminsPage() {
               <tr className="border-b border-gray-100 dark:border-white/[0.06]">
                 <th className="text-right text-xs font-black text-gray-500 px-5 py-3">ادمین</th>
                 <th className="text-right text-xs font-black text-gray-500 px-5 py-3">شماره موبایل</th>
+                {roles.length > 0 && (
+                  <th className="text-right text-xs font-black text-gray-500 px-5 py-3">نقش کارتابل</th>
+                )}
                 <th className="text-right text-xs font-black text-gray-500 px-5 py-3">وضعیت</th>
                 <th className="text-right text-xs font-black text-gray-500 px-5 py-3">تاریخ ثبت</th>
                 <th className="px-5 py-3" />
@@ -168,6 +215,21 @@ export default function AdminsPage() {
                       </div>
                     </td>
                     <td className="px-5 py-4 text-sm font-bold text-gray-600 dark:text-gray-400 dir-ltr">{admin.phone}</td>
+                    {roles.length > 0 && (
+                      <td className="px-5 py-4">
+                        <select
+                          value={admin.staffRoleId ?? ""}
+                          disabled={savingRole === admin.id}
+                          onChange={(e) => assignRole(admin.id, e.target.value)}
+                          className="px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-700 dark:text-gray-300 outline-none focus:border-blue-400 disabled:opacity-50"
+                        >
+                          <option value="">بدون نقش (دسترسی کامل)</option>
+                          {roles.map((r) => (
+                            <option key={r.id} value={r.id}>{r.title}</option>
+                          ))}
+                        </select>
+                      </td>
+                    )}
                     <td className="px-5 py-4">
                       <span className={`text-[11px] font-black px-2.5 py-1 rounded-lg border ${
                         admin.isActive

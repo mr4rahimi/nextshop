@@ -14,7 +14,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DOMAIN_LABELS, CARRIERS, parseOutcomes } from "@/lib/worklist/types";
-import type { StaffDomain } from "@/lib/worklist/types";
+import type { StaffDomain, StaffChannel } from "@/lib/worklist/types";
+import type { HelpKey } from "./help-content";
 import type { TaskTypeLite, ContactSuggestion, TaskItem } from "./types";
 import HelpButton from "./HelpButton";
 
@@ -26,6 +27,18 @@ interface Props {
   presetCustomer?: { id: string; name: string; phone: string } | null;
   /** پیش‌انتخاب نوع کار با slug */
   presetTypeSlug?: string | null;
+  /**
+   * فقط نوع‌کارهایی با این کانال‌ها نشان داده شوند.
+   *
+   * صفحه‌ی تماس‌ها با این، همان فرم را به «ثبت تماس» تبدیل می‌کند: به‌جای
+   * بیست‌وچند نوع کار، فقط آن‌هایی که واقعاً تماس‌اند. مدل داده یکی می‌ماند —
+   * تماس `StaffTask` با کانال تماس است — ولی کارمند فهرست نامربوط نمی‌بیند.
+   */
+  onlyChannels?: StaffChannel[] | null;
+  /** عنوان بالای فرم — پیش‌فرض «ثبت کار» */
+  title?: string;
+  /** موضوع راهنمای کنار عنوان */
+  helpTopic?: HelpKey;
 }
 
 export default function QuickTaskForm({
@@ -34,6 +47,9 @@ export default function QuickTaskForm({
   onCreated,
   presetCustomer = null,
   presetTypeSlug = null,
+  onlyChannels = null,
+  title: heading = "ثبت کار",
+  helpTopic = "quickForm",
 }: Props) {
   const [types, setTypes] = useState<TaskTypeLite[]>([]);
   const [typeId, setTypeId] = useState<string>("");
@@ -200,9 +216,15 @@ export default function QuickTaskForm({
 
   if (!open) return null;
 
-  const domains = Array.from(new Set(types.map((t) => t.domain)));
+  // فیلتر کانال قبل از هر چیز دیگر اعمال می‌شود
+  const scopedTypes = onlyChannels?.length
+    ? types.filter((t) => onlyChannels.includes(t.channel))
+    : types;
+  const domains = Array.from(new Set(scopedTypes.map((t) => t.domain)));
   const visibleTypes =
-    domainFilter === "ALL" ? types : types.filter((t) => t.domain === domainFilter);
+    domainFilter === "ALL"
+      ? scopedTypes
+      : scopedTypes.filter((t) => t.domain === domainFilter);
 
   return (
     <div
@@ -214,8 +236,8 @@ export default function QuickTaskForm({
       <div className="w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 shadow-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-white/10">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-gray-900 dark:text-white">ثبت کار</h2>
-            <HelpButton topic="quickForm" size="sm" />
+            <h2 className="text-base font-bold text-gray-900 dark:text-white">{heading}</h2>
+            <HelpButton topic={helpTopic} size="sm" />
           </div>
           <button
             onClick={onClose}
@@ -259,7 +281,7 @@ export default function QuickTaskForm({
           {/* نوع کار */}
           <div>
             <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">
-              چه کاری انجام دادید؟
+              {onlyChannels?.length ? "نوع تماس" : "چه کاری انجام دادید؟"}
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
               {visibleTypes.map((t) => (

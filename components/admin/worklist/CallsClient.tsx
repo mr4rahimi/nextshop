@@ -243,10 +243,14 @@ export default function CallsClient() {
         <HelpButton topic="calls" />
       </div>
 
+      {/* همان فرم، ولی فقط نوع‌کارهای تماس — کارمند فهرست نامربوط نمی‌بیند */}
       <QuickTaskForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onCreated={(t) => setItems((prev) => [t, ...prev])}
+        onlyChannels={["CALL_IN", "CALL_OUT"]}
+        title="ثبت تماس"
+        helpTopic="calls"
       />
       <NotesPanel
         task={notesTask}

@@ -71,6 +71,7 @@ const MENU_GROUPS = [
           { href: "/admin/worklist/calls", label: "تماس‌ها" },
           { href: "/admin/worklist/tasks", label: "همه‌ی کارها" },
           { href: "/admin/worklist/settings", label: "قواعد تکرارشونده" },
+          { href: "/admin/worklist/roles", label: "نقش‌ها و دسترسی‌ها" },
         ],
       },
     ],
