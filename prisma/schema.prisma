@@ -2160,7 +2160,114 @@ model StaffTaskType {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
+  tasks         StaffTask[]
+
   @@index([domain, isActive])
   @@index([source])
   @@index([isActive, sortOrder])
+}
+
+enum StaffTaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELED
+}
+
+enum StaffPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+/// یک واحد کار — چه انجام‌شده چه در انتظار.
+///
+/// «کار» و «فعالیت انجام‌شده» عمداً یک مدل‌اند: کارِ باز همان فرمِ نیمه‌پرشده
+/// است و کارمند فقط می‌بنددش. تماس هم موجودیت جدا نیست، فقط `channel` دارد.
+///
+/// ⚠️ تغییر وضعیت فقط از `lib/worklist/task-service.ts` انجام می‌شود.
+model StaffTask {
+  id            String          @id @default(cuid())
+  typeId        String
+  /// کپی از نوع — تا تغییر بعدیِ نوع، گزارش پارسال را جابه‌جا نکند
+  domain        StaffDomain
+  channel       StaffChannel    @default(NONE)
+  source        StaffTaskSource @default(MANUAL)
+  title         String
+
+  /// کارمند مسئولِ فعلی — نام اسنپ‌شات است نه رابطه، مثل ActivityLog،
+  /// تا حذف یا تغییر نام حساب گزارش‌های قدیمی را نشکند
+  ownerId       String?
+  ownerName     String
+  createdById   String?
+  createdByName String
+
+  status        StaffTaskStatus @default(OPEN)
+  priority      StaffPriority   @default(NORMAL)
+
+  /// طرف مقابل — عضو باشگاه، یا فقط یک شماره، یا یک تأمین‌کننده
+  customerId    String?
+  contactName   String?
+  contactPhone  String?
+  supplierName  String?
+
+  /// اتصال به موجودیت فروشگاه — از همان ActivityEntity استفاده می‌شود
+  entity        ActivityEntity?
+  entityId      String?
+  linkUrl       String?
+  amount        BigInt?
+  carrier       String?
+
+  /// یکی از مقادیر `outcomes` نوع کار — دکمه است نه متن آزاد
+  outcome       String?
+  note          String?
+
+  /// کار فرزند: تماس فروشی که به کار خرید منجر شد
+  parentId      String?
+  /// قاعده‌ی تکرارشونده‌ای که این ردیف را ساخت — فاز ۳
+  ruleId        String?
+
+  dueAt         DateTime?
+  /// کِی اتفاق افتاد — قابل عقب‌بردن توسط کارمند
+  occurredAt    DateTime?
+  doneAt        DateTime?
+  /// کِی در سیستم ثبت شد — ⚠️ مبنای همه‌ی آمار عملکرد همین است، نه occurredAt.
+  /// کارِ دیروز که امروز ثبت شده، کارِ امروز است.
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  type          StaffTaskType   @relation(fields: [typeId], references: [id])
+  parent        StaffTask?      @relation("StaffTaskChildren", fields: [parentId], references: [id])
+  children      StaffTask[]     @relation("StaffTaskChildren")
+  notes         StaffTaskNote[]
+
+  @@index([ownerId, status, dueAt])
+  @@index([status, dueAt])
+  @@index([createdAt])
+  @@index([domain, createdAt])
+  @@index([typeId, createdAt])
+  @@index([customerId, createdAt])
+  @@index([entity, entityId])
+  @@index([contactPhone])
+  @@index([parentId])
+}
+
+/// رشته‌ی یادداشت‌های یک کار.
+///
+/// یادداشت‌گذاشتن کار را `IN_PROGRESS` می‌کند. نویسنده‌ی یادداشت لزوماً
+/// مسئولِ کار نیست — خیلی وقت‌ها یکی کار را انجام می‌دهد و دیگری مستندش می‌کند.
+model StaffTaskNote {
+  id         String    @id @default(cuid())
+  taskId     String
+  authorId   String?
+  authorName String
+  body       String
+  createdAt  DateTime  @default(now())
+  editedAt   DateTime?
+
+  task       StaffTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@index([authorId, createdAt])
 }
