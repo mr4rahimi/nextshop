@@ -14,7 +14,10 @@
     "club:seller": "tsx scripts/create-seller.ts",
     "sms:check": "tsx scripts/sms-check.ts",
     "sms:raw": "tsx scripts/sms-raw.ts",
-    "club:templates": "tsx scripts/seed-club-templates.ts"
+    "club:templates": "tsx scripts/seed-club-templates.ts",
+    "work:roles": "tsx scripts/seed-staff-roles.ts",
+    "work:types": "tsx scripts/seed-task-types.ts",
+    "work:seed": "pnpm work:roles && pnpm work:types"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.2",

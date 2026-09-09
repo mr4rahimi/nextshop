@@ -28,10 +28,16 @@ model User {
   wishlist      WishlistItem[]
   guaranties    Guaranty[]
   blogComments  BlogComment[]
-  clubProfile   ClubProfile? 
+  clubProfile   ClubProfile?
+
+  /// نقش کارتابل — جدا از `role`. خالی بودنش یعنی دسترسی کامل (سازگاری عقب‌رو).
+  staffRoleId   String?
+  staffRole     StaffRole?          @relation(fields: [staffRoleId], references: [id])
+  staffOrders   Order[]             @relation("OrderCreatedByStaff")
 
   @@index([role])
   @@index([isActive])
+  @@index([staffRoleId])
 }
 
 model Address {
@@ -220,14 +226,19 @@ model Order {
   orderNumber   String      @unique
   note          String?
   trackingCode  String?
+  /// کارمندی که این سفارش را از پنل ادمین ثبت کرده.
+  /// `null` یعنی سفارش آنلاین — همین خالی‌بودن تعریفِ «سفارش سایت» است.
+  createdByStaffId String?
   address       Address?    @relation(fields: [addressId], references: [id])
   user          User        @relation(fields: [userId], references: [id])
+  createdByStaff User?      @relation("OrderCreatedByStaff", fields: [createdByStaffId], references: [id])
   items         OrderItem[]
   payments      Payment[]
 
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+  @@index([createdByStaffId, createdAt])
 }
 
 model OrderItem {
@@ -675,6 +686,10 @@ model StoreSettings {
 
   /// کلمه/عدد کلیدی رضایت با پاسخ پیامکی — مشتری این را به خط خدماتی می‌فرستد
   smsOptInText         String? @default("عضویت")
+
+  // ── کارتابل ─────────────────────────────────────────────────────
+  /// پیش‌فرض خاموش: سایت‌های دیگر با دیپلوی بعدی منوی تازه نمی‌بینند.
+  worklistEnabled      Boolean @default(false)
 }
 
 model MenuItem {
@@ -2046,5 +2061,106 @@ enum ActivityEntity {
   BLOG
   USER
   SETTINGS
+  STAFF_ROLE
+  STAFF_TASK
   OTHER
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// کارتابل — مدیریت کار و عملکرد کارکنان
+// مستندات: docs/features/staff-worklist.md
+// ═══════════════════════════════════════════════════════════════════
+
+/// دامنه‌ی کار — enum ثابت در کد چون واحد گروه‌بندی گزارش‌هاست.
+/// نوعِ کار برعکس، جدول است تا مدیر بتواند بدون مهاجرت اضافه کند.
+enum StaffDomain {
+  SALES // فروش
+  FINANCE // مالی و پرداخت
+  PROCUREMENT // تأمین و خرید
+  FULFILLMENT // ارسال و تحویل
+  CATALOG // کاتالوگ و قیمت
+  CONTENT // محتوا و بازاریابی
+  SUPPORT // پشتیبانی و گارانتی
+  INTERNAL // داخلی و اداری
+}
+
+enum StaffChannel {
+  NONE
+  CALL_IN
+  CALL_OUT
+  SMS
+  MESSENGER
+  EMAIL
+  IN_PERSON
+  ONLINE
+}
+
+/// از کجا این ردیف کار به وجود آمد
+enum StaffTaskSource {
+  MANUAL // کارمند خودش ثبت کرد
+  RECURRING // قاعده‌ی تکرارشونده ساخت
+  ASSIGNED // مدیر یا همکار ارجاع داد
+  SYSTEM // از یک نوشتنِ واقعی در پنل استخراج می‌شود
+}
+
+/// نقش کارتابل — لایه‌ای جدا از UserRole.
+///
+/// ⚠️ `UserRole` عمداً دست‌نخورده می‌ماند: ۴۶ جای کد مستقیم "ADMIN" را چک
+/// می‌کند و افزودن عضو تازه یعنی ریسک باز شدن مسیر ادمین. کاربری که
+/// `staffRoleId` ندارد دسترسی کامل دارد، پس روز دیپلوی هیچ‌کس بیرون نمی‌افتد.
+model StaffRole {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String?
+  /// کلیدهای مجوز — تعریف کلیدها در lib/permissions.ts است، ترکیبشان اینجا.
+  /// مجوزی که هیچ کدی چکش نمی‌کند فقط توهم امنیت می‌سازد، پس ساخت کلید تازه
+  /// از پنل ممکن نیست.
+  permissions String[] @default([])
+  /// نقش سیستمی حذف نمی‌شود و مجوزهایش کم نمی‌شود
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+
+  @@index([isActive, sortOrder])
+}
+
+/// نوع کار — قابل افزودن توسط مدیر بدون تغییر کد.
+///
+/// ⚠️ هرگز حذف نمی‌شود، فقط `isActive = false` می‌گیرد. کارهای ثبت‌شده به آن
+/// ارجاع دارند و حذفش گزارش‌های سال قبل را می‌شکند.
+model StaffTaskType {
+  id            String          @id @default(cuid())
+  slug          String          @unique
+  title         String
+  domain        StaffDomain
+  channel       StaffChannel    @default(NONE)
+  source        StaffTaskSource @default(MANUAL)
+  /// وقتی source = SYSTEM: کلید نگاشت به ActivityLog — lib/worklist/system-map.ts
+  systemKey     String?         @unique
+  icon          String?
+  color         String?
+  /// نتیجه‌های آماده: [{ value, label, isSuccess }]
+  /// ⚠️ نتیجه دکمه است نه فیلد متنی؛ متن آزاد یعنی نمودار هرگز ساخته نمی‌شود.
+  outcomes      Json            @default("[]")
+  needsCustomer Boolean         @default(false)
+  needsAmount   Boolean         @default(false)
+  needsLink     Boolean         @default(false)
+  needsCarrier  Boolean         @default(false)
+  /// مهلت خودکار بر حسب دقیقه از لحظه‌ی ساخت — پیک تهران ۱۸۰، شهرستان ۱۴۴۰
+  slaMinutes    Int?
+  /// وزن این نوع در امتیازدهی — فاز ۶
+  weight        Float           @default(1)
+  isActive      Boolean         @default(true)
+  sortOrder     Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([domain, isActive])
+  @@index([source])
+  @@index([isActive, sortOrder])
 }
