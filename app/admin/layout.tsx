@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ThemeProvider, useTheme } from "@/components/layout/ThemeProvider";
 import { Target } from "lucide-react";
 import WorklistNotifier from "@/components/admin/worklist/WorklistNotifier";
+import HeartbeatPing from "@/components/admin/worklist/HeartbeatPing";
 
 function Icon({ path, className = "w-4 h-4" }: { path: string; className?: string }) {
   return (
@@ -60,8 +61,8 @@ const MENU_GROUPS = [
   },
   {
     // کارتابل — مدیریت کار و عملکرد کارکنان.
-    // زیرمنوهای مدیریتی (کارکنان، نقش‌ها، حضور، گزارش تیم) در فازهای بعد
-    // اضافه می‌شوند؛ مستندات: docs/features/staff-worklist.md
+    // زیرمنوهای مدیریتی باقی‌مانده (گزارش تیم و امتیاز) در فاز ۶ اضافه
+    // می‌شوند؛ مستندات: docs/features/staff-worklist.md
     label: "کارتابل",
     items: [
       {
@@ -70,7 +71,8 @@ const MENU_GROUPS = [
           { href: "/admin/worklist", label: "کارهای من" },
           { href: "/admin/worklist/calls", label: "تماس‌ها" },
           { href: "/admin/worklist/tasks", label: "همه‌ی کارها" },
-          { href: "/admin/worklist/settings", label: "قواعد تکرارشونده" },
+          { href: "/admin/worklist/attendance", label: "حضور" },
+          { href: "/admin/worklist/settings", label: "تنظیمات کارتابل" },
           { href: "/admin/worklist/roles", label: "نقش‌ها و دسترسی‌ها" },
         ],
       },
@@ -448,6 +450,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* پاپ‌آپ ارجاع فوری و نشان کارتابل — در همه‌ی صفحات ادمین زنده است.
           بدون دسترسی یا بدون داده، هیچ‌چیز رندر نمی‌کند. */}
       <WorklistNotifier />
+      <HeartbeatPing />
     </div>
    </ThemeProvider>
   );

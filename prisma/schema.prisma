@@ -31,10 +31,10 @@ model User {
   clubProfile   ClubProfile?
 
   /// نقش کارتابل — جدا از `role`. خالی بودنش یعنی دسترسی کامل (سازگاری عقب‌رو).
-  staffRoleId   String?
-  staffRole     StaffRole?          @relation(fields: [staffRoleId], references: [id])
-  staffOrders   Order[]             @relation("OrderCreatedByStaff")
-  staffTasksAsCustomer StaffTask[]  @relation("StaffTaskCustomer")
+  staffRoleId          String?
+  staffRole            StaffRole?  @relation(fields: [staffRoleId], references: [id])
+  staffOrders          Order[]     @relation("OrderCreatedByStaff")
+  staffTasksAsCustomer StaffTask[] @relation("StaffTaskCustomer")
 
   @@index([role])
   @@index([isActive])
@@ -83,7 +83,7 @@ model Category {
   products        Product[]
   megaMenu        MegaMenuCategory?
   attributeGroups CategoryAttributeGroup[]
-  landingPages LandingPage[]
+  landingPages    LandingPage[]
 
   @@index([parentId])
   @@index([isActive])
@@ -212,29 +212,29 @@ model WishlistItem {
 }
 
 model Order {
-  id            String      @id @default(cuid())
-  userId        String
-  addressId     String?
-  status        OrderStatus @default(PENDING_PAYMENT)
-  itemsTotal    BigInt      @default(0)
-  shippingFee   BigInt      @default(0)
-  discountTotal BigInt      @default(0)
+  id               String      @id @default(cuid())
+  userId           String
+  addressId        String?
+  status           OrderStatus @default(PENDING_PAYMENT)
+  itemsTotal       BigInt      @default(0)
+  shippingFee      BigInt      @default(0)
+  discountTotal    BigInt      @default(0)
   /// کد تخفیف اعمال‌شده روی این سفارش — برای نمایش و گزارش
-  couponCode    String?
-  grandTotal    BigInt      @default(0)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  orderNumber   String      @unique
-  note          String?
-  trackingCode  String?
+  couponCode       String?
+  grandTotal       BigInt      @default(0)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  orderNumber      String      @unique
+  note             String?
+  trackingCode     String?
   /// کارمندی که این سفارش را از پنل ادمین ثبت کرده.
   /// `null` یعنی سفارش آنلاین — همین خالی‌بودن تعریفِ «سفارش سایت» است.
   createdByStaffId String?
-  address       Address?    @relation(fields: [addressId], references: [id])
-  user          User        @relation(fields: [userId], references: [id])
-  createdByStaff User?      @relation("OrderCreatedByStaff", fields: [createdByStaffId], references: [id])
-  items         OrderItem[]
-  payments      Payment[]
+  address          Address?    @relation(fields: [addressId], references: [id])
+  user             User        @relation(fields: [userId], references: [id])
+  createdByStaff   User?       @relation("OrderCreatedByStaff", fields: [createdByStaffId], references: [id])
+  items            OrderItem[]
+  payments         Payment[]
 
   @@index([userId])
   @@index([status])
@@ -572,7 +572,7 @@ model ShippingMethod {
 }
 
 model StoreSettings {
-  id                       String   @id @default("singleton")
+  id String @id @default("singleton")
 
   cardNumber               String?
   cardHolder               String?
@@ -669,28 +669,31 @@ model StoreSettings {
   // ── ربات بله ────────────────────────────────────────────────────
   // ⚠️ مثل smsApiKey، اختصاصی هر کسب‌وکار است. هر سایت ربات خودش را دارد،
   //    پس منبع حقیقت دیتابیس همان سایت است نه متغیر محیطی.
-  baleBotToken         String?
+  baleBotToken      String?
   /// نام کاربری ربات بدون @ — برای ساخت لینک /start و QR
-  baleBotUsername      String?
+  baleBotUsername   String?
   /// رشته‌ی تصادفی در مسیر وب‌هوک. بله `secret_token` ندارد، پس تنها راه
   /// محافظت، غیرقابل‌حدس بودن خودِ آدرس است.
-  baleWebhookSecret    String?
+  baleWebhookSecret String?
   /// API کسب‌وکاری بله (سهمیه‌ی نرخ بالاتر، هزینه‌دار) به‌جای API معمولی
-  baleBusinessApi      Boolean @default(false)
+  baleBusinessApi   Boolean @default(false)
   /// نشانگر getUpdates — فقط برای حالت بدون وب‌هوک (توسعه‌ی لوکال)
-  baleUpdateOffset     Int?
+  baleUpdateOffset  Int?
   /// کلید سفیر — ارسال با «شماره تلفن» بدون اینکه کاربر /start زده باشد.
   /// ⚠️ این کلید با توکن ربات فرق دارد؛ از پنل کسب‌وکار بله گرفته می‌شود و
   ///    ارسال از آن هزینه‌دار است.
-  baleSafirKey         String?
-  baleSafirEnabled     Boolean @default(false)
+  baleSafirKey      String?
+  baleSafirEnabled  Boolean @default(false)
 
   /// کلمه/عدد کلیدی رضایت با پاسخ پیامکی — مشتری این را به خط خدماتی می‌فرستد
-  smsOptInText         String? @default("عضویت")
+  smsOptInText String? @default("عضویت")
 
   // ── کارتابل ─────────────────────────────────────────────────────
   /// پیش‌فرض خاموش: سایت‌های دیگر با دیپلوی بعدی منوی تازه نمی‌بینند.
-  worklistEnabled      Boolean @default(false)
+  worklistEnabled     Boolean @default(false)
+  /// سقف حضور روزانه بر حسب دقیقه — بیشتر از این یعنی یادش رفته خروج بزند،
+  /// نه اینکه کار کرده. پیش‌فرض ده ساعت.
+  worklistDailyCapMin Int     @default(600)
 }
 
 model MenuItem {
@@ -1142,7 +1145,7 @@ enum IntegPlatformType {
 // ── محصولات دریافت‌شده از هر پلتفرم ────────────────────────────────
 
 model IntegPlatformProduct {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   platformCode      String
   platformProductId String
   title             String
@@ -1150,22 +1153,22 @@ model IntegPlatformProduct {
   barcode           String?
   stock             Float?
   price             Float?
-  originalPrice     Float?    // قیمت پیش از تخفیف — null یعنی تخفیفی نیست
-  discountPercent   Float?    // درصد تخفیف فعال روی پلتفرم
+  originalPrice     Float? // قیمت پیش از تخفیف — null یعنی تخفیفی نیست
+  discountPercent   Float? // درصد تخفیف فعال روی پلتفرم
   discountStartsAt  DateTime?
   discountEndsAt    DateTime?
-  discountStock     Int?      // موجودی اختصاصی تخفیف (اسنپ‌شاپ)
+  discountStock     Int? // موجودی اختصاصی تخفیف (اسنپ‌شاپ)
   // آیا این ردیف بعد از افزوده‌شدن ردیابی تخفیف، تازه‌سازی شده؟
   // ردیف‌های قدیمی false می‌مانند؛ تا وقتی «دریافت محصولات» اجرا نشود
   // نمی‌دانیم محصول تخفیف دارد یا نه، پس قیمت برایش ارسال نمی‌شود.
   discountSynced    Boolean   @default(false)
   purchasePrice     Float?
   unit              String?
-  isEnabled         Boolean  @default(true)
-  rawData           Json     @default("{}")
-  lastFetchedAt     DateTime @default(now())
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  isEnabled         Boolean   @default(true)
+  rawData           Json      @default("{}")
+  lastFetchedAt     DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   platform IntegPlatform @relation(fields: [platformCode], references: [code])
 
@@ -1284,7 +1287,7 @@ model IntegOrder {
   mappingId           String?
   platformCode        String
   platformOrderId     String
-  platformOrderNo     String?  // شماره سفارش قابل نمایش برای کاربر (نه شناسه داخلی)
+  platformOrderNo     String? // شماره سفارش قابل نمایش برای کاربر (نه شناسه داخلی)
   platformOrderItemId String?
   productTitle        String
   qty                 Int
@@ -1292,7 +1295,7 @@ model IntegOrder {
   customerName        String?
   customerPhone       String?
   status              IntegOrderStatus @default(PENDING)
-  blockedReason       String?  // چرا فاکتور نخورد — برای نمایش در ادمین
+  blockedReason       String? // چرا فاکتور نخورد — برای نمایش در ادمین
   invoicedAt          DateTime?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
@@ -1477,13 +1480,13 @@ enum IntegPurchasePriceSource {
 /// منبع *جذب* عضو — از کجا آمد. با «کانال ارتباطی» (ClubChannel) فرق دارد:
 /// یکی می‌گوید از کجا آمد، دیگری می‌گوید از چه راهی به او برسیم.
 enum ClubSource {
-  ONLINE        // ثبت‌نام از سایت
-  IN_STORE      // ثبت توسط فروشنده
-  CALLER_ID     // دستگاه شماره‌گیر
-  IMPORT        // ورود از فایل
-  MARKETPLACE   // باسلام / تپسی‌شاپ / اسنپ‌شاپ / دیجی‌کالا / دیوار
-  MESSAGING     // تلگرام / بله — عضویت از ربات پیام‌رسان
-  REFERRAL      // معرفی توسط عضو دیگر
+  ONLINE // ثبت‌نام از سایت
+  IN_STORE // ثبت توسط فروشنده
+  CALLER_ID // دستگاه شماره‌گیر
+  IMPORT // ورود از فایل
+  MARKETPLACE // باسلام / تپسی‌شاپ / اسنپ‌شاپ / دیجی‌کالا / دیوار
+  MESSAGING // تلگرام / بله — عضویت از ربات پیام‌رسان
+  REFERRAL // معرفی توسط عضو دیگر
 }
 
 /// کانال ارتباطی — از چه راهی می‌شود به عضو پیام رساند.
@@ -1509,16 +1512,16 @@ enum PointReason {
 }
 
 model ClubProfile {
-  id             String     @id @default(cuid())
-  userId         String     @unique
+  id             String      @id @default(cuid())
+  userId         String      @unique
   birthDate      DateTime?
-  birthMonth     Int?       // ماه شمسی ۱-۱۲ — برای کوئری سریع کمپین تولد
-  birthDay       Int?       // روز شمسی ۱-۳۱
+  birthMonth     Int? // ماه شمسی ۱-۱۲ — برای کوئری سریع کمپین تولد
+  birthDay       Int? // روز شمسی ۱-۳۱
   gender         String?
-  source         ClubSource @default(ONLINE)
-  sourcePlatform String?    // وقتی source = MARKETPLACE → "basalam" | "tapsi_shop"
+  source         ClubSource  @default(ONLINE)
+  sourcePlatform String? // وقتی source = MARKETPLACE → "basalam" | "tapsi_shop"
   /// کد معرفی اختصاصی این عضو — با اولین درخواست ساخته می‌شود
-  referralCode   String?    @unique
+  referralCode   String?     @unique
   /// عضوی که این شخص را معرفی کرده
   referredById   String?
   referredAt     DateTime?
@@ -1527,26 +1530,26 @@ model ClubProfile {
   firstSource    ClubSource?
   firstPlatform  String?
   firstSeenAt    DateTime?
-  registeredById String?    // شناسه فروشنده‌ای که ثبت کرده
+  registeredById String? // شناسه فروشنده‌ای که ثبت کرده
   tierId         String?
-  totalSpent     BigInt     @default(0)
-  orderCount     Int        @default(0)
+  totalSpent     BigInt      @default(0)
+  orderCount     Int         @default(0)
   lastPurchaseAt DateTime?
-  smsConsent     Boolean    @default(false)
+  smsConsent     Boolean     @default(false)
   consentAt      DateTime?
   consentIp      String?
-  isBlocked      Boolean    @default(false)
-  tags           String[]   @default([])
+  isBlocked      Boolean     @default(false)
+  tags           String[]    @default([])
   note           String?
-  joinedAt       DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  joinedAt       DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tier           ClubTier?          @relation(fields: [tierId], references: [id])
-  points         PointTransaction[]
-  touchpoints    ClubTouchpoint[]
-  identities     ClubChannelIdentity[]
-  consentEvents  ClubConsentEvent[]
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tier          ClubTier?             @relation(fields: [tierId], references: [id])
+  points        PointTransaction[]
+  touchpoints   ClubTouchpoint[]
+  identities    ClubChannelIdentity[]
+  consentEvents ClubConsentEvent[]
 
   @@index([tierId])
   @@index([firstSource, firstPlatform])
@@ -1595,7 +1598,7 @@ model ClubTouchpoint {
   meta       Json?
   occurredAt DateTime     @default(now())
 
-  profile    ClubProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile ClubProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([profileId, occurredAt])
   @@index([source, platform])
@@ -1608,20 +1611,20 @@ model ClubTouchpoint {
 /// اختصاصی خودشان (chat_id) را دارند که فقط بعد از استارت زدن کاربر به دست
 /// می‌آید. بدون این جدول، ارسال چندکاناله ممکن نیست.
 model ClubChannelIdentity {
-  id          String      @id @default(cuid())
-  profileId   String
-  channel     ClubChannel
+  id           String      @id @default(cuid())
+  profileId    String
+  channel      ClubChannel
   /// chat_id تلگرام / شناسه‌ی بله / شماره برای SMS
-  externalId  String
+  externalId   String
   /// نام کاربری قابل نمایش در آن پلتفرم
-  username    String?
+  username     String?
   /// کاربر می‌تواند در همان پلتفرم لغو کند بدون اینکه رکورد حذف شود
-  isActive    Boolean     @default(true)
-  subscribedAt DateTime   @default(now())
-  lastSeenAt  DateTime?
-  meta        Json?
+  isActive     Boolean     @default(true)
+  subscribedAt DateTime    @default(now())
+  lastSeenAt   DateTime?
+  meta         Json?
 
-  profile     ClubProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile ClubProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@unique([channel, externalId])
   @@index([profileId, channel])
@@ -1630,14 +1633,14 @@ model ClubChannelIdentity {
 
 /// منبعی که رضایت از آن گرفته شد — برای اثبات در صورت شکایت
 enum ConsentSource {
-  CHECKOUT      // تیک در صفحه تسویه‌حساب
-  LANDING       // صفحه فرود عمومی / QR فروش حضوری
-  SMS_REPLY     // پاسخ پیامکی با کلمه کلیدی
-  PROFILE       // کلید در پنل کاربری خود مشتری
-  MESSENGER     // /start در ربات بله یا تلگرام
-  SELLER        // ثبت توسط فروشنده
-  ADMIN         // تغییر دستی ادمین
-  IMPORT        // ورود از فایل
+  CHECKOUT // تیک در صفحه تسویه‌حساب
+  LANDING // صفحه فرود عمومی / QR فروش حضوری
+  SMS_REPLY // پاسخ پیامکی با کلمه کلیدی
+  PROFILE // کلید در پنل کاربری خود مشتری
+  MESSENGER // /start در ربات بله یا تلگرام
+  SELLER // ثبت توسط فروشنده
+  ADMIN // تغییر دستی ادمین
+  IMPORT // ورود از فایل
 }
 
 /// دفتر تاریخچه‌ی رضایت — هر بار دادن یا پس‌گرفتن رضایت یک ردیف
@@ -1682,15 +1685,15 @@ model TemplateChannelBody {
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
-  template   SmsTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template SmsTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@unique([templateId, channel])
   @@index([channel])
 }
 
 enum CouponType {
-  PERCENT   // درصدی
-  FIXED     // مبلغ ثابت
+  PERCENT // درصدی
+  FIXED // مبلغ ثابت
   FREE_SHIP // ارسال رایگان
 }
 
@@ -1699,38 +1702,38 @@ enum CouponType {
 /// جدا از تخفیف محصول (`salePrice`) است: آن روی کالا اعمال می‌شود، این روی
 /// سبد. برای هدیه‌ی تولد، بازگرداندن مشتری خوابیده و مزایای سطح لازم است.
 model Coupon {
-  id             String     @id @default(cuid())
-  code           String     @unique
-  title          String?
-  type           CouponType @default(PERCENT)
+  id            String     @id @default(cuid())
+  code          String     @unique
+  title         String?
+  type          CouponType @default(PERCENT)
   /// درصد (۱ تا ۱۰۰) یا مبلغ ثابت به تومان — بسته به `type`
-  value          BigInt     @default(0)
+  value         BigInt     @default(0)
   /// سقف تخفیف برای نوع درصدی — ۰ یعنی بی‌سقف
-  maxDiscount    BigInt     @default(0)
+  maxDiscount   BigInt     @default(0)
   /// حداقل مبلغ سبد برای اعتبار کد
-  minOrderTotal  BigInt     @default(0)
+  minOrderTotal BigInt     @default(0)
 
-  startsAt       DateTime?
-  expiresAt      DateTime?
+  startsAt     DateTime?
+  expiresAt    DateTime?
   /// سقف کل استفاده — ۰ یعنی نامحدود
-  usageLimit     Int        @default(0)
+  usageLimit   Int       @default(0)
   /// سقف استفاده به‌ازای هر کاربر — ۰ یعنی نامحدود
-  perUserLimit   Int        @default(1)
-  usedCount      Int        @default(0)
+  perUserLimit Int       @default(1)
+  usedCount    Int       @default(0)
 
   /// اگر پر باشد، فقط همین کاربر می‌تواند استفاده کند (کد اختصاصی تولد و ...)
-  userId         String?
+  userId   String?
   /// اگر پر باشد، فقط اعضای این سطوح
-  tierIds        String[]   @default([])
+  tierIds  String[] @default([])
   /// فقط اعضایی که رضایت باشگاه دارند
-  clubOnly       Boolean    @default(false)
+  clubOnly Boolean  @default(false)
 
-  isActive       Boolean    @default(true)
-  note           String?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  isActive  Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  redemptions    CouponRedemption[]
+  redemptions CouponRedemption[]
 
   @@index([isActive, expiresAt])
   @@index([userId])
@@ -1742,15 +1745,15 @@ model Coupon {
 ///    می‌گیرد، و شمارش `perUserLimit` از همین جدول خوانده می‌شود نه از یک
 ///    شمارنده‌ی جدا که ممکن است ناهمگام شود.
 model CouponRedemption {
-  id         String   @id @default(cuid())
-  couponId   String
-  userId     String
-  orderId    String
+  id        String   @id @default(cuid())
+  couponId  String
+  userId    String
+  orderId   String
   /// مبلغ تخفیف واقعی اعمال‌شده (تومان)
-  discount   BigInt   @default(0)
-  createdAt  DateTime @default(now())
+  discount  BigInt   @default(0)
+  createdAt DateTime @default(now())
 
-  coupon     Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
 
   @@unique([couponId, orderId])
   @@index([userId])
@@ -1760,15 +1763,15 @@ model CouponRedemption {
 model PointTransaction {
   id        String      @id @default(cuid())
   profileId String
-  amount    Int         // مثبت = کسب، منفی = مصرف
+  amount    Int // مثبت = کسب، منفی = مصرف
   reason    PointReason
-  refType   String?     // "order" | "campaign" | "instore"
+  refType   String? // "order" | "campaign" | "instore"
   refId     String?
   note      String?
   expiresAt DateTime?
   createdAt DateTime    @default(now())
 
-  profile   ClubProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile ClubProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([profileId])
   @@index([createdAt])
@@ -1806,9 +1809,9 @@ model SmsTemplate {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  campaigns   SmsCampaign[]
+  campaigns     SmsCampaign[]
   channelBodies TemplateChannelBody[]
-  automations ClubAutomation[]
+  automations   ClubAutomation[]
 }
 
 enum CampaignStatus {
@@ -1837,39 +1840,39 @@ model SmsCampaign {
   createdById   String?
   createdAt     DateTime       @default(now())
 
-  template      SmsTemplate    @relation(fields: [templateId], references: [id])
-  messages      SmsMessage[]
+  template SmsTemplate  @relation(fields: [templateId], references: [id])
+  messages SmsMessage[]
 
   @@index([status])
   @@index([scheduledAt])
 }
 
 model SmsMessage {
-  id               String    @id @default(cuid())
-  userId           String?
-  phone            String
-  campaignId       String?
-  automationId     String?
-  templateKey      String?
-  kind             SmsKind   @default(MARKETING)
+  id                String      @id @default(cuid())
+  userId            String?
+  phone             String
+  campaignId        String?
+  automationId      String?
+  templateKey       String?
+  kind              SmsKind     @default(MARKETING)
   /// کانالی که پیام از آن رفت. پیش‌فرض SMS تا ردیف‌های موجود معنا داشته باشند.
-  channel          ClubChannel @default(SMS)
+  channel           ClubChannel @default(SMS)
   /// شناسه‌ی گیرنده در آن کانال — برای SMS همان `phone` است
-  destination      String?
-  body             String?
-  lineNumber       String?
-  provider         String    @default("iranpayamak")
+  destination       String?
+  body              String?
+  lineNumber        String?
+  provider          String      @default("iranpayamak")
   providerRequestId Int?
-  status           SmsStatus @default(QUEUED)
-  skipReason       String?
-  errorMessage     String?
-  cost             BigInt    @default(0)
-  queuedAt         DateTime  @default(now())
-  sentAt           DateTime?
-  deliveredAt      DateTime?
-  providerStatus   String?
+  status            SmsStatus   @default(QUEUED)
+  skipReason        String?
+  errorMessage      String?
+  cost              BigInt      @default(0)
+  queuedAt          DateTime    @default(now())
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  providerStatus    String?
 
-  campaign         SmsCampaign? @relation(fields: [campaignId], references: [id])
+  campaign SmsCampaign? @relation(fields: [campaignId], references: [id])
 
   @@index([userId])
   @@index([phone])
@@ -1884,7 +1887,7 @@ model SmsOptOut {
   id        String   @id @default(cuid())
   phone     String   @unique
   reason    String?
-  source    String?  // "sms_reply" | "blacklist" | "admin" | "panel"
+  source    String? // "sms_reply" | "blacklist" | "admin" | "panel"
   createdAt DateTime @default(now())
 }
 
@@ -1909,7 +1912,7 @@ model ClubAutomation {
   isActive     Boolean     @default(false)
   lastRunAt    DateTime?
 
-  template     SmsTemplate @relation(fields: [templateId], references: [id])
+  template SmsTemplate @relation(fields: [templateId], references: [id])
 }
 
 model LandingPage {
@@ -1935,9 +1938,9 @@ model LandingPage {
 }
 
 enum RedirectMatch {
-  EXACT   // /old/path            — کل مسیر برابر باشد
-  PREFIX  // /old/*               — مسیر با این شروع شود، دنباله به مقصد چسبانده می‌شود
-  REGEX   // ^/product/(\d+)$     — با $1 … در مقصد
+  EXACT // /old/path            — کل مسیر برابر باشد
+  PREFIX // /old/*               — مسیر با این شروع شود، دنباله به مقصد چسبانده می‌شود
+  REGEX // ^/product/(\d+)$     — با $1 … در مقصد
 }
 
 /// ریدایرکت‌های قابل مدیریت از پنل ادمین.
@@ -1980,6 +1983,7 @@ model NotFoundLog {
   @@index([ignored, hits])
   @@index([lastSeen])
 }
+
 /// برگه‌های ثابت سایت (تماس با ما، درباره ما، قوانین، سوالات متداول، ...)
 /// نشانی برگه در ریشه‌ی سایت است: /{slug}
 model Page {
@@ -2128,7 +2132,7 @@ model StaffRole {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  users       User[]
+  users User[]
 
   @@index([isActive, sortOrder])
 }
@@ -2164,8 +2168,8 @@ model StaffTaskType {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
-  tasks         StaffTask[]
-  rules         StaffRecurringRule[]
+  tasks StaffTask[]
+  rules StaffRecurringRule[]
 
   @@index([domain, isActive])
   @@index([source])
@@ -2193,13 +2197,13 @@ enum StaffPriority {
 ///
 /// ⚠️ تغییر وضعیت فقط از `lib/worklist/task-service.ts` انجام می‌شود.
 model StaffTask {
-  id            String          @id @default(cuid())
-  typeId        String
+  id      String          @id @default(cuid())
+  typeId  String
   /// کپی از نوع — تا تغییر بعدیِ نوع، گزارش پارسال را جابه‌جا نکند
-  domain        StaffDomain
-  channel       StaffChannel    @default(NONE)
-  source        StaffTaskSource @default(MANUAL)
-  title         String
+  domain  StaffDomain
+  channel StaffChannel    @default(NONE)
+  source  StaffTaskSource @default(MANUAL)
+  title   String
 
   /// کارمند مسئولِ فعلی — نام اسنپ‌شات است نه رابطه، مثل ActivityLog،
   /// تا حذف یا تغییر نام حساب گزارش‌های قدیمی را نشکند
@@ -2208,52 +2212,52 @@ model StaffTask {
   createdById   String?
   createdByName String
 
-  status        StaffTaskStatus @default(OPEN)
-  priority      StaffPriority   @default(NORMAL)
+  status   StaffTaskStatus @default(OPEN)
+  priority StaffPriority   @default(NORMAL)
 
   /// طرف مقابل — عضو باشگاه، یا فقط یک شماره، یا یک تأمین‌کننده.
   /// رابطه‌ی واقعی است تا پرونده‌ی مشتری و محافظِ فاصله‌ی قواعد تکرارشونده
   /// بدون کوئری دستی کار کنند. حذف کاربر فقط این فیلد را خالی می‌کند.
-  customerId    String?
-  customer      User?           @relation("StaffTaskCustomer", fields: [customerId], references: [id], onDelete: SetNull)
-  contactName   String?
-  contactPhone  String?
-  supplierName  String?
+  customerId   String?
+  customer     User?   @relation("StaffTaskCustomer", fields: [customerId], references: [id], onDelete: SetNull)
+  contactName  String?
+  contactPhone String?
+  supplierName String?
 
   /// اتصال به موجودیت فروشگاه — از همان ActivityEntity استفاده می‌شود
-  entity        ActivityEntity?
-  entityId      String?
-  linkUrl       String?
-  amount        BigInt?
-  carrier       String?
+  entity   ActivityEntity?
+  entityId String?
+  linkUrl  String?
+  amount   BigInt?
+  carrier  String?
 
   /// یکی از مقادیر `outcomes` نوع کار — دکمه است نه متن آزاد
-  outcome       String?
-  note          String?
+  outcome String?
+  note    String?
 
   /// کار فرزند: تماس فروشی که به کار خرید منجر شد
-  parentId      String?
+  parentId String?
   /// قاعده‌ی تکرارشونده‌ای که این ردیف را ساخت
-  ruleId        String?
+  ruleId   String?
   /// کلید یکتاییِ ساخت خودکار — `ruleId:روز` یا `ruleId:مشتری:روز`.
   /// ⚠️ ایندکس یکتا تنها چیزی است که جلوی دوباره‌ساخته‌شدن را حتی در اجرای
   /// هم‌زمان می‌گیرد. شرط `findFirst` قبل از `create` کافی نیست.
-  runKey        String?         @unique
+  runKey   String? @unique
 
-  dueAt         DateTime?
+  dueAt      DateTime?
   /// کِی اتفاق افتاد — قابل عقب‌بردن توسط کارمند
-  occurredAt    DateTime?
-  doneAt        DateTime?
+  occurredAt DateTime?
+  doneAt     DateTime?
   /// کِی در سیستم ثبت شد — ⚠️ مبنای همه‌ی آمار عملکرد همین است، نه occurredAt.
   /// کارِ دیروز که امروز ثبت شده، کارِ امروز است.
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  type          StaffTaskType   @relation(fields: [typeId], references: [id])
-  parent        StaffTask?      @relation("StaffTaskChildren", fields: [parentId], references: [id])
-  children      StaffTask[]     @relation("StaffTaskChildren")
-  notes         StaffTaskNote[]
-  referrals     StaffTaskReferral[]
+  type      StaffTaskType       @relation(fields: [typeId], references: [id])
+  parent    StaffTask?          @relation("StaffTaskChildren", fields: [parentId], references: [id])
+  children  StaffTask[]         @relation("StaffTaskChildren")
+  notes     StaffTaskNote[]
+  referrals StaffTaskReferral[]
 
   @@index([ownerId, status, dueAt])
   @@index([status, dueAt])
@@ -2279,7 +2283,7 @@ model StaffTaskNote {
   createdAt  DateTime  @default(now())
   editedAt   DateTime?
 
-  task       StaffTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task StaffTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId, createdAt])
   @@index([authorId, createdAt])
@@ -2309,7 +2313,7 @@ model StaffTaskReferral {
   seenAt    DateTime?
   createdAt DateTime  @default(now())
 
-  task      StaffTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task StaffTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([toId, seenAt])
   @@index([toId, createdAt])
@@ -2332,38 +2336,98 @@ enum StaffScheduleKind {
 /// ⚠️ سه محافظ اجباری‌اند و بدون هرکدام این قابلیت به فاجعه تبدیل می‌شود:
 /// یکتایی (`StaffTask.runKey`)، سقف (`maxPerRun`) و فاصله (`idleDays`).
 model StaffRecurringRule {
-  id          String            @id @default(cuid())
-  typeId      String
-  title       String
+  id           String            @id @default(cuid())
+  typeId       String
+  title        String
   /// کارمند ثابتِ این قاعده — `null` یعنی بین اعضای نقش نوبتی توزیع می‌شود
-  ownerId     String?
-  ownerName   String?
+  ownerId      String?
+  ownerName    String?
   /// وقتی `ownerId` خالی است: بین دارندگان این نقش گردشی
-  roleId      String?
-  schedule    StaffScheduleKind
+  roleId       String?
+  schedule     StaffScheduleKind
   /// برای WEEKLY — شنبه = ۰، مطابق تقویم ایران
-  daysOfWeek  Int[]             @default([])
+  daysOfWeek   Int[]             @default([])
   /// برای MONTHLY — روز ماه شمسی
-  dayOfMonth  Int?
+  dayOfMonth   Int?
   /// "09:00" — فقط ترتیب نمایش در کارتابل، نه زمان دقیق اجرا
-  timeOfDay   String?
+  timeOfDay    String?
   /// برای CUSTOMER_IDLE: چند روز از آخرین خرید گذشته باشد.
   /// همین عدد **فاصله‌ی محافظ** هم هست: مشتری‌ای که در این بازه با او تماس
   /// گرفته شده دوباره انتخاب نمی‌شود.
-  idleDays    Int?
+  idleDays     Int?
   /// شرط اضافه‌ی انتخاب مشتری — رزرو برای اتصال به سگمنت باشگاه
-  segmentJson Json?
+  segmentJson  Json?
   /// سقف ردیف در هر اجرا. اولین اجرای «مشتریان بیش از نود روز» هزاران نفر
   /// واجد شرایط دارد؛ بدون سقف کارتابل یک نفر پر می‌شود و دیگر بازش نمی‌کند.
-  maxPerRun   Int               @default(20)
-  isActive    Boolean           @default(true)
-  lastRunAt   DateTime?
+  maxPerRun    Int               @default(20)
+  isActive     Boolean           @default(true)
+  lastRunAt    DateTime?
   /// تعداد کارِ ساخته‌شده در آخرین اجرا — برای صفحه‌ی تنظیمات
-  lastRunCount Int              @default(0)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  lastRunCount Int               @default(0)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
-  type        StaffTaskType     @relation(fields: [typeId], references: [id])
+  type StaffTaskType @relation(fields: [typeId], references: [id])
 
   @@index([isActive, schedule])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// کارتابل — فاز ۵: حضور و ساعت کاری
+// مستندات: docs/features/staff-worklist.md بخش ۱۱
+// ═══════════════════════════════════════════════════════════════════
+
+/// چرا نشست بسته شد
+enum StaffSessionEnd {
+  LOGOUT // خودش خروج زد
+  TIMEOUT // ضربان قطع شد و سیستم بست
+  MANUAL // مدیر دستی اصلاح کرد
+}
+
+/// نشستِ خام — هرگز پاک یا اصلاح نمی‌شود.
+///
+/// ⚠️ خام جدا از تجمیع‌شده نگه داشته می‌شود. وقتی داده‌ی یک ماه مشکوک به نظر
+/// می‌رسد، تنها راه بررسی این است که به رکورد خام برگردیم. اگر فقط
+/// `StaffWorkDay` بماند و مدیر اصلاحش کند، دیگر راهی برای فهمیدن واقعیت نیست.
+model StaffWorkSession {
+  id         String           @id @default(cuid())
+  userId     String
+  startedAt  DateTime         @default(now())
+  lastSeenAt DateTime         @default(now())
+  endedAt    DateTime?
+  endReason  StaffSessionEnd?
+  ip         String?
+  userAgent  String?
+
+  @@index([userId, startedAt])
+  @@index([endedAt])
+}
+
+/// روزِ تجمیع‌شده — قابل اصلاح دستی توسط مدیر.
+///
+/// ⚠️ `activeMin` از **ادغام** بازه‌های هم‌پوشان می‌آید نه جمعشان. دو تب باز
+/// یعنی دو نشستِ هم‌زمان؛ جمع‌زدنشان ساعت حضور را دو برابر می‌کند.
+///
+/// ⚠️ ردیفی که `editedById` دارد دیگر بازسازی نمی‌شود. اصلاح مدیر حرف آخر است
+/// تا چرخه‌ی بعدیِ زمان‌بند بی‌صدا رویش ننویسد.
+model StaffWorkDay {
+  id           String    @id @default(cuid())
+  userId       String
+  /// نیمه‌شب روز شمسی به وقت تهران — مرز ماه از lib/club/jalali.ts می‌آید
+  day          DateTime  @db.Date
+  firstIn      DateTime
+  lastOut      DateTime
+  /// دقیقه‌ی حضور مؤثر: مجموع بازه‌های ادغام‌شده، بعد از اعمال سقف روزانه
+  activeMin    Int
+  /// دقیقه‌ی خام از اولین ورود تا آخرین خروج، بدون کسر فاصله‌ها
+  grossMin     Int
+  note         String?
+  editedById   String?
+  editedByName String?
+  editedAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([userId, day])
+  @@index([day])
 }

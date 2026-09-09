@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { signToken, setAuthCookie, verifyPassword } from "@/lib/auth";
 import { normalizePhone } from "@/lib/club/phone";
+import { startWorkSession, sessionContextFrom } from "@/lib/worklist/attendance";
 
 export const runtime = "nodejs";
 
@@ -49,6 +50,9 @@ export async function POST(req: Request) {
       role: user.role,
     });
     await setAuthCookie(token);
+
+    // حضور — فروشنده هم کارمند است و نشستش ثبت می‌شود
+    await startWorkSession(user.id, sessionContextFrom(req));
 
     return NextResponse.json({ success: true, role: user.role });
   } catch {

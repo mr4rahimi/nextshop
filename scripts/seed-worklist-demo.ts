@@ -16,6 +16,7 @@
 import "../lib/load-env";
 import { prisma } from "../lib/prisma";
 import { hashPassword } from "../lib/auth";
+import { dayKeyOf, dayBounds, aggregateDay } from "../lib/worklist/attendance";
 
 const DEMO_TAG = "[نمونه]";
 const PASSWORD = "Test@12345";
@@ -97,6 +98,11 @@ async function main() {
     });
     customers.push({ ...user, name: `${c.firstName} ${c.lastName}` });
   }
+
+  // ── حضور ──────────────────────────────────────────────────────
+  // قبل از خروجِ زودهنگامِ پایین می‌آید: خودش هر بار از نو می‌سازد، پس اجرای
+  // دوباره‌ی اسکریپت هم تقویم حضور را تازه می‌کند.
+  await seedAttendance([manager, ...staff].map((u) => u.id));
 
   // ── کارهای نمونه ──────────────────────────────────────────────
   const already = await prisma.staffTask.count({ where: { title: { startsWith: DEMO_TAG } } });
@@ -202,6 +208,60 @@ async function main() {
 
   console.log(`\n${made} کار نمونه و یک ارجاع فوری ساخته شد.`);
   await report(manager.id);
+}
+
+/**
+ * حضورِ چهارده روز گذشته — تا تقویم فاز ۵ خالی نباشد.
+ *
+ * عمداً «تمیز» نیست: یک روز دو نشستِ هم‌پوشان دارد (تا ادغام دیده شود)، یک
+ * روز نشستِ باز و یادرفته دارد (تا سقف روزانه دیده شود) و جمعه‌ها خالی‌اند.
+ */
+async function seedAttendance(userIds: string[]) {
+  await prisma.staffWorkSession.deleteMany({ where: { userId: { in: userIds } } });
+  await prisma.staffWorkDay.deleteMany({ where: { userId: { in: userIds } } });
+
+  const today = dayKeyOf(new Date());
+  let sessions = 0;
+
+  for (const userId of userIds) {
+    for (let back = 1; back <= 14; back++) {
+      const day = new Date(today.getTime() - back * 86400000);
+      const { start } = dayBounds(day);
+      // جمعه تعطیل — `getUTCDay` جمعه را ۵ می‌دهد
+      if (day.getUTCDay() === 5) continue;
+
+      const at = (h: number, m = 0) => new Date(start.getTime() + h * 3600000 + m * 60000);
+      const jitter = Math.floor(Math.random() * 40);
+
+      const spans: [Date, Date][] = [
+        [at(8, 30 + jitter), at(13, jitter)],
+        [at(14, jitter), at(17, 30 + jitter)],
+      ];
+      // یک روز، دو تبِ هم‌زمان
+      if (back === 3) spans.push([at(9, 15), at(11, 45)]);
+      // یک روز، خروج‌نزده تا نیمه‌شب — سقف روزانه باید بگیردش
+      if (back === 6) spans[1] = [at(14), at(23, 55)];
+
+      for (const [startedAt, endedAt] of spans) {
+        await prisma.staffWorkSession.create({
+          data: {
+            userId,
+            startedAt,
+            lastSeenAt: endedAt,
+            endedAt,
+            endReason: back === 6 ? "TIMEOUT" : "LOGOUT",
+            ip: "127.0.0.1",
+            userAgent: "seed",
+          },
+        });
+        sessions++;
+      }
+
+      await aggregateDay(userId, day, { capMin: 600 });
+    }
+  }
+
+  console.log(`${sessions} نشست حضور برای چهارده روز گذشته ساخته شد.`);
 }
 
 async function report(managerId: string) {

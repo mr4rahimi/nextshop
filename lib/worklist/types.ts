@@ -181,3 +181,41 @@ export function dueLabel(dueAt: string | Date | null | undefined): string | null
         : `${Math.round(abs / 1440)} روز`;
   return diffMin >= 0 ? `${unit} مانده` : `${unit} گذشته`;
 }
+
+/** «۷ ساعت و ۲۵ دقیقه» — عدد خام دقیقه در گزارش حضور خوانده نمی‌شود */
+export function formatMinutes(min: number): string {
+  if (min <= 0) return "—";
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return `${m} دقیقه`;
+  if (m === 0) return `${h} ساعت`;
+  return `${h} ساعت و ${m} دقیقه`;
+}
+
+/** «۷:۲۵» — شکل فشرده برای خانه‌ی تقویم */
+export function formatHoursShort(min: number): string {
+  if (min <= 0) return "—";
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${h}:${String(m).padStart(2, "0")}`;
+}
+
+/**
+ * ساعت به وقت تهران — «۰۹:۱۵».
+ *
+ * ⚠️ `formatTime` منطقه‌ی زمانیِ خودِ مرورگر را می‌گیرد. برای گزارش حضور این
+ * کافی نیست: مرزِ روز سمت سرور تهران است و اگر کارمندی مرورگرش روی UTC باشد،
+ * ساعتِ ورودش سه‌ونیم ساعت جابه‌جا دیده می‌شود.
+ */
+export function formatTimeTehran(value: string | Date | null | undefined): string {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleTimeString("fa-IR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Tehran",
+    });
+  } catch {
+    return String(value);
+  }
+}

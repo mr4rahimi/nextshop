@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { signToken, setAuthCookie, verifyPassword } from "@/lib/auth";
 import { logActivityAsync } from "@/lib/activity";
+import { startWorkSession, sessionContextFrom } from "@/lib/worklist/attendance";
 
 export const runtime = "nodejs";
 
@@ -35,6 +36,11 @@ export async function POST(req: Request) {
         phone: user.phone,
       },
     });
+
+    // حضور — نشستِ کاری از همین لحظه باز می‌شود.
+    // ⚠️ خودش خطا نمی‌دهد و گیتِ `worklistEnabled` را داخل خودش چک می‌کند؛
+    // ورود به پنل هیچ‌وقت نباید به این وابسته باشد.
+    await startWorkSession(user.id, sessionContextFrom(req));
 
     return NextResponse.json({ success: true });
   } catch (e) {

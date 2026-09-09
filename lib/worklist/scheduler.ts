@@ -12,6 +12,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { runRecurringRules } from "./recurring";
+import { closeStaleSessions, aggregateRecentDays } from "./attendance";
 
 let started = false;
 
@@ -36,6 +37,19 @@ async function tick() {
     const created = results.reduce((sum, r) => sum + r.created, 0);
     if (created > 0) {
       console.log(`[worklist] ${created} کار خودکار ساخته شد.`);
+    }
+
+    // حضور — بستن نشستِ مرورگرهای بسته‌شده و بازسازی روزهای اخیر.
+    // ⚠️ جدا از قواعد تکرارشونده try/catch می‌شود: اگر تجمیع حضور بشکند،
+    // نباید ساختِ کارهای خودکار در چرخه‌ی بعد هم متوقف بماند و برعکس.
+    try {
+      const closed = await closeStaleSessions();
+      if (closed > 0) {
+        console.log(`[worklist] ${closed} نشستِ بی‌ضربان بسته شد.`);
+      }
+      await aggregateRecentDays();
+    } catch (e) {
+      console.error("[worklist] تجمیع حضور شکست خورد:", e);
     }
   } catch (e) {
     // زمان‌بند هرگز نباید پروسه‌ی سایت را بشکند

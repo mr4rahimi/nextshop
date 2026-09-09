@@ -135,3 +135,44 @@ export interface WorklistCounts {
   unlogged: number;
   doneToday: number;
 }
+
+/** یک روز از تقویم حضور — همان شکلی که مسیر حضور برمی‌گرداند */
+export interface AttendanceDay {
+  /** «1405-05-02» — کلید یکتای خانه‌ی تقویم و ورودیِ اصلاح دستی */
+  key: string;
+  day: string;
+  jy: number;
+  jm: number;
+  jd: number;
+  /** شنبه = ۰ */
+  weekday: number;
+  firstIn: string | null;
+  lastOut: string | null;
+  activeMin: number;
+  grossMin: number;
+  note: string | null;
+  editedByName: string | null;
+  editedAt: string | null;
+  isFuture: boolean;
+}
+
+/** یک کارمند در فهرست صفحه‌ی حضور، با جمعِ همان ماه */
+export interface AttendanceStaff {
+  id: string;
+  name: string;
+  phone: string;
+  isMe: boolean;
+  activeMin: number;
+  presentDays: number;
+}
+
+export interface AttendanceResponse {
+  year: number;
+  month: number;
+  userId: string;
+  days: AttendanceDay[];
+  totals: { activeMin: number; presentDays: number };
+  staff: AttendanceStaff[];
+  capMin: number;
+  can: { viewAll: boolean; edit: boolean; manageSettings: boolean };
+}
