@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import PhoneOrderForm from "@/components/admin/orders/PhoneOrderForm";
 
 interface Order {
   id: string;
@@ -41,6 +42,8 @@ export default function AdminOrdersPage() {
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  /** فرم ثبت سفارش تلفنی — تنها راه ثبت سفارش از پنل */
+  const [phoneFormOpen, setPhoneFormOpen] = useState(false);
   const PAGE_SIZE = 20;
 
   const fetchOrders = useCallback(async (search: string, status: string, p: number) => {
@@ -74,6 +77,14 @@ export default function AdminOrdersPage() {
           <h1 className="text-2xl font-black text-gray-900 dark:text-white">مدیریت سفارشات</h1>
           <p className="text-sm text-gray-500 mt-1">{toFa(total)} سفارش ثبت شده</p>
         </div>
+
+        <button
+          onClick={() => setPhoneFormOpen(true)}
+          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-all flex items-center gap-2 w-fit"
+        >
+          <span className="text-base leading-none">+</span>
+          ثبت سفارش تلفنی
+        </button>
 
         {}
         <form onSubmit={handleSearch} className="flex items-center gap-2">
@@ -242,6 +253,12 @@ export default function AdminOrdersPage() {
           </>
         )}
       </div>
+      <PhoneOrderForm
+        open={phoneFormOpen}
+        onClose={() => setPhoneFormOpen(false)}
+        onCreated={() => fetchOrders(q, statusFilter, page)}
+      />
+
     </div>
   );
 }

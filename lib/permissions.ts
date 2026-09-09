@@ -63,6 +63,17 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    key: "orders",
+    label: "سفارش",
+    items: [
+      {
+        key: "ORDER_CREATE",
+        label: "ثبت سفارش تلفنی",
+        hint: "ثبت سفارش از پنل، جدا از مجوز ثبت کار در کارتابل",
+      },
+    ],
+  },
+  {
     key: "staff",
     label: "کارکنان",
     items: [

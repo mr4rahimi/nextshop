@@ -44,6 +44,7 @@ const ROLES: RoleSeed[] = [
       "WORK_VIEW_OWN", "WORK_VIEW_ALL", "WORK_CREATE", "WORK_EDIT_OWN",
       "WORK_EDIT_ALL", "WORK_ASSIGN",
       "CALL_VIEW_OWN", "CALL_VIEW_ALL", "CALL_LOG",
+      "ORDER_CREATE",
       "STAFF_VIEW",
       "ATTENDANCE_VIEW_OWN", "ATTENDANCE_VIEW_ALL",
       "WORK_REPORT_VIEW", "WORK_REPORT_EXPORT",
@@ -57,6 +58,7 @@ const ROLES: RoleSeed[] = [
     permissions: [
       "WORK_VIEW_OWN", "WORK_CREATE", "WORK_EDIT_OWN", "WORK_ASSIGN",
       "CALL_VIEW_OWN", "CALL_LOG",
+      "ORDER_CREATE",
       "ATTENDANCE_VIEW_OWN",
       "SCORE_VIEW_OWN",
     ],
