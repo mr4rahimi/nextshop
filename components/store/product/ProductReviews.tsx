@@ -19,6 +19,7 @@
 
 import { useEffect, useState } from "react";
 import { useHelpfulVotes } from "@/components/store/useHelpfulVotes";
+import { readFormError } from "@/lib/form-errors";
 
 export interface StoreReview {
   id: string;
@@ -263,9 +264,8 @@ export default function ProductReviews({
           guestEmail: isGuest ? email : undefined,
         }),
       });
-      const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "ثبت نظر انجام نشد");
+        setError(await readFormError(res, "ثبت نظر انجام نشد"));
         return;
       }
       setDone(true);
