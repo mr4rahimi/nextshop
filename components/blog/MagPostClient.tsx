@@ -4,17 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import FaqSection from "@/components/store/FaqSection";
+import PostComments, { type PostComment } from "@/components/blog/PostComments";
 import { normalizeFaq } from "@/lib/faq";
 
 interface Product {
   id: string; title: string; slug: string; mainImage: string | null;
   price: string; salePrice: string | null; images: { url: string }[];
 }
-interface Comment {
-  id: string; content: string; createdAt: string; name: string | null;
-  user: { firstName: string | null; lastName: string | null; avatarUrl: string | null } | null;
-  replies: Comment[];
-}
+type Comment = PostComment;
 interface Post {
   id: string; title: string; slug: string; excerpt: string | null;
   content: string; coverImage: string | null; videoUrl: string | null;
@@ -88,53 +85,11 @@ function ShareButtons({ title, url: urlProp }: { title: string; url: string }) {
   );
 }
 
-function CommentForm({ postSlug, onSubmit }: { postSlug: string; onSubmit: (c: Comment) => void }) {
-  const [name, setName]       = useState("");
-  const [content, setContent] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent]       = useState(false);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!content.trim()) return;
-    setSending(true);
-    const res = await fetch(`/api/mag/${postSlug}`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, content }),
-    });
-    setSending(false); setSent(true);
-    setName(""); setContent("");
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6">
-      <h4 className="font-black text-sm text-gray-900 dark:text-white">ثبت نظر</h4>
-      {sent ? (
-        <div className="py-4 text-center">
-          <p className="text-sm font-bold text-emerald-600">✓ نظر شما دریافت شد و پس از تأیید نمایش داده می‌شود</p>
-        </div>
-      ) : (
-        <>
-          <input className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white outline-none focus:border-primary-500"
-            placeholder="نام شما (اختیاری)" value={name} onChange={e => setName(e.target.value)} />
-          <textarea rows={4} required className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white outline-none focus:border-primary-500 resize-none"
-            placeholder="نظر شما..." value={content} onChange={e => setContent(e.target.value)} />
-          <button type="submit" disabled={sending || !content.trim()}
-            className="px-6 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-black hover:bg-primary-700 disabled:opacity-60 transition-all">
-            {sending ? "ارسال..." : "ارسال نظر"}
-          </button>
-        </>
-      )}
-    </form>
-  );
-}
-
 export default function MagPostClient({ post, related }: { post: Post; related: Related[] }) {
   const [activeHeading, setActiveHeading] = useState("");
   const contentRef = useRef<HTMLDivElement>(null);
   const processedContent = injectHeadingIds(post.content);
   const headings = extractHeadings(processedContent);
-  const [comments, setComments] = useState<Comment[]>(post.comments);
   const pageUrl = "";
 
   // scroll spy
@@ -295,54 +250,13 @@ export default function MagPostClient({ post, related }: { post: Post; related: 
             )}
 
             {/* نظرات */}
-            <div className="bg-white dark:bg-gray-900/60 rounded-[2.5rem] p-8 space-y-6">
-              <h3 className="font-black text-lg text-gray-900 dark:text-white flex items-center gap-3">
-                <span className="w-1.5 h-6 bg-primary-500 rounded-full" />
-                نظرات ({toFa(post._count.comments)})
-              </h3>
-
-              <CommentForm postSlug={post.slug} onSubmit={c => setComments(p => [c, ...p])} />
-
-              {comments.length > 0 && (
-                <div className="space-y-4">
-                  {comments.map(c => {
-                    const name = c.user ? [c.user.firstName, c.user.lastName].filter(Boolean).join(" ") : c.name ?? "ناشناس";
-                    return (
-                      <div key={c.id} className="space-y-3">
-                        <div className="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
-                          <div className="w-10 h-10 rounded-2xl bg-primary-500/10 flex items-center justify-center flex-shrink-0 font-black text-primary-600">
-                            {name.charAt(0)}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-sm font-black text-gray-900 dark:text-white">{name}</p>
-                              <p className="text-[10px] text-gray-400">{new Date(c.createdAt).toLocaleDateString("fa-IR")}</p>
-                            </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{c.content}</p>
-                          </div>
-                        </div>
-                        {c.replies.map(r => {
-                          const rName = r.user ? [r.user.firstName, r.user.lastName].filter(Boolean).join(" ") : r.name ?? "ناشناس";
-                          return (
-                            <div key={r.id} className="flex items-start gap-4 p-4 bg-primary-50/50 dark:bg-primary-900/10 rounded-2xl mr-8">
-                              <div className="w-8 h-8 rounded-xl bg-primary-500/20 flex items-center justify-center flex-shrink-0 text-xs font-black text-primary-600">
-                                {rName.charAt(0)}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="text-xs font-black text-primary-600 dark:text-primary-400">{rName}</p>
-                                  <span className="text-[10px] text-gray-400">پاسخ ادمین</span>
-                                </div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{r.content}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            <div className="bg-white dark:bg-gray-900/60 rounded-[2.5rem] p-8">
+              <PostComments
+                postSlug={post.slug}
+                postTitle={post.title}
+                comments={post.comments}
+                commentCount={post._count.comments}
+              />
             </div>
           </article>
 

@@ -239,6 +239,8 @@ export function buildProductSchema(opts: {
   url: string;
   ratingValue?: number;
   ratingCount?: number;
+  /** نظرهای **تأییدشده** برای بخش review اسکیما */
+  reviews?: SchemaReview[];
   category?: string | null;
   /** ISO 8601 (YYYY-MM-DD). پیش‌فرض: پایان سال میلادی بعدی */
   priceValidUntil?: string;
@@ -329,7 +331,87 @@ export function buildProductSchema(opts: {
     };
   }
 
+  const reviewNodes = (opts.reviews ?? []).map(buildReviewNode);
+  if (reviewNodes.length > 0) schema.review = reviewNodes;
+
   return schema;
+}
+
+/** یک نظر، به شکلی که در اسکیمای Product می‌نشیند */
+export interface SchemaReview {
+  author: string;
+  rating: number;
+  body?: string | null;
+  title?: string | null;
+  datePublished: string;
+  pros?: string[];
+  cons?: string[];
+  /** پاسخ رسمی فروشگاه، اگر ثبت شده باشد */
+  reply?: { body: string; date: string } | null;
+}
+
+/**
+ * گره‌ی `Review` — بدون `itemReviewed` عمداً، چون داخل خودِ Product قرار
+ * می‌گیرد و تکرارش گوگل را به حلقه می‌اندازد.
+ *
+ * `positiveNotes`/`negativeNotes` همان نقاط قوت و ضعف‌اند و گوگل آن‌ها را
+ * در rich result نظرات نشان می‌دهد.
+ */
+function buildReviewNode(r: SchemaReview) {
+  const node: any = {
+    "@type": "Review",
+    author: { "@type": "Person", name: r.author },
+    datePublished: r.datePublished,
+    reviewRating: {
+      "@type": "Rating",
+      ratingValue: String(r.rating),
+      bestRating: "5",
+      worstRating: "1",
+    },
+    name: blankToUndefined(r.title),
+    reviewBody: blankToUndefined(r.body),
+  };
+
+  if (r.pros?.length) {
+    node.positiveNotes = {
+      "@type": "ItemList",
+      itemListElement: r.pros.map((text, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: text,
+      })),
+    };
+  }
+
+  if (r.cons?.length) {
+    node.negativeNotes = {
+      "@type": "ItemList",
+      itemListElement: r.cons.map((text, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: text,
+      })),
+    };
+  }
+
+  if (r.reply) {
+    node.comment = [
+      {
+        "@type": "Comment",
+        text: r.reply.body,
+        dateCreated: r.reply.date,
+        author: {
+          "@type": "Organization",
+          name:
+            process.env.STORE_NAME ??
+            process.env.NEXT_PUBLIC_STORE_NAME ??
+            "فروشگاه",
+        },
+      },
+    ];
+  }
+
+  return node;
 }
 
 export function buildArticleSchema(opts: {
@@ -342,6 +424,10 @@ export function buildArticleSchema(opts: {
   authorName?: string;
   publisherName: string;
   publisherLogo?: string | null;
+  /** نظرهای تأییدشده‌ی مقاله */
+  comments?: SchemaComment[];
+  /** تعداد نظرهای تأییدشده، شامل پاسخ‌ها */
+  commentCount?: number;
 }) {
   return {
     "@context":      "https://schema.org",
@@ -364,6 +450,33 @@ export function buildArticleSchema(opts: {
         : undefined,
     },
     inLanguage: "fa",
+    /**
+     * فقط نظرهای **تأییدشده** — و `commentCount` هم همان‌ها را می‌شمارد.
+     * عددی که با فهرست زیرش نخواند، از نظر گوگل خطاست.
+     */
+    commentCount: opts.commentCount ?? undefined,
+    comment: opts.comments?.length
+      ? opts.comments.map(buildCommentNode)
+      : undefined,
+  };
+}
+
+/** یک نظر مقاله، به شکلی که در اسکیمای Article می‌نشیند */
+export interface SchemaComment {
+  author: string;
+  text: string;
+  datePublished: string;
+  /** پاسخ‌ها — یک لایه، همان چیزی که صفحه نشان می‌دهد */
+  replies?: SchemaComment[];
+}
+
+function buildCommentNode(c: SchemaComment): Record<string, unknown> {
+  return {
+    "@type": "Comment",
+    author: { "@type": "Person", name: c.author },
+    text: c.text,
+    dateCreated: c.datePublished,
+    comment: c.replies?.length ? c.replies.map(buildCommentNode) : undefined,
   };
 }
 

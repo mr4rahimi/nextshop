@@ -24,6 +24,7 @@ model User {
   cart          Cart?
   orders        Order[]
   reviews       Review[]
+  reviewReplies Review[]            @relation("ReviewReplyBy")
   walletTx      WalletTransaction[]
   wishlist      WishlistItem[]
   guaranties    Guaranty[]
@@ -180,22 +181,75 @@ model ProductImage {
   @@index([sortOrder])
 }
 
+/// نظر کاربر روی محصول.
+///
+/// `userId` عمداً اختیاری است: مهمان هم می‌تواند نظر بدهد و نامش در
+/// `guestName` می‌نشیند. برای همین محدودیت یکتای قدیمی
+/// `[productId, userId]` برداشته شد — مهمان‌ها اصلاً کلیدی برای یکتا شدن
+/// ندارند و کاربر عضو هم می‌تواند بعد از خرید دوباره نظر بدهد.
+///
+/// همه‌ی نظرها با `status = PENDING` ثبت می‌شوند و فقط پس از تأیید ادمین
+/// در صفحه‌ی محصول و در اسکیمای Review گوگل دیده می‌شوند.
+///
+/// مستندات: docs/features/reviews.md
 model Review {
-  id         String   @id @default(cuid())
+  id         String        @id @default(cuid())
   productId  String
-  userId     String
+  userId     String?
+  /// نام مهمان — فقط وقتی userId خالی است پر می‌شود
+  guestName  String?
+  /// ایمیل اختیاری مهمان؛ هرگز عمومی نمایش داده نمی‌شود
+  guestEmail String?
   rating     Int
   title      String?
   body       String?
-  isApproved Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// نقاط قوت و ضعف — در اسکیمای Review به positiveNotes/negativeNotes می‌روند
+  pros       String[]      @default([])
+  cons       String[]      @default([])
+  /// آیا این محصول را پیشنهاد می‌کند؟ خالی یعنی نظری نداده
+  recommends Boolean?
+  /// در لحظه‌ی ثبت محاسبه می‌شود: کاربر این محصول را در سفارشی
+  /// پرداخت‌شده یا تحویل‌شده خریده است
+  isBuyer    Boolean       @default(false)
+  status     CommentStatus @default(PENDING)
+  /// رأی «مفید بود» — شمارنده‌ی مادی‌شده تا مرتب‌سازی ارزان بماند
+  helpfulYes Int           @default(0)
+  helpfulNo  Int           @default(0)
+  /// پاسخ رسمی فروشگاه
+  replyBody  String?
+  replyAt    DateTime?
+  replyById  String?
+  /// برای تشخیص اسپم و محدودکردن ثبت پیاپی
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @default(now()) @updatedAt
+  product    Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  replyBy    User?         @relation("ReviewReplyBy", fields: [replyById], references: [id])
+  votes      ReviewVote[]
 
-  @@unique([productId, userId])
   @@index([productId])
   @@index([userId])
-  @@index([isApproved])
+  @@index([status])
+  @@index([productId, status, createdAt])
+}
+
+/// رأی «مفید بود» روی یک نظر.
+///
+/// کلید یکتا روی `[reviewId, voterKey]` است؛ `voterKey` برای کاربر عضو
+/// شناسه‌ی اوست و برای مهمان هش IP. این تنها چیزی است که مانع می‌شود
+/// یک نفر با رفرش کردن صفحه شمارنده را بالا ببرد.
+model ReviewVote {
+  id        String   @id @default(cuid())
+  reviewId  String
+  voterKey  String
+  helpful   Boolean
+  createdAt DateTime @default(now())
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, voterKey])
+  @@index([reviewId])
 }
 
 model WishlistItem {
@@ -809,22 +863,62 @@ model BlogPostProduct {
   @@id([postId, productId])
 }
 
+/// نظر روی مقاله‌ی مجله.
+///
+/// مثل `Review`، مهمان هم می‌تواند نظر بدهد (`userId` خالی، نام در `name`)
+/// و هیچ نظری بدون تأیید ادمین دیده نمی‌شود.
+///
+/// پاسخ — چه پاسخ کاربر به کاربر، چه پاسخ رسمی فروشگاه — یک `BlogComment`
+/// فرزند با `parentId` است، نه ستون جدا. برای مقاله گفتگو طبیعی است و
+/// همین ساختار هر دو حالت را می‌پوشاند؛ `isStaffReply` فقط می‌گوید کدام
+/// پاسخ از سمت فروشگاه است. تا امروز رابط کاربری **هر** پاسخی را
+/// «پاسخ ادمین» برچسب می‌زد، که برای پاسخ یک بازدیدکننده دروغ بود.
+///
+/// مستندات: docs/features/reviews.md
 model BlogComment {
-  id        String        @id @default(cuid())
-  postId    String
-  userId    String?
-  name      String?
-  content   String
-  status    CommentStatus @default(PENDING)
-  parentId  String?
-  post      BlogPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User?         @relation(fields: [userId], references: [id])
-  parent    BlogComment?  @relation("replies", fields: [parentId], references: [id])
-  replies   BlogComment[] @relation("replies")
-  createdAt DateTime      @default(now())
+  id           String            @id @default(cuid())
+  postId       String
+  userId       String?
+  /// نام مهمان — فقط وقتی userId خالی است پر می‌شود
+  name         String?
+  /// ایمیل اختیاری مهمان؛ هرگز عمومی نمایش داده نمی‌شود
+  email        String?
+  content      String
+  status       CommentStatus     @default(PENDING)
+  parentId     String?
+  /// این پاسخ از سمت فروشگاه نوشته شده است
+  isStaffReply Boolean           @default(false)
+  /// رأی «مفید بود» — شمارنده‌ی مادی‌شده تا مرتب‌سازی ارزان بماند
+  helpfulYes   Int               @default(0)
+  helpfulNo    Int               @default(0)
+  /// برای تشخیص اسپم و محدودکردن ثبت پیاپی
+  ip           String?
+  userAgent    String?
+  post         BlogPost          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  parent       BlogComment?      @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      BlogComment[]     @relation("replies")
+  votes        BlogCommentVote[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @default(now()) @updatedAt
 
   @@index([postId])
   @@index([status])
+  @@index([parentId])
+  @@index([postId, status, createdAt])
+}
+
+/// رأی «مفید بود» روی یک نظر مقاله — همان قاعده‌ی `ReviewVote`
+model BlogCommentVote {
+  id        String      @id @default(cuid())
+  commentId String
+  voterKey  String
+  helpful   Boolean
+  createdAt DateTime    @default(now())
+  comment   BlogComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, voterKey])
+  @@index([commentId])
 }
 
 model ProductRelated {

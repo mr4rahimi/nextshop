@@ -13,6 +13,7 @@ import {
   buildBreadcrumbSchema,
   buildFAQSchema,
 } from "@/lib/seo";
+import { reviewAuthorName } from "@/lib/reviews";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -60,7 +61,13 @@ async function getProduct(slug: string) {
           },
         },
 
+        // فقط نظرهای تأییدشده — نظر در انتظار تأیید نه در صفحه دیده می‌شود
+        // نه در اسکیمای گوگل. مفیدترین‌ها اول می‌آیند تا بازدیدکننده و
+        // خزنده‌ی گوگل هر دو، بهترین نظرها را بالای فهرست ببینند.
         reviews: {
+          where: {
+            status: "APPROVED" as const,
+          },
           include: {
             user: {
               select: {
@@ -68,11 +75,18 @@ async function getProduct(slug: string) {
                 lastName: true,
               },
             },
+            replyBy: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
-          orderBy: {
-            createdAt: "desc" as const,
-          },
-          take: 20,
+          orderBy: [
+            { helpfulYes: "desc" as const },
+            { createdAt: "desc" as const },
+          ],
+          take: 30,
         },
 
         relatedProducts: {
@@ -232,11 +246,60 @@ async function getProduct(slug: string) {
       product.relatedProducts ?? []
     ).map((r: any) => r.related);
 
+    /**
+     * آمار نظرها روی **همه‌ی** نظرهای تأییدشده حساب می‌شود، نه فقط ۳۰ تای
+     * بالای فهرست — وگرنه نمودار توزیع ستاره‌ها با عددِ کنارش نمی‌خواند.
+     */
+    const [ratingBuckets, recommendYes, recommendTotal] =
+      await Promise.all([
+        prisma.review.groupBy({
+          by: ["rating"],
+
+          where: {
+            productId: product.id,
+            status: "APPROVED",
+          },
+
+          _count: { _all: true },
+        }),
+
+        prisma.review.count({
+          where: {
+            productId: product.id,
+            status: "APPROVED",
+            recommends: true,
+          },
+        }),
+
+        prisma.review.count({
+          where: {
+            productId: product.id,
+            status: "APPROVED",
+            recommends: { not: null },
+          },
+        }),
+      ]);
+
+    const distribution = [5, 4, 3, 2, 1].map((star) => ({
+      star,
+
+      count:
+        ratingBuckets.find(
+          (b) => b.rating === star,
+        )?._count._all ?? 0,
+    }));
+
     return {
       ...serialize(product),
       categoryRelated,
       brandRelated,
       manualRelated,
+
+      reviewStats: {
+        distribution,
+        recommendYes,
+        recommendTotal,
+      },
     };
   } catch {
     return null;
@@ -426,6 +489,39 @@ export default async function ProductDetailPage({
       ratingCount:
         product.ratingCount,
 
+      reviews: (product.reviews ?? []).map(
+        (r: any) => ({
+          author: reviewAuthorName(r),
+
+          rating: r.rating,
+
+          title: r.title,
+
+          body: r.body,
+
+          datePublished:
+            new Date(r.createdAt)
+              .toISOString()
+              .slice(0, 10),
+
+          pros: r.pros,
+
+          cons: r.cons,
+
+          reply: r.replyBody
+            ? {
+                body: r.replyBody,
+
+                date: new Date(
+                  r.replyAt ?? r.createdAt,
+                )
+                  .toISOString()
+                  .slice(0, 10),
+              }
+            : null,
+        }),
+      ),
+
       category:
         product.category?.title,
     });
@@ -517,6 +613,9 @@ export default async function ProductDetailPage({
 
       <ProductDetailClient
         product={product}
+        reviewStats={
+          product.reviewStats
+        }
         categoryRelated={
           product.categoryRelated
         }

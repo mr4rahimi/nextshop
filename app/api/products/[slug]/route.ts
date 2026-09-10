@@ -24,11 +24,12 @@ export async function GET(
         },
       },
       reviews: {
-        where: { isApproved: true },
-        orderBy: { createdAt: "desc" },
+        where: { status: "APPROVED" },
+        orderBy: [{ helpfulYes: "desc" }, { createdAt: "desc" }],
         take: 10,
         include: {
           user: { select: { firstName: true, lastName: true } },
+          replyBy: { select: { firstName: true, lastName: true } },
         },
       },
     },
@@ -97,8 +98,18 @@ export async function GET(
         rating: r.rating,
         title: r.title,
         body: r.body,
+        pros: r.pros,
+        cons: r.cons,
+        recommends: r.recommends,
+        isBuyer: r.isBuyer,
+        helpfulYes: r.helpfulYes,
+        helpfulNo: r.helpfulNo,
+        replyBody: r.replyBody,
+        replyAt: r.replyAt,
+        guestName: r.guestName,
         createdAt: r.createdAt,
         user: r.user,
+        replyBy: r.replyBy,
       })),
     })
   );

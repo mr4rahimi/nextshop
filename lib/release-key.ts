@@ -11,4 +11,4 @@ export const RELEASE_REGISTRY_URL =
   process.env.RELEASE_REGISTRY_URL ?? "https://updates.9dm.ir";
 
 /** نسخه فعلی — هنگام ساخت بسته به‌روز می‌شود */
-export const APP_VERSION = "2.34.0";
+export const APP_VERSION = "2.36.0";

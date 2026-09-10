@@ -1,0 +1,58 @@
+/**
+ * رأی «مفید بود» روی یک نظر مقاله — همان قاعده‌ی رأی نظرات محصول.
+ *
+ * کلید یکتای دیتابیس تضمین می‌کند رأی دوم همان نفر ثبت نشود؛ بدون آن
+ * شمارنده با چند بار کلیک بی‌معنی می‌شد.
+ */
+
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getAuthUser } from "@/lib/auth";
+import { clientIp, voterKey } from "@/lib/moderation";
+
+export const runtime = "nodejs";
+
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "درخواست نامعتبر است" }, { status: 400 });
+  }
+
+  const helpful = body.helpful === true;
+
+  const comment = await prisma.blogComment.findFirst({
+    where: { id, status: "APPROVED" },
+    select: { id: true },
+  });
+  if (!comment) {
+    return NextResponse.json({ error: "نظر یافت نشد" }, { status: 404 });
+  }
+
+  const user = await getAuthUser();
+  const key = voterKey(user?.id ?? null, clientIp(req));
+
+  if (!key) {
+    return NextResponse.json({ error: "امکان ثبت رأی نیست" }, { status: 400 });
+  }
+
+  try {
+    await prisma.blogCommentVote.create({
+      data: { commentId: id, voterKey: key, helpful },
+    });
+  } catch {
+    // رأی تکراری — خطا نیست، فقط چیزی عوض نمی‌شود
+    return NextResponse.json({ success: true, alreadyVoted: true });
+  }
+
+  const updated = await prisma.blogComment.update({
+    where: { id },
+    data: helpful ? { helpfulYes: { increment: 1 } } : { helpfulNo: { increment: 1 } },
+    select: { helpfulYes: true, helpfulNo: true },
+  });
+
+  return NextResponse.json({ success: true, ...updated });
+}

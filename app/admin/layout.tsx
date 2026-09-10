@@ -116,12 +116,19 @@ const MENU_GROUPS = [
     items: [
       { href: "/admin/media", label: "کتابخانه رسانه", icon: "media" },
       {
+        href: "/admin/comments", label: "نظرات", icon: "chat",
+        children: [
+          { href: "/admin/comments", label: "نظرات فروشگاه" },
+          { href: "/admin/comments?tab=blog", label: "نظرات مقالات" },
+        ],
+      },
+      {
         href: "/admin/blog", label: "مجله / بلاگ", icon: "blog",
         children: [
           { href: "/admin/blog", label: "مطالب" },
           { href: "/admin/blog/create", label: "مطلب جدید" },
           { href: "/admin/blog/categories", label: "دسته‌بندی‌ها" },
-          { href: "/admin/blog/comments", label: "نظرات" },
+          { href: "/admin/comments?tab=blog", label: "نظرات" },
         ],
       },
       {

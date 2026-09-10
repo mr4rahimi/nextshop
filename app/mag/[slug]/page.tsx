@@ -4,6 +4,9 @@ import { serialize } from "@/lib/serialize";
 import MagPostClient from "@/components/blog/MagPostClient";
 import { SITE_URL, canonicalUrl, buildBaseMetadata, buildArticleSchema, buildBreadcrumbSchema, buildFAQSchema } from "@/lib/seo";
 import { normalizeFaq } from "@/lib/faq";
+import { approvedCommentCount, approvedCommentsQuery } from "@/lib/blog-comments";
+import { publicAuthorName } from "@/lib/moderation";
+import type { SchemaComment } from "@/lib/seo";
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -43,15 +46,7 @@ export default async function MagPostPage({ params }: Props) {
             orderBy: { sortOrder: "asc" },
             include: { product: { select: { id: true, title: true, slug: true, mainImage: true, price: true, salePrice: true, images: { take: 1, select: { url: true } } } } },
           },
-          comments: {
-            where: { status: "APPROVED", parentId: null },
-            orderBy: { createdAt: "desc" },
-            include: {
-              user: { select: { firstName: true, lastName: true, avatarUrl: true } },
-              replies: { where: { status: "APPROVED" }, include: { user: { select: { firstName: true, lastName: true, avatarUrl: true } } } },
-            },
-          },
-          _count: { select: { comments: true } },
+          comments: approvedCommentsQuery(),
         },
       }),
       prisma.storeSettings.findUnique({ where: { id: "singleton" } }),
@@ -70,6 +65,23 @@ export default async function MagPostPage({ params }: Props) {
 
   await prisma.blogPost.update({ where: { slug }, data: { viewCount: { increment: 1 } } }).catch(() => {});
 
+  /**
+   * شمارنده جدا حساب می‌شود چون `_count` پریزما نظرهای در انتظار تأیید و
+   * ردشده را هم می‌شمارد — عددی که تا امروز بالای بخش نظرات دیده می‌شد با
+   * فهرست زیرش نمی‌خواند.
+   */
+  const commentCount = await approvedCommentCount(post.id);
+
+  /** نام مهمان در `name` می‌نشیند نه `guestName`، پس نگاشت می‌شود */
+  const toSchemaComment = (c: any): SchemaComment => ({
+    author: c.isStaffReply && !c.user
+      ? (settings?.storeName ?? "پشتیبانی فروشگاه")
+      : publicAuthorName({ guestName: c.name, user: c.user }),
+    text: c.content,
+    datePublished: new Date(c.createdAt).toISOString().slice(0, 10),
+    replies: (c.replies ?? []).map(toSchemaComment),
+  });
+
   const articleSchema = buildArticleSchema({
     title:          post.title,
     description:    post.seoDescription ?? post.excerpt,
@@ -79,6 +91,8 @@ export default async function MagPostPage({ params }: Props) {
     updatedAt:      post.updatedAt,
     publisherName:  settings?.storeName  ?? "مجله",
     publisherLogo:  settings?.storeLogo  ?? null,
+    comments:       (post.comments ?? []).map(toSchemaComment),
+    commentCount,
   });
 
   const faqSchema = buildFAQSchema(normalizeFaq(post.faq));
@@ -97,7 +111,10 @@ export default async function MagPostPage({ params }: Props) {
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       )}
-      <MagPostClient post={serialize(post)} related={serialize(related)} />
+      <MagPostClient
+        post={serialize({ ...post, _count: { comments: commentCount } })}
+        related={serialize(related)}
+      />
     </>
   );
 }

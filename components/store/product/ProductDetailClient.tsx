@@ -6,6 +6,10 @@ import Link from "next/link";
 import AddToCartButton from "@/components/store/cart/AddToCartButton";
 import { useWishlist } from "@/components/store/wishlist/WishlistContext";
 import { addToLastVisited } from "@/lib/lastVisited";
+import ProductReviews, {
+  type ReviewStats,
+  type StoreReview,
+} from "@/components/store/product/ProductReviews";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SpecItem {
@@ -24,14 +28,7 @@ interface ProductImage {
   alt: string | null;
   sortOrder: number;
 }
-interface Review {
-  id: string;
-  rating: number;
-  title: string | null;
-  body: string | null;
-  createdAt: string;
-  user: { firstName: string | null; lastName: string | null };
-}
+type Review = StoreReview;
 interface FaqItem {
   q: string;
   a: string;
@@ -80,6 +77,7 @@ interface RelatedProduct {
 
 interface Props {
   product: Product;
+  reviewStats?: ReviewStats;
   categoryRelated?: RelatedProduct[];
   brandRelated?: RelatedProduct[];
   manualRelated?: RelatedProduct[];
@@ -95,30 +93,6 @@ function formatPrice(val: string | null | undefined): string {
 
 function toFarsiNum(n: number): string {
   return n.toLocaleString("fa-IR");
-}
-
-function userInitials(user: Review["user"]): string {
-  const f = user.firstName?.[0] || "";
-  const l = user.lastName?.[0] || "";
-  return (f + (l ? "." + l : "")) || "ک";
-}
-
-function userName(user: Review["user"]): string {
-  if (user.firstName || user.lastName)
-    return [user.firstName, user.lastName].filter(Boolean).join(" ");
-  return "کاربر ناشناس";
-}
-
-function persianDate(dateStr: string): string {
-  try {
-    return new Intl.DateTimeFormat("fa-IR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }).format(new Date(dateStr));
-  } catch {
-    return dateStr;
-  }
 }
 
 function starPercent(rating: number): number {
@@ -230,7 +204,7 @@ function RelatedSection({ title, products }: { title: string; products: RelatedP
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function ProductDetailClient({ product, categoryRelated = [], brandRelated = [], manualRelated = [] }: Props) {
+export default function ProductDetailClient({ product, reviewStats, categoryRelated = [], brandRelated = [], manualRelated = [] }: Props) {
   useEffect(() => { addToLastVisited(product.id); }, [product.id]);
 
   const [activeTab, setActiveTab] = useState<"overview" | "expert" | "specs" | "reviews" | "faq">("specs");
@@ -808,55 +782,14 @@ export default function ProductDetailClient({ product, categoryRelated = [], bra
 
               {/* ── Reviews Tab ── */}
               <TabPanel id="reviews" heading={`نظرات کاربران درباره ${product.title}`} active={activeTab === "reviews"}>
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-                  {/* Summary */}
-                  <div className="lg:col-span-4 space-y-6">
-                    <div className="relative overflow-hidden p-10 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-3xl border border-white dark:border-white/10 rounded-[3rem] shadow-2xl">
-                      <div className="flex flex-col items-center pt-4">
-                        <span className="text-[13px] font-black text-zinc-400 mb-3 uppercase tracking-widest">امتیاز کلی</span>
-                        <span className="block text-7xl font-black text-zinc-900 dark:text-white tracking-tighter mb-4">
-                          {toFarsiNum(product.ratingAvg)}
-                        </span>
-                        <Stars rating={product.ratingAvg} size={6} />
-                        <p className="text-[13px] font-bold text-zinc-500 mt-4">
-                          بر اساس {toFarsiNum(product.ratingCount)} نظر ثبت شده
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Reviews List */}
-                  <div className="lg:col-span-8 space-y-6" dir="rtl">
-                    {product.reviews.length > 0 ? (
-                      product.reviews.map((r) => (
-                        <div key={r.id} className="group relative p-8 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-2xl border border-gray-200 dark:border-white/10 rounded-[3rem] transition-all hover:shadow-2xl hover:-translate-y-1">
-                          <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                            <div className="flex items-center gap-4">
-                              <div className="w-14 h-14 rounded-[1.5rem] bg-primary-600/10 flex items-center justify-center text-primary-600 font-black text-lg border border-primary-600/20">
-                                {userInitials(r.user)}
-                              </div>
-                              <div>
-                                <p className="text-[14px] font-black text-zinc-900 dark:text-white">{userName(r.user)}</p>
-                                <p className="text-[12px] font-bold text-zinc-400 mt-1">{persianDate(r.createdAt)}</p>
-                              </div>
-                            </div>
-                            <Stars rating={r.rating} size={5} />
-                          </div>
-                          {r.title && (
-                            <p className="mt-4 text-[15px] font-black text-zinc-800 dark:text-zinc-200">{r.title}</p>
-                          )}
-                          {r.body && (
-                            <p className="mt-3 text-[14px] font-medium text-zinc-600 dark:text-zinc-300 leading-8">{r.body}</p>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-16 text-gray-400">
-                        <p className="text-sm">هنوز نظری ثبت نشده است.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <ProductReviews
+                  productId={product.id}
+                  productTitle={product.title}
+                  ratingAvg={product.ratingAvg}
+                  ratingCount={product.ratingCount}
+                  reviews={product.reviews}
+                  stats={reviewStats}
+                />
               </TabPanel>
 
               {/* ── FAQ Tab ── */}
