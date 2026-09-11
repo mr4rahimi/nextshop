@@ -54,6 +54,12 @@ interface BasalamProductsResponse {
 
 // ── Adapter ───────────────────────────────────────────────────────────
 
+/** یک شناسه را از فهرست موفق به ناموفق منتقل می‌کند، بدون تکرار. */
+function failMove(result: BatchResult, id: string, error: string): void {
+  result.success = result.success.filter((s) => s !== id);
+  if (!result.failed.some((f) => f.id === id)) result.failed.push({ id, error });
+}
+
 export class BasalamAdapter extends BaseAdapter {
   readonly platformCode = "basalam";
   readonly platformName = "باسلام";
@@ -268,83 +274,127 @@ export class BasalamAdapter extends BaseAdapter {
 
 
 
-  // باسلام در Batch Update فقط فیلد `price` را می‌پذیرد و آن «قیمت مؤثر» است —
-  // یعنی همان مبلغی که خریدار می‌پردازد (primary_price فقط قیمت خط‌خورده است و
-  // وقتی تخفیف فعال باشد پر می‌شود).
+  // ── قیمت و تخفیف ─────────────────────────────────────────────────
   //
-  // قبلاً قیمت محاسبه‌شده مستقیم در `price` می‌نشست و تخفیف محصول از بین می‌رفت.
-  // حالا درصد تخفیف قبلی روی قیمت پایه‌ی جدید اعمال می‌شود و «قیمت مؤثر» ارسال
-  // می‌شود؛ پس نسبت تخفیف حفظ می‌ماند و مشتری همان درصد تخفیف را می‌بیند.
+  // باسلام تخفیف را نه به‌صورت فیلد روی محصول، بلکه به‌صورت «کمپین» نگه می‌دارد:
+  //   POST   /v1/vendors/{vendorId}/discounts  { product_filter, discount_percent, active_days }
+  //   DELETE /v1/vendors/{vendorId}/discounts  { product_filter }
+  // وقتی کمپینی فعال باشد، `primary_price` قیمت خط‌خورده می‌شود و خود باسلام
+  // `price` را از روی درصد حساب می‌کند.
   //
-  // بعد از آن تلاش می‌شود کمپین تخفیف هم بازسازی شود تا قیمت خط‌خورده تازه شود.
-  // ⚠ مسیر REST سرویس تخفیف در مستندات باسلام نیامده (فقط متد SDK مستند است)،
-  // پس این مرحله «تلاش بهترین‌کوشش» است و پیش‌فرض خاموش: با مقدار
-  // `enableDiscountCampaign = "true"` در credentials فعال می‌شود. خاموش‌بودنش
-  // ضرری ندارد چون قیمت مؤثر از قبل درست ارسال شده است.
+  // پس دو مسیر متفاوت داریم:
+  //
+  // • `enableDiscountCampaign = "true"` — مدیریت کامل. قیمت **اصلی** ارسال
+  //   می‌شود و تخفیف با کمپین ساخته یا حذف می‌شود. ترتیب عمدی است: اول قیمت
+  //   اصلی، بعد کمپین. اگر کمپین شکست بخورد محصول با قیمت کامل می‌ماند که
+  //   خطای بی‌خطری است؛ عکسش (قیمت تخفیف‌خورده + کمپین) تخفیف را دو بار اعمال
+  //   می‌کرد و زیر قیمت تمام‌شده می‌فروخت.
+  //
+  // • خاموش (پیش‌فرض) — رفتار قدیمی: فقط «قیمت مؤثر» ارسال می‌شود و به کمپین‌ها
+  //   دست زده نمی‌شود. نسبت تخفیف حفظ می‌ماند ولی قیمت خط‌خورده تازه نمی‌شود و
+  //   تخفیفی که در پنل ما حذف شود روی باسلام باقی می‌ماند.
+  //
+  // مسیر REST از SDK رسمی پایتون باسلام گرفته شده (`src/basalam_sdk/core/client.py`)
+  // و هنوز روی حساب واقعی آزمایش نشده — به همین دلیل پشت کلید است.
   async updatePrice(
     credentials: Record<string, string>,
     updates: PriceUpdate[],
   ): Promise<BatchResult> {
+    const manageCampaigns = credentials.enableDiscountCampaign === "true";
+
     const result = await this.bulkUpdate(
       credentials,
       updates.map((u) => {
-        const { effective } = applyDiscount(u.price, u.discount);
+        const { original, effective } = applyDiscount(u.price, u.discount);
         return {
           id:    parseInt(u.platformProductId, 10),
-          price: effective * 10,   // تومان → ریال
+          // در حالت مدیریت کامل، خودِ باسلام قیمت تخفیف‌خورده را حساب می‌کند
+          price: (manageCampaigns ? original : effective) * 10,   // تومان → ریال
         };
       }),
       updates.map((u) => u.platformProductId),
     );
 
-    if (credentials.enableDiscountCampaign === "true") {
-      const successSet = new Set(result.success);
-      for (const u of updates) {
-        if (!successSet.has(u.platformProductId)) continue;
-        if (!u.discount || !(u.discount.percent > 0)) continue;
-        await this.applyDiscountCampaign(credentials, u.platformProductId, u.discount).catch((err) => {
-          // شکست بازسازی کمپین نباید قیمت درست‌ارسال‌شده را باطل کند
-          console.error("[basalam] بازسازی کمپین تخفیف ناموفق:", err instanceof Error ? err.message : err);
-        });
+    if (!manageCampaigns) return result;
+
+    const successSet = new Set(result.success);
+    for (const u of updates) {
+      if (!successSet.has(u.platformProductId)) continue;
+      const hasDiscount = !!u.discount && u.discount.percent > 0;
+      try {
+        if (hasDiscount) {
+          await this.applyDiscountCampaign(credentials, u.platformProductId, u.discount!);
+        } else {
+          // باسلام تخفیف را با «نفرستادن فیلد» برنمی‌دارد؛ حذف، فراخوانی جدا دارد
+          await this.removeDiscountCampaign(credentials, u.platformProductId);
+        }
+      } catch (err) {
+        // قیمت درست نشسته؛ شکست کمپین نباید کل ارسال را باطل کند، ولی باید
+        // در نتیجه دیده شود وگرنه کاربر فکر می‌کند تخفیف اعمال شده است.
+        const msg = err instanceof Error ? err.message : String(err);
+        failMove(result, u.platformProductId, `قیمت ارسال شد ولی ${hasDiscount ? "ساخت" : "حذف"} کمپین تخفیف ناموفق بود: ${msg}`);
       }
     }
 
     return result;
   }
 
-  // ── بازسازی کمپین تخفیف (اختیاری — مسیر REST تأییدنشده) ──────────
+  /** بدنه‌ی مشترک فراخوانی‌های کمپین تخفیف. */
+  private async discountRequest(
+    credentials: Record<string, string>,
+    method: "POST" | "DELETE",
+    body: Record<string, unknown>,
+  ): Promise<void> {
+    const { vendorId } = credentials;
+    if (!vendorId) throw new Error("vendorId تنظیم نشده");
+
+    await this.rateLimit(200);
+    const res = await this.authedFetch(
+      credentials,
+      `${OPENAPI_BASE}/v1/vendors/${vendorId}/discounts`,
+      { method, body: JSON.stringify(body) },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+    }
+  }
+
   private async applyDiscountCampaign(
     credentials: Record<string, string>,
     platformProductId: string,
     discount: { percent: number; endsAt?: Date | null },
   ): Promise<void> {
-    const { vendorId } = credentials;
-    if (!vendorId) return;
-
     const percent = Math.round(discount.percent);
     if (!(percent > 0) || percent >= 100) return;
 
-    // باسلام تخفیف را زمان‌دار می‌گیرد؛ اگر پایان مشخص نبود ۳۰ روز در نظر می‌گیریم
-    let activeDays = 30;
-    if (discount.endsAt) {
-      const days = Math.ceil((discount.endsAt.getTime() - Date.now()) / 86_400_000);
-      if (days > 0) activeDays = days;
-    }
+    // باسلام تاریخ پایان نمی‌گیرد، فقط «چند روز فعال بماند». تاریخ شروع هم ندارد:
+    // کمپین همان لحظه شروع می‌شود. شروعِ زمان‌بندی‌شده را پنل ما اجرا می‌کند —
+    // تا وقتی بازه باز نشده اصلاً تخفیفی به اینجا نمی‌رسد.
+    const activeDays = BasalamAdapter.activeDays(discount.endsAt);
 
-    await this.rateLimit(200);
-    const res = await this.authedFetch(credentials, `${CORE_BASE}/v3/vendors/${vendorId}/discounts`, {
-      method:  "POST",
-      body:    JSON.stringify({
-        product_filter:   { product_ids: [parseInt(platformProductId, 10)] },
-        discount_percent: percent,
-        active_days:      activeDays,
-      }),
+    await this.discountRequest(credentials, "POST", {
+      product_filter:   { product_ids: [parseInt(platformProductId, 10)] },
+      discount_percent: percent,
+      active_days:      activeDays,
     });
+  }
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
-    }
+  private async removeDiscountCampaign(
+    credentials: Record<string, string>,
+    platformProductId: string,
+  ): Promise<void> {
+    await this.discountRequest(credentials, "DELETE", {
+      product_filter: { product_ids: [parseInt(platformProductId, 10)] },
+    });
+  }
+
+  /** تاریخ پایان ما → تعداد روز فعال باسلام. بدون تاریخ پایان، یک سال. */
+  private static activeDays(endsAt?: Date | null): number {
+    if (!endsAt) return 365;
+    const days = Math.ceil((endsAt.getTime() - Date.now()) / 86_400_000);
+    return Math.max(1, Math.min(365, days));
   }
 
   async fetchOrders(
