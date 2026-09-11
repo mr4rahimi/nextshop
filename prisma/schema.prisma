@@ -1337,6 +1337,20 @@ model IntegMappingLink {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // ── تخفیف تحت مدیریت پنل ───────────────────────────────────────
+  // چرا اینجا و نه روی IntegMapping: هر بازارگاه تخفیف مستقل دارد و این جدول
+  // دقیقاً یک ردیف به ازای هر (نگاشت، پلتفرم) است.
+  // discountManaged = true یعنی پنل ما فرمانده است؛ هرچه در پنل بازارگاه
+  // تنظیم شود در ارسال بعدی بازنویسی می‌شود. false یعنی تخفیف از کش
+  // IntegPlatformProduct خوانده و حفظ می‌شود (رفتار قدیمی، حالا انتخابی).
+  discountManaged   Boolean   @default(true)
+  discountPercent   Float? // null یعنی تخفیفی تعریف نشده — ارسال، تخفیف را برمی‌دارد
+  discountStartsAt  DateTime? // null یعنی از همین حالا
+  discountEndsAt    DateTime? // null یعنی بی‌پایان؛ گذشته یعنی تخفیف حذف شود
+  discountStock     Int? // موجودی اختصاصی تخفیف — فعلاً فقط اسنپ‌شاپ
+  discountPushedAt  DateTime?
+  discountPushError String?
+
   mapping IntegMapping @relation(fields: [mappingId], references: [id], onDelete: Cascade)
 
   @@unique([mappingId, platformCode])

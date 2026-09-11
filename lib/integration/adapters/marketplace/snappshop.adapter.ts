@@ -12,6 +12,8 @@ import type {
   PriceDiscount,
 } from "@/lib/integration/types";
 import { applyDiscount } from "@/lib/integration/types";
+import type { ResolvedDiscount } from "@/lib/integration/core/discount";
+import { resolveDiscountsForPush, toTehranDate } from "@/lib/integration/core/discount";
 
 const BASE = "https://apix.snappshop.ir/automation/v1";
 
@@ -174,51 +176,50 @@ export class SnappShopAdapter extends BaseAdapter {
   // ── اسنپ‌شاپ در آپدیت، هم stock و هم price را اجباری می‌خواهد ─────
   // و چون فیلدهای special_price در همان PATCH می‌آیند، اگر ارسال نشوند تخفیف
   // محصول پاک می‌شود. پس هر آپدیت باید کل تصویر (قیمت + موجودی + تخفیف) را ببرد.
+  //
+  // تخفیف دیگر از کش خوانده نمی‌شود — منبعش resolveDiscountForPush است تا سینک
+  // موجودی و سینک قیمت هر دو یک چیز بفرستند. جزئیات: docs/integrations/discounts.md
   private async loadContext(
     ids: string[],
-  ): Promise<Map<string, { basePrice?: number; stock?: number; discount?: PriceDiscount }>> {
-    const [snapshots, links] = await Promise.all([
+  ): Promise<Map<string, { basePrice?: number; stock?: number; discount: ResolvedDiscount }>> {
+    const [snapshots, links, discounts] = await Promise.all([
       prisma.integPlatformProduct.findMany({
         where:  { platformCode: this.platformCode, platformProductId: { in: ids } },
         select: {
           platformProductId: true, price: true, stock: true,
-          originalPrice: true, discountPercent: true,
-          discountStartsAt: true, discountEndsAt: true, discountStock: true,
+          originalPrice: true,
         },
       }),
       prisma.integMappingLink.findMany({
         where:  { platformCode: this.platformCode, externalId: { in: ids }, isActive: true },
         select: { externalId: true, mapping: { select: { stock: true } } },
       }),
+      resolveDiscountsForPush(this.platformCode, ids),
     ]);
 
-    const map = new Map<string, { basePrice?: number; stock?: number; discount?: PriceDiscount }>();
+    const map = new Map<string, { basePrice?: number; stock?: number; discount: ResolvedDiscount }>();
+    for (const id of ids) map.set(id, { discount: discounts.get(id) ?? "UNKNOWN" });
+
     for (const s of snapshots) {
       // price ستون «قیمت مؤثر» است؛ قیمت پایه وقتی تخفیف هست در originalPrice می‌نشیند
-      const basePrice = s.originalPrice ?? s.price ?? undefined;
-      const discount =
-        s.discountPercent != null && s.discountPercent > 0 && s.originalPrice != null
-          ? {
-              percent:  s.discountPercent,
-              startsAt: s.discountStartsAt,
-              endsAt:   s.discountEndsAt,
-              stock:    s.discountStock,
-            }
-          : undefined;
-      map.set(s.platformProductId, { basePrice, stock: s.stock ?? undefined, discount });
+      const cur = map.get(s.platformProductId) ?? { discount: "UNKNOWN" as ResolvedDiscount };
+      map.set(s.platformProductId, {
+        ...cur,
+        basePrice: s.originalPrice ?? s.price ?? undefined,
+        stock:     s.stock ?? undefined,
+      });
     }
     for (const l of links) {
-      const cur = map.get(l.externalId) ?? {};
+      const cur = map.get(l.externalId) ?? { discount: "UNKNOWN" as ResolvedDiscount };
       map.set(l.externalId, { ...cur, stock: l.mapping.stock ?? cur.stock });
     }
     return map;
   }
 
+  // اسنپ‌شاپ فرمت YYYY-MM-DD می‌خواهد و آن را به وقت ایران می‌فهمد. toISOString
+  // تاریخ را به UTC می‌برد و با اختلاف ۳:۳۰ تهران گاهی یک روز عقب می‌فرستاد.
   private static fmtDate(d?: Date | null): string | undefined {
-    if (!d) return undefined;
-    const t = d.getTime();
-    if (!Number.isFinite(t)) return undefined;
-    return d.toISOString().slice(0, 10); // اسنپ‌شاپ فرمت YYYY-MM-DD می‌خواهد
+    return toTehranDate(d);
   }
 
   /** بدنه‌ی یک آیتم PATCH — همیشه کامل، تا هیچ فیلدی به‌طور ضمنی پاک نشود. */
@@ -236,10 +237,9 @@ export class SnappShopAdapter extends BaseAdapter {
       const end   = SnappShopAdapter.fmtDate(discount.endsAt);
       if (start) body.special_price_start_at = start;
       if (end)   body.special_price_end_at   = end;
-      // موجودی تخفیف هرگز نباید از موجودی کل بیشتر باشد؛ اسنپ‌شاپ کل درخواست را
-      // با ۴۲۲ روی `products.N.special_price_stock` رد می‌کند. مقدار از snapshot
-      // قبلی می‌آمد و وقتی موجودی کم می‌شد بزرگ‌تر از stock جدید باقی می‌ماند —
-      // در لاگ پروداکشن ۱۲۵ بار در هفته همین خطا ثبت شده بود.
+      // موجودی تخفیف دستی وارد می‌شود، ولی هرگز نباید از موجودی کل بیشتر باشد؛
+      // اسنپ‌شاپ کل درخواست را با ۴۲۲ روی `products.N.special_price_stock` رد
+      // می‌کند — در لاگ پروداکشن ۱۲۵ بار در هفته همین خطا ثبت شده بود.
       if (discount.stock != null) {
         body.special_price_stock = Math.max(0, Math.min(discount.stock, stock));
       }
@@ -260,6 +260,12 @@ export class SnappShopAdapter extends BaseAdapter {
       const c = ctx.get(u.platformProductId);
       if (c?.basePrice == null || c.basePrice <= 0) {
         failed.push({ id: u.platformProductId, error: "قیمت فعلی نامشخص است — ابتدا «دریافت محصولات» را اجرا کنید (اسنپ‌شاپ قیمت را در آپدیت اجباری می‌داند)" });
+        continue;
+      }
+      // اسنپ در همین PATCH تخفیف را هم بازنویسی می‌کند. اگر ندانیم محصول تخفیف
+      // دارد یا نه، ارسال یعنی پاک کردن کورکورانه‌ی تخفیف — پس متوقف می‌شویم.
+      if (c.discount === "UNKNOWN") {
+        failed.push({ id: u.platformProductId, error: "وضعیت تخفیف نامشخص است — این لینک «تحت مدیریت پنل» نیست و کش پلتفرم خالی است؛ ارسال موجودی متوقف شد تا تخفیف پاک نشود" });
         continue;
       }
       products.push(SnappShopAdapter.buildPayload(u.platformProductId, c.basePrice, u.stock, c.discount));
@@ -287,6 +293,10 @@ export class SnappShopAdapter extends BaseAdapter {
       }
       // قیمت‌های اسنپ‌شاپ به تومان است — بدون ضرب در ۱۰
       const discount = u.discount !== undefined ? u.discount : c.discount;
+      if (discount === "UNKNOWN") {
+        failed.push({ id: u.platformProductId, error: "وضعیت تخفیف نامشخص است — این لینک «تحت مدیریت پنل» نیست و کش پلتفرم خالی است" });
+        continue;
+      }
       products.push(SnappShopAdapter.buildPayload(u.platformProductId, u.price, c.stock, discount));
       ids.push(u.platformProductId);
     }

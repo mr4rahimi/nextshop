@@ -6,7 +6,9 @@
 >
 > ⚠️ محصولات اسنپ‌شاپ **تخفیف** دارند (`discount.special_price`) و در `PATCH`
 > فیلدهای `price` و `stock` اجباری‌اند — ارسال ناقص، تخفیف را پاک می‌کند.
-> جزئیات در [orders-and-invoicing.md](../orders-and-invoicing.md).
+> تخفیف اسنپ‌شاپ از پنل خود فروشگاه مدیریت می‌شود؛ سازوکارش در
+> [discounts.md](../discounts.md) و قرارداد قیمت در
+> [orders-and-invoicing.md](../orders-and-invoicing.md).
 
 ## اتصال
 

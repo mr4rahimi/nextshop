@@ -3,39 +3,9 @@ import type { IntegPriceRule, IntegPriceRuleTier } from "@prisma/client";
 import { getAdapter } from "./adapter-registry";
 import { decryptCredentials } from "./crypto";
 import { writeLog } from "./log";
-import type { PriceDiscount } from "@/lib/integration/types";
 import { applyDiscount } from "@/lib/integration/types";
 import { recordPushedPrice } from "./snapshot";
-
-// تخفیف فعال یک محصول روی پلتفرم — از آخرین snapshot «دریافت محصولات».
-// هدف: وقتی قیمت اصلی عوض می‌شود، تخفیف با همان درصد بازسازی شود نه اینکه پاک شود.
-// null = تخفیفی نیست | "UNKNOWN" = هنوز نمی‌دانیم (snapshot قدیمی است)
-async function loadPlatformDiscount(
-  platformCode: string,
-  platformProductId: string,
-): Promise<PriceDiscount | null | "UNKNOWN"> {
-  const snap = await prisma.integPlatformProduct.findUnique({
-    where:  { platformCode_platformProductId: { platformCode, platformProductId } },
-    select: {
-      originalPrice: true, discountPercent: true, discountSynced: true,
-      discountStartsAt: true, discountEndsAt: true, discountStock: true,
-    },
-  });
-
-  // snapshot پیش از افزوده‌شدن ردیابی تخفیف گرفته شده — «بدون تخفیف» فرض کردنش
-  // یعنی همان باگی که می‌خواهیم رفع کنیم (پاک شدن تخفیف در اولین ارسال قیمت).
-  if (!snap || !snap.discountSynced) return "UNKNOWN";
-
-  if (!snap.discountPercent || snap.discountPercent <= 0 || snap.originalPrice == null) return null;
-  // تخفیفی که تاریخش گذشته نباید دوباره اعمال شود
-  if (snap.discountEndsAt && snap.discountEndsAt.getTime() < Date.now()) return null;
-  return {
-    percent:  snap.discountPercent,
-    startsAt: snap.discountStartsAt,
-    endsAt:   snap.discountEndsAt,
-    stock:    snap.discountStock,
-  };
-}
+import { resolveDiscountForPush, recordDiscountPush } from "./discount";
 
 type RuleWithTiers = IntegPriceRule & { tiers: IntegPriceRuleTier[] };
 
@@ -165,8 +135,9 @@ async function pushMappingPrice(mapping: {
       continue;
     }
 
-    // تخفیف فعلی محصول روی این پلتفرم — با همان درصد روی قیمت جدید بازسازی می‌شود
-    const loaded = await loadPlatformDiscount(link.platformCode, link.externalId);
+    // تخفیفی که باید همراه قیمت جدید برود — لینک تحت مدیریت از پنل ما می‌آید،
+    // لینک آزاد از کش پلتفرم. جزئیات در docs/integrations/discounts.md
+    const loaded = await resolveDiscountForPush(link.platformCode, link.externalId);
     if (loaded === "UNKNOWN") {
       await writeLog({
         platformCode:  link.platformCode,
@@ -175,7 +146,7 @@ async function pushMappingPrice(mapping: {
         entityType:    "PRICE",
         entityId:      link.externalId,
         status:        "ERROR",
-        errorMessage:  "وضعیت تخفیف این محصول نامشخص است — ابتدا «دریافت محصولات» را برای این پلتفرم اجرا کنید تا ارسال قیمت، تخفیف موجود را پاک نکند",
+        errorMessage:  "وضعیت تخفیف این محصول نامشخص است — این لینک «تحت مدیریت پنل» نیست و کش پلتفرم هم خالی است. یا «دریافت محصولات» را اجرا کنید یا از صفحه‌ی تخفیف‌ها مدیریت پنل را روشن کنید",
       }).catch(() => {});
       tally.failed++;
       continue;
@@ -240,12 +211,15 @@ async function pushMappingPrice(mapping: {
             result.failed[0]?.error ?? "خطای نامشخص از پلتفرم",
           durationMs: Date.now() - start,
         }).catch(() => {});
+        await recordDiscountPush(link.platformCode, link.externalId,
+          result.failed[0]?.error ?? "خطای نامشخص از پلتفرم").catch(() => {});
         tally.failed++;
       } else {
         // snapshot باید همین‌جا تازه شود؛ وگرنه سینک موجودیِ بعدی (که در
         // اسنپ‌شاپ قیمت را هم می‌فرستد) قیمت قدیمی را برمی‌گرداند.
         await recordPushedPrice(link.platformCode, link.externalId, original, discount)
           .catch(() => {});
+        await recordDiscountPush(link.platformCode, link.externalId).catch(() => {});
 
         await writeLog({
           platformCode: link.platformCode,
@@ -272,6 +246,8 @@ async function pushMappingPrice(mapping: {
         errorMessage: err instanceof Error ? err.message : String(err),
         durationMs: Date.now() - start,
       }).catch(() => {});
+      await recordDiscountPush(link.platformCode, link.externalId,
+        err instanceof Error ? err.message : String(err)).catch(() => {});
       tally.failed++;
     }
 

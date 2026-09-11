@@ -193,6 +193,7 @@ export const MENU_GROUPS: NavGroup[] = [
           { href: "/admin/integration/product-suggestions",   label: "پیشنهادات اضافه کردن محصول" },
           { href: "/admin/integration/price-rules",           label: "قوانین قیمت" },
           { href: "/admin/integration/pricing",               label: "مدیریت قیمت خرید" },
+          { href: "/admin/integration/discounts",             label: "تخفیف بازارگاه‌ها" },
           { href: "/admin/integration/inventory",             label: "مدیریت موجودی" },
           { href: "/admin/integration/queue",                 label: "صف عملیات" },
           { href: "/admin/integration/logs",                  label: "گزارش لاگ‌ها" },

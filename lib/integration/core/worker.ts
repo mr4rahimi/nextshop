@@ -17,6 +17,11 @@ import { recordPushedPrice, recordPushedStock } from "./snapshot";
 // ── jobهای زمان‌بندی‌شده خودکار (خودترمیم) ─────────────────────────
 // - هر مارکت‌پلیس متصل که fetchOrders دارد: حلقه FETCH_ORDERS همیشه زنده می‌ماند
 // - حسابداری متصل: هر syncIntervalMin دقیقه یک SYNC_ALL_STOCK خودکار
+// کش محصولات هر بازارگاه حداکثر این‌قدر کهنه می‌ماند. منبع حقیقتِ تخفیف دیگر
+// کش نیست (به docs/integrations/discounts.md نگاه کنید)، ولی قیمت پایه‌ی اسنپ‌شاپ
+// و تخفیف لینک‌های «آزاد» همچنان از همین‌جا می‌آیند.
+const PRODUCT_REFRESH_MS = 6 * 60 * 60_000;
+
 async function ensureScheduledJobs(): Promise<void> {
   const connections = await prisma.integConnection.findMany({
     where:   { status: { in: ["CONNECTED", "SYNCING"] } },
@@ -25,12 +30,18 @@ async function ensureScheduledJobs(): Promise<void> {
 
   for (const conn of connections) {
     if (conn.platform.type === "MARKETPLACE") {
-      // اطلاعات تخفیف محصولات هنوز یک‌بار هم دریافت نشده؟ تا وقتی دریافت نشود
-      // ارسال قیمت متوقف است (تا تخفیف پاک نشود)، پس خودمان یک‌بار صف می‌کنیم.
-      const staleDiscounts = await prisma.integPlatformProduct.count({
-        where: { platformCode: conn.platformCode, discountSynced: false },
+      // کش محصولات پلتفرم باید دوره‌ای تازه شود.
+      //
+      // پیش از این، FETCH_PRODUCTS فقط وقتی صف می‌شد که ردیفی با
+      // discountSynced = false مانده باشد. بعد از اولین دریافت موفق همه‌ی
+      // ردیف‌ها true شدند و این شرط برای همیشه خاموش شد — کش روی مای‌مونتا
+      // ۲۳ روز دست‌نخورده ماند در حالی که هزار سینک موجودی از رویش ارسال شد.
+      const lastFetch = await prisma.integPlatformProduct.aggregate({
+        where:  { platformCode: conn.platformCode },
+        _max:   { lastFetchedAt: true },
       });
-      if (staleDiscounts > 0) {
+      const lastFetchedAt = lastFetch._max.lastFetchedAt?.getTime() ?? 0;
+      if (Date.now() - lastFetchedAt >= PRODUCT_REFRESH_MS) {
         const pendingFetch = await prisma.integJob.findFirst({
           where:  { platformCode: conn.platformCode, type: "FETCH_PRODUCTS", status: { in: ["PENDING", "PROCESSING"] } },
           select: { id: true },
