@@ -14,14 +14,20 @@ import { applyDiscount } from "@/lib/integration/types";
 
 const BASE = "https://vendorgw.tapsi.shop/Web/Hub/vendors/v1";
 
-// هدرهای ثابت طبق مستندات تپسی‌شاپ
+// هدرهای ثابت طبق مستندات تپسی‌شاپ (webhook v0.3)
+//
+// تپسی نام هدر احراز هویت را به `Tapsi-Shop-Hub-Authorization` تغییر داد و
+// پشتیبانی از املای قدیمی `TapsiShop.Hub.Authorization` را از ۲۱ شهریور ۱۴۰۵
+// قطع می‌کند. هر دو با هم فرستاده می‌شوند تا در روز گذار هیچ درخواستی رد نشود؛
+// بعد از اطمینان از پذیرش املای جدید، خط قدیمی حذف می‌شود.
 function baseHeaders(token: string): HeadersInit {
   return {
-    "accept":                    "application/json",
-    "client-name":               "mymonta-integration",
-    "client-version":            "1.0.0.0",
-    "Content-Type":              "application/json",
-    "TapsiShop.Hub.Authorization": token,
+    "accept":                      "application/json",
+    "client-name":                 "mymonta-integration",
+    "client-version":              "1.0.0.0",
+    "Content-Type":                "application/json",
+    "Tapsi-Shop-Hub-Authorization": token,
+    "TapsiShop.Hub.Authorization":  token, // منسوخ — بعد از گذار حذف شود
   };
 }
 

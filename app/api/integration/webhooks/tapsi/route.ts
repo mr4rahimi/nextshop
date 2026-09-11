@@ -32,8 +32,23 @@ interface TapsiWebhookBody {
   }[];
 }
 
-// تپسی توکن را با این هدر می‌فرستد
-const AUTH_HEADER = "tapsishop.hub.webhook-authorization";
+// تپسی توکن را با این هدرها می‌فرستد.
+//
+// در نسخه‌ی ۰.۳ مستندات، نام هدر به `Tapsi-Shop-Hub-Authorization` تغییر کرد و
+// پشتیبانی از املای قدیمی از ۲۱ شهریور ۱۴۰۵ قطع می‌شود. هر دو خوانده می‌شوند:
+// اولین هدری که مقدار داشته باشد ملاک است، تا در روز گذار هیچ سفارشی رد نشود.
+const AUTH_HEADERS = [
+  "Tapsi-Shop-Hub-Authorization",
+  "tapsishop.hub.webhook-authorization", // منسوخ — بعد از گذار حذف شود
+];
+
+function readAuthHeader(req: NextRequest): { name: string; value: string } | null {
+  for (const name of AUTH_HEADERS) {
+    const value = req.headers.get(name);
+    if (value) return { name, value };
+  }
+  return null;
+}
 
 // توکن‌ها با فاصله/نیم‌فاصله‌ی چسبیده در فرم ادمین paste می‌شوند و بعضی کلاینت‌ها
 // پیشوند Bearer می‌گذارند — قبل از مقایسه هر دو طرف نرمال می‌شوند.
@@ -63,7 +78,8 @@ async function resolveExternalId(skuOrId: string): Promise<string> {
 export async function POST(req: NextRequest) {
   // ── اعتبارسنجی توکن ────────────────────────────────────────────
   // headers.get خودش case-insensitive است؛ فراخوانی دوم با املای دیگر بی‌اثر بود.
-  const rawToken  = req.headers.get(AUTH_HEADER);
+  const header    = readAuthHeader(req);
+  const rawToken  = header?.value ?? null;
   const sentToken = normalizeToken(rawToken);
 
   const connection = await prisma.integConnection.findFirst({
@@ -100,6 +116,7 @@ export async function POST(req: NextRequest) {
         accepted: acceptedNames,
         hadBearerPrefix: /^Bearer\s/i.test(rawToken ?? ""),
         headerPresent:   rawToken !== null,
+        headerName:      header?.name ?? "(هیچ‌کدام از هدرهای شناخته‌شده)",
       },
       errorMessage: accepted.length
         ? `توکن وب‌هوک نامعتبر — ارسالی: ${fingerprint(rawToken)} | پذیرفته‌شده‌ها: ${acceptedNames.join("، ")}`
@@ -142,6 +159,13 @@ export async function POST(req: NextRequest) {
     // بدون sku هم ثبت می‌شود (با کلید ایندکس) تا فروش نامرئی نماند
     const externalId = sku ? await resolveExternalId(sku) : "";
 
+    // کلید یکتای قلم. تپسی تا وقتی succeed:true نگیرد همان سفارش را دوباره
+    // می‌فرستد، پس کلید باید بین تلاش‌ها ثابت بماند — ایندکس آرایه نیست.
+    // ردیف‌های قدیمی با کلید ایندکس ثبت شده‌اند، پس هر دو جست‌وجو می‌شوند.
+    const itemKey   = `${orderId}:${item.orderItemId ?? idx}`;
+    const legacyKey = `${orderId}:${idx}`;
+    const bothKeys  = itemKey === legacyKey ? [itemKey] : [itemKey, legacyKey];
+
     try {
       if (changeType === 2) {
         // ── لغو: برگرداندن موجودی + علامت‌گذاری سفارش ────────────
@@ -152,7 +176,7 @@ export async function POST(req: NextRequest) {
         await prisma.integOrder.updateMany({
           where: {
             platformCode: PLATFORM,
-            platformOrderId: `${orderId}:${idx}`,
+            platformOrderId: { in: bothKeys },
             status: { in: ["PENDING", "NEEDS_MAPPING"] },
           },
           data:  { status: "CANCELLED" },
@@ -160,9 +184,9 @@ export async function POST(req: NextRequest) {
         cancelled++;
       } else {
         // ── خرید: dedup، کسر موجودی، ساخت IntegOrder (فاکتور خودکار توسط worker) ──
-        const platformOrderId = `${orderId}:${idx}`;
-        const existing = await prisma.integOrder.findUnique({
-          where: { platformCode_platformOrderId: { platformCode: PLATFORM, platformOrderId } },
+        const existing = await prisma.integOrder.findFirst({
+          where:  { platformCode: PLATFORM, platformOrderId: { in: bothKeys } },
+          select: { id: true },
         });
         if (existing) { skipped++; continue; }
 
@@ -181,7 +205,7 @@ export async function POST(req: NextRequest) {
           data: {
             mappingId:           link?.mappingId ?? null,
             platformCode:        PLATFORM,
-            platformOrderId,
+            platformOrderId:     itemKey,
             platformOrderNo:     body.orderDetail?.orderNumber ?? orderId,
             platformOrderItemId: String(item.orderItemId ?? idx),
             productTitle:        link?.externalTitle ?? sku ?? "(بدون عنوان)",

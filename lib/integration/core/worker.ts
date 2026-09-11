@@ -6,7 +6,7 @@ import { writeLog } from "./log";
 import { getAdapter } from "./adapter-registry";
 import { decryptCredentials } from "./crypto";
 import { runAutoMatch } from "./mapping";
-import { resyncPricesFromAccounting } from "./pricing";
+import { resyncPricesFromAccounting, applyDiscountWindowChanges } from "./pricing";
 
 import { resyncStockFromAccounting } from "./inventory";
 import { fetchAndProcessOrders } from "./orders";
@@ -144,6 +144,12 @@ export async function runWorkerCycle(maxJobs = 5): Promise<void> {
 
   // jobهای زمان‌بندی‌شده (polling سفارش باسلام + سینک دوره‌ای حسابداری) و فاکتورهای معوق
   await ensureScheduledJobs().catch((e: unknown) => console.error("[integ] ensureScheduledJobs:", e));
+
+  // تخفیفی که بازه‌اش همین حالا باز یا بسته شده باید دوباره ارسال شود. تپسی‌شاپ
+  // تاریخ را نمی‌شناسد و تا وقتی قیمت جدید نفرستیم، تخفیفِ تمام‌شده روی محصول
+  // می‌ماند و تخفیفِ زمان‌بندی‌شده هرگز شروع نمی‌شود.
+  await applyDiscountWindowChanges().catch((e: unknown) => console.error("[integ] بازه‌ی تخفیف:", e));
+
   await processPendingInvoices().catch((e: unknown) => console.error("[integ-invoice] چرخه فاکتور ناموفق:", e));
 
   const concurrent = Math.min(maxJobs, settings.maxConcurrentJobs);

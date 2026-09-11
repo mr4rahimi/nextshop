@@ -5,7 +5,7 @@ import { decryptCredentials } from "./crypto";
 import { writeLog } from "./log";
 import { applyDiscount } from "@/lib/integration/types";
 import { recordPushedPrice } from "./snapshot";
-import { resolveDiscountForPush, recordDiscountPush } from "./discount";
+import { resolveDiscountForPush, recordDiscountPush, findDiscountWindowChanges } from "./discount";
 
 type RuleWithTiers = IntegPriceRule & { tiers: IntegPriceRuleTier[] };
 
@@ -352,4 +352,38 @@ export async function resyncPricesFromAccounting(
   }).catch(() => {});
 
   return { updatedFromHesaban, pushedMappings: mappings.length };
+}
+// ── اجرای بازه‌ی تخفیف ────────────────────────────────────────────
+// تپسی‌شاپ تاریخ شروع/پایان را نمی‌شناسد و فقط «قیمت نهایی» می‌گیرد، پس باز و
+// بسته شدن بازه را باید خودمان با یک ارسال قیمت به او بفهمانیم. برای اسنپ‌شاپ
+// هم بی‌ضرر است: همان تخفیف با همان تاریخ‌ها دوباره ارسال می‌شود.
+export async function applyDiscountWindowChanges(): Promise<PricePushResult> {
+  const changes = await findDiscountWindowChanges();
+  const totals = emptyResult();
+  if (!changes.length) return totals;
+
+  // یک نگاشت ممکن است روی چند پلتفرم همزمان تغییر وضعیت بدهد؛ pushMappingPrice
+  // همه‌ی لینک‌هایش را با هم می‌فرستد، پس هر نگاشت فقط یک بار پردازش می‌شود.
+  for (const mappingId of new Set(changes.map((c) => c.mappingId))) {
+    const r = await pushPriceForMapping(mappingId).catch(() => emptyResult());
+    totals.pushed  += r.pushed;
+    totals.failed  += r.failed;
+    totals.skipped += r.skipped;
+  }
+
+  await writeLog({
+    platformCode:  changes[0].platformCode,
+    operationType: "SYNC_ALL_PRICE",
+    direction:     "OUTBOUND",
+    entityType:    "PRICE",
+    status:        totals.failed === 0 ? "SUCCESS" : totals.pushed === 0 ? "ERROR" : "PARTIAL",
+    responseData:  {
+      reason:  "تغییر وضعیت بازه‌ی تخفیف",
+      opened:  changes.filter((c) => c.activeNow).length,
+      closed:  changes.filter((c) => !c.activeNow).length,
+      ...totals,
+    },
+  }).catch(() => {});
+
+  return totals;
 }

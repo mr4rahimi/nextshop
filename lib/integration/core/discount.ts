@@ -184,3 +184,57 @@ export async function recordDiscountPush(
       : { discountPushedAt: new Date(), discountPushError: null },
   }).catch(() => {});
 }
+
+// ── بازه‌هایی که همین حالا باز یا بسته شده‌اند ──────────────────────
+//
+// اسنپ‌شاپ تاریخ شروع و پایان را خودش می‌فهمد، ولی تپسی‌شاپ فقط یک «قیمت نهایی»
+// می‌گیرد و از بازه خبر ندارد. پس اجرای بازه بر عهده‌ی ماست: وقتی تخفیفی شروع
+// یا تمام می‌شود باید قیمت دوباره ارسال شود، وگرنه تخفیف تپسی یا هرگز اعمال
+// نمی‌شود یا برای همیشه روی محصول می‌ماند.
+//
+// ملاک، مقایسه‌ی وضعیت بازه در «الان» با وضعیتش در «لحظه‌ی آخرین ارسال» است.
+// لینکی که هنوز ارسالی نداشته کنار گذاشته می‌شود؛ اولین ارسال کار خودش را می‌کند.
+
+export interface DiscountWindowChange {
+  mappingId:    string;
+  platformCode: string;
+  externalId:   string;
+  activeNow:    boolean;
+}
+
+export async function findDiscountWindowChanges(
+  limit = 50,
+  now: Date = new Date(),
+): Promise<DiscountWindowChange[]> {
+  const links = await prisma.integMappingLink.findMany({
+    where: {
+      isActive:         true,
+      discountManaged:  true,
+      discountPercent:  { gt: 0 },
+      discountPushedAt: { not: null },
+      // فقط لینک‌هایی که اصلاً مرزی دارند — بی‌کران‌ها هرگز تغییر وضعیت نمی‌دهند
+      OR: [{ discountStartsAt: { not: null } }, { discountEndsAt: { not: null } }],
+      mapping: { isActive: true, syncPriceEnabled: true },
+    },
+    select: {
+      mappingId: true, platformCode: true, externalId: true,
+      discountStartsAt: true, discountEndsAt: true, discountPushedAt: true,
+    },
+    take: limit,
+  });
+
+  const out: DiscountWindowChange[] = [];
+  for (const l of links) {
+    const activeNow  = isWindowActive(l.discountStartsAt, l.discountEndsAt, now);
+    const activeThen = isWindowActive(l.discountStartsAt, l.discountEndsAt, l.discountPushedAt!);
+    if (activeNow !== activeThen) {
+      out.push({
+        mappingId:    l.mappingId,
+        platformCode: l.platformCode,
+        externalId:   l.externalId,
+        activeNow,
+      });
+    }
+  }
+  return out;
+}

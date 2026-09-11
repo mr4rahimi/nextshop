@@ -5,6 +5,15 @@ import { useCallback, useEffect, useState } from "react";
 // فقط اسنپ‌شاپ مفهوم «موجودی اختصاصی تخفیف» دارد
 const STOCK_AWARE = new Set(["snappshop"]);
 
+// هر بازارگاه به اندازه‌ی متفاوتی از تخفیف را خودش می‌فهمد؛ بقیه‌اش را پنل ما
+// اجرا می‌کند. کاربر باید بداند تاریخ‌هایی که وارد می‌کند کجا اعمال می‌شوند.
+const PLATFORM_NOTE: Record<string, string> = {
+  snappshop:
+    "اسنپ‌شاپ بازه‌ی تخفیف و موجودی تخفیف‌دار را خودش می‌شناسد — هر سه مقدار عیناً به اسنپ ارسال می‌شوند.",
+  tapsi_shop:
+    "تپسی‌شاپ فقط «قیمت نهایی» می‌گیرد و از تاریخ خبر ندارد. بازه را پنل ما اجرا می‌کند: با شروع بازه قیمت تخفیف‌دار و با پایانش قیمت اصلی ارسال می‌شود.",
+};
+
 interface DiscountLink {
   id:                string;
   platformCode:      string;
@@ -115,12 +124,17 @@ export default function DiscountsClient({
         <p className="text-xs text-gray-400 mr-auto">{total} نگاشت</p>
       </div>
 
-      <div className="rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/[0.06] px-4 py-3">
+      <div className="rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/[0.06] px-4 py-3 space-y-2">
         <p className="text-xs text-amber-800 dark:text-amber-300 leading-6">
           وقتی «تحت مدیریت پنل» روشن باشد، هر تخفیفی که در پنل خود بازارگاه تنظیم شود در
           ارسال بعدی بازنویسی می‌شود. خالی گذاشتن درصد یعنی «تخفیف نداشته باشد» و تخفیف
           موجود روی بازارگاه حذف می‌شود.
         </p>
+        {PLATFORM_NOTE[platform] && (
+          <p className="text-xs text-amber-800/80 dark:text-amber-300/80 leading-6">
+            {PLATFORM_NOTE[platform]}
+          </p>
+        )}
       </div>
 
       <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
