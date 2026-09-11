@@ -198,7 +198,10 @@ export class SnappShopAdapter extends BaseAdapter {
     ]);
 
     const map = new Map<string, { basePrice?: number; stock?: number; discount: ResolvedDiscount }>();
-    for (const id of ids) map.set(id, { discount: discounts.get(id) ?? "UNKNOWN" });
+    // `??` ممنوع: `null` یعنی «تخفیفی ندارد» و نباید با «نمی‌دانیم» یکی شود
+    for (const id of ids) {
+      map.set(id, { discount: discounts.has(id) ? discounts.get(id)! : "UNKNOWN" });
+    }
 
     for (const s of snapshots) {
       // price ستون «قیمت مؤثر» است؛ قیمت پایه وقتی تخفیف هست در originalPrice می‌نشیند

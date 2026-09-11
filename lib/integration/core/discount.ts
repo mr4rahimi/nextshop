@@ -121,7 +121,10 @@ export async function resolveDiscountForPush(
   now: Date = new Date(),
 ): Promise<ResolvedDiscount> {
   const map = await resolveDiscountsForPush(platformCode, [externalId], now);
-  return map.get(externalId) ?? "UNKNOWN";
+  // `??` اینجا فاجعه بود: `null` یعنی «تخفیفی ندارد» — یک نتیجه‌ی کاملاً معتبر —
+  // ولی nullish محسوب می‌شد و به "UNKNOWN" تبدیل می‌شد. یعنی هر لینک تحت مدیریتی
+  // که هنوز درصد تخفیف نگرفته بود، ارسال قیمتش مسدود می‌شد.
+  return map.has(externalId) ? map.get(externalId)! : "UNKNOWN";
 }
 
 /** نسخه‌ی گروهی — برای ارسال‌های دسته‌ای که ده‌ها محصول را با هم می‌برند. */
