@@ -10,6 +10,7 @@ import { resyncPricesFromAccounting, applyDiscountWindowChanges } from "./pricin
 
 import { resyncStockFromAccounting } from "./inventory";
 import { fetchAndProcessOrders } from "./orders";
+import { fetchAndStoreChats, sendPendingMessage } from "./chat";
 import { enqueue } from "./queue";
 import { processPendingInvoices } from "./invoicing";
 import { recordPushedPrice, recordPushedStock } from "./snapshot";
@@ -21,6 +22,9 @@ import { recordPushedPrice, recordPushedStock } from "./snapshot";
 // کش نیست (به docs/integrations/discounts.md نگاه کنید)، ولی قیمت پایه‌ی اسنپ‌شاپ
 // و تخفیف لینک‌های «آزاد» همچنان از همین‌جا می‌آیند.
 const PRODUCT_REFRESH_MS = 6 * 60 * 60_000;
+
+/** فاصله دو دور کشیدن گفت‌وگوها. */
+const CHAT_POLL_MS = 5 * 60_000;
 
 async function ensureScheduledJobs(): Promise<void> {
   const connections = await prisma.integConnection.findMany({
@@ -52,6 +56,19 @@ async function ensureScheduledJobs(): Promise<void> {
       }
 
       const adapter = getAdapter(conn.platformCode);
+
+      // حلقه گفت‌وگوها مستقل از حلقه سفارش‌هاست — پیام باید خیلی زودتر از
+      // سفارش برسد، پس بازه‌اش جدا و ثابت است نه syncIntervalMin اتصال.
+      if (adapter?.fetchChats) {
+        const pendingChat = await prisma.integJob.findFirst({
+          where:  { platformCode: conn.platformCode, type: "FETCH_CHATS", status: { in: ["PENDING", "PROCESSING"] } },
+          select: { id: true },
+        });
+        if (!pendingChat) {
+          await enqueue({ type: "FETCH_CHATS", platformCode: conn.platformCode, payload: {}, priority: 3 });
+        }
+      }
+
       if (!adapter?.fetchOrders) continue;
 
       const existing = await prisma.integJob.findFirst({
@@ -294,6 +311,25 @@ async function dispatchJob(job: IntegJob): Promise<void> {
         priority:     3,
         delayMs:      connection.syncIntervalMin * 60_000,
       });
+      break;
+    }
+
+    case "FETCH_CHATS": {
+      await fetchAndStoreChats(job.id, job.platformCode, adapter, credentials);
+      await enqueue({
+        type:         "FETCH_CHATS",
+        platformCode: job.platformCode,
+        payload:      {},
+        priority:     3,
+        delayMs:      CHAT_POLL_MS,
+      });
+      break;
+    }
+
+    case "SEND_MESSAGE": {
+      const { messageId } = job.payload as { messageId?: string };
+      if (!messageId) throw new Error("SEND_MESSAGE بدون messageId");
+      await sendPendingMessage(job.id, job.platformCode, adapter, credentials, messageId);
       break;
     }
 

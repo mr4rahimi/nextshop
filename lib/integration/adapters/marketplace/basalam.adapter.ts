@@ -12,6 +12,12 @@ import type {
   StockUpdate,
   PriceUpdate,
   BatchResult,
+  FetchChatsResult,
+  FetchMessagesResult,
+  SendMessageResult,
+  ChatInfo,
+  ChatMessageInfo,
+  ChatFileInfo,
 } from "@/lib/integration/types";
 
 const OPENAPI_BASE = "https://openapi.basalam.com";
@@ -53,6 +59,48 @@ interface BasalamProductsResponse {
   page:        number;
   per_page:    number;
 }
+
+// ── شکل پاسخ سرویس گفت‌وگو ────────────────────────────────────────────
+// مرجع: openapi_data/chat.json در SDK رسمی باسلام. خلاصه‌اش در
+// docs/plans/basalam-chat.md آمده است.
+
+interface BasalamChatUser {
+  id:      number;
+  hash_id?: string;
+  name?:   string | null;
+  avatar?: string | null;
+}
+
+interface BasalamChatMessage {
+  id:           number;
+  chat_id:      number;
+  seen_at:      string | null;
+  created_at:   string;
+  updated_at:   string;
+  message_type: string;
+  sender:       BasalamChatUser | null;
+  content: {
+    text?:      string | null;
+    files?:     { url?: string; width?: number; height?: number; name?: string }[] | null;
+    links?:     unknown[] | null;
+    entity_id?: number | null;
+  } | null;
+}
+
+interface BasalamChat {
+  id:                   number;
+  chat_type:            string;
+  unseen_message_count: number;
+  updated_at:           string;
+  contact:              BasalamChatUser | null;
+  contact_id:           number | null;
+  last_message:         BasalamChatMessage | null;
+  channel:              { title?: string; avatar?: string } | null;
+  group:                { title?: string; avatar?: string } | null;
+}
+
+interface BasalamChatsResponse  { data: { chats: BasalamChat[] } }
+interface BasalamMessagesResponse { data: { messages: BasalamChatMessage[] } }
 
 // ── Adapter ───────────────────────────────────────────────────────────
 
@@ -599,5 +647,178 @@ export class BasalamAdapter extends BaseAdapter {
     }
 
     return { success, failed };
+  }
+
+  // ── سرویس گفت‌وگو ─────────────────────────────────────────────────
+  // اسکوپ‌های لازم روی توکن: customer.chat.read و customer.chat.write.
+  // نقشه راه و جزئیات endpointها: docs/plans/basalam-chat.md
+
+  /**
+   * باسلام زمان‌ها را بدون منطقه زمانی می‌دهد («2026-07-22 10:28:23»).
+   * بدون Z، `new Date` آن را به وقت محلی سرور می‌خواند و روی سروری که
+   * منطقه‌اش تهران نیست تاریخ‌ها ۳:۳۰ جابه‌جا می‌شوند. پس صریح UTC می‌خوانیم.
+   */
+  private static parseTs(raw: string | null | undefined): Date | null {
+    if (!raw) return null;
+    const normalized = /[Zz]|[+-]\d{2}:?\d{2}$/.test(raw)
+      ? raw
+      : `${raw.trim().replace(" ", "T")}Z`;
+    const d = new Date(normalized);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  /**
+   * شناسه کاربر غرفه — برای تشخیص اینکه فرستنده هر پیام خودمان بودیم یا مشتری.
+   * یک بار از /v1/users/me گرفته و کنار بقیه credentials ذخیره می‌شود.
+   */
+  private async resolveUserId(credentials: Record<string, string>): Promise<string | null> {
+    if (credentials.userId?.trim()) return credentials.userId.trim();
+
+    const res = await this.authedFetch(credentials, `${OPENAPI_BASE}/v1/users/me`);
+    if (!res.ok) return null;
+
+    const info: BasalamUserInfo = await res.json();
+    const userId = String(info.id);
+    credentials.userId = userId;
+    await patchConnectionCredentials(this.platformCode, { userId }).catch(() => {});
+    return userId;
+  }
+
+  private static toFiles(msg: BasalamChatMessage): ChatFileInfo[] {
+    const files = msg.content?.files;
+    if (!Array.isArray(files)) return [];
+    return files
+      .filter((f): f is { url: string; width?: number; height?: number; name?: string } =>
+        typeof f?.url === "string" && f.url.length > 0)
+      .map((f) => ({ url: f.url, width: f.width, height: f.height, name: f.name }));
+  }
+
+  private static toMessageInfo(msg: BasalamChatMessage): ChatMessageInfo {
+    return {
+      externalId:  String(msg.id),
+      senderId:    msg.sender?.id != null ? String(msg.sender.id) : undefined,
+      senderName:  msg.sender?.name ?? undefined,
+      messageType: msg.message_type ?? "text",
+      text:        msg.content?.text ?? undefined,
+      files:       BasalamAdapter.toFiles(msg),
+      seenAt:      BasalamAdapter.parseTs(msg.seen_at),
+      sentAt:      BasalamAdapter.parseTs(msg.created_at) ?? new Date(),
+      raw:         msg,
+    };
+  }
+
+  /** پیام خطای خوانا برای پاسخ‌های ناموفق سرویس گفت‌وگو. */
+  private async chatError(res: Response, credentials: Record<string, string>): Promise<string> {
+    const body = await res.text().catch(() => "");
+    if (res.status === 401) return `HTTP 401${BasalamAdapter.authErrorHint(credentials)}`;
+    if (res.status === 403) {
+      return "HTTP 403 — توکن باسلام اسکوپ customer.chat.read یا customer.chat.write را ندارد";
+    }
+    return `HTTP ${res.status} ${body.slice(0, 300)}`;
+  }
+
+  async fetchChats(
+    credentials: Record<string, string>,
+    opts: { updatedFrom?: Date | null; limit?: number },
+  ): Promise<FetchChatsResult> {
+    const params = new URLSearchParams({
+      limit:    String(opts.limit ?? 50),
+      order_by: "updated_at",
+    });
+    // باسلام زمان را بدون منطقه می‌خواهد؛ همان قالبی که خودش برمی‌گرداند.
+    if (opts.updatedFrom) {
+      params.set("updated_from", opts.updatedFrom.toISOString().slice(0, 19).replace("T", " "));
+    }
+
+    const res = await this.authedFetch(credentials, `${OPENAPI_BASE}/v1/chats?${params}`);
+    if (!res.ok) throw new Error(await this.chatError(res, credentials));
+
+    const json: BasalamChatsResponse = await res.json();
+    const raw = json.data?.chats ?? [];
+
+    let maxUpdatedAt: Date | null = null;
+    const chats: ChatInfo[] = raw.map((c) => {
+      const updatedAt = BasalamAdapter.parseTs(c.updated_at);
+      if (updatedAt && (!maxUpdatedAt || updatedAt > maxUpdatedAt)) maxUpdatedAt = updatedAt;
+
+      // کانال‌ها و گروه‌ها مخاطب ندارند؛ عنوانشان جای نام مخاطب می‌نشیند.
+      const title  = c.contact?.name ?? c.channel?.title ?? c.group?.title ?? undefined;
+      const avatar = c.contact?.avatar ?? c.channel?.avatar ?? c.group?.avatar ?? undefined;
+
+      return {
+        externalId:      String(c.id),
+        chatType:        c.chat_type ?? "private",
+        contactId:       c.contact_id != null ? String(c.contact_id) : undefined,
+        contactName:     title,
+        contactAvatar:   avatar ?? undefined,
+        unseenCount:     c.unseen_message_count ?? 0,
+        updatedAt,
+        lastMessageAt:   BasalamAdapter.parseTs(c.last_message?.created_at),
+        lastMessageText: c.last_message?.content?.text ?? undefined,
+        raw:             c,
+      };
+    });
+
+    return { chats, maxUpdatedAt };
+  }
+
+  async fetchMessages(
+    credentials: Record<string, string>,
+    opts: { chatId: string; sinceMessageId?: string | null; limit?: number },
+  ): Promise<FetchMessagesResult> {
+    const limit = opts.limit ?? 50;
+    const params = new URLSearchParams({ limit: String(limit), order: "desc" });
+
+    // با message_id + cmp=gt فقط پیام‌های تازه‌تر از آخرین چیزی که داریم می‌آید.
+    if (opts.sinceMessageId) {
+      params.set("message_id", opts.sinceMessageId);
+      params.set("cmp", "gt");
+    }
+
+    const res = await this.authedFetch(
+      credentials,
+      `${OPENAPI_BASE}/v1/chats/${encodeURIComponent(opts.chatId)}/messages?${params}`,
+    );
+    if (!res.ok) throw new Error(await this.chatError(res, credentials));
+
+    const json: BasalamMessagesResponse = await res.json();
+    const raw = json.data?.messages ?? [];
+
+    return {
+      messages: raw.map(BasalamAdapter.toMessageInfo),
+      hasMore:  raw.length >= limit,
+    };
+  }
+
+  async sendMessage(
+    credentials: Record<string, string>,
+    opts: { chatId: string; text: string; repliedMessageId?: string | null },
+  ): Promise<SendMessageResult> {
+    const res = await this.authedFetch(
+      credentials,
+      `${OPENAPI_BASE}/v1/chats/${encodeURIComponent(opts.chatId)}/messages`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          content:      { text: opts.text },
+          message_type: "text",
+          ...(opts.repliedMessageId ? { replied_message_id: Number(opts.repliedMessageId) } : {}),
+        }),
+      },
+    );
+    if (!res.ok) throw new Error(await this.chatError(res, credentials));
+
+    const json = await res.json() as { data?: BasalamChatMessage } & Partial<BasalamChatMessage>;
+    const msg  = json.data ?? (json as BasalamChatMessage);
+
+    return {
+      externalId: String(msg.id),
+      sentAt:     BasalamAdapter.parseTs(msg.created_at) ?? new Date(),
+    };
+  }
+
+  /** شناسه کاربر غرفه، برای اینکه هسته جهت هر پیام را تشخیص دهد. */
+  async resolveSelfId(credentials: Record<string, string>): Promise<string | null> {
+    return this.resolveUserId(credentials);
   }
 }

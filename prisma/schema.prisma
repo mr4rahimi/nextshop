@@ -1229,6 +1229,7 @@ model IntegPlatform {
   jobs             IntegJob[]
   logs             IntegLog[]
   platformProducts IntegPlatformProduct[]
+  chats            IntegChat[]
 }
 
 enum IntegPlatformType {
@@ -1460,6 +1461,8 @@ enum IntegJobType {
   CREATE_INVOICE // ثبت فاکتور فروش در حسابداری (فقط برای لاگ)
   CREATE_PRODUCT
   TEST_CONNECTION
+  FETCH_CHATS // دریافت گفت‌وگوها و پیام‌های بازارگاه
+  SEND_MESSAGE // ارسال پاسخ ادمین به گفت‌وگوی بازارگاه
 }
 
 enum IntegJobStatus {
@@ -1509,6 +1512,7 @@ enum IntegEntityType {
   PRICE
   ORDER
   CONNECTION
+  CHAT
 }
 
 enum IntegLogStatus {
@@ -1563,6 +1567,76 @@ model IntegPriceRuleTier {
   rule IntegPriceRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
   @@index([ruleId])
+}
+
+// ── گفت‌وگوهای بازارگاه ──────────────────────────────────────────────
+// جدول‌ها از ابتدا چندپلتفرمی‌اند (platformCode)، ولی فعلاً فقط آداپتور باسلام
+// آن‌ها را پر می‌کند. به docs/plans/basalam-chat.md نگاه کنید.
+
+model IntegChat {
+  id           String @id @default(cuid())
+  platformCode String
+  /// شناسه گفت‌وگو سمت پلتفرم — در باسلام همان chat_id عددی
+  externalId   String
+
+  /// private | group | channel | bot — کانال‌ها پیام مشتری نیستند و در پنل
+  /// به‌طور پیش‌فرض نمایش داده نمی‌شوند.
+  chatType      String  @default("private")
+  contactId     String?
+  contactName   String?
+  contactAvatar String?
+
+  unseenCount     Int       @default(0)
+  lastMessageAt   DateTime?
+  lastMessageText String?
+
+  /// updated_at سمت پلتفرم — مکان‌نمای همگام‌سازی افزایشی
+  externalUpdatedAt DateTime?
+  /// بزرگ‌ترین شناسه پیامی که تا الان کشیده‌ایم
+  lastFetchedMsgId  String?
+
+  raw       Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  platform IntegPlatform      @relation(fields: [platformCode], references: [code])
+  messages IntegChatMessage[]
+
+  @@unique([platformCode, externalId])
+  @@index([platformCode, lastMessageAt])
+  @@index([chatType])
+}
+
+model IntegChatMessage {
+  id         String  @id @default(cuid())
+  chatId     String
+  /// شناسه پیام سمت پلتفرم. برای پیام خروجی تا لحظه ارسال موفق خالی است.
+  externalId String?
+
+  /// IN = از مشتری، OUT = از غرفه
+  direction  String
+  senderId   String?
+  senderName String?
+
+  messageType String  @default("text")
+  text        String? @db.Text
+  files       Json    @default("[]")
+
+  seenAt DateTime?
+  sentAt DateTime
+
+  /// فقط برای پیام‌های خروجی: SYNCED | PENDING | SENT | FAILED
+  sendStatus String  @default("SYNCED")
+  sendError  String?
+
+  raw       Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  chat IntegChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, externalId])
+  @@index([chatId, sentAt])
+  @@index([sendStatus])
 }
 
 // ── تنظیمات کلی ──────────────────────────────────────────────────────

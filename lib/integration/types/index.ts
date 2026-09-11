@@ -143,3 +143,53 @@ export interface FetchOrdersResult {
   hasMore: boolean;
   cursor?: string;
 }
+// ── گفت‌وگوهای بازارگاه ───────────────────────────────────────────────
+
+export interface ChatFileInfo {
+  url:     string;
+  width?:  number;
+  height?: number;
+  name?:   string;
+}
+
+export interface ChatMessageInfo {
+  externalId:  string;
+  senderId?:   string;
+  senderName?: string;
+  messageType: string;
+  text?:       string;
+  files:       ChatFileInfo[];
+  seenAt?:     Date | null;
+  sentAt:      Date;
+  raw:         unknown;
+}
+
+export interface ChatInfo {
+  externalId:     string;
+  /** private | group | channel | bot */
+  chatType:       string;
+  contactId?:     string;
+  contactName?:   string;
+  contactAvatar?: string;
+  unseenCount:    number;
+  updatedAt?:     Date | null;
+  lastMessageAt?: Date | null;
+  lastMessageText?: string;
+  raw:            unknown;
+}
+
+export interface FetchChatsResult {
+  chats: ChatInfo[];
+  /** بزرگ‌ترین updated_at این دور — مکان‌نمای دور بعد */
+  maxUpdatedAt?: Date | null;
+}
+
+export interface FetchMessagesResult {
+  messages: ChatMessageInfo[];
+  hasMore:  boolean;
+}
+
+export interface SendMessageResult {
+  externalId: string;
+  sentAt:     Date;
+}

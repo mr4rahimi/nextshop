@@ -26,6 +26,7 @@ export default async function IntegrationDashboardPage() {
     syncCount24h,
     failedJobs,
     ordersNeedingMapping,
+    unseenMessages,
   ] = await Promise.all([
     prisma.integPlatform.findMany({ where: { isActive: true }, orderBy: { type: "asc" } }),
     prisma.integConnection.findMany({ include: { platform: true } }),
@@ -47,7 +48,10 @@ export default async function IntegrationDashboardPage() {
       include: { platform: { select: { name: true } } },
     }),
     prisma.integOrder.count({ where: { status: "NEEDS_MAPPING" } }),
+    prisma.integChat.aggregate({ where: { chatType: "private" }, _sum: { unseenCount: true } }),
   ]);
+
+  const unseenCount = unseenMessages._sum.unseenCount ?? 0;
 
   const connMap = new Map(connections.map(c => [c.platformCode, c]));
 
@@ -75,6 +79,14 @@ export default async function IntegrationDashboardPage() {
       type:    "error",
       message: `${ordersNeedingMapping} قلم سفارش فاکتور نخورده — محصولشان به کالای حسابداری نگاشت ندارد`,
       link:    "/admin/integration/orders?status=NEEDS_MAPPING",
+    });
+  }
+
+  if (unseenCount > 0) {
+    alerts.push({
+      type:    "warn",
+      message: `${unseenCount} پیام خوانده‌نشده از مشتریان بازارگاه`,
+      link:    "/admin/integration/messages",
     });
   }
 
@@ -128,7 +140,7 @@ export default async function IntegrationDashboardPage() {
       )}
 
       {/* آمار کلی */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <Link href="/admin/integration/mapping"
           className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-blue-300 dark:hover:border-blue-500/30 transition-colors">
           <p className="text-xs text-gray-500 font-bold">نگاشت فعال</p>
@@ -148,6 +160,13 @@ export default async function IntegrationDashboardPage() {
           <p className="text-xs text-gray-500 font-bold">قوانین قیمت فعال</p>
           <p className="text-3xl font-black mt-1 text-purple-600 dark:text-purple-400">{priceRuleCount}</p>
           <p className="text-[10px] text-gray-400 mt-0.5">اعمال در sync</p>
+        </Link>
+
+        <Link href="/admin/integration/messages"
+          className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-rose-300 dark:hover:border-rose-500/30 transition-colors">
+          <p className="text-xs text-gray-500 font-bold">پیام خوانده‌نشده</p>
+          <p className={`text-3xl font-black mt-1 ${unseenCount > 0 ? "text-rose-500" : "text-gray-900 dark:text-white"}`}>{unseenCount}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">گفت‌وگوی مشتریان</p>
         </Link>
 
         <Link href="/admin/integration/queue"

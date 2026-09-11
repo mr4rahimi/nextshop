@@ -5,8 +5,10 @@ import type {
   PriceUpdate,
   BatchResult,
   ConnectionTestResult,
-  FetchOrdersResult,   
-  
+  FetchOrdersResult,
+  FetchChatsResult,
+  FetchMessagesResult,
+  SendMessageResult,
 } from "@/lib/integration/types";
 
 export abstract class BaseAdapter {
@@ -55,6 +57,30 @@ export abstract class BaseAdapter {
     credentials: Record<string, string>,
     cursor: string
   ): Promise<void>;
+
+  // ── گفت‌وگوها — اختیاری، فقط پلتفرم‌هایی که پیام‌رسان دارند ─────────
+  // هر سه با هم معنی دارند: بدون fetchChats دو تای دیگر جایی صدا زده نمی‌شوند.
+
+  /** لیست گفت‌وگوهای تغییرکرده از `updatedFrom` به بعد. */
+  fetchChats?(
+    credentials: Record<string, string>,
+    opts: { updatedFrom?: Date | null; limit?: number },
+  ): Promise<FetchChatsResult>;
+
+  /** پیام‌های یک گفت‌وگو، فقط آن‌هایی که شناسه‌شان از `sinceMessageId` بزرگ‌تر است. */
+  fetchMessages?(
+    credentials: Record<string, string>,
+    opts: { chatId: string; sinceMessageId?: string | null; limit?: number },
+  ): Promise<FetchMessagesResult>;
+
+  /** شناسه کاربر خودمان روی پلتفرم — برای تشخیص جهت هر پیام. */
+  resolveSelfId?(credentials: Record<string, string>): Promise<string | null>;
+
+  /** ارسال پاسخ متنی به یک گفت‌وگو. */
+  sendMessage?(
+    credentials: Record<string, string>,
+    opts: { chatId: string; text: string; repliedMessageId?: string | null },
+  ): Promise<SendMessageResult>;
 
   // Rate limiting — هر Adapter می‌تواند override کند
   protected async rateLimit(_ms = 0): Promise<void> {
