@@ -75,6 +75,24 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // ── Integration API routes ───────────────────────────────────────
+  // این مسیرها زیر /api/admin/ نیستند ولی داده‌ی پنل را می‌دهند — از جمله
+  // متن گفت‌وگوی مشتریان بازارگاه. تا پیش از این بدون هیچ احراز هویتی از
+  // اینترنت قابل خواندن بودند.
+  //
+  // دو استثنا: worker با هدر x-worker-secret و وب‌هوک‌های بازارگاه با هدر
+  // اختصاصی خودشان احراز می‌شوند و کوکی ادمین ندارند.
+  if (
+    pathname.startsWith("/api/integration/") &&
+    !pathname.startsWith("/api/integration/worker") &&
+    !pathname.startsWith("/api/integration/webhooks/")
+  ) {
+    if (!(await hasRole(token, ["ADMIN"]))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.next();
+  }
+
   // ── Admin page routes ────────────────────────────────────────────
   if (pathname.startsWith("/admin")) {
     if (pathname === "/admin/login") return NextResponse.next();
