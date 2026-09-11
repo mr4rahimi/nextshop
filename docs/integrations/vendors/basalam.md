@@ -28,7 +28,14 @@ DELETE https://openapi.basalam.com/v1/vendors/{vendorId}/discounts
 ```
 
 منبع: SDK رسمی پایتون باسلام، `src/basalam_sdk/core/client.py`. در مستندات
-REST زیر نیامده — فقط نام متد SDK ذکر شده است.
+REST زیر نیامده — فقط نام متد SDK ذکر شده است. هر دو روی غرفه‌ی واقعی آزمایش
+و تأیید شده‌اند؛ جزئیات آزمایش در [discounts.md](../discounts.md).
+
+هر دو **۲۰۲** برمی‌گردانند با شناسه‌ی job (`{"id": 17700682}`)، نه ۲۰۰. پس
+پاسخ موفق یعنی «پذیرفته شد»، نه «اعمال شد» — اثرش زیر پنج ثانیه می‌نشیند.
+
+`active_days` تاریخ نیست، تعداد روز است و به «آخرِ روزِ N روز بعد» ترجمه
+می‌شود: `active_days: 1` در ساعت ۲۰:۴۴ یعنی تا فردا ۲۳:۵۹.
 
 `product_filter` فیلترهای دیگری هم می‌پذیرد: `variation_ids`، `category_id`،
 `status`، `stock`، `price`، `exclude`، `title`. ما فقط `product_ids` را

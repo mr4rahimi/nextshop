@@ -1,6 +1,8 @@
 import { BaseAdapter } from "../base.adapter";
+import { prisma } from "@/lib/prisma";
 import type { FetchOrdersResult, OrderItemInfo } from "@/lib/integration/types";
 import { applyDiscount } from "@/lib/integration/types";
+import { toTehranDate } from "@/lib/integration/core/discount";
 import { patchConnectionCredentials } from "@/lib/integration/core/credentials";
 
 import type {
@@ -279,67 +281,81 @@ export class BasalamAdapter extends BaseAdapter {
   // باسلام تخفیف را نه به‌صورت فیلد روی محصول، بلکه به‌صورت «کمپین» نگه می‌دارد:
   //   POST   /v1/vendors/{vendorId}/discounts  { product_filter, discount_percent, active_days }
   //   DELETE /v1/vendors/{vendorId}/discounts  { product_filter }
-  // وقتی کمپینی فعال باشد، `primary_price` قیمت خط‌خورده می‌شود و خود باسلام
-  // `price` را از روی درصد حساب می‌کند.
   //
-  // پس دو مسیر متفاوت داریم:
+  // هر دو روی حساب واقعی آزمایش شده‌اند. رفتار تأییدشده روی محصول ۱۲۶۶۳۳۲۵:
+  //   قبل   → price = primary_price = 29,860,000
+  //   POST ۱۰٪ → price = 26,874,000 و primary_price = 29,860,000 (زیر ۵ ثانیه)
+  //   DELETE  → هر دو دوباره 29,860,000
   //
-  // • `enableDiscountCampaign = "true"` — مدیریت کامل. قیمت **اصلی** ارسال
-  //   می‌شود و تخفیف با کمپین ساخته یا حذف می‌شود. ترتیب عمدی است: اول قیمت
-  //   اصلی، بعد کمپین. اگر کمپین شکست بخورد محصول با قیمت کامل می‌ماند که
-  //   خطای بی‌خطری است؛ عکسش (قیمت تخفیف‌خورده + کمپین) تخفیف را دو بار اعمال
-  //   می‌کرد و زیر قیمت تمام‌شده می‌فروخت.
+  // یعنی باسلام قیمتِ ارسالی را به عنوان **قیمت اصلی** نگه می‌دارد و قیمت
+  // تخفیف‌خورده را خودش حساب می‌کند. پس باید قیمت اصلی بفرستیم؛ فرستادن قیمت
+  // مؤثر به‌علاوه‌ی کمپین، تخفیف را دو بار اعمال می‌کرد.
   //
-  // • خاموش (پیش‌فرض) — رفتار قدیمی: فقط «قیمت مؤثر» ارسال می‌شود و به کمپین‌ها
-  //   دست زده نمی‌شود. نسبت تخفیف حفظ می‌ماند ولی قیمت خط‌خورده تازه نمی‌شود و
-  //   تخفیفی که در پنل ما حذف شود روی باسلام باقی می‌ماند.
-  //
-  // مسیر REST از SDK رسمی پایتون باسلام گرفته شده (`src/basalam_sdk/core/client.py`)
-  // و هنوز روی حساب واقعی آزمایش نشده — به همین دلیل پشت کلید است.
+  // ترتیب سه مرحله عمدی است: حذف کمپین → ارسال قیمت → ساخت کمپین.
+  // باسلام ویرایش قیمت محصولی که «تخفیف زمانمند» دارد را رد می‌کند
+  // («... قابل ویرایش نیستند. شناسه: ۱۳۰۸۸۰۱۷» در لاگ پروداکشن)، پس کمپین
+  // باید اول برداشته شود. ضمناً اگر ساخت کمپین شکست بخورد محصول با قیمت کامل
+  // می‌ماند که خطای بی‌خطری است — عکسش فروش زیر قیمت تمام‌شده بود.
   async updatePrice(
     credentials: Record<string, string>,
     updates: PriceUpdate[],
   ): Promise<BatchResult> {
-    const manageCampaigns = credentials.enableDiscountCampaign === "true";
+    // کدام محصول‌ها همین حالا کمپین فعال دارند؟ فقط برای آن‌ها حذف لازم است.
+    const cached = await prisma.integPlatformProduct.findMany({
+      where: {
+        platformCode:      this.platformCode,
+        platformProductId: { in: updates.map((u) => u.platformProductId) },
+        discountPercent:   { gt: 0 },
+      },
+      select: { platformProductId: true },
+    });
+    const hasCampaign = new Set(cached.map((c) => c.platformProductId));
+
+    const clearFailed = new Map<string, string>();
+    for (const u of updates) {
+      if (!hasCampaign.has(u.platformProductId)) continue;
+      try {
+        await this.removeDiscountCampaign(credentials, u.platformProductId);
+      } catch (err) {
+        // ادامه می‌دهیم: اگر کمپین واقعاً مانده باشد، خود باسلام ارسال قیمت را
+        // رد می‌کند و پیامش در نتیجه دیده می‌شود.
+        clearFailed.set(u.platformProductId, err instanceof Error ? err.message : String(err));
+      }
+    }
 
     const result = await this.bulkUpdate(
       credentials,
       updates.map((u) => {
-        const { original, effective } = applyDiscount(u.price, u.discount);
+        const { original } = applyDiscount(u.price, u.discount);
         return {
           id:    parseInt(u.platformProductId, 10),
-          // در حالت مدیریت کامل، خودِ باسلام قیمت تخفیف‌خورده را حساب می‌کند
-          price: (manageCampaigns ? original : effective) * 10,   // تومان → ریال
+          price: original * 10,   // تومان → ریال؛ باسلام خودش تخفیف را حساب می‌کند
         };
       }),
       updates.map((u) => u.platformProductId),
     );
 
-    if (!manageCampaigns) return result;
-
     const successSet = new Set(result.success);
     for (const u of updates) {
       if (!successSet.has(u.platformProductId)) continue;
-      const hasDiscount = !!u.discount && u.discount.percent > 0;
+      if (!u.discount || !(u.discount.percent > 0)) continue;
       try {
-        if (hasDiscount) {
-          await this.applyDiscountCampaign(credentials, u.platformProductId, u.discount!);
-        } else {
-          // باسلام تخفیف را با «نفرستادن فیلد» برنمی‌دارد؛ حذف، فراخوانی جدا دارد
-          await this.removeDiscountCampaign(credentials, u.platformProductId);
-        }
+        await this.applyDiscountCampaign(credentials, u.platformProductId, u.discount);
       } catch (err) {
-        // قیمت درست نشسته؛ شکست کمپین نباید کل ارسال را باطل کند، ولی باید
-        // در نتیجه دیده شود وگرنه کاربر فکر می‌کند تخفیف اعمال شده است.
         const msg = err instanceof Error ? err.message : String(err);
-        failMove(result, u.platformProductId, `قیمت ارسال شد ولی ${hasDiscount ? "ساخت" : "حذف"} کمپین تخفیف ناموفق بود: ${msg}`);
+        failMove(result, u.platformProductId, `قیمت ارسال شد ولی ساخت کمپین تخفیف ناموفق بود: ${msg}`);
       }
+    }
+
+    for (const [id, msg] of clearFailed) {
+      if (!successSet.has(id)) continue;
+      failMove(result, id, `حذف کمپین تخفیف قبلی ناموفق بود: ${msg}`);
     }
 
     return result;
   }
 
-  /** بدنه‌ی مشترک فراخوانی‌های کمپین تخفیف. */
+  /** بدنه‌ی مشترک فراخوانی‌های کمپین تخفیف. پاسخ ۲۰۲ است و اثرش چند ثانیه بعد می‌نشیند. */
   private async discountRequest(
     credentials: Record<string, string>,
     method: "POST" | "DELETE",
@@ -369,15 +385,10 @@ export class BasalamAdapter extends BaseAdapter {
     const percent = Math.round(discount.percent);
     if (!(percent > 0) || percent >= 100) return;
 
-    // باسلام تاریخ پایان نمی‌گیرد، فقط «چند روز فعال بماند». تاریخ شروع هم ندارد:
-    // کمپین همان لحظه شروع می‌شود. شروعِ زمان‌بندی‌شده را پنل ما اجرا می‌کند —
-    // تا وقتی بازه باز نشده اصلاً تخفیفی به اینجا نمی‌رسد.
-    const activeDays = BasalamAdapter.activeDays(discount.endsAt);
-
     await this.discountRequest(credentials, "POST", {
       product_filter:   { product_ids: [parseInt(platformProductId, 10)] },
       discount_percent: percent,
-      active_days:      activeDays,
+      active_days:      BasalamAdapter.activeDays(discount.endsAt),
     });
   }
 
@@ -390,11 +401,25 @@ export class BasalamAdapter extends BaseAdapter {
     });
   }
 
-  /** تاریخ پایان ما → تعداد روز فعال باسلام. بدون تاریخ پایان، یک سال. */
+  /**
+   * تاریخ پایان ما → `active_days` باسلام.
+   *
+   * باسلام تاریخ پایان نمی‌گیرد و `active_days` را به «آخرِ روزِ N روز بعد»
+   * ترجمه می‌کند: در آزمایش، کمپینی که ۲۰ شهریور ساعت ۲۰:۴۴ با `active_days: 1`
+   * ساخته شد `rollback_at` برابر ۲۱ شهریور ۲۳:۵۹ گرفت. پس ملاک، اختلاف
+   * **روز تقویمی** به وقت تهران است، نه اختلاف ساعت — وگرنه تخفیفی که فردا
+   * شب تمام می‌شود یک روز اضافه فعال می‌ماند.
+   *
+   * تاریخ شروع را باسلام نمی‌فهمد (کمپین همان لحظه شروع می‌شود)؛ اجرای شروع
+   * با بازه‌ی پنل ماست و تا باز نشدنش اصلاً تخفیفی به اینجا نمی‌رسد.
+   */
   private static activeDays(endsAt?: Date | null): number {
     if (!endsAt) return 365;
-    const days = Math.ceil((endsAt.getTime() - Date.now()) / 86_400_000);
-    return Math.max(1, Math.min(365, days));
+    const today = toTehranDate(new Date());
+    const end   = toTehranDate(endsAt);
+    if (!today || !end) return 365;
+    const diff = Math.round((Date.parse(end) - Date.parse(today)) / 86_400_000);
+    return Math.max(1, Math.min(365, diff));
   }
 
   async fetchOrders(
