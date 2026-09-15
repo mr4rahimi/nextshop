@@ -120,6 +120,7 @@ export async function PUT(
           salePrice: pick("salePrice", (v) => (v ? BigInt(v) : null)),
 
           warranty:      str("warranty"),
+          condition:     pick("condition", (v) => (["NEW", "STOCK", "USED", "REFURBISHED"].includes(v) ? v : "NEW")),
           downloadTitle: str("downloadTitle"),
           downloadUrl:   str("downloadUrl"),
 

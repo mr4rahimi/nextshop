@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requirePermission, can } from "@/lib/permissions";
+import { assignOwner, canSeeProfile, setCategory } from "@/lib/club/ownership";
 import { serialize } from "@/lib/serialize";
 import { fromJalali } from "@/lib/club/jalali";
 import {
@@ -14,19 +15,20 @@ export const runtime = "nodejs";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-async function requireAdmin() {
-  const admin = await getAuthUser();
-  if (!admin || admin.role !== "ADMIN") return null;
-  return admin;
-}
-
-/** جزئیات یک عضو */
+/**
+ * جزئیات یک عضو.
+ *
+ * بدون `CUSTOMER_VIEW_ALL` فقط مشتریان خودِ کارمند. عضوِ دیگری ۴۰۴ می‌گیرد
+ * نه ۴۰۳، تا شناسه‌ها قابل حدس‌زدن نباشند.
+ */
 export async function GET(_req: Request, { params }: Ctx) {
-  if (!(await requireAdmin())) {
-    return NextResponse.json({ error: "دسترسی غیرمجاز" }, { status: 403 });
-  }
+  const guard = await requirePermission(["CUSTOMER_VIEW_OWN", "CUSTOMER_VIEW_ALL"]);
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
 
   const { id } = await params;
+  if (!(await canSeeProfile(guard.access, id))) {
+    return NextResponse.json({ error: "عضو یافت نشد" }, { status: 404 });
+  }
 
   const profile = await prisma.clubProfile.findUnique({
     where: { id },
@@ -55,6 +57,9 @@ export async function GET(_req: Request, { params }: Ctx) {
       identities: {
         select: { channel: true, username: true, isActive: true, subscribedAt: true },
       },
+      category: { select: { id: true, title: true, color: true } },
+      // تاریخچه‌ی صاحب — «چرا مال اوست» همیشه جواب داشته باشد
+      ownerTransfers: { orderBy: { createdAt: "desc" }, take: 20 },
     },
   });
 
@@ -75,14 +80,24 @@ export async function GET(_req: Request, { params }: Ctx) {
   return NextResponse.json(serialize({ ...profile, balance, registeredBy }));
 }
 
-/** ویرایش دستی عضو توسط ادمین */
+/**
+ * ویرایش عضو.
+ *
+ * - نام، دسته، یادداشت، برچسب، تولد: `CUSTOMER_EDIT` روی مشتریِ قابل‌دیدن
+ * - رضایت، مسدودی، امتیاز دستی: علاوه بر آن `CUSTOMER_VIEW_ALL` — این‌ها روی
+ *   پیام تبلیغاتی و کیف امتیاز اثر دارند و کار مدیریتی باشگاه‌اند
+ * - صاحب: `CUSTOMER_ASSIGN`
+ */
 export async function PATCH(req: Request, { params }: Ctx) {
-  const admin = await requireAdmin();
-  if (!admin) {
-    return NextResponse.json({ error: "دسترسی غیرمجاز" }, { status: 403 });
-  }
+  const guard = await requirePermission(["CUSTOMER_EDIT", "CUSTOMER_ASSIGN"]);
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
+  const { access } = guard;
+  const admin = { id: access.userId };
 
   const { id } = await params;
+  if (!(await canSeeProfile(access, id))) {
+    return NextResponse.json({ error: "عضو یافت نشد" }, { status: 404 });
+  }
 
   const profile = await prisma.clubProfile.findUnique({
     where: { id },
@@ -108,12 +123,53 @@ export async function PATCH(req: Request, { params }: Ctx) {
     /** افزودن یا کسر امتیاز دستی */
     pointsDelta?: number;
     pointsNote?: string;
+    categoryId?: string | null;
+    ownerId?: string | null;
+    ownerReason?: string | null;
   };
 
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "بدنه درخواست نامعتبر است" }, { status: 400 });
+  }
+
+  const canEdit = can(access, "CUSTOMER_EDIT");
+  const canManage = canEdit && can(access, "CUSTOMER_VIEW_ALL");
+  const touchesEdit = ["firstName", "lastName", "note", "tags", "birthYear", "clearBirthDate", "categoryId", "recomputeStats"]
+    .some((k) => (body as Record<string, unknown>)[k] !== undefined);
+  const touchesManage =
+    typeof body.smsConsent === "boolean" ||
+    typeof body.isBlocked === "boolean" ||
+    (typeof body.pointsDelta === "number" && body.pointsDelta !== 0);
+
+  if (touchesEdit && !canEdit) {
+    return NextResponse.json({ error: "اجازه‌ی ویرایش مشتری را ندارید" }, { status: 403 });
+  }
+  if (touchesManage && !canManage) {
+    return NextResponse.json(
+      { error: "رضایت پیامک، مسدودی و امتیاز فقط با دسترسی مدیریت باشگاه تغییر می‌کند" },
+      { status: 403 },
+    );
+  }
+
+  // ── صاحب و دسته ─────────────────────────────────────────────────
+  if (body.ownerId !== undefined) {
+    if (!can(access, "CUSTOMER_ASSIGN")) {
+      return NextResponse.json({ error: "اجازه‌ی جابه‌جایی صاحب مشتری را ندارید" }, { status: 403 });
+    }
+    try {
+      await assignOwner([id], body.ownerId || null, access, body.ownerReason);
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+    }
+  }
+  if (body.categoryId !== undefined) {
+    try {
+      await setCategory([id], body.categoryId || null);
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+    }
   }
 
   // ── اطلاعات کاربر ───────────────────────────────────────────────

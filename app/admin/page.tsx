@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getStaffAccess, canAny } from "@/lib/permissions";
 import DashboardClient from "@/components/admin/DashboardClient";
 
 export const metadata = { title: "داشبورد | پنل مدیریت" };
@@ -15,6 +17,13 @@ function fillDays(data: { date: Date; value: number }[], days: number): number[]
 }
 
 export default async function AdminDashboardPage() {
+  // داشبورد فروش و موجودی کل مجموعه را نشان می‌دهد؛ کارمندی که به گزارش یا
+  // سفارش دسترسی ندارد مستقیم به کارتابلش می‌رود (lib/admin-sections.ts)
+  const access = await getStaffAccess();
+  if (access && !canAny(access, ["PANEL_REPORTS", "PANEL_ORDERS"])) {
+    redirect("/admin/worklist");
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 

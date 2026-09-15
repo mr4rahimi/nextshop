@@ -124,6 +124,7 @@ export async function POST(req: Request) {
       salePrice: body.salePrice ? BigInt(body.salePrice) : null,
  
       warranty:      body.warranty,
+      condition:     ["NEW", "STOCK", "USED", "REFURBISHED"].includes(body.condition) ? body.condition : "NEW",
       downloadTitle: body.downloadTitle || null,
       downloadUrl:   body.downloadUrl   || null,
       stock:      body.stock      ? parseInt(body.stock) : 0,

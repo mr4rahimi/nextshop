@@ -9,6 +9,11 @@
  * تنها استثنا نقش سیستمیِ «مدیر» است: مجوزهایش همیشه به کاملِ روز به‌روز
  * می‌شود، وگرنه با افزودن هر مجوز تازه به کد، مدیر از آن بخش بیرون می‌ماند.
  *
+ * `--grant-new`: مجوزهای گروه‌هایی که بعد از ساخت نقش‌ها به کد اضافه شدند
+ * (`GRANT_NEW_PREFIXES`) به نقش‌های موجود **اضافه** می‌شوند. هیچ مجوزی کم
+ * نمی‌شود. بدون این پرچم، نقش «فروش» که پیش از فاز ۸ ساخته شده هرگز
+ * «دیدن مشتریان خودم» را نمی‌گرفت.
+ *
  * ⚠️ اجرای این اسکریپت به هیچ کاربری نقش نمی‌دهد. تا وقتی مدیر عمداً از
  * پنل نقشی به کسی ندهد، همه‌ی ادمین‌ها دسترسی کاملشان را دارند.
  *
@@ -45,6 +50,10 @@ const ROLES: RoleSeed[] = [
       "WORK_EDIT_ALL", "WORK_ASSIGN",
       "CALL_VIEW_OWN", "CALL_VIEW_ALL", "CALL_LOG",
       "ORDER_CREATE",
+      "CUSTOMER_VIEW_OWN", "CUSTOMER_VIEW_ALL", "CUSTOMER_CREATE", "CUSTOMER_EDIT",
+      "SUPPLIER_VIEW", "SUPPLIER_CREATE",
+      "DEAL_LOG", "DEAL_VIEW_ALL", "COMMISSION_VIEW_OWN", "COMMISSION_VIEW_ALL",
+      "PANEL_ORDERS", "PANEL_REPORTS",
       "STAFF_VIEW",
       "ATTENDANCE_VIEW_OWN", "ATTENDANCE_VIEW_ALL",
       "WORK_REPORT_VIEW", "WORK_REPORT_EXPORT",
@@ -59,6 +68,10 @@ const ROLES: RoleSeed[] = [
       "WORK_VIEW_OWN", "WORK_CREATE", "WORK_EDIT_OWN", "WORK_ASSIGN",
       "CALL_VIEW_OWN", "CALL_LOG",
       "ORDER_CREATE",
+      "CUSTOMER_VIEW_OWN", "CUSTOMER_CREATE", "CUSTOMER_EDIT",
+      "SUPPLIER_VIEW",
+      "DEAL_LOG", "COMMISSION_VIEW_OWN",
+      "PANEL_ORDERS",
       "ATTENDANCE_VIEW_OWN",
       "SCORE_VIEW_OWN",
     ],
@@ -68,6 +81,7 @@ const ROLES: RoleSeed[] = [
     title: "پشتیبانی",
     description: "پشتیبانی فنی، نصب دستگاه و گارانتی",
     permissions: [
+      "PANEL_ORDERS",
       "WORK_VIEW_OWN", "WORK_CREATE", "WORK_EDIT_OWN", "WORK_ASSIGN",
       "CALL_VIEW_OWN", "CALL_LOG",
       "ATTENDANCE_VIEW_OWN",
@@ -79,6 +93,7 @@ const ROLES: RoleSeed[] = [
     title: "محتوا و سئو",
     description: "تولید محتوا، بنر، شبکه‌های اجتماعی و کارهای سئو",
     permissions: [
+      "PANEL_CONTENT", "PANEL_CATALOG",
       "WORK_VIEW_OWN", "WORK_CREATE", "WORK_EDIT_OWN",
       "ATTENDANCE_VIEW_OWN",
       "SCORE_VIEW_OWN",
@@ -91,6 +106,8 @@ const ROLES: RoleSeed[] = [
     permissions: [
       "WORK_VIEW_OWN", "WORK_CREATE", "WORK_EDIT_OWN", "WORK_ASSIGN",
       "CALL_VIEW_OWN", "CALL_LOG",
+      "SUPPLIER_VIEW", "SUPPLIER_CREATE", "SUPPLIER_MANAGE",
+      "PANEL_CATALOG",
       "ATTENDANCE_VIEW_OWN",
       "SCORE_VIEW_OWN",
     ],
@@ -102,6 +119,9 @@ const ROLES: RoleSeed[] = [
     permissions: [
       "WORK_VIEW_OWN", "WORK_VIEW_ALL",
       "CALL_VIEW_OWN", "CALL_VIEW_ALL",
+      "CUSTOMER_VIEW_OWN", "CUSTOMER_VIEW_ALL",
+      "SUPPLIER_VIEW",
+      "PANEL_REPORTS",
       "STAFF_VIEW",
       "ATTENDANCE_VIEW_OWN", "ATTENDANCE_VIEW_ALL",
       "WORK_REPORT_VIEW",
@@ -109,6 +129,12 @@ const ROLES: RoleSeed[] = [
     ],
   },
 ];
+
+/** گروه‌های مجوزی که بعد از فاز ۷ آمدند — فقط این‌ها با `--grant-new` اضافه می‌شوند */
+const GRANT_NEW_PREFIXES = ["CUSTOMER_", "SUPPLIER_", "DEAL_", "COMMISSION_"];
+// PANEL_* اینجا نیست: مهاجرت 20260915170000 همه‌شان را به نقش‌های موجود داده
+// تا رفتار قبلی حفظ شود؛ اضافه‌کردنش فقط بخشی را که مدیر عمداً بسته، باز می‌کرد.
+const GRANT_NEW = process.argv.includes("--grant-new");
 
 async function main() {
   let created = 0;
@@ -127,7 +153,7 @@ async function main() {
 
     const existing = await prisma.staffRole.findUnique({
       where: { slug: seed.slug },
-      select: { id: true, isSystem: true },
+      select: { id: true, isSystem: true, permissions: true },
     });
 
     if (!existing) {
@@ -154,6 +180,23 @@ async function main() {
       });
       refreshed++;
       console.log(`↻ به‌روز شد: ${seed.title} (${permissions.length} مجوز)`);
+    } else if (GRANT_NEW) {
+      const missing = permissions.filter(
+        (p) =>
+          GRANT_NEW_PREFIXES.some((prefix) => p.startsWith(prefix)) &&
+          !existing.permissions.includes(p),
+      );
+      if (missing.length) {
+        await prisma.staffRole.update({
+          where: { id: existing.id },
+          data: { permissions: [...existing.permissions, ...missing] },
+        });
+        refreshed++;
+        console.log(`+ مجوز تازه به ${seed.title}: ${missing.join(", ")}`);
+      } else {
+        kept++;
+        console.log(`= دست‌نخورده ماند: ${seed.title}`);
+      }
     } else {
       kept++;
       console.log(`= دست‌نخورده ماند: ${seed.title}`);

@@ -24,6 +24,8 @@ export interface FormState {
   videoUrl: string; mainImage: string;
   features: string[]; colors: string[];
   price: string; salePrice: string; warranty: string;
+  /** نو / استوک / دست‌دوم / بازسازی‌شده — مبنای درصد پورسانت کارتابل */
+  condition: string;
   stock: string; trackStock: boolean; lowStockThreshold: string;
   faq: FaqItem[];
   seoTitle: string; seoDescription: string; seoKeywords: string; seoSchema: string;
@@ -42,7 +44,7 @@ export const EMPTY_FORM: FormState = {
   summaryTitle: "", summaryDescription: "", summaryImage: "", summaryFeatures: [],
   videoUrl: "", mainImage: "",
   features: [], colors: [],
-  price: "", salePrice: "", warranty: "",
+  price: "", salePrice: "", warranty: "", condition: "NEW",
   downloadTitle: "", downloadUrl: "",
   stock: "", trackStock: false, lowStockThreshold: "3",
   faq: [],
@@ -638,6 +640,14 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
             <Field label="قیمت با تخفیف (تومان)">
               <input type="number" min="0" dir="ltr" value={form.salePrice} className={inp}
                 onChange={e => set("salePrice", e.target.value)} placeholder="اختیاری" />
+            </Field>
+            <Field label="وضعیت کالا" hint="درصد پورسانت فروش می‌تواند به نو یا استوک بودن بستگی داشته باشد">
+              <select value={form.condition} className={inp} onChange={e => set("condition", e.target.value)}>
+                <option value="NEW">نو</option>
+                <option value="STOCK">استوک</option>
+                <option value="USED">دست‌دوم</option>
+                <option value="REFURBISHED">بازسازی‌شده</option>
+              </select>
             </Field>
             <Field label="گارانتی">
               <input value={form.warranty} className={inp}

@@ -12,6 +12,28 @@ import { prisma } from "@/lib/prisma";
 import { logActivityAsync } from "@/lib/activity";
 import type { StaffAccess } from "@/lib/permissions";
 import type { Prisma, StaffTaskStatus } from "@prisma/client";
+import { supplierSnapshot } from "./suppliers";
+import { claimIfUnowned, CLAIMING_CHANNELS } from "@/lib/club/ownership";
+
+/**
+ * تماسی که نتیجه گرفت و مشتری ثبت‌شده دارد، مشتریِ بی‌صاحب را به نام کسی
+ * می‌زند که نتیجه را ثبت کرد — «اولین نفر برنده است» (بخش ۲۱.۳).
+ * هیچ‌وقت صاحبِ موجود را عوض نمی‌کند و هیچ‌وقت خطا نمی‌دهد.
+ */
+async function claimFromCall(
+  task: { id: string; channel: string; customerId: string | null; outcome: string | null },
+  access: StaffAccess,
+) {
+  if (!task.outcome || !task.customerId) return;
+  if (!(CLAIMING_CHANNELS as readonly string[]).includes(task.channel)) return;
+  await claimIfUnowned({
+    userId: task.customerId,
+    ownerId: access.userId,
+    ownerName: access.name,
+    via: "CALL",
+    taskId: task.id,
+  });
+}
 
 /** فیلدهایی که فهرست و کارت کار لازم دارند */
 export const TASK_SELECT = {
@@ -31,6 +53,7 @@ export const TASK_SELECT = {
   contactName: true,
   contactPhone: true,
   supplierName: true,
+  supplierId: true,
   entity: true,
   entityId: true,
   linkUrl: true,
@@ -93,6 +116,8 @@ export interface CreateTaskInput {
   contactName?: string | null;
   contactPhone?: string | null;
   supplierName?: string | null;
+  /** از فهرست تأمین‌کننده‌ها — اگر آمده باشد، نامش بر `supplierName` مقدم است */
+  supplierId?: string | null;
   entity?: string | null;
   entityId?: string | null;
   linkUrl?: string | null;
@@ -154,6 +179,7 @@ export async function createTask(input: CreateTaskInput, access: StaffAccess) {
 
   const outcome = trimOrNull(input.outcome);
   const now = new Date();
+  const supplier = await resolveSupplier(input.supplierId);
   const dueAt =
     toDate(input.dueAt) ??
     (type.slaMinutes ? new Date(now.getTime() + type.slaMinutes * 60_000) : null);
@@ -178,7 +204,8 @@ export async function createTask(input: CreateTaskInput, access: StaffAccess) {
       customerId: input.customerId ?? null,
       contactName: trimOrNull(input.contactName),
       contactPhone: trimOrNull(input.contactPhone),
-      supplierName: trimOrNull(input.supplierName),
+      supplierId: supplier?.id ?? null,
+      supplierName: supplier?.name ?? trimOrNull(input.supplierName),
 
       entity: (input.entity as never) ?? null,
       entityId: trimOrNull(input.entityId),
@@ -205,6 +232,8 @@ export async function createTask(input: CreateTaskInput, access: StaffAccess) {
     summary: `ثبت کار «${task.title}»`,
   });
 
+  await claimFromCall(task, access);
+
   return task;
 }
 
@@ -220,11 +249,20 @@ export interface UpdateTaskInput {
   contactName?: string | null;
   contactPhone?: string | null;
   supplierName?: string | null;
+  supplierId?: string | null;
   linkUrl?: string | null;
   amount?: string | number | null;
   carrier?: string | null;
   dueAt?: string | Date | null;
   occurredAt?: string | Date | null;
+}
+
+/** شناسه‌ی تأمین‌کننده را به نام اسنپ‌شات تبدیل می‌کند؛ شناسه‌ی نامعتبر خطاست */
+async function resolveSupplier(id: string | null | undefined) {
+  if (!id) return null;
+  const s = await supplierSnapshot(id);
+  if (!s) throw new Error("تأمین‌کننده پیدا نشد");
+  return s;
 }
 
 /**
@@ -257,7 +295,13 @@ export async function updateTask(
   if (has("customerId")) data.customerId = input.customerId ?? null;
   if (has("contactName")) data.contactName = trimOrNull(input.contactName);
   if (has("contactPhone")) data.contactPhone = trimOrNull(input.contactPhone);
-  if (has("supplierName")) data.supplierName = trimOrNull(input.supplierName);
+  if (has("supplierId")) {
+    const supplier = await resolveSupplier(input.supplierId);
+    data.supplierId = supplier?.id ?? null;
+    data.supplierName = supplier?.name ?? null;
+  } else if (has("supplierName")) {
+    data.supplierName = trimOrNull(input.supplierName);
+  }
   if (has("linkUrl")) data.linkUrl = trimOrNull(input.linkUrl);
   if (has("amount")) data.amount = toBigInt(input.amount);
   if (has("carrier")) data.carrier = trimOrNull(input.carrier);
@@ -301,6 +345,8 @@ export async function updateTask(
         ? `وضعیت کار «${task.title}» به «${nextStatus}» تغییر کرد`
         : `ویرایش کار «${task.title}»`,
   });
+
+  if (has("outcome")) await claimFromCall(task, access);
 
   return task;
 }

@@ -41,6 +41,7 @@ export default function EditProductPage() {
           price:              product.price?.toString()       ?? "",
           salePrice:          product.salePrice?.toString()   ?? "",
           warranty:           product.warranty          ?? "",
+          condition:          product.condition         ?? "NEW",
           downloadTitle:      product.downloadTitle     ?? "",
           downloadUrl:        product.downloadUrl       ?? "",
           stock:              product.stock?.toString() ?? "0",

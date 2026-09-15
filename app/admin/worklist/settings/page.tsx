@@ -1,6 +1,7 @@
 import HelpButton from "@/components/admin/worklist/HelpButton";
 import RulesClient from "@/components/admin/worklist/RulesClient";
 import WorklistSettingsCard from "@/components/admin/worklist/WorklistSettingsCard";
+import CommissionPlansCard from "@/components/admin/worklist/CommissionPlansCard";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default function WorklistSettingsPage() {
         </p>
       </div>
       <WorklistSettingsCard />
+      <CommissionPlansCard />
       <RulesClient />
     </div>
   );

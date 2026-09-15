@@ -13,6 +13,7 @@ import {
   attendanceGate,
   jalaliKey,
 } from "@/lib/worklist/attendance";
+import { getWorklistConfig } from "@/lib/worklist/settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,9 +49,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "به حضور دیگران دسترسی ندارید" }, { status: 403 });
   }
 
-  const [{ capMin }, calendar] = await Promise.all([
+  const { workHours } = await getWorklistConfig();
+  const [{ capMin }, calendar, target] = await Promise.all([
     attendanceGate(),
-    getMonthAttendance(wanted, year, month),
+    getMonthAttendance(wanted, year, month, workHours),
+    prisma.user.findUnique({ where: { id: wanted }, select: { staffWorkMode: true } }),
   ]);
 
   // فهرست کارکنان و جمعِ ماهشان فقط برای کسی که مجوز دیدن همه را دارد
@@ -60,7 +63,7 @@ export async function GET(req: Request) {
       prisma.user.findMany({
         where: { isActive: true, role: { in: ["ADMIN", "SELLER"] } },
         orderBy: [{ firstName: "asc" }, { phone: "asc" }],
-        select: { id: true, firstName: true, lastName: true, phone: true },
+        select: { id: true, firstName: true, lastName: true, phone: true, staffWorkMode: true },
       }),
       getMonthSummary(year, month),
     ]);
@@ -71,6 +74,7 @@ export async function GET(req: Request) {
         name: [u.firstName, u.lastName].filter(Boolean).join(" ").trim() || u.phone || "بدون نام",
         phone: u.phone,
         isMe: u.id === access.userId,
+        workMode: u.staffWorkMode,
         activeMin: s?.activeMin ?? 0,
         presentDays: s?.presentDays ?? 0,
       };
@@ -83,6 +87,7 @@ export async function GET(req: Request) {
     userId: wanted,
     days: calendar.days,
     totals: calendar.totals,
+    workMode: target?.staffWorkMode ?? "ONSITE",
     staff,
     capMin,
     can: {

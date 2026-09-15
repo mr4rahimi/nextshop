@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, sanitizePermissions } from "@/lib/permissions";
 import { logActivityAsync } from "@/lib/activity";
+import { clearAdminGateCache } from "@/lib/admin-gate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,6 +76,8 @@ export async function PATCH(req: Request, { params }: Params) {
       summary: `ویرایش نقش «${updated.title}»`,
     });
 
+    // دروازه‌ی بخش‌های پنل مجوزها را ۳۰ ثانیه کش می‌کند؛ تغییر نقش باید فوری باشد
+    clearAdminGateCache();
     return NextResponse.json({ role: updated });
   } catch (e) {
     const message = e instanceof Error ? e.message : "خطای سرور";

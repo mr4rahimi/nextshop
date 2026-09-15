@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DOMAIN_LABELS, CARRIERS, parseOutcomes } from "@/lib/worklist/types";
 import type { StaffDomain, StaffChannel } from "@/lib/worklist/types";
 import type { HelpKey } from "./help-content";
+import SupplierPicker, { type SupplierOption } from "./SupplierPicker";
 import type { TaskTypeLite, ContactSuggestion, TaskItem } from "./types";
 import HelpButton from "./HelpButton";
 
@@ -59,7 +60,7 @@ export default function QuickTaskForm({
   const [suggestions, setSuggestions] = useState<ContactSuggestion[]>([]);
   const [customer, setCustomer] = useState<ContactSuggestion | null>(null);
 
-  const [supplierName, setSupplierName] = useState("");
+  const [supplier, setSupplier] = useState<SupplierOption | null>(null);
   const [amount, setAmount] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [carrier, setCarrier] = useState("");
@@ -107,7 +108,7 @@ export default function QuickTaskForm({
     setAmount("");
     setLinkUrl("");
     setCarrier("");
-    setSupplierName("");
+    setSupplier(null);
     if (presetCustomer) {
       setCustomer({
         id: presetCustomer.id,
@@ -178,7 +179,7 @@ export default function QuickTaskForm({
       if (selectedType?.needsAmount) payload.amount = amount.replace(/[^\d]/g, "") || null;
       if (selectedType?.needsLink) payload.linkUrl = linkUrl.trim() || null;
       if (selectedType?.needsCarrier) payload.carrier = carrier || null;
-      if (supplierName.trim()) payload.supplierName = supplierName.trim();
+      if (supplier) payload.supplierId = supplier.id;
 
       try {
         const res = await fetch("/api/admin/worklist/tasks", {
@@ -210,7 +211,7 @@ export default function QuickTaskForm({
     },
     [
       typeId, outcome, note, title, selectedType, customer, contactQuery,
-      amount, linkUrl, carrier, supplierName, onCreated, onClose,
+      amount, linkUrl, carrier, supplier, onCreated, onClose,
     ],
   );
 
@@ -378,12 +379,7 @@ export default function QuickTaskForm({
                   <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">
                     تأمین‌کننده
                   </label>
-                  <input
-                    value={supplierName}
-                    onChange={(e) => setSupplierName(e.target.value)}
-                    placeholder="نام تأمین‌کننده"
-                    className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white outline-none focus:border-blue-400"
-                  />
+                  <SupplierPicker value={supplier} onChange={setSupplier} />
                 </div>
               )}
 

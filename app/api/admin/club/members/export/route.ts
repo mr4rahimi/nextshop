@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { NextResponse } from "next/server";
 import { buildMemberWhere } from "../route";
 import { formatJalaliShort } from "@/lib/club/jalali";
@@ -21,13 +21,12 @@ const SOURCE_FA: Record<string, string> = {
  * به‌صورت کاراکترهای درهم نمایش می‌دهد.
  */
 export async function GET(req: Request) {
-  const admin = await getAuthUser();
-  if (!admin || admin.role !== "ADMIN") {
-    return NextResponse.json({ error: "دسترسی غیرمجاز" }, { status: 403 });
-  }
+  const guard = await requirePermission(["CUSTOMER_VIEW_OWN", "CUSTOMER_VIEW_ALL"]);
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
 
   const url = new URL(req.url);
-  const where = buildMemberWhere(url.searchParams);
+  // خروجی همان مرز مالکیت فهرست را دارد — کارمند فقط مشتریان خودش را برمی‌دارد
+  const where = buildMemberWhere(url.searchParams, guard.access);
 
   const rows = await prisma.clubProfile.findMany({
     where,
@@ -46,6 +45,8 @@ export async function GET(req: Request) {
       tags: true,
       note: true,
       joinedAt: true,
+      ownerName: true,
+      category: { select: { title: true } },
       user: {
         select: { firstName: true, lastName: true, phone: true, email: true },
       },
@@ -68,6 +69,8 @@ export async function GET(req: Request) {
     "برچسب‌ها",
     "یادداشت",
     "تاریخ عضویت",
+    "صاحب (کارمند)",
+    "دسته",
   ];
 
   const lines = [headers.map(csv).join(",")];
@@ -91,6 +94,8 @@ export async function GET(req: Request) {
         r.tags.join(" | "),
         r.note ?? "",
         formatJalaliShort(r.joinedAt),
+        r.ownerName ?? "بی‌صاحب",
+        r.category?.title ?? "",
       ]
         .map(csv)
         .join(",")

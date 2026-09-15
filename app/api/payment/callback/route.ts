@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deductStockForOrderItems } from "@/lib/order-stock";
 import { processOrderForClub } from "@/lib/club/rewards";
+import { syncDealSafe } from "@/lib/worklist/deals";
 
 export const runtime = "nodejs";
 
@@ -94,6 +95,7 @@ async function handleCallback(req: Request, p: CallbackParams) {
 
       // باشگاه مشتریان — امتیاز و سطح بعد از پرداخت موفق
       void processOrderForClub(orderId);
+      syncDealSafe(orderId);
 
       // کسر موجودی سایت و نگاشت — دقیقاً یک بار (گارد PENDING_PAYMENT بالا)
       await deductStockForOrderItems(order.items).catch((e: unknown) =>

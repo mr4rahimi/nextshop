@@ -8,6 +8,8 @@ import { createTask } from "@/lib/worklist/task-service";
 import { normalizePhone } from "@/lib/club/phone";
 import { ensureClubProfile } from "@/lib/club/profile";
 import type { OrderStatus, Prisma } from "@prisma/client";
+import { claimIfUnowned } from "@/lib/club/ownership";
+import { syncDealSafe } from "@/lib/worklist/deals";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -243,6 +245,17 @@ export async function POST(req: Request) {
   // `CALLER_ID` نزدیک‌ترین منبع به سفارش تلفنی است؛ عضو تازه‌ای به enum
   // اضافه نشد تا گزارش‌های موجود جذب مشتری دست نخورند.
   await ensureClubProfile(customer.id, { source: "CALLER_ID" }).catch(() => {});
+
+  // مشتریِ بی‌صاحب به ثبت‌کننده‌ی سفارش می‌رسد (فاز ۸). صاحبِ موجود عوض نمی‌شود.
+  await claimIfUnowned({
+    userId: customer.id,
+    ownerId: guard.access.userId,
+    ownerName: guard.access.name,
+    via: "ORDER",
+  });
+
+  // معامله‌ی سود — فقط اگر همان لحظه پرداخت‌شده ثبت شده باشد؛ بقیه با گذار وضعیت
+  if (paid) syncDealSafe(order.id);
 
   logActivityAsync({
     action: "CREATE",

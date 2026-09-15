@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { matchPath, shouldSkip, normalizePath } from "@/lib/redirects";
 import { getRules, internalBase, INTERNAL_HEADER, internalToken } from "@/lib/redirectCache";
+import { canOpenPath } from "@/lib/admin-sections";
+import { getGateAccess } from "@/lib/admin-gate";
 
 const SECRET = process.env.JWT_SECRET ?? "";
 
@@ -55,6 +57,28 @@ async function verifyToken(token: string): Promise<TokenPayload | null> {
   }
 }
 
+/**
+ * دروازه‌ی بخش‌های پنل (کارتابل فاز ۹ — lib/admin-sections.ts).
+ *
+ * نقش ADMIN فقط ورود به پنل است؛ اینکه کدام بخش باز شود از مجوزهای نقش
+ * کارتابل می‌آید. ادمینِ بی‌نقش همه‌جا را می‌بیند.
+ *
+ * ⚠️ اگر خواندن دسترسی خطا بدهد (دیتابیس در دسترس نیست) مسیر **بسته** می‌ماند.
+ * پنلی که دیتابیس ندارد کاری هم نمی‌تواند بکند؛ باز گذاشتنش در خطا یعنی هر
+ * مشکل گذرا مرز دسترسی را برمی‌دارد.
+ */
+async function sectionAllowed(token: string | undefined, pathname: string): Promise<boolean> {
+  const payload = token ? await verifyToken(token) : null;
+  if (!payload) return false;
+  try {
+    const access = await getGateAccess(payload.userId);
+    return !!access && canOpenPath(pathname, access);
+  } catch (e) {
+    console.error("[admin-gate] خواندن دسترسی شکست خورد:", e);
+    return false;
+  }
+}
+
 async function hasRole(token: string | undefined, roles: string[]): Promise<boolean> {
   if (!token) return false;
   const payload = await verifyToken(token);
@@ -71,6 +95,9 @@ export async function proxy(request: NextRequest) {
 
     if (!(await hasRole(token, ["ADMIN"]))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!(await sectionAllowed(token, pathname))) {
+      return NextResponse.json({ error: "به این بخش دسترسی ندارید" }, { status: 403 });
     }
     return NextResponse.next();
   }
@@ -90,6 +117,9 @@ export async function proxy(request: NextRequest) {
     if (!(await hasRole(token, ["ADMIN"]))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    if (!(await sectionAllowed(token, pathname))) {
+      return NextResponse.json({ error: "به این بخش دسترسی ندارید" }, { status: 403 });
+    }
     return NextResponse.next();
   }
 
@@ -99,6 +129,13 @@ export async function proxy(request: NextRequest) {
 
     if (!(await hasRole(token, ["ADMIN"]))) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+    // صفحه‌ی بسته به کارتابل برمی‌گردد با پیام، نه به صفحه‌ی خطا —
+    // کارتابل تنها جایی است که هر کارمند همیشه باز دارد
+    if (!(await sectionAllowed(token, pathname))) {
+      const url = new URL("/admin/worklist", request.url);
+      url.searchParams.set("denied", pathname);
+      return NextResponse.redirect(url);
     }
     return NextResponse.next();
   }

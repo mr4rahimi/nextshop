@@ -18,6 +18,26 @@ import { BREADCRUMB_LABELS, Icon } from "@/components/admin/nav";
 import WorklistNotifier from "@/components/admin/worklist/WorklistNotifier";
 import HeartbeatPing from "@/components/admin/worklist/HeartbeatPing";
 
+/**
+ * پیام «به این بخش دسترسی ندارید» وقتی proxy صفحه‌ی بسته را به کارتابل برگرداند.
+ * بدون این، کارمند فکر می‌کند لینک خراب است.
+ */
+function DeniedBanner({ pathname }: { pathname: string }) {
+  const [denied, setDenied] = useState<string | null>(null);
+  useEffect(() => {
+    const d = new URLSearchParams(window.location.search).get("denied");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- پارامتر آدرس فقط بعد از mount در دسترس است
+    setDenied(d);
+  }, [pathname]);
+  if (!denied) return null;
+  return (
+    <div className="mx-4 mt-4 lg:mx-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 flex items-center justify-between gap-3">
+      <span>به بخش «{denied}» دسترسی ندارید. اگر لازم دارید، از مدیر بخواهید در نقش شما باز کند.</span>
+      <button onClick={() => setDenied(null)} aria-label="بستن">✕</button>
+    </div>
+  );
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -74,6 +94,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </header>
 
           <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-[#080b12]">
+            <DeniedBanner pathname={pathname} />
             {children}
           </main>
         </div>

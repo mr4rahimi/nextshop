@@ -23,6 +23,9 @@
 
 import { prisma } from "@/lib/prisma";
 import type { Prisma, StaffRecurringRule } from "@prisma/client";
+import { dayKeyOf, iranWeekday } from "./attendance";
+import { getWorklistConfig } from "./settings";
+import { isWorkday } from "./work-hours";
 
 /** بامداد امروز در وقت محلی سرور */
 export function startOfDay(d: Date = new Date()): Date {
@@ -161,11 +164,15 @@ async function runCustomerIdle(
   if (quota <= 0) return 0;
 
   const idleBefore = new Date(now.getTime() - idleDays * 86_400_000);
+  // «مشتری ثابت» از تنظیمات کارتابل می‌آید (بخش ۱۹، سؤال ۲)
+  const { loyalMinOrders, loyalMinSpent } = await getWorklistConfig();
 
   const candidates = await prisma.clubProfile.findMany({
     where: {
       isBlocked: false,
       lastPurchaseAt: { not: null, lt: idleBefore },
+      orderCount: { gte: loyalMinOrders },
+      ...(loyalMinSpent > 0n ? { totalSpent: { gte: loyalMinSpent } } : {}),
       // محافظ فاصله: مشتری‌ای که در همین بازه با او تماس گرفته شده، نه.
       // فیلتر روی `User` است چون `StaffTask.customerId` به کاربر اشاره دارد.
       user: {
@@ -232,6 +239,11 @@ export async function runRecurringRules(now: Date = new Date()): Promise<RunResu
 
   const results: RunResult[] = [];
 
+  // روز تعطیل هیچ قاعده‌ای کار نمی‌سازد — وگرنه شنبه صبح کارتابل با کارهای
+  // جمعه پر است. روز هفته به وقت تهران است، نه ساعت سرور (تله‌ی ۲۷).
+  const { workHours } = await getWorklistConfig();
+  const closedToday = !isWorkday(workHours, iranWeekday(dayKeyOf(now)));
+
   for (const rule of rules) {
     try {
       if (!rule.type.isActive) {
@@ -240,6 +252,10 @@ export async function runRecurringRules(now: Date = new Date()): Promise<RunResu
       }
       if (!rule.ownerId) {
         results.push({ ruleId: rule.id, title: rule.title, created: 0, skipped: "مسئول تعیین نشده" });
+        continue;
+      }
+      if (closedToday) {
+        results.push({ ruleId: rule.id, title: rule.title, created: 0, skipped: "امروز تعطیل است" });
         continue;
       }
       if (!isDue(rule, now)) {

@@ -7,6 +7,7 @@ import { sendOrderSms, OrderSmsEvent } from "@/lib/sms";
 import { processOrderForClub } from "@/lib/club/rewards";
 import { refundOrderPoints } from "@/lib/club/points";
 import { releaseCoupon } from "@/lib/club/coupons";
+import { syncDealSafe } from "@/lib/worklist/deals";
 
 export const runtime = "nodejs";
 
@@ -112,6 +113,8 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
   //    processOrderForClub تکرار را بی‌اثر می‌کند، پس صدا زدن مکرر بی‌خطر است.
   if (prevOrder && data.status && data.status !== prevOrder.status) {
     void processOrderForClub(id);
+    // سود و پورسانت کارتابل — idempotent، مسیر سفارش را نمی‌شکند
+    syncDealSafe(id);
 
     // سفارش لغو یا مرجوع شد → امتیاز خرج‌شده برگردد.
     // بدون این، مشتری هم سفارشش لغو می‌شود هم امتیازش می‌سوزد.

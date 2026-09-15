@@ -28,6 +28,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon, MENU_GROUPS, type NavChild, type NavGroup, type NavItem } from "./nav";
+import { canOpenPath, type GateAccess } from "@/lib/admin-sections";
 
 const STORAGE_KEY = "admin:sidebar";
 const COLLAPSED_CLASS = "admin-nav-collapsed";
@@ -100,6 +101,32 @@ function filterGroups(groups: NavGroup[], query: string): NavGroup[] {
       }, []),
     }))
     .filter(g => g.items.length > 0);
+}
+
+/**
+ * پنهان‌کردن بخش‌هایی که کاربر به آن‌ها دسترسی ندارد.
+ *
+ * ⚠️ فقط راحتی است، نه امنیت — مرز واقعی proxy.ts است. تا وقتی دسترسی
+ * نیامده (`null`) همه‌چیز نشان داده می‌شود تا منو پرش نکند.
+ */
+function filterByAccess(groups: NavGroup[], access: GateAccess | null): NavGroup[] {
+  if (!access || access.isUnrestricted) return groups;
+  const open = (href: string) => canOpenPath(href.split("?")[0], access);
+
+  return groups
+    .map((g) => ({
+      ...g,
+      items: g.items.reduce<NavItem[]>((acc, item) => {
+        const kids = (item.children ?? []).filter((c) => !c.target && open(c.href));
+        if (item.children?.length) {
+          if (kids.length) acc.push({ ...item, href: open(item.href) ? item.href : kids[0].href, children: kids });
+        } else if (open(item.href)) {
+          acc.push(item);
+        }
+        return acc;
+      }, []),
+    }))
+    .filter((g) => g.items.length > 0);
 }
 
 // ── پنل شناور حالت جمع ────────────────────────────────────────────────────────
@@ -394,7 +421,15 @@ export default function AdminSidebar({
 
   useEffect(() => () => holdFlyout(), [holdFlyout]);
 
-  const groups = useMemo(() => filterGroups(MENU_GROUPS, query), [query]);
+  const [access, setAccess] = useState<GateAccess | null>(null);
+  useEffect(() => {
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setAccess({ isUnrestricted: d.isUnrestricted, permissions: d.permissions ?? [] }))
+      .catch(() => {});
+  }, []);
+
+  const groups = useMemo(() => filterGroups(filterByAccess(MENU_GROUPS, access), query), [access, query]);
   const searching = query.trim().length > 0;
 
   async function handleLogout() {

@@ -44,6 +44,7 @@ export async function GET(req: Request) {
         createdAt: true,
         // نقش کارتابل — صفحه‌ی مدیریت ادمین‌ها با همین نقش می‌دهد
         staffRoleId: true,
+        staffWorkMode: true,
         staffRole: { select: { id: true, title: true } },
         _count: { select: { orders: true } },
       },

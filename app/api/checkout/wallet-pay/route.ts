@@ -3,6 +3,7 @@ import { serialize } from "@/lib/serialize";
 import { getAuthUser } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { processOrderForClub } from "@/lib/club/rewards";
+import { syncDealSafe } from "@/lib/worklist/deals";
 
 export const runtime = "nodejs";
 
@@ -73,7 +74,10 @@ export async function POST(req: Request) {
   await prisma.$transaction(txOperations);
 
   // باشگاه مشتریان — فقط وقتی سفارش کامل پرداخت شد
-  if (remaining === 0n) void processOrderForClub(orderId);
+  if (remaining === 0n) {
+    void processOrderForClub(orderId);
+    syncDealSafe(orderId);
+  }
 
   return NextResponse.json(serialize({
     success: true,

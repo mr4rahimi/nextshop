@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import SmsAccountCard from "@/components/admin/sms/SmsAccountCard";
+import CustomerCategoriesCard from "@/components/admin/club/CustomerCategoriesCard";
 
 interface Settings {
   clubEnabled: boolean;
@@ -130,6 +131,9 @@ export default function ClubSettingsPage() {
 
       {/* اعتبار پنل — کارت مشترک با /admin/sms */}
       <SmsAccountCard compact />
+
+      {/* دسته‌های مشتری — مالکیت کارتابل، فاز ۸ */}
+      <CustomerCategoriesCard />
 
       {/* عمومی */}
       <Card title="عمومی">

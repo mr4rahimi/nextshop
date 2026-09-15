@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatMinutes, formatHoursShort, formatTimeTehran } from "@/lib/worklist/types";
 import { JALALI_MONTH_OPTIONS, jalaliMonthName } from "@/lib/club/jalali";
+import { WORK_MODE_LABELS } from "@/lib/worklist/work-hours";
 import type { AttendanceDay, AttendanceResponse } from "./types";
 
 const WEEKDAYS = ["شنبه", "یک‌شنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنج‌شنبه", "جمعه"];
@@ -190,7 +191,7 @@ export default function AttendanceClient({
 
       {/* ── جمع ماه ───────────────────────────────────────────── */}
       {data && !error && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <SummaryCard
             label={`جمع ${jalaliMonthName(data.month)}`}
             value={formatMinutes(data.totals.activeMin)}
@@ -208,6 +209,16 @@ export default function AttendanceClient({
                 ? formatMinutes(
                     Math.round(data.totals.activeMin / data.totals.presentDays),
                   )
+                : "—"
+            }
+          />
+          <SummaryCard
+            label={`موظف تا امروز · ${WORK_MODE_LABELS[data.workMode] ?? "حضوری"}`}
+            value={
+              data.totals.expectedToDateMin > 0
+                ? `${formatMinutes(data.totals.expectedToDateMin)} (${fa(
+                    Math.round((data.totals.activeMin / data.totals.expectedToDateMin) * 100),
+                  )}٪)`
                 : "—"
             }
           />
@@ -283,6 +294,11 @@ export default function AttendanceClient({
                       (خودم)
                     </span>
                   )}
+                  {s.workMode !== "ONSITE" && (
+                    <span className="text-[10px] font-bold mr-1.5 px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                      {WORK_MODE_LABELS[s.workMode] ?? s.workMode}
+                    </span>
+                  )}
                 </span>
                 <span className="flex items-center gap-3 shrink-0">
                   <span className="text-[11px] text-gray-500">
@@ -321,7 +337,8 @@ function DayCell({
   isSelected: boolean;
   onSelect: () => void;
 }) {
-  const isHoliday = day.weekday === 6; // جمعه
+  // تعطیل از ساعت کاری تنظیمات می‌آید، نه جمعه‌ی ثابت
+  const isHoliday = day.expectedMin === 0;
   const present = day.activeMin > 0;
   const atCap = present && day.activeMin >= capMin;
 

@@ -74,6 +74,65 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    key: "customers",
+    label: "مشتریان باشگاه",
+    items: [
+      { key: "CUSTOMER_VIEW_OWN", label: "دیدن مشتریان خودم" },
+      { key: "CUSTOMER_VIEW_ALL", label: "دیدن مشتریان همه", hint: "شامل گزارش پخش مشتری بین کارکنان" },
+      { key: "CUSTOMER_CREATE", label: "ثبت مشتری تازه" },
+      { key: "CUSTOMER_EDIT", label: "ویرایش نام، دسته و یادداشت مشتریان خودم" },
+      {
+        key: "CUSTOMER_ASSIGN",
+        label: "جابه‌جایی صاحب مشتری",
+        hint: "مجوز مدیریتی — پورسانت به صاحب مشتری می‌رسد",
+      },
+      { key: "CUSTOMER_CATEGORY_MANAGE", label: "ساخت و ویرایش دسته‌های مشتری" },
+    ],
+  },
+  {
+    key: "suppliers",
+    label: "تأمین‌کننده‌ها",
+    items: [
+      { key: "SUPPLIER_VIEW", label: "دیدن فهرست تأمین‌کننده‌ها" },
+      { key: "SUPPLIER_CREATE", label: "افزودن سریع تأمین‌کننده", hint: "از داخل فرم کار" },
+      { key: "SUPPLIER_MANAGE", label: "ویرایش و غیرفعال‌کردن تأمین‌کننده" },
+    ],
+  },
+  {
+    key: "deals",
+    label: "سود و پورسانت",
+    items: [
+      { key: "DEAL_LOG", label: "ثبت قیمت خرید روی معاملات خودم" },
+      {
+        key: "DEAL_VIEW_ALL",
+        label: "دیدن سود و حاشیه‌ی همه",
+        hint: "قیمت خرید و حاشیه‌ی سود حساس‌ترین عدد مجموعه است",
+      },
+      { key: "COMMISSION_VIEW_OWN", label: "دیدن پورسانت خودم" },
+      { key: "COMMISSION_VIEW_ALL", label: "دیدن پورسانت همه" },
+      {
+        key: "COMMISSION_MANAGE",
+        label: "طرح پورسانت، تخصیص معامله و ثبت پرداخت",
+        hint: "پرداخت برگشت‌ناپذیر است",
+      },
+    ],
+  },
+  {
+    // دسترسی به بخش‌های قدیمی پنل — نقشه‌ی مسیرها در lib/admin-sections.ts
+    key: "panel",
+    label: "بخش‌های پنل مدیریت",
+    items: [
+      { key: "PANEL_CATALOG", label: "محصولات، دسته‌ها، برندها و رسانه" },
+      { key: "PANEL_ORDERS", label: "سفارش‌ها، ارسال، کیف پول و گارانتی" },
+      { key: "PANEL_CONTENT", label: "مقاله، برگه، نظرات، بنر، منو و سئو" },
+      { key: "PANEL_USERS", label: "کاربران و ادمین‌ها", hint: "شامل تغییر رمز و نقش ادمین‌ها" },
+      { key: "PANEL_CLUB", label: "باشگاه، پیامک انبوه و کمپین", hint: "فهرست «مشتریان من» جداست" },
+      { key: "PANEL_INTEGRATION", label: "یکپارچه‌سازی، بازارگاه و قیمت خرید", hint: "قیمت خرید حسابداری اینجا دیده می‌شود" },
+      { key: "PANEL_SETTINGS", label: "تنظیمات فروشگاه و گفتگو" },
+      { key: "PANEL_REPORTS", label: "گزارش عملکرد و داشبورد" },
+    ],
+  },
+  {
     key: "staff",
     label: "کارکنان",
     items: [
@@ -109,8 +168,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     items: [
       {
         key: "WORK_SETTINGS_MANAGE",
-        label: "انواع کار و قواعد تکرارشونده",
-        hint: "شامل وزن‌ها و فاصله‌ی تماس دوره‌ای",
+        label: "انواع کار، قواعد تکرارشونده و ساعت کاری",
+        hint: "شامل وزن‌ها، فاصله‌ی تماس دوره‌ای و تعریف مشتری ثابت",
       },
     ],
   },

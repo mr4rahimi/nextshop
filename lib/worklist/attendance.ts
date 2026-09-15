@@ -22,6 +22,7 @@
 import { prisma } from "@/lib/prisma";
 import type { StaffSessionEnd } from "@prisma/client";
 import { toJalali, fromJalali, jalaliMonthLength } from "@/lib/club/jalali";
+import { expectedMinutes, normalizeWorkHours, type DayHours } from "./work-hours";
 
 // برچسب‌ها در `types.ts` می‌مانند تا کامپوننت کلاینت بتواند بدون کشیدنِ
 // prisma به بسته‌ی مرورگر از همان قالب‌بندی استفاده کند.
@@ -441,6 +442,8 @@ export interface AttendanceDay {
   editedByName: string | null;
   editedAt: string | null;
   isFuture: boolean;
+  /** دقیقه‌ی موظف طبق ساعت کاری آن روز هفته — روز تعطیل صفر */
+  expectedMin: number;
 }
 
 export function jalaliKey(day: Date): string {
@@ -462,9 +465,12 @@ export async function getMonthAttendance(
   userId: string,
   year: number,
   month: number,
-): Promise<{ days: AttendanceDay[]; totals: { activeMin: number; presentDays: number } }> {
+  workHours: DayHours[] = normalizeWorkHours(null),
+): Promise<{ days: AttendanceDay[]; totals: MonthTotals }> {
   const days = jalaliMonthDays(year, month);
-  if (days.length === 0) return { days: [], totals: { activeMin: 0, presentDays: 0 } };
+  if (days.length === 0) {
+    return { days: [], totals: { activeMin: 0, presentDays: 0, expectedMin: 0, expectedToDateMin: 0 } };
+  }
 
   const rows = await prisma.staffWorkDay.findMany({
     where: { userId, day: { gte: days[0], lte: days[days.length - 1] } },
@@ -502,6 +508,7 @@ export async function getMonthAttendance(
       editedByName: row?.editedByName ?? null,
       editedAt: row?.editedAt?.toISOString() ?? null,
       isFuture: key > todayKey,
+      expectedMin: expectedMinutes(workHours, iranWeekday(day)),
     };
   });
 
@@ -510,8 +517,18 @@ export async function getMonthAttendance(
     totals: {
       activeMin: out.reduce((s, d) => s + d.activeMin, 0),
       presentDays: out.filter((d) => d.activeMin > 0).length,
+      expectedMin: out.reduce((s, d) => s + d.expectedMin, 0),
+      // موظفِ تا امروز — مقایسه‌ی حضورِ نیمه‌ی ماه با موظفِ کل ماه گمراه‌کننده است
+      expectedToDateMin: out.filter((d) => !d.isFuture).reduce((s, d) => s + d.expectedMin, 0),
     },
   };
+}
+
+export interface MonthTotals {
+  activeMin: number;
+  presentDays: number;
+  expectedMin: number;
+  expectedToDateMin: number;
 }
 
 /** جمعِ ماهِ همه‌ی کارکنان — سطر بالای صفحه‌ی حضور */

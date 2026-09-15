@@ -13,6 +13,7 @@
 import { prisma } from "@/lib/prisma";
 import { runRecurringRules } from "./recurring";
 import { closeStaleSessions, aggregateRecentDays } from "./attendance";
+import { sweepDeals } from "./deals";
 
 let started = false;
 
@@ -50,6 +51,16 @@ async function tick() {
       await aggregateRecentDays();
     } catch (e) {
       console.error("[worklist] تجمیع حضور شکست خورد:", e);
+    }
+
+    // معامله‌ی سفارش‌هایی که از مسیرِ بدون هوک پرداخت یا لغو شدند (فاز ۹)
+    try {
+      const { created: deals, voided } = await sweepDeals();
+      if (deals + voided > 0) {
+        console.log(`[worklist] جاروب معامله: ${deals} ساخته، ${voided} لغو شد.`);
+      }
+    } catch (e) {
+      console.error("[worklist] جاروب معامله شکست خورد:", e);
     }
   } catch (e) {
     // زمان‌بند هرگز نباید پروسه‌ی سایت را بشکند

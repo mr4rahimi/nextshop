@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { WORK_MODE_LABELS } from "@/lib/worklist/work-hours";
 
 interface AdminUser {
   id: string;
@@ -14,6 +15,8 @@ interface AdminUser {
   /** نقش کارتابل — `null` یعنی دسترسی کامل (رفتار پیش‌فرض) */
   staffRoleId: string | null;
   staffRole: { id: string; title: string } | null;
+  /** حضوری / دورکار / ترکیبی */
+  staffWorkMode: string;
 }
 
 interface StaffRoleOption {
@@ -73,6 +76,24 @@ export default function AdminsPage() {
       );
     } catch {
       alert("تغییر نقش ذخیره نشد");
+    } finally {
+      setSavingRole(null);
+    }
+  }
+
+  async function assignWorkMode(adminId: string, staffWorkMode: string) {
+    setSavingRole(adminId);
+    try {
+      const res = await fetch(`/api/admin/users/${adminId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ staffWorkMode }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "ذخیره نشد");
+      setAdmins((prev) => prev.map((a) => (a.id === adminId ? { ...a, staffWorkMode: d.staffWorkMode } : a)));
+    } catch {
+      alert("نوع کار ذخیره نشد");
     } finally {
       setSavingRole(null);
     }
@@ -193,6 +214,7 @@ export default function AdminsPage() {
                 {roles.length > 0 && (
                   <th className="text-right text-xs font-black text-gray-500 px-5 py-3">نقش کارتابل</th>
                 )}
+                <th className="text-right text-xs font-black text-gray-500 px-5 py-3">نوع کار</th>
                 <th className="text-right text-xs font-black text-gray-500 px-5 py-3">وضعیت</th>
                 <th className="text-right text-xs font-black text-gray-500 px-5 py-3">تاریخ ثبت</th>
                 <th className="px-5 py-3" />
@@ -230,6 +252,18 @@ export default function AdminsPage() {
                         </select>
                       </td>
                     )}
+                    <td className="px-5 py-4">
+                      <select
+                        value={admin.staffWorkMode ?? "ONSITE"}
+                        disabled={savingRole === admin.id}
+                        onChange={(e) => assignWorkMode(admin.id, e.target.value)}
+                        className="px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-700 dark:text-gray-300 outline-none focus:border-blue-400 disabled:opacity-50"
+                      >
+                        {Object.entries(WORK_MODE_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="px-5 py-4">
                       <span className={`text-[11px] font-black px-2.5 py-1 rounded-lg border ${
                         admin.isActive

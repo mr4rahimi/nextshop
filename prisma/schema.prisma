@@ -36,6 +36,16 @@ model User {
   staffRole            StaffRole?  @relation(fields: [staffRoleId], references: [id])
   staffOrders          Order[]     @relation("OrderCreatedByStaff")
   staffTasksAsCustomer StaffTask[] @relation("StaffTaskCustomer")
+  staffNotes           StaffNote[]
+  /// حضوری یا دورکار — حضورِ کارمند دورکار با آی‌پی دفتر سنجیده نمی‌شود
+  staffWorkMode        StaffWorkMode @default(ONSITE)
+  /// طرح پورسانت — خالی یعنی این کارمند پورسانت نمی‌گیرد
+  commissionPlanId     String?
+  commissionPlan       StaffCommissionPlan? @relation(fields: [commissionPlanId], references: [id], onDelete: SetNull)
+  staffDealsOwned      StaffDeal[]   @relation("StaffDealOwner")
+  staffDealsAsCustomer StaffDeal[]   @relation("StaffDealCustomer")
+  staffPayouts         StaffPayout[] @relation("StaffPayoutUser")
+  ownedClubProfiles    ClubProfile[] @relation("ClubProfileOwner")
 
   @@index([role])
   @@index([isActive])
@@ -89,6 +99,7 @@ model Category {
   @@index([parentId])
   @@index([isActive])
   @@index([sortOrder])
+  commissionRules StaffCommissionRule[]
 }
 
 model Brand {
@@ -112,6 +123,8 @@ model Product {
   id                 String             @id @default(cuid())
   title              String
   slug               String             @unique
+  /// نو، استوک، دست‌دوم یا بازسازی‌شده — مبنای درصد پورسانت (بخش ۲۲.۵ کارتابل)
+  condition          ProductCondition   @default(NEW)
   categoryId         String
   brandId            String?
   // شناسه‌های محصول برای Product schema و Google Merchant Center
@@ -167,6 +180,7 @@ model Product {
   @@index([categoryId])
   @@index([brandId])
   @@index([isActive])
+  @@index([condition])
 }
 
 model ProductImage {
@@ -287,6 +301,7 @@ model Order {
   address          Address?    @relation(fields: [addressId], references: [id])
   user             User        @relation(fields: [userId], references: [id])
   createdByStaff   User?       @relation("OrderCreatedByStaff", fields: [createdByStaffId], references: [id])
+  staffDeal        StaffDeal?
   items            OrderItem[]
   payments         Payment[]
 
@@ -748,6 +763,12 @@ model StoreSettings {
   /// سقف حضور روزانه بر حسب دقیقه — بیشتر از این یعنی یادش رفته خروج بزند،
   /// نه اینکه کار کرده. پیش‌فرض ده ساعت.
   worklistDailyCapMin Int     @default(600)
+  /// ساعت کاری هر روز هفته: [{ day: 0..6 (شنبه = ۰), open, start: "09:00", end: "18:00" }]
+  /// آرایه‌ی خالی یعنی پیش‌فرض کد — lib/worklist/work-hours.ts
+  worklistWorkHours   Json    @default("[]")
+  /// «مشتری ثابت» برای قاعده‌ی تماس دوره‌ای: حداقل تعداد خرید و مبلغ کل (تومان)
+  worklistLoyalMinOrders Int    @default(2)
+  worklistLoyalMinSpent  BigInt @default(0)
 }
 
 model MenuItem {
@@ -1713,6 +1734,18 @@ model ClubProfile {
   firstPlatform  String?
   firstSeenAt    DateTime?
   registeredById String? // شناسه فروشنده‌ای که ثبت کرده
+
+  /// ── مالکیت کارتابل (فاز ۸) — کارمندی که صاحب این مشتری است ──
+  /// ⚠️ تصاحب خودکار فقط روی مشتریِ بی‌صاحب. جابه‌جایی فقط صریح و با ردیف
+  /// `ClubOwnerTransfer`. مستندات: docs/features/staff-worklist.md بخش ۲۱
+  ownerId        String?
+  /// اسنپ‌شات نام مالک — تله‌ی ۴
+  ownerName      String?
+  claimedVia     StaffClaimSource?
+  claimedAt      DateTime?
+  /// کارِ تماسی که باعث تصاحب شد
+  claimTaskId    String?
+  categoryId     String?
   tierId         String?
   totalSpent     BigInt      @default(0)
   orderCount     Int         @default(0)
@@ -1728,6 +1761,9 @@ model ClubProfile {
 
   user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   tier          ClubTier?             @relation(fields: [tierId], references: [id])
+  owner         User?                 @relation("ClubProfileOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  category      ClubCustomerCategory? @relation(fields: [categoryId], references: [id])
+  ownerTransfers ClubOwnerTransfer[]
   points        PointTransaction[]
   touchpoints   ClubTouchpoint[]
   identities    ClubChannelIdentity[]
@@ -1742,6 +1778,8 @@ model ClubProfile {
   @@index([source])
   @@index([sourcePlatform])
   @@index([joinedAt])
+  @@index([ownerId, categoryId])
+  @@index([categoryId])
 }
 
 model ClubTier {
@@ -2405,6 +2443,9 @@ model StaffTask {
   contactName  String?
   contactPhone String?
   supplierName String?
+  /// از فهرست تأمین‌کننده‌ها — `supplierName` اسنپ‌شات نام همان است (تله‌ی ۴)
+  supplierId   String?
+  supplier     StaffSupplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   /// اتصال به موجودیت فروشگاه — از همان ActivityEntity استفاده می‌شود
   entity   ActivityEntity?
@@ -2450,6 +2491,7 @@ model StaffTask {
   @@index([entity, entityId])
   @@index([contactPhone])
   @@index([parentId])
+  @@index([supplierId])
 }
 
 /// رشته‌ی یادداشت‌های یک کار.
@@ -2612,4 +2654,268 @@ model StaffWorkDay {
 
   @@unique([userId, day])
   @@index([day])
+}
+
+/// یادداشت شخصی کارمند در کارتابل — مثل Google Keep.
+///
+/// ⚠️ کاملاً خصوصی است: هیچ مجوزی (حتی دسترسی کامل ادمین) دیدن یادداشت
+/// دیگری را باز نمی‌کند. همه‌ی کوئری‌ها باید با `userId` کاربر جاری فیلتر شوند.
+model StaffNote {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String   @default("")
+  body      String   @default("")
+  /// کلید رنگ — فهرست مجاز در lib/worklist/note-colors.ts
+  color     String   @default("default")
+  pinned    Boolean  @default(false)
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, archived, pinned, updatedAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// کارتابل — تأمین‌کننده، مالکیت مشتری
+// مستندات: docs/features/staff-worklist.md بخش‌های ۱۹ و ۲۱
+// ═══════════════════════════════════════════════════════════════════
+
+enum StaffWorkMode {
+  ONSITE // حضوری
+  REMOTE // دورکار
+  HYBRID // ترکیبی
+}
+
+/// تأمین‌کننده — فهرست مشترک برای کار، معامله و گزارش.
+///
+/// ⚠️ حذف نمی‌شود، فقط `isActive = false`؛ کارها و معامله‌های قدیمی به آن ارجاع دارند.
+model StaffSupplier {
+  id          String   @id @default(cuid())
+  name        String
+  /// نام نرمال‌شده برای جلوگیری از تکرار («شرکت الف» و «شركت الف» یکی‌اند)
+  nameKey     String   @unique
+  contactName String?
+  phone       String?
+  city        String?
+  note        String?
+  isActive    Boolean  @default(true)
+  createdById String?
+  createdByName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks StaffTask[]
+  deals StaffDeal[]
+
+  @@index([isActive, name])
+}
+
+/// دسته‌ی مشتری — ارگانی، تهران، شهرستان… قابل افزودن توسط مدیر.
+///
+/// با سطح باشگاه (`ClubTier`) قاطی نمی‌شود: سطح با خرید به دست می‌آید، دسته را
+/// آدم تعیین می‌کند. ⚠️ حذف نمی‌شود، فقط `isActive = false`.
+model ClubCustomerCategory {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  color     String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profiles ClubProfile[]
+
+  @@index([isActive, sortOrder])
+}
+
+enum StaffClaimSource {
+  MANUAL // کارمند خودش ثبت کرد
+  CALL   // نتیجه‌ی تماس ثبت شد و مشتری بی‌صاحب بود
+  ORDER  // سفارش تلفنی به نامش ثبت شد
+  ADMIN  // مدیر تخصیص داد
+}
+
+/// تاریخچه‌ی جابه‌جایی مالکیت مشتری — هرگز پاک نمی‌شود.
+model ClubOwnerTransfer {
+  id        String   @id @default(cuid())
+  profileId String
+  fromId    String?
+  fromName  String?
+  /// خالی یعنی مشتری بی‌صاحب شد
+  toId      String?
+  toName    String?
+  byId      String?
+  byName    String
+  via       StaffClaimSource
+  reason    String?
+  createdAt DateTime @default(now())
+
+  profile ClubProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// کارتابل فاز ۹ — سود مستقیم و پورسانت
+// مستندات: docs/features/staff-worklist.md بخش ۲۲
+// ═══════════════════════════════════════════════════════════════════
+
+enum ProductCondition {
+  NEW         // نو
+  STOCK       // استوک
+  USED        // دست‌دوم
+  REFURBISHED // بازسازی‌شده
+}
+
+enum StaffDealStatus {
+  PENDING   // درآمد معلوم است، هزینه هنوز وارد نشده
+  CONFIRMED // هزینه وارد شده، سود و پورسانت قطعی است
+  VOID      // سفارش لغو یا مرجوع شد
+}
+
+/// یک معامله‌ی سوددار که به یک کارمند نسبت داده می‌شود.
+///
+/// ⚠️ `orderId` یکتاست: هر سفارش حداکثر یک ردیف سود دارد.
+/// ⚠️ دوره‌ی باز جدول ندارد: هر معامله‌ی CONFIRMED با `payoutId = null` در دوره‌ی باز است.
+model StaffDeal {
+  id           String          @id @default(cuid())
+  orderId      String?         @unique
+  customerId   String?
+  /// خالی = بی‌صاحب؛ هیچ‌وقت پورسانت نمی‌سازد تا مدیر تخصیص دهد
+  ownerId      String?
+  ownerName    String?
+  customerName String?
+  title        String
+  /// مبلغ کالاها بعد از تخفیف، بدون کرایه‌ی ارسال
+  revenue      BigInt          @default(0)
+  cost         BigInt?
+  profit       BigInt?
+  commission   BigInt?
+  costPerItem  Boolean         @default(false)
+  /// معامله‌ی بدون سفارش — درآمدش را کارمند وارد کرده
+  isManual     Boolean         @default(false)
+  supplierId   String?
+  supplierName String?
+  note         String?
+  status       StaffDealStatus @default(PENDING)
+  /// «1405-06» — فقط برای گزارش ماهانه، ربطی به دوره‌ی پرداخت ندارد
+  monthKey     String
+  occurredAt   DateTime
+  confirmedAt  DateTime?
+  confirmedById   String?
+  confirmedByName String?
+  /// تسویه‌ای که این معامله را پوشش داد
+  payoutId     String?
+  /// معامله‌ای که بعد از پرداخت VOID شد، کسری‌اش در این تسویه آمد
+  adjustedPayoutId String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  order          Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  customer       User?          @relation("StaffDealCustomer", fields: [customerId], references: [id], onDelete: SetNull)
+  owner          User?          @relation("StaffDealOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  supplier       StaffSupplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  payout         StaffPayout?   @relation("StaffPayoutDeals", fields: [payoutId], references: [id])
+  adjustedPayout StaffPayout?   @relation("StaffPayoutAdjustments", fields: [adjustedPayoutId], references: [id])
+  items          StaffDealItem[]
+
+  @@index([ownerId, payoutId, status])
+  @@index([ownerId, monthKey])
+  @@index([payoutId, status])
+  @@index([status, createdAt])
+}
+
+/// یک ردیف معامله به‌ازای هر کالای سفارش — چون درصد پورسانت به کالا بستگی دارد.
+/// دسته و وضعیت کالا در لحظه‌ی ساخت کپی می‌شوند.
+model StaffDealItem {
+  id           String           @id @default(cuid())
+  dealId       String
+  orderItemId  String?          @unique
+  productId    String?
+  title        String
+  categoryId   String?
+  /// زنجیره‌ی دسته از خودش تا ریشه — تطبیق قاعده بدون پیمایش درخت
+  categoryPath String[]         @default([])
+  condition    ProductCondition @default(NEW)
+  qty          Int              @default(1)
+  revenue      BigInt           @default(0)
+  cost         BigInt?
+  profit       BigInt?
+  percent      Float?
+  commission   BigInt?
+  ruleId       String?
+  ruleLabel    String?
+
+  deal StaffDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId])
+  @@index([categoryId])
+}
+
+model StaffCommissionPlan {
+  id        String   @id @default(cuid())
+  title     String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rules StaffCommissionRule[]
+  users User[]
+}
+
+/// قاعده‌ی درصد. قاعده‌ی بدون دسته و بدون وضعیت، پیش‌فرض همه‌ی کالاهاست.
+model StaffCommissionRule {
+  id         String            @id @default(cuid())
+  planId     String
+  categoryId String?
+  condition  ProductCondition?
+  percent    Float
+  isActive   Boolean           @default(true)
+  createdAt  DateTime          @default(now())
+
+  plan     StaffCommissionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  category Category?           @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([planId, isActive])
+}
+
+/// یک تسویه‌ی ثبت‌شده با یک کارمند — از لحظه‌ی ساخت قفل است.
+///
+/// پرداخت جزئی مجاز است (بخش ۱۹، سؤال ۱۰): `due` مبلغ قابل پرداخت، `amount`
+/// آنچه واقعاً پرداخت شد، و `remaining` به تسویه‌ی بعدی منتقل می‌شود.
+model StaffPayout {
+  id              String   @id @default(cuid())
+  userId          String
+  userName        String
+  fromAt          DateTime
+  toAt            DateTime
+  dealCount       Int      @default(0)
+  totalProfit     BigInt   @default(0)
+  grossCommission BigInt   @default(0)
+  /// فقط نمایشی: grossCommission ÷ totalProfit
+  percent         Float    @default(0)
+  planTitle       String?
+  /// کسری مرجوعی‌های بعد از پرداخت — منفی یا صفر
+  adjustment      BigInt   @default(0)
+  /// باقی‌مانده‌ی تسویه‌ی قبلی که به این دوره آمد
+  carriedIn       BigInt   @default(0)
+  /// grossCommission + adjustment + carriedIn
+  due             BigInt   @default(0)
+  amount          BigInt   @default(0)
+  /// due - amount → carriedIn تسویه‌ی بعدی
+  remaining       BigInt   @default(0)
+  paidAt          DateTime @default(now())
+  paidById        String?
+  paidByName      String
+  note            String?
+
+  user        User        @relation("StaffPayoutUser", fields: [userId], references: [id])
+  deals       StaffDeal[] @relation("StaffPayoutDeals")
+  adjustments StaffDeal[] @relation("StaffPayoutAdjustments")
+
+  @@index([userId, paidAt])
+  @@index([paidAt])
 }

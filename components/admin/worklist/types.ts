@@ -41,6 +41,7 @@ export interface TaskItem {
   contactName: string | null;
   contactPhone: string | null;
   supplierName: string | null;
+  supplierId: string | null;
   entity: string | null;
   entityId: string | null;
   linkUrl: string | null;
@@ -154,6 +155,8 @@ export interface AttendanceDay {
   editedByName: string | null;
   editedAt: string | null;
   isFuture: boolean;
+  /** دقیقه‌ی موظف طبق ساعت کاری — روز تعطیل صفر */
+  expectedMin: number;
 }
 
 /** یک کارمند در فهرست صفحه‌ی حضور، با جمعِ همان ماه */
@@ -162,6 +165,7 @@ export interface AttendanceStaff {
   name: string;
   phone: string;
   isMe: boolean;
+  workMode: string;
   activeMin: number;
   presentDays: number;
 }
@@ -171,7 +175,9 @@ export interface AttendanceResponse {
   month: number;
   userId: string;
   days: AttendanceDay[];
-  totals: { activeMin: number; presentDays: number };
+  totals: { activeMin: number; presentDays: number; expectedMin: number; expectedToDateMin: number };
+  /** حضوری / دورکار / ترکیبیِ کارمندِ نمایش‌داده‌شده */
+  workMode: string;
   staff: AttendanceStaff[];
   capMin: number;
   can: { viewAll: boolean; edit: boolean; manageSettings: boolean };

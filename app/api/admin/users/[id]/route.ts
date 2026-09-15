@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { hashPassword } from "@/lib/auth";
 import type { Prisma } from "@prisma/client";
+import { requirePermission } from "@/lib/permissions";
+import { clearAdminGateCache } from "@/lib/admin-gate";
 
 export const runtime = "nodejs";
 
@@ -49,6 +51,16 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
   const data = await _req.json();
   const has = (k: string) => Object.prototype.hasOwnProperty.call(data, k);
 
+  // ⚠️ نقش سایت و نقش کارتابل مرز دسترسی‌اند. بدون این، هر کسی که به صفحه‌ی
+  // کاربران دسترسی دارد می‌توانست نقش کارتابل خودش را بردارد و «ادمین بی‌نقش»
+  // یعنی دسترسی کامل شود.
+  if (has("staffRoleId") || has("role")) {
+    const guard = await requirePermission("ROLE_MANAGE");
+    if (!guard.ok) {
+      return NextResponse.json({ error: "تغییر نقش فقط با مجوز مدیریت نقش‌ها" }, { status: guard.status });
+    }
+  }
+
   // ⚠️ فقط فیلدهایی نوشته می‌شوند که واقعاً در بدنه آمده‌اند. پیش‌تر یک
   // درخواست ناقص، نام و ایمیل را خالی می‌کرد و کاربر را فعال می‌کرد —
   // همان تله‌ای که یک بار روی محصولات هم خورده بودیم.
@@ -61,6 +73,14 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (data.password) patch.passwordHash = await hashPassword(data.password);
 
   // نقش کارتابل — `null` یعنی «بدون نقش» که دسترسی کامل می‌دهد
+  // حضوری / دورکار / ترکیبی — بخش ۱۹ مستندات کارتابل، سؤال ۶
+  if (has("staffWorkMode")) {
+    if (!["ONSITE", "REMOTE", "HYBRID"].includes(data.staffWorkMode)) {
+      return NextResponse.json({ error: "نوع کار نامعتبر است" }, { status: 400 });
+    }
+    patch.staffWorkMode = data.staffWorkMode;
+  }
+
   if (has("staffRoleId")) {
     patch.staffRole = data.staffRoleId
       ? { connect: { id: data.staffRoleId } }
@@ -74,9 +94,11 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
       select: {
         id: true, firstName: true, lastName: true, email: true, isActive: true,
         staffRoleId: true,
+        staffWorkMode: true,
         staffRole: { select: { id: true, title: true } },
       },
     });
+    if (has("staffRoleId") || has("role") || has("isActive")) clearAdminGateCache(id);
     return NextResponse.json(user);
   } catch (e) {
     // کاربرِ نبوده یا نقشِ نبوده باید ۴۰۴ بدهد، نه ۵۰۰ با ردِ پشته
