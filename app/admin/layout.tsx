@@ -17,6 +17,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import { BREADCRUMB_LABELS, Icon } from "@/components/admin/nav";
 import WorklistNotifier from "@/components/admin/worklist/WorklistNotifier";
 import HeartbeatPing from "@/components/admin/worklist/HeartbeatPing";
+import OnlineOrderSound from "@/components/admin/orders/OnlineOrderSound";
 
 /**
  * پیام «به این بخش دسترسی ندارید» وقتی proxy صفحه‌ی بسته را به کارتابل برگرداند.
@@ -78,6 +79,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
 
             <div className="flex flex-shrink-0 items-center gap-2">
+              <OnlineOrderSound />
               <ThemeToggle />
               <Link
                 href="/"
