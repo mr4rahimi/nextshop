@@ -26,6 +26,7 @@
 | [نظرات محصول و مقاله](features/reviews.md) | پنل `/admin/comments` — ثبت نظر بدون ورود، برچسب خریدار، تأیید ادمین، پاسخ فروشگاه، گفتگو زیر مقاله، اسکیمای Review و Comment |
 | [سایدبار پنل مدیریت](features/admin-sidebar.md) | درخت منو در `nav.tsx`، حالت جمع‌شونده، پنل شناور، جستجوی منو |
 | [ورود به پنل مدیریت](features/admin-login.md) | `/admin/login` — جدا بودن از اسکلت پنل، لایه‌های محافظت در `proxy.ts`، ظاهر تک‌حالته |
+| [پیش‌نمایش قیمت پلتفرم‌ها](features/price-preview.md) | قیمت نمایشی هر محصول روی هر بازارگاه طبق قوانین قیمت — فقط خواندنی، دو مصرف‌کننده در پنل |
 | [تاریخ و تقویم شمسی](features/jalali-dates.md) | `JalaliDatePicker` و `DateField` — قرارداد مقدار میلادی، `fa-IR` از قبل شمسی است، ساعت دیواری تهران |
 | [صدای سفارش آنلاین](features/online-order-sound.md) | دکمه‌ی بلندگو در نوار بالای پنل، poll هر ۲۰ ثانیه، همان صدای CRM |
 | [گزارش عملکرد ادمین](features/activity-reports.md) | پنل `/admin/reports` — `ActivityLog`، diff «قبل ← بعد»، نمودارها |

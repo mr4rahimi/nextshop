@@ -46,16 +46,25 @@ export function calculatePrice(rule: RuleWithTiers, purchasePrice: number, stock
 
 // ── پیدا کردن اولین قانون فعال و منطبق برای یک پلتفرم/محصول ──────────
 
-async function findApplicableRule(
-  platformCode: string,
-  shopProduct: { categoryId: string; brandId: string | null } | null,
-): Promise<RuleWithTiers | null> {
-  const rules = await prisma.integPriceRule.findMany({
+/** همه‌ی قوانین فعال، به ترتیب اولویت. برای محاسبه‌ی گروهی یک بار صدا بزنید. */
+export async function loadActiveRules(): Promise<RuleWithTiers[]> {
+  return prisma.integPriceRule.findMany({
     where:   { isActive: true },
     orderBy: { priority: "asc" },
     include: { tiers: true },
   });
+}
 
+/**
+ * اولین قانونِ منطبق از فهرست از پیش خوانده‌شده — خالص و بدون کوئری.
+ * پیش‌نمایش قیمت ده‌ها محصول × چند پلتفرم را می‌سازد، پس نباید به ازای هر
+ * ترکیب دوباره کل جدول قوانین را بخواند.
+ */
+export function pickRule(
+  rules: RuleWithTiers[],
+  platformCode: string,
+  shopProduct: { categoryId: string; brandId: string | null } | null,
+): RuleWithTiers | null {
   for (const rule of rules) {
     if (rule.targetPlatforms.length > 0 && !rule.targetPlatforms.includes(platformCode)) continue;
 
@@ -69,6 +78,13 @@ async function findApplicableRule(
     return rule;
   }
   return null;
+}
+
+async function findApplicableRule(
+  platformCode: string,
+  shopProduct: { categoryId: string; brandId: string | null } | null,
+): Promise<RuleWithTiers | null> {
+  return pickRule(await loadActiveRules(), platformCode, shopProduct);
 }
 
 // ── Push قیمت محاسبه‌شده‌ی یک mapping به همه‌ی لینک‌های فعال ──────────

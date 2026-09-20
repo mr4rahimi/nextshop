@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { pushPriceForMapping } from "@/lib/integration/core/pricing";
 import { tehranDayStart, tehranDayEnd, toTehranDate } from "@/lib/integration/core/discount";
+import {
+  previewPricesForMappings,
+  type MappingPricePreview,
+  type PlatformPricePreview,
+} from "@/lib/integration/core/price-preview";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +42,12 @@ export async function GET(req: NextRequest) {
     : [];
   const shopMap = new Map(shopProducts.map((p) => [p.id, p]));
 
+  // قیمت نمایشی هر لینک طبق قوانین قیمت — فقط خواندنی، هیچ ارسالی ندارد.
+  // اگر محاسبه خطا داد صفحه نباید بیفتد؛ تخفیف‌ها بدون پیش‌نمایش هم کار می‌کنند.
+  const previews: Map<string, MappingPricePreview> =
+    await previewPricesForMappings(mappings.map((m) => m.id))
+      .catch(() => new Map<string, MappingPricePreview>());
+
   const items = mappings.map((m) => {
     const shopLink = m.links.find((l) => l.platformCode === "shop");
     const title =
@@ -44,10 +55,15 @@ export async function GET(req: NextRequest) {
       m.links.find((l) => l.externalTitle)?.externalTitle ??
       "(بدون عنوان)";
 
+    const preview = previews.get(m.id);
+    const priceOf = new Map<string, PlatformPricePreview>(
+      (preview?.platforms ?? []).map((p) => [p.platformCode, p]));
+
     return {
       id:    m.id,
       title,
       stock: m.stock,
+      purchasePrice: preview?.purchasePrice ?? null,
       syncPriceEnabled: m.syncPriceEnabled,
       links: m.links
         .filter((l) => !EXCLUDED.has(l.platformCode) && (!platform || l.platformCode === platform))
@@ -63,6 +79,11 @@ export async function GET(req: NextRequest) {
           discountStock:     l.discountStock,
           discountPushedAt:  l.discountPushedAt?.toISOString() ?? null,
           discountPushError: l.discountPushError,
+          // ── فقط نمایشی ──
+          basePrice:  priceOf.get(l.platformCode)?.price ?? null,
+          rulePrice:  priceOf.get(l.platformCode)?.effective ?? null,
+          ruleName:   priceOf.get(l.platformCode)?.ruleName ?? null,
+          priceNote:  priceOf.get(l.platformCode)?.reason ?? null,
         })),
     };
   }).filter((m) => m.links.length > 0);

@@ -30,6 +30,11 @@ interface DiscountLink {
   discountStock:     number | null;
   discountPushedAt:  string | null;
   discountPushError: string | null;
+  // ── فقط نمایشی؛ از قوانین قیمت ساخته می‌شوند و در PATCH نقشی ندارند ──
+  basePrice: number | null;
+  rulePrice: number | null;
+  ruleName:  string | null;
+  priceNote: string | null;
 }
 
 interface Item {
@@ -38,6 +43,7 @@ interface Item {
   stock: number;
   syncPriceEnabled: boolean;
   links: DiscountLink[];
+  purchasePrice: number | null;
 }
 
 type Patch = Partial<Pick<DiscountLink,
@@ -45,7 +51,21 @@ type Patch = Partial<Pick<DiscountLink,
 
 const inputClass =
   "px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] " +
-  "bg-gray-50 dark:bg-white/[0.03] text-xs disabled:opacity-40";
+  "bg-gray-50 dark:bg-white/[0.03] text-xs disabled:opacity-40 " +
+  "text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500";
+
+const fa = (n: number) => n.toLocaleString("fa-IR");
+
+// آیا بازه‌ی تخفیف همین حالا فعال است؟ تاریخ‌ها «YYYY-MM-DD» به وقت تهران‌اند و
+// پایان بازه یعنی «تا آخر آن روز» — همان قراردادی که سرور در tehranDayEnd دارد.
+function windowActive(startsAt: string | null, endsAt: string | null): boolean {
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+  if (startsAt && startsAt > today) return false;
+  if (endsAt && endsAt < today) return false;
+  return true;
+}
 
 export default function DiscountsClient({
   platforms,
@@ -120,7 +140,7 @@ export default function DiscountsClient({
         <select
           value={platform}
           onChange={(e) => { setPage(1); setPlatform(e.target.value); }}
-          className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-sm font-bold"
+          className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-sm font-bold text-gray-900 dark:text-white"
         >
           {platforms.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
         </select>
@@ -221,6 +241,61 @@ export default function DiscountsClient({
                     </button>
                   </div>
 
+                  {/* ── قیمت نمایشی روی همین بازارگاه ──
+                      `basePrice` قیمت طبق قوانین قیمتِ همین پلتفرم است (بدون تخفیف).
+                      برای لینک «تحت مدیریت پنل» قیمت با تخفیف را همین‌جا حساب می‌کنیم
+                      تا با درصدی که همین الان ویرایش شده هم‌قدم بماند؛ برای لینک آزاد
+                      تخفیف از کش خود پلتفرم می‌آید و سرور آن را در `rulePrice` داده. */}
+                  {l.basePrice != null && (() => {
+                    const pct   = l.discountPercent ?? 0;
+                    const inWin = windowActive(l.discountStartsAt, l.discountEndsAt);
+
+                    const off = l.discountManaged
+                      ? (pct > 0 && pct < 100 ? Math.round(l.basePrice * (1 - pct / 100)) : null)
+                      : (l.rulePrice != null && l.rulePrice !== l.basePrice ? l.rulePrice : null);
+
+                    // لینک آزاد همیشه «در بازه» است — تخفیفش را خود پلتفرم اجرا می‌کند
+                    const active = l.discountManaged ? inWin : true;
+
+                    return (
+                      <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                        {m.purchasePrice != null && (
+                          <span className="text-gray-400">خرید {fa(m.purchasePrice)}</span>
+                        )}
+                        <span
+                          className="text-gray-500 dark:text-gray-400"
+                          title={l.ruleName ? `قانون قیمت: ${l.ruleName}` : undefined}
+                        >
+                          قیمت نمایشی{" "}
+                          <b className={off != null && active
+                            ? "text-gray-400 line-through font-normal"
+                            : "text-gray-700 dark:text-gray-200"}>
+                            {fa(l.basePrice)}
+                          </b>
+                        </span>
+                        {off != null && (
+                          <span className={active
+                            ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                            : "text-gray-400"}>
+                            {active ? "با تخفیف " : "خارج از بازه — "}
+                            {fa(off)}
+                            {l.discountManaged
+                              ? ` (${fa(pct)}٪)`
+                              : " (تخفیف خود پلتفرم)"}
+                          </span>
+                        )}
+                        <span className="text-gray-300 dark:text-gray-600">تومان</span>
+                      </div>
+                    );
+                  })()}
+
+                  {/* دلیل نبودِ محاسبه، یا نامشخص بودن تخفیف — قیمت را پنهان نمی‌کند */}
+                  {l.priceNote && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 leading-5">
+                      {l.priceNote}
+                    </p>
+                  )}
+
                   {l.discountPushError ? (
                     <p className="text-[11px] text-red-600 dark:text-red-400">
                       آخرین ارسال ناموفق: {l.discountPushError}
@@ -240,12 +315,12 @@ export default function DiscountsClient({
       {pages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] text-xs disabled:opacity-40">
+            className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] text-xs text-gray-700 dark:text-gray-200 disabled:opacity-40">
             قبلی
           </button>
           <span className="text-xs text-gray-500">{page} از {pages}</span>
           <button onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page === pages}
-            className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] text-xs disabled:opacity-40">
+            className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] text-xs text-gray-700 dark:text-gray-200 disabled:opacity-40">
             بعدی
           </button>
         </div>

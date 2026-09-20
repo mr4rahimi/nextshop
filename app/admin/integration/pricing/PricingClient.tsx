@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface Link {
   platformCode: string;
@@ -18,11 +18,148 @@ interface Item {
   links: Link[];
 }
 
+// ── پیش‌نمایش قیمت روی پلتفرم‌ها ────────────────────────────────────
+// فقط خواندنی؛ این پاپ‌آپ هیچ قیمتی به بازارگاه ارسال نمی‌کند.
+
+interface PlatformPrice {
+  platformCode: string;
+  platformName: string;
+  ruleName: string | null;
+  price: number | null;
+  effective: number | null;
+  discountPercent: number | null;
+  discountSource: "MANAGED" | "PLATFORM" | "NONE" | "UNKNOWN";
+  reason: string | null;
+}
+
+const fa = (n: number) => n.toLocaleString("fa-IR");
+
+const SOURCE_FA: Record<string, string> = {
+  MANAGED:  "تخفیف از پنل",
+  PLATFORM: "تخفیف از خود پلتفرم",
+};
+
+function PricePreviewModal({ item, title, onClose }: {
+  item: Item;
+  title: string;
+  onClose: () => void;
+}) {
+  const [rows,    setRows]    = useState<PlatformPrice[] | null>(null);
+  const [error,   setError]   = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res  = await fetch(`/api/integration/pricing/preview?mappingId=${item.id}`);
+        const data = await res.json() as { platforms?: PlatformPrice[]; error?: string };
+        if (!alive) return;
+        if (!res.ok) { setError(data.error ?? "خطا در محاسبه"); return; }
+        setRows(data.platforms ?? []);
+      } catch {
+        if (alive) setError("ارتباط برقرار نشد");
+      }
+    })();
+    return () => { alive = false; };
+  }, [item.id]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg max-h-[80vh] overflow-auto rounded-2xl bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/10 shadow-2xl"
+      >
+        <div className="px-5 py-4 border-b border-gray-100 dark:border-white/[0.06] flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-sm text-gray-900 dark:text-white">قیمت نهایی در پلتفرم‌ها</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 truncate">{title}</p>
+            <p className="text-[11px] text-gray-400 mt-1">
+              قیمت خرید {item.purchasePrice != null ? fa(item.purchasePrice) : "—"} · موجودی {fa(item.stock)}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xl leading-none px-1"
+            aria-label="بستن"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="p-3">
+          {error ? (
+            <p className="text-center text-xs text-red-500 py-8">{error}</p>
+          ) : rows === null ? (
+            <p className="text-center text-xs text-gray-400 py-8">در حال محاسبه…</p>
+          ) : rows.length === 0 ? (
+            <p className="text-center text-xs text-gray-400 py-8">این محصول به هیچ پلتفرمی لینک نیست</p>
+          ) : (
+            <div className="space-y-2">
+              {rows.map((r) => (
+                <div
+                  key={r.platformCode}
+                  className="rounded-xl border border-gray-100 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.02] px-3 py-2.5"
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-black text-xs text-gray-900 dark:text-white">{r.platformName}</span>
+                    {r.ruleName && (
+                      <span className="text-[10px] text-gray-400">قانون: {r.ruleName}</span>
+                    )}
+                    {r.price != null && (
+                      <span className="mr-auto flex items-center gap-2">
+                        <b className={r.effective !== r.price
+                          ? "text-gray-400 line-through font-normal text-xs"
+                          : "text-sm font-black text-gray-900 dark:text-white"}>
+                          {fa(r.price)}
+                        </b>
+                        {r.effective !== r.price && r.effective != null && (
+                          <b className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                            {fa(r.effective)}
+                          </b>
+                        )}
+                        <span className="text-[10px] text-gray-400">تومان</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {r.discountPercent != null && (
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1">
+                      {fa(r.discountPercent)}٪ تخفیف فعال
+                      {SOURCE_FA[r.discountSource] ? ` — ${SOURCE_FA[r.discountSource]}` : ""}
+                    </p>
+                  )}
+                  {r.reason && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 leading-5">{r.reason}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-[10px] text-gray-400 mt-3 leading-5 px-1">
+            این اعداد فقط محاسبه‌اند و چیزی به بازارگاه ارسال نمی‌شود. قیمتی که مشتری
+            می‌بیند بعد از آخرین «بروزرسانی قیمت» موفق تغییر می‌کند.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PricingClient({ initialItems, initialTotal }: { initialItems: Item[]; initialTotal: number }) {
   const [items, setItems] = useState<Item[]>(initialItems);
   const [saving, setSaving] = useState<string | null>(null);
   const [resyncing, setResyncing] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [preview, setPreview] = useState<Item | null>(null);
 
   function titleOf(m: Item): string {
     const shopLink = m.links.find((l) => l.platformCode === "shop");
@@ -109,7 +246,7 @@ export default function PricingClient({ initialItems, initialTotal }: { initialI
                   value={m.purchasePriceSource}
                   onChange={(e) => patch(m.id, { purchasePriceSource: e.target.value as "HESABAN" | "MANUAL" })}
                   disabled={saving === m.id}
-                  className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-xs"
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-xs text-gray-900 dark:text-white"
                 >
                   <option value="HESABAN">از حسابداری</option>
                   <option value="MANUAL">دستی</option>
@@ -121,7 +258,7 @@ export default function PricingClient({ initialItems, initialTotal }: { initialI
                     defaultValue={m.purchasePrice ?? ""}
                     onBlur={(e) => patch(m.id, { purchasePrice: e.target.value ? Number(e.target.value) : null })}
                     placeholder="قیمت خرید"
-                    className="w-32 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-xs"
+                    className="w-32 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                     dir="ltr"
                   />
                 ) : (
@@ -140,11 +277,27 @@ export default function PricingClient({ initialItems, initialTotal }: { initialI
                   />
                   <span className="text-xs text-gray-500 font-bold">سینک قیمت</span>
                 </label>
+
+                {/* قیمت‌ها پشت یک پاپ‌آپ می‌مانند تا ردیف شلوغ نشود */}
+                <button
+                  onClick={() => setPreview(m)}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/[0.06] transition-colors"
+                >
+                  قیمت نهایی در پلتفرم‌ها
+                </button>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {preview && (
+        <PricePreviewModal
+          item={preview}
+          title={titleOf(preview)}
+          onClose={() => setPreview(null)}
+        />
+      )}
     </div>
   );
 }
