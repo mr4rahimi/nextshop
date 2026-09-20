@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
+import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
+
 /**
  * اجزای مشترک صفحات `/admin/sms`
  *
@@ -176,6 +178,39 @@ export function Field({
       />
       {hint && <span className="block text-[10px] font-bold text-gray-400 mt-1.5 leading-relaxed">{hint}</span>}
     </label>
+  );
+}
+
+/** مثل `Field` ولی با تقویم شمسی — مقدار به شکل "YYYY-MM-DD" میلادی */
+export function DateField({
+  label,
+  hint,
+  value,
+  onChange,
+  placeholder,
+  disabled,
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="block">
+      <span className="text-[11px] font-black text-gray-600 dark:text-gray-300">{label}</span>
+      <div className="mt-1.5">
+        <JalaliDatePicker
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          placeholder={placeholder ?? "انتخاب تاریخ"}
+          className={`${inputClass} disabled:opacity-50`}
+        />
+      </div>
+      {hint && <span className="block text-[10px] font-bold text-gray-400 mt-1.5 leading-relaxed">{hint}</span>}
+    </div>
   );
 }
 

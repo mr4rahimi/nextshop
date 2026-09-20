@@ -135,3 +135,87 @@ export function parseJalaliInput(input: string): Date | null {
 function toFa(n: number | string): string {
   return String(n).replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
 }
+
+// ─── کمکی‌های تقویم و ورودی تاریخ ──────────────────────────────────
+//
+// قرارداد مقدار ورودی‌های تاریخ در ادمین (سازگار با <input type="date">):
+//   - حالت «date»     →  "YYYY-MM-DD"        میلادی، بدون منطقه‌زمانی
+//   - حالت «datetime» →  "YYYY-MM-DDTHH:mm"  میلادی، ساعت به وقت تهران
+//
+// یعنی هیچ تغییری در API یا دیتابیس لازم نیست؛ فقط لایه‌ی نمایش شمسی می‌شود.
+
+/** نام روزهای هفته، از شنبه */
+export const JALALI_WEEKDAYS = ["ش", "ی", "د", "س", "چ", "پ", "ج"] as const;
+
+/** شماره روز هفته با مبنای شنبه = ۰ */
+export function jalaliWeekday(date: Date): number {
+  return (date.getUTCDay() + 1) % 7;
+}
+
+/** "YYYY-MM-DD" میلادی → اجزای شمسی */
+export function parseDateValue(value: string): JalaliParts | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value ?? "");
+  if (!m) return null;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  if (Number.isNaN(d.getTime())) return null;
+  return toJalali(d);
+}
+
+/** اجزای شمسی → "YYYY-MM-DD" میلادی */
+export function toDateValue(year: number, month: number, day: number): string {
+  const d = fromJalali(year, month, day);
+  if (!d) return "";
+  return [
+    d.getUTCFullYear(),
+    String(d.getUTCMonth() + 1).padStart(2, "0"),
+    String(d.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+/** "YYYY-MM-DD" یا "YYYY-MM-DDTHH:mm" → متن شمسی خوانا */
+export function formatDateValue(value: string, withTime = false): string {
+  const parts = parseDateValue(value);
+  if (!parts) return "";
+  const base = `${parts.year}/${String(parts.month).padStart(2, "0")}/${String(parts.day).padStart(2, "0")}`;
+  if (!withTime) return base;
+  const t = /T(\d{2}):(\d{2})/.exec(value);
+  return t ? `${base} — ${t[1]}:${t[2]}` : base;
+}
+
+// ─── تبدیل لحظه‌ی ISO ↔ ساعت دیواری تهران ─────────────────────────
+
+const tehranParts = new Intl.DateTimeFormat("en-US-u-ca-gregory-nu-latn", {
+  year: "numeric", month: "2-digit", day: "2-digit",
+  hour: "2-digit", minute: "2-digit", second: "2-digit",
+  hour12: false,
+  timeZone: "Asia/Tehran",
+});
+
+/** افست تهران در یک لحظه‌ی مشخص، بر حسب میلی‌ثانیه */
+function tehranOffset(date: Date): number {
+  const p = tehranParts.formatToParts(date);
+  const get = (type: string) => Number(p.find((x) => x.type === type)?.value ?? 0);
+  const asUtc = Date.UTC(
+    get("year"), get("month") - 1, get("day"),
+    get("hour") % 24, get("minute"), get("second"),
+  );
+  return asUtc - date.getTime();
+}
+
+/** لحظه‌ی ISO → "YYYY-MM-DDTHH:mm" به وقت تهران */
+export function isoToTehranLocal(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Date(d.getTime() + tehranOffset(d)).toISOString().slice(0, 16);
+}
+
+/** "YYYY-MM-DDTHH:mm" به وقت تهران → لحظه‌ی ISO */
+export function tehranLocalToIso(value: string): string {
+  if (!value) return "";
+  const asUtc = new Date(`${value}:00.000Z`);
+  if (Number.isNaN(asUtc.getTime())) return "";
+  // افست را با تقریب اول حساب می‌کنیم و بعد یک‌بار اصلاح — برای گذر از DST کافی است
+  const guess = new Date(asUtc.getTime() - tehranOffset(asUtc));
+  return new Date(asUtc.getTime() - tehranOffset(guess)).toISOString();
+}

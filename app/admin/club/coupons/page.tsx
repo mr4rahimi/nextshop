@@ -5,6 +5,7 @@ import {
   Card,
   Button,
   Field,
+  DateField,
   Select,
   ErrorBox,
   Notice,
@@ -189,10 +190,9 @@ export default function CouponsPage() {
             onChange={(v) => setForm((f) => ({ ...f, minOrderTotal: v }))}
           />
 
-          <Field
+          <DateField
             label="تاریخ انقضا"
-            type="date"
-            dir="ltr"
+            placeholder="بدون انقضا"
             value={form.expiresAt}
             onChange={(v) => setForm((f) => ({ ...f, expiresAt: v }))}
           />

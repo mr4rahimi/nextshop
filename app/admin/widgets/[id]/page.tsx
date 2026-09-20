@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
+import { isoToTehranLocal, tehranLocalToIso } from "@/lib/club/jalali";
 import {
   SPACER_DEFAULT, SPACER_MIN, SPACER_MAX,
   normalizeSpacerConfig, type SpacerConfig,
@@ -786,22 +788,20 @@ function AmazingDealsEditor({
     setSelectedIds(selectedIds.filter(x => x !== id));
     setSelectedProducts(prev => prev.filter(p => p.id !== id));
   }
-  function toLocal(iso: string): string {
-    if (!iso) return "";
-    try { return new Date(iso).toISOString().slice(0, 16); } catch { return ""; }
-  }
-  function fromLocal(val: string): string {
-    if (!val) return "";
-    return new Date(val).toISOString();
-  }
+  // ساعت دیواری تهران — نه UTC، وگرنه زمان پایان ۳:۳۰ ساعت جابه‌جا نمایش داده می‌شود
+  const toLocal = isoToTehranLocal;
+  const fromLocal = tehranLocalToIso;
 
   return (
     <div className="space-y-6">
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
         <h3 className="font-black text-sm text-gray-900 dark:text-white mb-4">زمان پایان پیشنهاد</h3>
         <div className="flex items-center gap-4">
-          <input type="datetime-local" className="border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white flex-1 max-w-xs"
-            value={toLocal(endsAt)} onChange={e => setEndsAt(fromLocal(e.target.value))} />
+          <div className="flex-1 max-w-xs">
+            <JalaliDatePicker mode="datetime" clearable={false} placeholder="بدون زمان پایان"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white"
+              value={toLocal(endsAt)} onChange={v => setEndsAt(fromLocal(v))} />
+          </div>
           {endsAt && (
             <button onClick={() => setEndsAt("")} className="text-xs text-red-500 hover:text-red-700 font-bold px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all">
               پاک کردن
@@ -979,8 +979,9 @@ function SpecialOffersEditor({
     setProductIds(productIds.filter(x => x !== id));
     setSelectedProducts(prev => prev.filter(p => p.id !== id));
   }
-  function toLocal(iso: string) { try { return iso ? new Date(iso).toISOString().slice(0, 16) : ""; } catch { return ""; } }
-  function fromLocal(val: string) { return val ? new Date(val).toISOString() : ""; }
+  // ساعت دیواری تهران — نه UTC، وگرنه زمان پایان ۳:۳۰ ساعت جابه‌جا نمایش داده می‌شود
+  const toLocal = isoToTehranLocal;
+  const fromLocal = tehranLocalToIso;
 
   return (
     <div className="space-y-5">
@@ -1042,9 +1043,11 @@ function SpecialOffersEditor({
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
         <h3 className="font-black text-sm text-gray-900 dark:text-white mb-4">زمان پایان پیشنهاد</h3>
         <div className="flex items-center gap-4">
-          <input type="datetime-local"
-            className="border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white flex-1 max-w-xs"
-            value={toLocal(endsAt)} onChange={e => setEndsAt(fromLocal(e.target.value))} />
+          <div className="flex-1 max-w-xs">
+            <JalaliDatePicker mode="datetime" clearable={false} placeholder="بدون زمان پایان"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white"
+              value={toLocal(endsAt)} onChange={v => setEndsAt(fromLocal(v))} />
+          </div>
           {endsAt && (
             <button onClick={() => setEndsAt("")}
               className="text-xs text-red-500 hover:text-red-700 font-bold px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all">

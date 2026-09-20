@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
+
 // فقط اسنپ‌شاپ مفهوم «موجودی اختصاصی تخفیف» دارد
 const STOCK_AWARE = new Set(["snappshop"]);
 
@@ -180,20 +182,20 @@ export default function DiscountsClient({
                       className={`${inputClass} w-20`} dir="ltr"
                     />
 
-                    <input
-                      type="date" title="تاریخ شروع"
-                      defaultValue={l.discountStartsAt ?? ""}
+                    <JalaliDatePicker
+                      title="تاریخ شروع" placeholder="تاریخ شروع"
+                      value={l.discountStartsAt ?? ""}
                       disabled={busy || !l.discountManaged}
-                      onChange={(e) => patch(l, { discountStartsAt: e.target.value || null }, false)}
-                      className={`${inputClass} w-36`} dir="ltr"
+                      onChange={(v) => patch(l, { discountStartsAt: v || null }, false)}
+                      className={`${inputClass} w-36`}
                     />
 
-                    <input
-                      type="date" title="تاریخ پایان"
-                      defaultValue={l.discountEndsAt ?? ""}
+                    <JalaliDatePicker
+                      title="تاریخ پایان" placeholder="تاریخ پایان"
+                      value={l.discountEndsAt ?? ""}
                       disabled={busy || !l.discountManaged}
-                      onChange={(e) => patch(l, { discountEndsAt: e.target.value || null }, false)}
-                      className={`${inputClass} w-36`} dir="ltr"
+                      onChange={(v) => patch(l, { discountEndsAt: v || null }, false)}
+                      className={`${inputClass} w-36`}
                     />
 
                     {STOCK_AWARE.has(l.platformCode) && (

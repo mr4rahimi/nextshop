@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 
+import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
+
 interface GuarantyItem {
   id: string;
   serialNumber: string;
@@ -472,7 +474,7 @@ export default function GuarantyListPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-black text-gray-700 dark:text-gray-300">تاریخ شروع</label>
-                  <input type="date" dir="ltr" value={editStartDate} onChange={e => setEditStartDate(e.target.value)} className={inp} />
+                  <JalaliDatePicker value={editStartDate} onChange={setEditStartDate} className={inp} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-xs font-black text-gray-700 dark:text-gray-300">مدت (روز)</label>
