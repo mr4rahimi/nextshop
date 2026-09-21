@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { runRecurringRules } from "./recurring";
 import { closeStaleSessions, aggregateRecentDays } from "./attendance";
 import { sweepDeals } from "./deals";
+import { runSeoSweep } from "@/lib/marketing/seo-sweep";
 
 let started = false;
 
@@ -61,6 +62,20 @@ async function tick() {
       }
     } catch (e) {
       console.error("[worklist] جاروب معامله شکست خورد:", e);
+    }
+
+    // کار دوره‌ای سئو و یادآوری بررسی نتیجه.
+    // ⚠️ جدا try/catch می‌شود، مثل بقیه: شکستن این نباید جلوی چرخه‌ی بعدیِ
+    // حضور و معامله را بگیرد و برعکس.
+    try {
+      const { created, blocked, reminded } = await runSeoSweep();
+      if (created + blocked + reminded > 0) {
+        console.log(
+          `[seo] جاروب: ${created} کار دوره‌ای ساخته، ${blocked} به‌خاطر کار باز رد، ${reminded} یادآوری بررسی.`,
+        );
+      }
+    } catch (e) {
+      console.error("[seo] جاروب سئو شکست خورد:", e);
     }
   } catch (e) {
     // زمان‌بند هرگز نباید پروسه‌ی سایت را بشکند

@@ -53,6 +53,7 @@ const ROLES: RoleSeed[] = [
       "CUSTOMER_VIEW_OWN", "CUSTOMER_VIEW_ALL", "CUSTOMER_CREATE", "CUSTOMER_EDIT",
       "SUPPLIER_VIEW", "SUPPLIER_CREATE",
       "DEAL_LOG", "DEAL_VIEW_ALL", "COMMISSION_VIEW_OWN", "COMMISSION_VIEW_ALL",
+      "MARKETING_VIEW_ALL",
       "PANEL_ORDERS", "PANEL_REPORTS",
       "STAFF_VIEW",
       "ATTENDANCE_VIEW_OWN", "ATTENDANCE_VIEW_ALL",
@@ -95,6 +96,27 @@ const ROLES: RoleSeed[] = [
     permissions: [
       "PANEL_CONTENT", "PANEL_CATALOG",
       "WORK_VIEW_OWN", "WORK_CREATE", "WORK_EDIT_OWN",
+      "SEO_TASK_WORK", "CONTENT_TASK_WORK", "LINK_WORK",
+      "ATTENDANCE_VIEW_OWN",
+      "SCORE_VIEW_OWN",
+    ],
+  },
+  {
+    // مدیر سئو — docs/plans/seo-marketing.md بخش ۴.
+    // عمداً `PANEL_CONTENT` دارد: کار سئو روی مقاله و برگه و ریدایرکت
+    // (`/admin/seo`) است و بدون آن، مدیر سئو نمی‌تواند یافته را رفع کند.
+    slug: "seo-manager",
+    title: "مدیر سئو",
+    description: "کارهای سئو، محتوا و لینک‌سازی — ساخت، ارجاع، تأیید و تنظیمات",
+    permissions: [
+      "MARKETING_VIEW_ALL",
+      "SEO_TASK_WORK", "SEO_TASK_MANAGE",
+      "CONTENT_TASK_WORK", "CONTENT_TASK_MANAGE",
+      "LINK_WORK", "LINK_MANAGE",
+      "MARKETING_SETTINGS_MANAGE", "SEO_ANALYTICS_VIEW",
+      "PANEL_CONTENT", "PANEL_CATALOG",
+      "WORK_VIEW_OWN", "WORK_CREATE", "WORK_EDIT_OWN", "WORK_ASSIGN",
+      "STAFF_VIEW",
       "ATTENDANCE_VIEW_OWN",
       "SCORE_VIEW_OWN",
     ],
@@ -131,7 +153,11 @@ const ROLES: RoleSeed[] = [
 ];
 
 /** گروه‌های مجوزی که بعد از فاز ۷ آمدند — فقط این‌ها با `--grant-new` اضافه می‌شوند */
-const GRANT_NEW_PREFIXES = ["CUSTOMER_", "SUPPLIER_", "DEAL_", "COMMISSION_"];
+const GRANT_NEW_PREFIXES = [
+  "CUSTOMER_", "SUPPLIER_", "DEAL_", "COMMISSION_",
+  // سئو و محتوا — نقش «محتوا و سئو»ی موجود وگرنه هیچ‌وقت این سه را نمی‌گیرد
+  "MARKETING_", "SEO_", "CONTENT_TASK_", "LINK_",
+];
 // PANEL_* اینجا نیست: مهاجرت 20260915170000 همه‌شان را به نقش‌های موجود داده
 // تا رفتار قبلی حفظ شود؛ اضافه‌کردنش فقط بخشی را که مدیر عمداً بسته، باز می‌کرد.
 const GRANT_NEW = process.argv.includes("--grant-new");

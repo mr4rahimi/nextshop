@@ -108,6 +108,19 @@ export interface InboxCounts {
   unseenReferrals: number;
   overdue: number;
   todayOpen: number;
+  /** اعلان خوانده‌نشده‌ی سئو، محتوا و لینک‌سازی */
+  marketing: number;
+}
+
+/** یک اعلان درون‌پنلی — سئو، محتوا یا لینک‌سازی */
+export interface MarketingNotification {
+  id: string;
+  type: "SEO_TASK" | "CONTENT_TASK" | "LINK_NODE";
+  entityId: string;
+  title: string;
+  body: string | null;
+  url: string;
+  createdAt: string;
 }
 
 export interface TaskNote {

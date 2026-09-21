@@ -10,6 +10,9 @@ export const dynamic = "force-dynamic";
 /** حداکثر ارجاع فوری که در یک poll برمی‌گردد — پاپ‌آپ‌ها پشت سر هم نشان داده می‌شوند */
 const MAX_POPUPS = 5;
 
+/** اعلان‌های سئو/محتوا/لینک پاپ‌آپ نمی‌گیرند؛ فهرست کوتاه زیر نشان می‌نشینند */
+const MAX_NOTIFICATIONS = 8;
+
 /**
  * صندوق ورودی — خوراک پاپ‌آپ ارجاع فوری و نشان روی منو.
  *
@@ -18,13 +21,25 @@ const MAX_POPUPS = 5;
  * بدون هیچ join سنگین.
  */
 export async function GET() {
-  const guard = await requirePermission(["WORK_VIEW_OWN", "WORK_VIEW_ALL"]);
+  // ⚠️ نگهبان عمداً گشاد است: کارمند سئو ممکن است هیچ مجوز کارتابلی نداشته
+  // باشد ولی اعلان کار سئو بگیرد. صندوق ورودی خودش چیزی جز شمارنده و پنج
+  // ردیفِ خودِ کاربر برنمی‌گرداند، پس گشاد بودنش نشتی نمی‌سازد.
+  const guard = await requirePermission([
+    "WORK_VIEW_OWN",
+    "WORK_VIEW_ALL",
+    "SEO_TASK_WORK",
+    "SEO_TASK_MANAGE",
+    "CONTENT_TASK_WORK",
+    "CONTENT_TASK_MANAGE",
+    "LINK_WORK",
+    "LINK_MANAGE",
+  ]);
   if (!guard.ok) {
     return NextResponse.json({ error: guard.error }, { status: guard.status });
   }
   const me = guard.access.userId;
 
-  const [urgent, unseenCount, overdue, todayOpen] = await Promise.all([
+  const [urgent, unseenCount, overdue, todayOpen, marketing] = await Promise.all([
     prisma.staffTaskReferral.findMany({
       where: { toId: me, seenAt: null, isUrgent: true },
       orderBy: { createdAt: "desc" },
@@ -52,11 +67,32 @@ export async function GET() {
         ],
       },
     }),
+    // اعلان‌های سئو، محتوا و لینک‌سازی — سبک، فقط ردیف‌های خوانده‌نشده
+    prisma.staffNotification.findMany({
+      where: { userId: me, readAt: null },
+      orderBy: { createdAt: "desc" },
+      take: MAX_NOTIFICATIONS,
+      select: {
+        id: true,
+        type: true,
+        entityId: true,
+        title: true,
+        body: true,
+        url: true,
+        createdAt: true,
+      },
+    }),
   ]);
 
   return NextResponse.json({
     urgent,
-    counts: { unseenReferrals: unseenCount, overdue, todayOpen },
+    marketing,
+    counts: {
+      unseenReferrals: unseenCount,
+      overdue,
+      todayOpen,
+      marketing: marketing.length,
+    },
   });
 }
 
@@ -67,20 +103,48 @@ export async function GET() {
  * دست نمی‌زند، تا هیچ‌وقت کل صندوق کسی یک‌جا پاک نشود.
  */
 export async function POST(req: Request) {
-  const guard = await requirePermission(["WORK_VIEW_OWN", "WORK_VIEW_ALL"]);
+  const guard = await requirePermission([
+    "WORK_VIEW_OWN",
+    "WORK_VIEW_ALL",
+    "SEO_TASK_WORK",
+    "SEO_TASK_MANAGE",
+    "CONTENT_TASK_WORK",
+    "CONTENT_TASK_MANAGE",
+    "LINK_WORK",
+    "LINK_MANAGE",
+  ]);
   if (!guard.ok) {
     return NextResponse.json({ error: guard.error }, { status: guard.status });
   }
 
   try {
-    const { referralIds } = await req.json();
-    if (!Array.isArray(referralIds) || referralIds.length === 0) {
-      return NextResponse.json({ error: "شناسه‌ی ارجاع لازم است" }, { status: 400 });
+    const { referralIds, notificationIds } = await req.json();
+    const refs = Array.isArray(referralIds)
+      ? referralIds.filter((x) => typeof x === "string")
+      : [];
+    const notes = Array.isArray(notificationIds)
+      ? notificationIds.filter((x) => typeof x === "string")
+      : [];
+
+    if (refs.length === 0 && notes.length === 0) {
+      return NextResponse.json({ error: "شناسه‌ی ارجاع یا اعلان لازم است" }, { status: 400 });
     }
-    const result = await markReferralsSeen(guard.access.userId, {
-      referralIds: referralIds.filter((x) => typeof x === "string"),
-    });
-    return NextResponse.json({ ok: true, count: result.count });
+
+    let count = 0;
+    if (refs.length) {
+      const result = await markReferralsSeen(guard.access.userId, { referralIds: refs });
+      count += result.count;
+    }
+    if (notes.length) {
+      // ⚠️ `userId` در شرط می‌ماند: بدون آن، شناسه‌ی اعلان دیگری هم خوانده می‌شد
+      const result = await prisma.staffNotification.updateMany({
+        where: { id: { in: notes }, userId: guard.access.userId, readAt: null },
+        data: { readAt: new Date() },
+      });
+      count += result.count;
+    }
+
+    return NextResponse.json({ ok: true, count });
   } catch {
     return NextResponse.json({ error: "خطای سرور" }, { status: 400 });
   }

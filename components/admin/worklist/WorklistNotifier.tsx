@@ -20,7 +20,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateTime } from "@/lib/worklist/types";
-import type { UrgentReferral, InboxCounts } from "./types";
+import type { UrgentReferral, InboxCounts, MarketingNotification } from "./types";
 
 const POLL_MS = 30_000;
 
@@ -28,6 +28,8 @@ export default function WorklistNotifier() {
   const router = useRouter();
   const [queue, setQueue] = useState<UrgentReferral[]>([]);
   const [counts, setCounts] = useState<InboxCounts | null>(null);
+  const [notes, setNotes] = useState<MarketingNotification[]>([]);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   /** ارجاع‌هایی که همین جلسه بسته شده‌اند — تا poll بعدی دوباره نشانشان ندهد */
   const dismissed = useRef<Set<string>>(new Set());
@@ -39,6 +41,7 @@ export default function WorklistNotifier() {
       if (!res.ok) return; // بدون دسترسی یا بدون ورود: بی‌سروصدا ساکت می‌ماند
       const data = await res.json();
       setCounts(data.counts ?? null);
+      setNotes(data.marketing ?? []);
       const fresh: UrgentReferral[] = (data.urgent ?? []).filter(
         (r: UrgentReferral) => !dismissed.current.has(r.id),
       );
@@ -90,13 +93,71 @@ export default function WorklistNotifier() {
 
   if (!current) {
     // نشان بی‌صدا: فقط وقتی چیزی هست دیده می‌شود
-    if (!counts || (counts.unseenReferrals === 0 && counts.overdue === 0)) return null;
+    if (
+      !counts ||
+      (counts.unseenReferrals === 0 && counts.overdue === 0 && (counts.marketing ?? 0) === 0)
+    ) {
+      return null;
+    }
+
+    // ⚠️ اعلان سئو/محتوا/لینک عمداً **پاپ‌آپ نمی‌گیرد**؛ پاپ‌آپ مال ارجاع
+    // فوری است و ارزشش به کمیابی‌اش است. اینجا فقط یک فهرست کوتاه باز می‌شود.
+    if (notesOpen && notes.length > 0) {
+      return (
+        <div className="fixed bottom-24 left-6 z-40 w-80 max-w-[calc(100vw-3rem)] rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-white/10">
+            <span className="text-xs font-black text-gray-900 dark:text-white">اعلان‌ها</span>
+            <button
+              onClick={() => setNotesOpen(false)}
+              className="text-[11px] font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white"
+            >
+              بستن
+            </button>
+          </div>
+          <ul className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-white/5">
+            {notes.map((n) => (
+              <li key={n.id}>
+                <button
+                  onClick={async () => {
+                    setNotes((prev) => prev.filter((x) => x.id !== n.id));
+                    setCounts((c) =>
+                      c ? { ...c, marketing: Math.max(0, c.marketing - 1) } : c,
+                    );
+                    try {
+                      await fetch("/api/admin/worklist/inbox", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ notificationIds: [n.id] }),
+                      });
+                    } catch {
+                      // نرسید؛ poll بعدی دوباره نشانش می‌دهد
+                    }
+                    router.push(n.url);
+                  }}
+                  className="w-full text-right px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5"
+                >
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">{n.title}</p>
+                  {n.body && (
+                    <p className="text-[11px] text-gray-500 truncate mt-0.5">{n.body}</p>
+                  )}
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    {formatDateTime(n.createdAt)}
+                  </p>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    }
     // ⚠️ سمت چپ و بالای دکمه‌ی «ثبت کار»، نه پایین‌راست: آنجا حباب چت و دکمه‌ی
     // «مشاهده سایت» می‌نشینند و نشان زیرشان گم می‌شد.
     // `bottom-24` دقیقاً بالای دکمه‌ی `bottom-6 h-14` قرار می‌گیرد.
     return (
       <button
-        onClick={() => router.push("/admin/worklist")}
+        onClick={() =>
+          notes.length > 0 ? setNotesOpen(true) : router.push("/admin/worklist")
+        }
         className="fixed bottom-24 left-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold shadow-xl transition hover:opacity-90"
       >
         {counts.overdue > 0 && (
@@ -106,6 +167,11 @@ export default function WorklistNotifier() {
         )}
         {counts.unseenReferrals > 0 && (
           <span>{counts.unseenReferrals.toLocaleString("fa-IR")} ارجاع تازه</span>
+        )}
+        {counts.marketing > 0 && (
+          <span className="text-amber-400 dark:text-amber-600">
+            {counts.marketing.toLocaleString("fa-IR")} اعلان
+          </span>
         )}
       </button>
     );

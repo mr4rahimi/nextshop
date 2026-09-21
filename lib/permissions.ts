@@ -174,6 +174,39 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    // سئو، محتوا و لینک‌سازی — docs/plans/seo-marketing.md بخش ۴
+    //
+    // ⚠️ فهرست «کارکنان» هر حوزه از همین مجوزها می‌آید، نه از یک فیلد بخش:
+    // مسئول کار سئو از دارندگان SEO_TASK_WORK، محتوانویس از CONTENT_TASK_WORK،
+    // مسئول گره از LINK_WORK. یک قانون بهتر از دو قانونی است که با هم اختلاف
+    // پیدا می‌کنند.
+    key: "marketing",
+    label: "سئو، محتوا و لینک‌سازی",
+    items: [
+      {
+        key: "MARKETING_VIEW_ALL",
+        label: "دیدن کارهای سئو، محتوا و لینک‌سازیِ همه",
+        hint: "بدون این مجوز، کارمند فقط کارهایی را می‌بیند که مسئول یا سازنده‌شان است",
+      },
+      { key: "SEO_TASK_WORK", label: "انجام و ثبت کار سئو" },
+      {
+        key: "SEO_TASK_MANAGE",
+        label: "تأیید، برگشت و کار دوره‌ای سئو",
+        hint: "تأیید نهایی همیشه با مدیر است، حتی اگر کار را خودش ثبت کرده باشد",
+      },
+      {
+        key: "CONTENT_TASK_WORK",
+        label: "نوشتن و انتشار محتوا",
+        hint: "انتشار از داخل کار محتوا انجام می‌شود و PANEL_CONTENT لازم ندارد",
+      },
+      { key: "CONTENT_TASK_MANAGE", label: "ساخت، تأیید و برگشت کار محتوا" },
+      { key: "LINK_WORK", label: "ساخت لینک و ثبت آدرس منتشرشده" },
+      { key: "LINK_MANAGE", label: "کمپین، چارت، ارجاع و تأیید گره" },
+      { key: "MARKETING_SETTINGS_MANAGE", label: "دسته‌های سئو، انواع لینک و پلتفرم‌ها" },
+      { key: "SEO_ANALYTICS_VIEW", label: "بخش آنالیز سئو" },
+    ],
+  },
+  {
     key: "score",
     label: "امتیاز و پاداش",
     items: [

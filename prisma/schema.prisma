@@ -857,6 +857,8 @@ model BlogPost {
   tags            BlogPostTag[]
   comments        BlogComment[]
   relatedProducts BlogPostProduct[]
+  /// کار محتوایی که این مقاله را ساخت — یکتا: یک کار، یک مقاله
+  contentTask     ContentTask?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -2291,6 +2293,9 @@ enum ActivityEntity {
   SETTINGS
   STAFF_ROLE
   STAFF_TASK
+  SEO_TASK
+  CONTENT_TASK
+  LINK_NODE
   OTHER
 }
 
@@ -2918,4 +2923,607 @@ model StaffPayout {
 
   @@index([userId, paidAt])
   @@index([paidAt])
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// سئو، محتوا و لینک‌سازی — زیرمجموعه‌ی کارتابل
+// مستندات: docs/plans/seo-marketing.md
+//
+// ⚠️ سه قاعده‌ی مشترک هر سه حوزه:
+//   ۱. هر انتقال وضعیت فقط از سرویس خودش عبور می‌کند و سه کار می‌کند:
+//      وضعیت را عوض می‌کند، یک رویداد می‌سازد، به نفر بعدی اعلان می‌دهد.
+//   ۲. حذف همه‌جا نرم است (`deletedAt`) و رویدادها می‌مانند.
+//   ۳. کنار هر شناسه‌ی کاربر، اسنپ‌شات نام می‌نشیند — حساب حذف‌شده نباید
+//      گزارش پارسال را خالی کند. (همان قرارداد StaffTask و ActivityLog)
+// ═══════════════════════════════════════════════════════════════════
+
+/// عملِ ثبت‌شده روی یک رویداد. بین هر سه حوزه مشترک است تا نگاشت فارسی
+/// یکی بماند؛ هر حوزه زیرمجموعه‌ی خودش را به کار می‌برد.
+enum MarketingEventAction {
+  CREATED
+  ASSIGNED // مسئول عوض شد
+  STARTED
+  REPORTED // گزارش انجام / ارسال به محتواگذار
+  PUBLISHING // محتواگذار کار را دست گرفت
+  SUBMITTED // تکمیل / ثبت آدرس لینک
+  APPROVED
+  RETURNED // برگشت با دلیل
+  CANCELED
+  REOPENED
+  FAILED // گره نشد
+  LOST // لینک بود و دیگر نیست
+  REVIEWED // نتیجه‌ی بررسی ثبت شد
+  SYSTEM // ساخت از الگو، یادآوری، هشدار زمان‌بند — actorId خالی
+}
+
+// ───────────────────────────── کارهای سئو ─────────────────────────────
+
+enum SeoTaskStatus {
+  ASSIGNED
+  IN_PROGRESS
+  AWAITING_APPROVAL
+  DONE
+  CANCELED
+}
+
+/// نتیجه‌ی بررسیِ بعد از انجام. وضعیت کار را عوض **نمی‌کند**: کار انجام شده،
+/// سؤال این است که ارزشش را داشت یا نه.
+enum SeoReviewOutcome {
+  EFFECTIVE // اثر داشت
+  PARTIAL // اثر جزئی
+  INEFFECTIVE // اثر نداشت
+}
+
+enum SeoRecurrenceUnit {
+  WEEK
+  MONTH // ماهِ **شمسی** — lib/marketing/seo-recurrence.ts
+}
+
+/// دسته‌ی کار سئو — جدول است نه enum تا مدیر بدون مهاجرت اضافه کند.
+/// دسته‌ی سیدشده `key` دارد که گزارش‌های فاز آنالیز رویش می‌نشینند، پس
+/// حذف نمی‌شود؛ فقط `isActive = false`.
+model SeoTaskCategory {
+  id          String   @id @default(cuid())
+  key         String?  @unique
+  title       String
+  description String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks      SeoTask[]
+  recurrings SeoRecurringTask[]
+
+  @@index([isActive, sortOrder])
+}
+
+model SeoTask {
+  id          String  @id @default(cuid())
+  /// شماره‌ی نمایشی برای گفت‌وگوی روزمره: «کار سئو ۱۲»
+  code        Int     @default(autoincrement())
+  categoryId  String
+  title       String
+  description String?
+  /// آدرس صفحه‌های مربوط — هر خط یک آدرس. عمداً متن است نه جدول؛ فعلاً فقط
+  /// نمایش و جست‌وجو دارد. مبنای «یادداشت تغییر» روی نمودار فاز آنالیز.
+  pageUrls    String?
+
+  assigneeId    String?
+  assigneeName  String
+  createdById   String?
+  createdByName String
+
+  status   SeoTaskStatus @default(ASSIGNED)
+  priority StaffPriority @default(NORMAL)
+  dueAt    DateTime?
+
+  /// گزارش انجام — اجباری هنگام رفتن به AWAITING_APPROVAL
+  report         String?
+  returnReason   String?
+  cancelReason   String?
+  startedAt      DateTime?
+  reportedAt     DateTime?
+  approvedAt     DateTime?
+  approvedById   String?
+  approvedByName String?
+
+  /// بررسی نتیجه (بخش ۵.۵ مستندات)
+  reviewAt         DateTime?
+  reviewOutcome    SeoReviewOutcome?
+  reviewNote       String?
+  reviewedAt       DateTime?
+  /// جلوی یادآوری تکراری را می‌گیرد؛ قبضه‌ی اتمیک زمان‌بند رویش می‌نشیند
+  reviewRemindedAt DateTime?
+
+  /// الگویی که این ردیف را ساخت
+  recurrenceId String?
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  category   SeoTaskCategory        @relation(fields: [categoryId], references: [id])
+  recurrence SeoRecurringTask?      @relation(fields: [recurrenceId], references: [id], onDelete: SetNull)
+  checklist  SeoTaskChecklistItem[]
+  files      SeoTaskFile[]
+  events     SeoTaskEvent[]
+
+  @@index([assigneeId, status])
+  @@index([status, dueAt])
+  @@index([categoryId, createdAt])
+  @@index([reviewAt, reviewOutcome])
+  @@index([createdAt])
+}
+
+/// تیک زدن **رویداد نمی‌سازد و اعلان نمی‌دهد** (وگرنه تاریخچه نویز می‌گیرد)،
+/// ولی چه کسی و کِی تیک زد روی خود بند می‌ماند.
+model SeoTaskChecklistItem {
+  id         String    @id @default(cuid())
+  taskId     String
+  title      String
+  sortOrder  Int       @default(0)
+  doneAt     DateTime?
+  doneById   String?
+  doneByName String?
+  createdAt  DateTime  @default(now())
+
+  task SeoTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, sortOrder])
+}
+
+model SeoTaskFile {
+  id             String    @id @default(cuid())
+  taskId         String
+  /// مسیر عمومی فایل — همان خروجی /api/admin/upload
+  url            String
+  fileName       String
+  mimeType       String?
+  size           Int?
+  uploadedById   String?
+  uploadedByName String
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  task SeoTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+}
+
+/// ⚠️ `actorId` خالی‌پذیر است: ساخت از الگو و یادآوری بررسی کارِ **سیستم** است
+/// و نسبت‌دادنش به سازنده‌ی الگو تاریخچه را دروغ می‌کند.
+model SeoTaskEvent {
+  id         String               @id @default(cuid())
+  taskId     String
+  actorId    String?
+  actorName  String?
+  action     MarketingEventAction
+  fromStatus SeoTaskStatus?
+  toStatus   SeoTaskStatus?
+  note       String?
+  createdAt  DateTime             @default(now())
+
+  task SeoTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+/// الگوی کار دوره‌ای. زمان‌بند (`lib/worklist/scheduler.ts`) در موعد از رویش
+/// یک `SeoTask` عادی می‌سازد.
+///
+/// ⚠️ سه قاعده در بخش ۵.۶ مستندات: عقب‌افتادگی انباشته نمی‌شود، تا کار قبلی
+/// باز است کار تازه ساخته نمی‌شود، و «قبضه»ی اتمیک روی `nextRunAt` جلوی
+/// ساخت تکراری در چند پروسه‌ی pm2 را می‌گیرد.
+model SeoRecurringTask {
+  id           String        @id @default(cuid())
+  title        String
+  categoryId   String
+  description  String?
+  pageUrls     String?
+  assigneeId   String?
+  assigneeName String
+  priority     StaffPriority @default(NORMAL)
+  /// بندهای چک‌لیست: آرایه‌ی رشته
+  checklist    Json          @default("[]")
+
+  unit             SeoRecurrenceUnit @default(MONTH)
+  /// «هر N هفته/ماه»
+  intervalCount    Int               @default(1)
+  /// مهلت نسبی: N روز بعد از ساخت
+  dueOffsetDays    Int?
+  /// N روز بعد از تأیید، بررسی نتیجه یادآوری شود
+  reviewOffsetDays Int?
+
+  nextRunAt DateTime
+  lastRunAt DateTime?
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  category SeoTaskCategory @relation(fields: [categoryId], references: [id])
+  tasks    SeoTask[]
+
+  @@index([isActive, nextRunAt])
+}
+
+// ───────────────────────────── محتوا ─────────────────────────────
+
+enum ContentTaskStatus {
+  ASSIGNED
+  WRITING
+  AWAITING_PUBLISH
+  PUBLISHING
+  AWAITING_APPROVAL
+  DONE
+  CANCELED
+}
+
+/// محتوا برای مجله‌ی خودمان است یا برای سایت میزبانِ یک گره‌ی لینک‌سازی.
+/// این تفکیک در برتر لازم نبود چون همه‌ی محتوا بیرونی بود.
+enum ContentDestination {
+  BLOG // منتشر در BlogPost همین فروشگاه
+  EXTERNAL // تحویل متن؛ publishedUrl دستی پر می‌شود
+}
+
+model ContentTask {
+  id              String             @id @default(cuid())
+  code            Int                @default(autoincrement())
+  title           String
+  primaryKeyword  String?
+  relatedKeywords String?
+  /// بریف مدیر
+  brief           String?
+  destination     ContentDestination @default(BLOG)
+
+  writerId      String?
+  writerName    String
+  publisherId   String?
+  publisherName String?
+  createdById   String?
+  createdByName String
+
+  status   ContentTaskStatus @default(ASSIGNED)
+  priority StaffPriority     @default(NORMAL)
+  dueAt    DateTime?
+
+  /// پیش‌نویس تا لحظه‌ی ساخت مقاله. از وقتی `blogPostId` پر شد، منبع حقیقتِ
+  /// متن **`BlogPost.content`** است و اینجا دیگر نوشته نمی‌شود (بخش ۶.۲).
+  body         String?
+  wordCount    Int?
+  blogPostId   String? @unique
+  publishedUrl String?
+
+  returnReason   String?
+  cancelReason   String?
+  startedAt      DateTime?
+  submittedAt    DateTime?
+  publishedAt    DateTime?
+  approvedAt     DateTime?
+  approvedById   String?
+  approvedByName String?
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  blogPost BlogPost?          @relation(fields: [blogPostId], references: [id], onDelete: SetNull)
+  files    ContentTaskFile[]
+  events   ContentTaskEvent[]
+  linkNode LinkNode?
+
+  @@index([writerId, status])
+  @@index([publisherId, status])
+  @@index([status, dueAt])
+  @@index([createdAt])
+}
+
+model ContentTaskFile {
+  id             String    @id @default(cuid())
+  taskId         String
+  url            String
+  fileName       String
+  mimeType       String?
+  size           Int?
+  uploadedById   String?
+  uploadedByName String
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  task ContentTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+}
+
+model ContentTaskEvent {
+  id         String               @id @default(cuid())
+  taskId     String
+  actorId    String?
+  actorName  String?
+  action     MarketingEventAction
+  fromStatus ContentTaskStatus?
+  toStatus   ContentTaskStatus?
+  note       String?
+  createdAt  DateTime             @default(now())
+
+  task ContentTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+// ──────────────────────── لینک‌سازی خارجی ────────────────────────
+
+enum LinkCampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  DONE
+}
+
+enum LinkNodeStatus {
+  PLANNED
+  ASSIGNED
+  IN_PROGRESS
+  SUBMITTED
+  LIVE
+  FAILED
+  LOST
+}
+
+enum LinkAnchorKind {
+  EXACT // تطابق دقیق
+  PARTIAL // تطابق جزئی
+  BRAND
+  BRAND_KEYWORD
+  NAKED_URL // آدرس خام
+  GENERIC // اینجا، بیشتر بخوانید
+  IMAGE // انکر همان alt است
+}
+
+enum LinkContentKind {
+  NONE
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+/// نوع لینک — «وبلاگ Web 2.0». آیکنش از lucide-react می‌آید.
+/// گزارش‌ها روی **نوع** جمع می‌شوند نه پلتفرم.
+model LinkType {
+  id                 String          @id @default(cuid())
+  key                String?         @unique
+  title              String
+  /// نام آیکن lucide-react
+  icon               String?
+  description        String?
+  /// کِی به کار می‌آید و تله‌اش چیست — آموزش کارمند تازه
+  seoNote            String?
+  sampleSites        String?
+  /// پیش‌فرض‌های هوشمند فرم گره؛ قفل نیستند
+  defaultContentKind LinkContentKind @default(NONE)
+  defaultUgc         Boolean         @default(false)
+  defaultSponsored   Boolean         @default(false)
+  /// PBN — روشِ لینک‌سازی ریسک جریمه دارد. هشدار قرمز در فرم.
+  isRisky            Boolean         @default(false)
+  isActive           Boolean         @default(true)
+  sortOrder          Int             @default(0)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  platforms LinkPlatform[]
+  nodes     LinkNode[]
+
+  @@index([isActive, sortOrder])
+}
+
+/// پلتفرم — «ویرگول». دامنه و حساب کاربری دارد.
+///
+/// ⚠️ `iconPath` را **فقط اسکریپت لوکال** می‌نویسد؛ سرور هیچ‌وقت برای آیکن به
+/// اینترنت وصل نمی‌شود و مسیر از روی دامنه حدس زده نمی‌شود (پسوند همیشه png
+/// نیست). خالی بودنش یعنی آیکن نوع نشان داده شود.
+model LinkPlatform {
+  id              String   @id @default(cuid())
+  typeId          String
+  title           String
+  domain          String
+  accountNote     String?
+  iconPath        String?
+  /// قدرت دامنه — فعلاً دستی؛ فاز آنالیز خودکارش می‌کند
+  domainAuthority Int?
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  type  LinkType   @relation(fields: [typeId], references: [id])
+  nodes LinkNode[]
+
+  @@unique([typeId, domain])
+  @@index([isActive, sortOrder])
+}
+
+model LinkCampaign {
+  id            String             @id @default(cuid())
+  title         String
+  note          String?
+  status        LinkCampaignStatus @default(DRAFT)
+  /// سقف لینک تازه در هفته — برنامه‌ساز مهلت‌ها را با آن پخش می‌کند.
+  /// راهنماست نه قفل.
+  weeklyQuota   Int?
+  /// کلید بازه‌ی مرجع توزیع انکر — پیش‌فرض «فروشگاه اینترنتی»
+  anchorProfile String             @default("ECOMMERCE")
+  /// چیدمان بوم یک‌بار ذخیره شده یا نه — (۰،۰) دو معنی دارد (تله‌ی ۶)
+  isPristine    Boolean            @default(true)
+  deletedAt     DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  targets LinkTarget[]
+  nodes   LinkNode[]
+  edges   LinkEdge[]
+
+  @@index([status, createdAt])
+}
+
+/// صفحه‌ی هدف — ردیف است نه ستون روی کمپین، چون توزیع انکر برای هر صفحه
+/// معنی جدا دارد و هشدار روی سطح صفحه هم لازم است.
+model LinkTarget {
+  id             String   @id @default(cuid())
+  campaignId     String
+  url            String
+  primaryKeyword String?
+  isActive       Boolean  @default(true)
+  posX           Float    @default(0)
+  posY           Float    @default(0)
+  createdAt      DateTime @default(now())
+
+  campaign LinkCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  edges    LinkEdge[]
+
+  @@index([campaignId, isActive])
+}
+
+/// یک لینک خارجی که قرار است ساخته شود — واحد کار.
+///
+/// ⚠️ `publishedUrl` آدرس صفحه‌ای است که ما لینک را **در آن** گذاشتیم.
+/// آدرسِ **مقصد** از یال درمی‌آید، نه از ستون. جابه‌جا شدنشان کل گزارش را
+/// بی‌معنی می‌کند (تله‌ی ۱).
+///
+/// ⚠️ `tier` از چارت مشتق می‌شود و فقط با تغییر یال بازمحاسبه می‌شود.
+model LinkNode {
+  id         String  @id @default(cuid())
+  code       Int     @default(autoincrement())
+  campaignId String
+  typeId     String
+  platformId String?
+  note       String?
+
+  anchorText   String?
+  anchorKind   LinkAnchorKind?
+  relFollow    Boolean         @default(true)
+  relUgc       Boolean         @default(false)
+  relSponsored Boolean         @default(false)
+
+  contentKind  LinkContentKind @default(NONE)
+  wordCount    Int?
+  contentBrief String?
+  profileTitle String?
+
+  assigneeId   String?
+  assigneeName String?
+  status       LinkNodeStatus @default(PLANNED)
+  dueAt        DateTime?
+  publishedUrl String?
+  /// هزینه‌ی ریالی اگر پولی بود — از حالا ثبت می‌شود هرچند گزارش بازدهی
+  /// فاز بعد است؛ هزینه‌ای که موقعش ثبت نشود بعداً بازسازی نمی‌شود.
+  cost         BigInt?
+
+  contentTaskId String? @unique
+
+  /// کوتاه‌ترین فاصله تا نزدیک‌ترین صفحه‌ی هدف؛ خالی یعنی «معلق»
+  tier Int?
+  posX Float @default(0)
+  posY Float @default(0)
+
+  submittedAt  DateTime?
+  liveAt       DateTime?
+  lostAt       DateTime?
+  failReason   String?
+  returnReason String?
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  campaign    LinkCampaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  type        LinkType        @relation(fields: [typeId], references: [id])
+  platform    LinkPlatform?   @relation(fields: [platformId], references: [id], onDelete: SetNull)
+  contentTask ContentTask?    @relation(fields: [contentTaskId], references: [id], onDelete: SetNull)
+  events      LinkNodeEvent[]
+  outEdges    LinkEdge[]      @relation("LinkEdgeFrom")
+  inEdges     LinkEdge[]      @relation("LinkEdgeTo")
+
+  @@index([campaignId, status])
+  @@index([assigneeId, status])
+  @@index([typeId, createdAt])
+  @@index([status, dueAt])
+}
+
+/// یال جدول جداست نه `parentId` روی گره — یک گره می‌تواند به چند مقصد لینک
+/// بدهد و درخت این را نمی‌کشد.
+///
+/// ⚠️ **دقیقاً یکی** از `toNodeId` یا `toTargetId` پر است. این را هم zod
+/// می‌گیرد هم قید `CHECK` دیتابیس، چون اسکریپت و سید و ترمیم دستی از zod رد
+/// نمی‌شوند. قید دوم جلوی لینک گره به خودش را می‌گیرد.
+model LinkEdge {
+  id         String   @id @default(cuid())
+  campaignId String
+  fromNodeId String
+  toNodeId   String?
+  toTargetId String?
+  createdAt  DateTime @default(now())
+
+  campaign LinkCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  fromNode LinkNode     @relation("LinkEdgeFrom", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode   LinkNode?    @relation("LinkEdgeTo", fields: [toNodeId], references: [id], onDelete: Cascade)
+  toTarget LinkTarget?  @relation(fields: [toTargetId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([fromNodeId])
+  @@index([toNodeId])
+  @@index([toTargetId])
+}
+
+model LinkNodeEvent {
+  id         String               @id @default(cuid())
+  nodeId     String
+  actorId    String?
+  actorName  String?
+  action     MarketingEventAction
+  fromStatus LinkNodeStatus?
+  toStatus   LinkNodeStatus?
+  note       String?
+  createdAt  DateTime             @default(now())
+
+  node LinkNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([nodeId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+// ───────────────────────────── اعلان ─────────────────────────────
+
+enum StaffNotificationType {
+  SEO_TASK
+  CONTENT_TASK
+  LINK_NODE
+}
+
+/// اعلان درون‌پنلی کارمند.
+///
+/// عمداً **عمومی** است و به یک حوزه قفل نیست (برخلاف `StaffTaskReferral` که
+/// به `StaffTask` می‌چسبد). `/api/admin/worklist/inbox` و `WorklistNotifier`
+/// رویش سوار می‌شوند.
+///
+/// ⚠️ کسی به خودش اعلان نمی‌دهد. ⚠️ پیامک عمداً نیست.
+/// ⚠️ این اعلان‌ها پاپ‌آپ فوری نمی‌گیرند — پاپ‌آپ مال ارجاع فوری کارتابل است
+/// و ارزشش به کمیابی‌اش است.
+model StaffNotification {
+  id        String                @id @default(cuid())
+  userId    String
+  type      StaffNotificationType
+  entityId  String
+  title     String
+  body      String?
+  /// مسیر پنل که کلیک روی اعلان باز می‌کند
+  url       String
+  readAt    DateTime?
+  createdAt DateTime              @default(now())
+
+  @@index([userId, readAt, createdAt])
+  @@index([type, entityId])
 }
