@@ -21,7 +21,24 @@ export interface TaskTypeLite {
   needsAmount: boolean;
   needsLink: boolean;
   needsCarrier: boolean;
+  needsRef: boolean;
+  refLabel: string | null;
+  needsPlatform: boolean;
   slaMinutes: number | null;
+}
+
+/** یک باربری قابل انتخاب — از `ShippingMethod`، نه از فهرست ثابت کد */
+export interface CarrierOption {
+  title: string;
+  /** «۲ ساعت» — فقط نمایش، مهلت واقعی از `slaMinutes` نوع کار می‌آید */
+  sla: string | null;
+  feePayer: "COLLECT" | "PREPAID" | "FREE";
+}
+
+/** یک بازارگاه — از `StoreSettings.worklistPlatforms` */
+export interface PlatformOption {
+  key: string;
+  label: string;
 }
 
 export interface TaskItem {
@@ -48,6 +65,8 @@ export interface TaskItem {
   /** BigInt سریالایز شده — رشته است نه عدد */
   amount: string | null;
   carrier: string | null;
+  refNo: string | null;
+  platform: string | null;
   outcome: string | null;
   note: string | null;
   parentId: string | null;
@@ -63,6 +82,9 @@ export interface TaskItem {
     title: string;
     icon: string | null;
     outcomes: unknown;
+    refLabel: string | null;
+    needsRef: boolean;
+    needsPlatform: boolean;
   };
   _count: { notes: number; referrals: number };
 }

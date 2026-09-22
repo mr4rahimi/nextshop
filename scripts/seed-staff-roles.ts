@@ -122,6 +122,21 @@ const ROLES: RoleSeed[] = [
     ],
   },
   {
+    // قیمت‌گذار — کسی که هر روز قیمت سایت و پنل بازارگاه‌ها را بروز می‌کند.
+    // نقش جداست نه چون مهام‌پرینت خواسته، بلکه چون قواعد تکرارشونده‌ی
+    // روزانه به **نقش** بسته می‌شوند نه به نام آدم‌ها.
+    slug: "pricing",
+    title: "قیمت‌گذاری و کاتالوگ",
+    description: "قیمت‌گذاری روزانه‌ی سایت و پنل بازارگاه‌ها، موجودی و محصول",
+    permissions: [
+      "PANEL_CATALOG",
+      "WORK_VIEW_OWN", "WORK_CREATE", "WORK_EDIT_OWN",
+      "SUPPLIER_VIEW",
+      "ATTENDANCE_VIEW_OWN",
+      "SCORE_VIEW_OWN",
+    ],
+  },
+  {
     slug: "procurement",
     title: "تدارکات",
     description: "استعلام قیمت، هماهنگی خرید و تأمین کالا",

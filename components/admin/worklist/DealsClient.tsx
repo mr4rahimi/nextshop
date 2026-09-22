@@ -38,6 +38,7 @@ interface Deal {
   commission: string | null;
   costPerItem: boolean;
   isManual: boolean;
+  noCommission: boolean;
   supplierId: string | null;
   supplierName: string | null;
   note: string | null;
@@ -197,6 +198,12 @@ export default function DealsClient() {
                       {d.title}
                       {d.isManual && (
                         <span className="mr-1.5 text-[9px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-600">دستی</span>
+                      )}
+                      {/* بدون این نشان، کارمند عدد صفرِ پورسانت را اشتباه حساب می‌داند */}
+                      {d.noCommission && (
+                        <span className="mr-1.5 text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">
+                          بدون پورسانت
+                        </span>
                       )}
                     </p>
                     <p className="text-[11px] text-gray-400">

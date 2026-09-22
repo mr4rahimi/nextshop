@@ -119,6 +119,12 @@ export default function TaskCard({
             {task.channel !== "NONE" && <span>{CHANNEL_LABELS[task.channel]}</span>}
             {amountFa && <span className="font-bold">{amountFa} تومان</span>}
             {task.carrier && <span>{task.carrier}</span>}
+            {task.platform && <span>{task.platform}</span>}
+            {task.refNo && (
+              <span dir="ltr" className="font-bold text-gray-700 dark:text-gray-300">
+                {task.type.refLabel || "مرجع"}: {task.refNo}
+              </span>
+            )}
             {showOwner && <span>مسئول: {task.ownerName}</span>}
           </div>
 

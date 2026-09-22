@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PROVINCES } from "@/lib/iran-cities";
+import { FEE_PAYER_SHORT, slaLabel } from "@/lib/shipping-methods";
 
 interface ShippingMethod {
   id: string;
@@ -12,6 +13,10 @@ interface ShippingMethod {
   fee: string;
   description: string | null;
   sortOrder: number;
+  slaMinutes: number | null;
+  feePayer: "COLLECT" | "PREPAID" | "FREE";
+  useInWorklist: boolean;
+  useInCheckout: boolean;
 }
 
 interface StoreSettings {
@@ -35,6 +40,7 @@ interface StoreSettings {
 const EMPTY_METHOD: Omit<ShippingMethod, "id"> = {
   title: "", type: "STANDARD", isActive: true,
   cities: [], fee: "0", description: null, sortOrder: 0,
+  slaMinutes: null, feePayer: "COLLECT", useInWorklist: true, useInCheckout: true,
 };
 
 const ALL_CITIES = PROVINCES.flatMap(p => p.cities.map(c => c.name));
@@ -70,7 +76,12 @@ export default function AdminShippingPage() {
 
   function openEdit(m: ShippingMethod) {
     setEditing(m);
-    setForm({ title: m.title, type: m.type, isActive: m.isActive, cities: m.cities, fee: m.fee, description: m.description ?? "", sortOrder: m.sortOrder });
+    setForm({
+      title: m.title, type: m.type, isActive: m.isActive, cities: m.cities, fee: m.fee,
+      description: m.description ?? "", sortOrder: m.sortOrder,
+      slaMinutes: m.slaMinutes, feePayer: m.feePayer ?? "COLLECT",
+      useInWorklist: m.useInWorklist !== false, useInCheckout: m.useInCheckout !== false,
+    });
     setCitySearch("");
     setShowForm(true);
   }
@@ -189,6 +200,8 @@ export default function AdminShippingPage() {
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5">
                         هزینه: {Number(m.fee) === 0 ? "رایگان" : `${Number(m.fee).toLocaleString("fa-IR")} تومان`}
+                        {m.slaMinutes ? ` · ${slaLabel(m.slaMinutes)}` : ""}
+                        {` · ${FEE_PAYER_SHORT[m.feePayer ?? "COLLECT"]}`}
                         {m.cities.length > 0 && ` — فقط: ${m.cities.slice(0, 3).join("، ")}${m.cities.length > 3 ? ` و ${(m.cities.length - 3).toLocaleString("fa-IR")} شهر دیگر` : ""}`}
                       </p>
                     </div>
@@ -252,6 +265,27 @@ export default function AdminShippingPage() {
                     value={form.sortOrder} onChange={e => setForm(f => ({ ...f, sortOrder: Number(e.target.value) }))} />
                 </div>
 
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-500">
+                    مهلت تعهدشده (دقیقه)
+                    <span className="text-gray-400 font-normal mr-1">خالی = بدون تعهد</span>
+                  </label>
+                  <input type="number" min="0" placeholder="مثلاً ۱۲۰ برای دو ساعت"
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white outline-none focus:border-blue-500"
+                    value={form.slaMinutes ?? ""}
+                    onChange={e => setForm(f => ({ ...f, slaMinutes: e.target.value === "" ? null : Number(e.target.value) }))} />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-500">کرایه با کیست</label>
+                  <select className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white outline-none focus:border-blue-500"
+                    value={form.feePayer} onChange={e => setForm(f => ({ ...f, feePayer: e.target.value as ShippingMethod["feePayer"] }))}>
+                    <option value="COLLECT">پس‌کرایه — مقصد می‌پردازد</option>
+                    <option value="PREPAID">پیش‌کرایه — فروشگاه می‌دهد</option>
+                    <option value="FREE">رایگان</option>
+                  </select>
+                </div>
+
                 <div className="md:col-span-2 space-y-1">
                   <label className="text-xs font-bold text-gray-500">توضیحات (اختیاری)</label>
                   <input className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white outline-none focus:border-blue-500"
@@ -313,6 +347,32 @@ export default function AdminShippingPage() {
                 </div>
                 <span className="text-sm font-bold text-gray-700 dark:text-gray-300">فعال</span>
               </label>
+
+              {/* دو مصرف‌کننده‌ی این جدول. «تیپاکس پس‌کرایه» فقط برای هماهنگی
+                  تلفنی تعریف می‌شود و نباید در سبد خرید دیده شود. */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div className="relative">
+                    <input type="checkbox" className="sr-only peer" checked={form.useInCheckout} onChange={e => setForm(f => ({ ...f, useInCheckout: e.target.checked }))} />
+                    <div className="w-11 h-6 bg-gray-200 peer-checked:bg-blue-500 rounded-full transition-all" />
+                    <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all peer-checked:translate-x-5" />
+                  </div>
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                    در سبد خرید سایت
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div className="relative">
+                    <input type="checkbox" className="sr-only peer" checked={form.useInWorklist} onChange={e => setForm(f => ({ ...f, useInWorklist: e.target.checked }))} />
+                    <div className="w-11 h-6 bg-gray-200 peer-checked:bg-blue-500 rounded-full transition-all" />
+                    <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all peer-checked:translate-x-5" />
+                  </div>
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                    به‌عنوان باربری در کارتابل
+                  </span>
+                </label>
+              </div>
 
               <div className="flex gap-3 pt-2">
                 <button onClick={handleSave} disabled={saving || !form.title}

@@ -26,6 +26,8 @@ export default function WorklistSettingsCard() {
   const [hours, setHours] = useState<DayHours[]>([]);
   const [loyalOrders, setLoyalOrders] = useState("2");
   const [loyalSpent, setLoyalSpent] = useState("0");
+  const [platforms, setPlatforms] = useState<{ key: string; label: string }[]>([]);
+  const [newPlatform, setNewPlatform] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -38,6 +40,7 @@ export default function WorklistSettingsCard() {
         setHours(d.workHours ?? []);
         setLoyalOrders(String(d.loyalMinOrders ?? 2));
         setLoyalSpent(String(d.loyalMinSpent ?? "0"));
+        setPlatforms(d.platforms ?? []);
         setLoaded(true);
       })
       .catch(() => {
@@ -54,6 +57,7 @@ export default function WorklistSettingsCard() {
     workHours?: DayHours[];
     loyalMinOrders?: string;
     loyalMinSpent?: string;
+    platforms?: { key: string; label: string }[];
   }) {
     setBusy(true);
     setErr(null);
@@ -66,6 +70,7 @@ export default function WorklistSettingsCard() {
       if (next.workHours) body.workHours = next.workHours;
       if (next.loyalMinOrders !== undefined) body.loyalMinOrders = next.loyalMinOrders;
       if (next.loyalMinSpent !== undefined) body.loyalMinSpent = next.loyalMinSpent;
+      if (next.platforms !== undefined) body.platforms = next.platforms;
       const res = await fetch("/api/admin/worklist/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -78,6 +83,7 @@ export default function WorklistSettingsCard() {
       setHours(data.workHours);
       setLoyalOrders(String(data.loyalMinOrders));
       setLoyalSpent(String(data.loyalMinSpent));
+      if (data.platforms) setPlatforms(data.platforms);
       setMsg("ذخیره شد");
     } catch (e) {
       setErr((e as Error).message);
@@ -236,6 +242,77 @@ export default function WorklistSettingsCard() {
             ذخیره
           </button>
         </div>
+      </div>
+
+      {/* ── بازارگاه‌ها ─────────────────────────────────────────── */}
+      <div>
+        <span className="block text-xs font-bold text-gray-900 dark:text-white">بازارگاه‌ها</span>
+        <span className="block text-[11px] text-gray-500 mt-0.5 mb-2">
+          خوراک فیلد «بازارگاه» در کارهایی مثل قیمت‌گذاری پنل‌ها. چون بازارگاه فیلد
+          جداست نه نتیجه، گزارش «هر پنل چند روز بروز شد» جدا درمی‌آید.
+        </span>
+
+        {platforms.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {platforms.map((p) => (
+              <span
+                key={p.key}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/5 text-xs font-bold text-gray-700 dark:text-gray-300"
+              >
+                {p.label}
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    const next = platforms.filter((x) => x.key !== p.key);
+                    setPlatforms(next);
+                    void save({ platforms: next });
+                  }}
+                  className="text-gray-400 hover:text-red-500 disabled:opacity-40"
+                  title="حذف"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-[11px] text-gray-600 dark:text-gray-400">
+            نام بازارگاه تازه
+            <input
+              value={newPlatform}
+              onChange={(e) => setNewPlatform(e.target.value)}
+              placeholder="مثلاً دیجی‌کالا"
+              className="block mt-1 w-44 px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs text-gray-900 dark:text-white outline-none focus:border-blue-400"
+            />
+          </label>
+          <button
+            disabled={busy || !newPlatform.trim()}
+            onClick={() => {
+              const label = newPlatform.trim();
+              // کلید از نام ساخته می‌شود و بعدش دست نمی‌خورد؛ اسم فارسی کلید
+              // بی‌ضرر است چون کلید فقط شناسه‌ی داخلی فهرست است.
+              const key = label.replace(/\s+/g, "-").toLowerCase();
+              if (platforms.some((p) => p.key === key || p.label === label)) {
+                setNewPlatform("");
+                return;
+              }
+              const next = [...platforms, { key, label }];
+              setPlatforms(next);
+              setNewPlatform("");
+              void save({ platforms: next });
+            }}
+            className="px-3 py-1.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold disabled:opacity-40"
+          >
+            افزودن
+          </button>
+        </div>
+
+        <p className="text-[11px] text-gray-400 mt-2">
+          حذف یک بازارگاه، کارهای ثبت‌شده‌ی قبلی را عوض نمی‌کند — نام روی خودِ کار
+          ذخیره شده است.
+        </p>
       </div>
 
       {msg && <p className="text-[11px] text-emerald-600 dark:text-emerald-400">{msg}</p>}

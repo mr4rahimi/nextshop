@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { logActivityAsync } from "@/lib/activity";
 import { clearAttendanceGateCache } from "@/lib/worklist/attendance";
-import { clearWorklistConfigCache } from "@/lib/worklist/settings";
+import { clearWorklistConfigCache, normalizePlatforms } from "@/lib/worklist/settings";
 import { normalizeWorkHours, validateWorkHours } from "@/lib/worklist/work-hours";
 
 export const runtime = "nodejs";
@@ -22,6 +22,7 @@ const SELECT = {
   worklistWorkHours: true,
   worklistLoyalMinOrders: true,
   worklistLoyalMinSpent: true,
+  worklistPlatforms: true,
 } as const;
 
 type Row = {
@@ -30,6 +31,7 @@ type Row = {
   worklistWorkHours: unknown;
   worklistLoyalMinOrders: number;
   worklistLoyalMinSpent: bigint;
+  worklistPlatforms: unknown;
 };
 
 function toJson(s: Row | null) {
@@ -41,6 +43,7 @@ function toJson(s: Row | null) {
     loyalMinOrders: s?.worklistLoyalMinOrders ?? 2,
     // BigInt در JSON نمی‌نشیند؛ ریال تا ۲^۵۳ جا می‌شود ولی رشته امن‌تر است
     loyalMinSpent: String(s?.worklistLoyalMinSpent ?? 0n),
+    platforms: normalizePlatforms(s?.worklistPlatforms),
   };
 }
 
@@ -82,6 +85,7 @@ export async function PUT(req: Request) {
       worklistWorkHours?: object[];
       worklistLoyalMinOrders?: number;
       worklistLoyalMinSpent?: bigint;
+      worklistPlatforms?: object[];
     } = {};
 
     if (typeof body?.enabled === "boolean") data.worklistEnabled = body.enabled;
@@ -120,6 +124,23 @@ export async function PUT(req: Request) {
         return NextResponse.json({ error: "حداقل مبلغ خرید نامعتبر است" }, { status: 400 });
       }
       data.worklistLoyalMinSpent = BigInt(raw);
+    }
+
+    if (body?.platforms !== undefined) {
+      if (!Array.isArray(body.platforms)) {
+        return NextResponse.json({ error: "فهرست بازارگاه‌ها نامعتبر است" }, { status: 400 });
+      }
+      const list = normalizePlatforms(body.platforms);
+      if (list.length !== body.platforms.length) {
+        return NextResponse.json(
+          { error: "هر بازارگاه باید کلید و نام یکتا داشته باشد" },
+          { status: 400 },
+        );
+      }
+      if (list.length > 30) {
+        return NextResponse.json({ error: "بیشتر از ۳۰ بازارگاه پذیرفته نمی‌شود" }, { status: 400 });
+      }
+      data.worklistPlatforms = list.map((p) => ({ ...p }));
     }
 
     if (Object.keys(data).length === 0) {

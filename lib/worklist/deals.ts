@@ -236,6 +236,8 @@ export const DEAL_SELECT = {
   commission: true,
   costPerItem: true,
   isManual: true,
+  noCommission: true,
+  taskId: true,
   supplierId: true,
   supplierName: true,
   note: true,
@@ -277,6 +279,7 @@ async function applyCommission(tx: Prisma.TransactionClient, dealId: string) {
     where: { id: dealId },
     select: {
       ownerId: true,
+      noCommission: true,
       owner: {
         select: {
           commissionPlan: {
@@ -293,6 +296,20 @@ async function applyCommission(tx: Prisma.TransactionClient, dealId: string) {
 
   const plan = deal.owner?.commissionPlan?.isActive ? deal.owner.commissionPlan : null;
   let total = 0n;
+
+  // معامله‌ی بدون پورسانت (درآمد تعمیرات): سود سر جایش می‌ماند و در گزارش و
+  // در `totalProfit` تسویه دیده می‌شود، ولی هیچ ردیفی پورسانت نمی‌گیرد.
+  // عمداً صفر نوشته می‌شود نه `null` — `null` یعنی «هنوز حساب نشده».
+  if (deal.noCommission) {
+    for (const item of deal.items) {
+      await tx.staffDealItem.update({
+        where: { id: item.id },
+        data: { percent: 0, commission: 0n, ruleId: null, ruleLabel: "بدون پورسانت" },
+      });
+    }
+    await tx.staffDeal.update({ where: { id: dealId }, data: { commission: 0n } });
+    return;
+  }
 
   for (const item of deal.items) {
     if (!deal.ownerId) {
@@ -511,6 +528,104 @@ export async function createManualDeal(
     );
   }
   return prisma.staffDeal.findUniqueOrThrow({ where: { id: deal.id }, select: DEAL_SELECT });
+}
+
+/**
+ * معامله از روی یک کارِ کارتابل — امروز فقط «تعمیر دستگاه».
+ *
+ * نوع کاری که `createsDeal` دارد، وقتی با **نتیجه‌ی موفق** و **مبلغ** بسته
+ * می‌شود یک معامله‌ی قطعی می‌سازد: درآمد همان مبلغ کار، هزینه صفر، سود برابر
+ * درآمد. اگر نوع کار `dealNoCommission` داشته باشد، معامله در سود می‌آید ولی
+ * پورسانت نمی‌سازد (بخش ۲ سند تنظیم‌پذیری).
+ *
+ * ⚠️ سه نکته که دور زدنشان گران تمام می‌شود:
+ *  - **idempotent** است: مرزش ایندکس یکتای `taskId` است، نه شمارش در کد.
+ *    کاری که باز و بسته شود دو معامله نمی‌سازد.
+ *  - **هزینه صفر یعنی سود برابر درآمد.** قطعات مصرفی تعمیر اگر روزی مهم شد،
+ *    همان `setDealCost` معمولی جوابش را می‌دهد و این تابع دست نمی‌خورد.
+ *  - **هیچ‌وقت مسیر کار را نمی‌شکند** — فراخواننده `dealFromTaskSafe` را صدا می‌زند.
+ */
+export async function dealFromTask(taskId: string): Promise<"created" | "none"> {
+  const task = await prisma.staffTask.findUnique({
+    where: { id: taskId },
+    select: {
+      id: true,
+      title: true,
+      amount: true,
+      outcome: true,
+      status: true,
+      ownerId: true,
+      ownerName: true,
+      customerId: true,
+      occurredAt: true,
+      createdAt: true,
+      deal: { select: { id: true } },
+      customer: { select: { firstName: true, lastName: true, phone: true } },
+      type: { select: { createsDeal: true, dealNoCommission: true, outcomes: true } },
+    },
+  });
+
+  if (!task || !task.type.createsDeal) return "none";
+  if (task.deal) return "none";
+  if (task.status !== "DONE" || !task.outcome) return "none";
+  // مبلغ صفر یا خالی یعنی کارمند هنوز عددش را نزده — معامله‌ی صفرریالی نمی‌سازیم
+  if (!task.amount || task.amount <= 0n) return "none";
+
+  // فقط نتیجه‌ی موفق درآمد است: «مشتری منصرف شد» معامله نیست
+  const outcomes = Array.isArray(task.type.outcomes) ? (task.type.outcomes as { value?: unknown; isSuccess?: unknown }[]) : [];
+  const isSuccess = outcomes.some((o) => o?.value === task.outcome && o?.isSuccess === true);
+  if (!isSuccess) return "none";
+
+  const occurredAt = task.occurredAt ?? task.createdAt;
+
+  try {
+    const deal = await prisma.staffDeal.create({
+      data: {
+        taskId: task.id,
+        isManual: true,
+        noCommission: task.type.dealNoCommission,
+        ownerId: task.ownerId,
+        ownerName: task.ownerName,
+        customerId: task.customerId,
+        customerName: fullName(task.customer),
+        title: task.title,
+        revenue: task.amount,
+        cost: 0n,
+        profit: task.amount,
+        status: "CONFIRMED",
+        confirmedAt: new Date(),
+        monthKey: monthKeyOf(occurredAt),
+        occurredAt,
+        items: {
+          create: [
+            {
+              title: task.title,
+              categoryPath: [],
+              condition: "NEW",
+              revenue: task.amount,
+              cost: 0n,
+              profit: task.amount,
+            },
+          ],
+        },
+      },
+      select: { id: true },
+    });
+
+    await prisma.$transaction(async (tx) => applyCommission(tx, deal.id));
+    return "created";
+  } catch (e) {
+    // همان کار از دو مسیر هم‌زمان بسته شد — ایندکس یکتا جلویش را گرفت
+    if ((e as { code?: string }).code === "P2002") return "none";
+    throw e;
+  }
+}
+
+/** نسخه‌ی بی‌خطر برای مسیر کار — بستن کار هیچ‌وقت نباید به خاطر معامله بشکند */
+export function dealFromTaskSafe(taskId: string): void {
+  dealFromTask(taskId).catch((e) =>
+    console.error("[worklist] ساخت معامله از کار شکست خورد:", e),
+  );
 }
 
 export type DealTab = "pending" | "open" | "paid" | "unowned" | "void" | "all";

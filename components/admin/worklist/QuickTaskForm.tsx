@@ -5,7 +5,8 @@
  *
  * هدف صریح: **زیر ده ثانیه**. سه ضربه کافی است — نوع کار، مخاطب، نتیجه.
  * هر فیلدی که به نوعِ انتخاب‌شده ربط ندارد اصلاً نشان داده نمی‌شود
- * (`needsCustomer`، `needsAmount`، `needsLink`، `needsCarrier`).
+ * (`needsCustomer`، `needsAmount`، `needsLink`، `needsCarrier`، `needsRef`،
+ * `needsPlatform`).
  *
  * دو تصمیم که اصطکاک را می‌کشند:
  *  - نتیجه‌ها **دکمه‌اند نه فیلد متنی**. متن آزاد یعنی نمودار هرگز ساخته نمی‌شود.
@@ -13,11 +14,17 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DOMAIN_LABELS, CARRIERS, parseOutcomes } from "@/lib/worklist/types";
+import { DOMAIN_LABELS, parseOutcomes } from "@/lib/worklist/types";
 import type { StaffDomain, StaffChannel } from "@/lib/worklist/types";
 import type { HelpKey } from "./help-content";
 import SupplierPicker, { type SupplierOption } from "./SupplierPicker";
-import type { TaskTypeLite, ContactSuggestion, TaskItem } from "./types";
+import type {
+  TaskTypeLite,
+  ContactSuggestion,
+  TaskItem,
+  CarrierOption,
+  PlatformOption,
+} from "./types";
 import HelpButton from "./HelpButton";
 
 interface Props {
@@ -64,6 +71,10 @@ export default function QuickTaskForm({
   const [amount, setAmount] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [carrier, setCarrier] = useState("");
+  const [carriers, setCarriers] = useState<CarrierOption[]>([]);
+  const [platforms, setPlatforms] = useState<PlatformOption[]>([]);
+  const [platform, setPlatform] = useState("");
+  const [refNo, setRefNo] = useState("");
   const [outcome, setOutcome] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [title, setTitle] = useState("");
@@ -90,6 +101,7 @@ export default function QuickTaskForm({
       .then((d) => {
         const list: TaskTypeLite[] = d.types ?? [];
         setTypes(list);
+        setPlatforms(d.platforms ?? []);
         if (presetTypeSlug) {
           const preset = list.find((t) => t.slug === presetTypeSlug);
           if (preset) setTypeId(preset.id);
@@ -97,6 +109,17 @@ export default function QuickTaskForm({
       })
       .catch(() => setError("بارگذاری انواع کار ناموفق بود"));
   }, [open, types.length, presetTypeSlug]);
+
+  // ── باربری‌ها ──────────────────────────────────────────────────
+  // فقط وقتی گرفته می‌شوند که نوعِ انتخاب‌شده باربری بخواهد: بیشتر کارها
+  // ربطی به ارسال ندارند و یک درخواست اضافه روی هر بازشدن فرم، بی‌دلیل است.
+  useEffect(() => {
+    if (!open || !selectedType?.needsCarrier || carriers.length) return;
+    fetch("/api/admin/worklist/carriers")
+      .then((r) => r.json())
+      .then((d) => setCarriers(d.carriers ?? []))
+      .catch(() => {});
+  }, [open, selectedType?.needsCarrier, carriers.length]);
 
   // ── بازنشانی هنگام باز شدن ─────────────────────────────────────
   useEffect(() => {
@@ -108,6 +131,8 @@ export default function QuickTaskForm({
     setAmount("");
     setLinkUrl("");
     setCarrier("");
+    setPlatform("");
+    setRefNo("");
     setSupplier(null);
     if (presetCustomer) {
       setCustomer({
@@ -179,6 +204,8 @@ export default function QuickTaskForm({
       if (selectedType?.needsAmount) payload.amount = amount.replace(/[^\d]/g, "") || null;
       if (selectedType?.needsLink) payload.linkUrl = linkUrl.trim() || null;
       if (selectedType?.needsCarrier) payload.carrier = carrier || null;
+      if (selectedType?.needsRef) payload.refNo = refNo.trim() || null;
+      if (selectedType?.needsPlatform) payload.platform = platform || null;
       if (supplier) payload.supplierId = supplier.id;
 
       try {
@@ -200,6 +227,7 @@ export default function QuickTaskForm({
           setTitle("");
           setAmount("");
           setLinkUrl("");
+          setRefNo("");
           setCustomer(null);
           setContactQuery("");
         }
@@ -211,7 +239,7 @@ export default function QuickTaskForm({
     },
     [
       typeId, outcome, note, title, selectedType, customer, contactQuery,
-      amount, linkUrl, carrier, supplier, onCreated, onClose,
+      amount, linkUrl, carrier, refNo, platform, supplier, onCreated, onClose,
     ],
   );
 
@@ -411,12 +439,57 @@ export default function QuickTaskForm({
                       className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white outline-none focus:border-blue-400"
                     >
                       <option value="">انتخاب کنید</option>
-                      {CARRIERS.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
+                      {carriers.map((c) => (
+                        <option key={c.title} value={c.title}>
+                          {c.title}
+                          {c.sla ? ` — ${c.sla}` : ""}
+                          {c.feePayer === "PREPAID" ? " (پیش‌کرایه)" : ""}
+                          {c.feePayer === "FREE" ? " (رایگان)" : ""}
                         </option>
                       ))}
                     </select>
+                    <p className="mt-1.5 text-[11px] text-gray-400">
+                      باربری و کرایه انتخاب مشتری است. فهرست را در «تنظیمات ارسال» عوض کنید.
+                    </p>
+                  </div>
+                )}
+
+                {selectedType.needsPlatform && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">
+                      بازارگاه
+                    </label>
+                    <select
+                      value={platform}
+                      onChange={(e) => setPlatform(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white outline-none focus:border-blue-400"
+                    >
+                      <option value="">انتخاب کنید</option>
+                      {platforms.map((p) => (
+                        <option key={p.key} value={p.label}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                    {platforms.length === 0 && (
+                      <p className="mt-1.5 text-[11px] text-orange-500">
+                        هنوز بازارگاهی تعریف نشده — تنظیمات کارتابل.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {selectedType.needsRef && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">
+                      {selectedType.refLabel || "شماره مرجع"}
+                    </label>
+                    <input
+                      value={refNo}
+                      onChange={(e) => setRefNo(e.target.value)}
+                      placeholder="—"
+                      className="w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white outline-none focus:border-blue-400"
+                    />
                   </div>
                 )}
 

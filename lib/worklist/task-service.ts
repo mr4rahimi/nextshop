@@ -14,6 +14,7 @@ import type { StaffAccess } from "@/lib/permissions";
 import type { Prisma, StaffTaskStatus } from "@prisma/client";
 import { supplierSnapshot } from "./suppliers";
 import { claimIfUnowned, CLAIMING_CHANNELS } from "@/lib/club/ownership";
+import { dealFromTaskSafe } from "./deals";
 
 /**
  * تماسی که نتیجه گرفت و مشتری ثبت‌شده دارد، مشتریِ بی‌صاحب را به نام کسی
@@ -59,6 +60,8 @@ export const TASK_SELECT = {
   linkUrl: true,
   amount: true,
   carrier: true,
+  refNo: true,
+  platform: true,
   outcome: true,
   note: true,
   parentId: true,
@@ -69,7 +72,16 @@ export const TASK_SELECT = {
   createdAt: true,
   updatedAt: true,
   type: {
-    select: { id: true, slug: true, title: true, icon: true, outcomes: true },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      icon: true,
+      outcomes: true,
+      refLabel: true,
+      needsRef: true,
+      needsPlatform: true,
+    },
   },
   _count: { select: { notes: true, referrals: true } },
 } satisfies Prisma.StaffTaskSelect;
@@ -123,6 +135,8 @@ export interface CreateTaskInput {
   linkUrl?: string | null;
   amount?: string | number | null;
   carrier?: string | null;
+  refNo?: string | null;
+  platform?: string | null;
   outcome?: string | null;
   note?: string | null;
   parentId?: string | null;
@@ -171,6 +185,8 @@ export async function createTask(input: CreateTaskInput, access: StaffAccess) {
       source: true,
       slaMinutes: true,
       isActive: true,
+      createsDeal: true,
+      dealNoCommission: true,
     },
   });
 
@@ -212,6 +228,8 @@ export async function createTask(input: CreateTaskInput, access: StaffAccess) {
       linkUrl: trimOrNull(input.linkUrl),
       amount: toBigInt(input.amount),
       carrier: trimOrNull(input.carrier),
+      refNo: trimOrNull(input.refNo),
+      platform: trimOrNull(input.platform),
 
       outcome,
       note: trimOrNull(input.note),
@@ -233,6 +251,8 @@ export async function createTask(input: CreateTaskInput, access: StaffAccess) {
   });
 
   await claimFromCall(task, access);
+  // کارِ درآمدزا (تعمیرات) که همان لحظه با نتیجه و مبلغ ثبت شود
+  if (task.status === "DONE") dealFromTaskSafe(task.id);
 
   return task;
 }
@@ -253,6 +273,8 @@ export interface UpdateTaskInput {
   linkUrl?: string | null;
   amount?: string | number | null;
   carrier?: string | null;
+  refNo?: string | null;
+  platform?: string | null;
   dueAt?: string | Date | null;
   occurredAt?: string | Date | null;
 }
@@ -305,6 +327,8 @@ export async function updateTask(
   if (has("linkUrl")) data.linkUrl = trimOrNull(input.linkUrl);
   if (has("amount")) data.amount = toBigInt(input.amount);
   if (has("carrier")) data.carrier = trimOrNull(input.carrier);
+  if (has("refNo")) data.refNo = trimOrNull(input.refNo);
+  if (has("platform")) data.platform = trimOrNull(input.platform);
   if (has("note")) data.note = trimOrNull(input.note);
   if (has("dueAt")) data.dueAt = toDate(input.dueAt);
   if (has("occurredAt")) data.occurredAt = toDate(input.occurredAt);
@@ -347,6 +371,9 @@ export async function updateTask(
   });
 
   if (has("outcome")) await claimFromCall(task, access);
+  // بستن کار، معامله‌ی تعمیر را می‌سازد. idempotent است، پس بازوبسته‌کردن
+  // دوباره‌ی کار معامله‌ی دوم نمی‌سازد.
+  if (task.status === "DONE") dealFromTaskSafe(task.id);
 
   return task;
 }

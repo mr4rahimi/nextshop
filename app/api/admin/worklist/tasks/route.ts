@@ -113,6 +113,10 @@ export async function GET(req: Request) {
   const customerId = sp.get("customerId");
   if (customerId) where.customerId = customerId;
 
+  // گزارش «دیجی‌کالا چند روز بروز شد» روی همین فیلتر می‌نشیند
+  const platform = sp.get("platform");
+  if (platform) where.platform = platform;
+
   // ⚠️ جستجو هم مثل مرز دسترسی داخل همان آرایه‌ی AND می‌رود. اگر هرکدام
   // مستقیم `where.AND` را بنویسند، دیگری را پاک می‌کنند و فیلتر دسترسی
   // بی‌سروصدا از بین می‌رود.
@@ -124,6 +128,8 @@ export async function GET(req: Request) {
         { contactName: { contains: q, mode: "insensitive" } },
         { contactPhone: { contains: q } },
         { supplierName: { contains: q, mode: "insensitive" } },
+        // شماره‌ی فاکتور رسمی و امثالش — «۱۴۰۵-۲۲۱» باید پیدا شود
+        { refNo: { contains: q, mode: "insensitive" } },
         { note: { contains: q, mode: "insensitive" } },
       ],
     });

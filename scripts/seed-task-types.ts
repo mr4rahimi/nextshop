@@ -1,7 +1,12 @@
 /**
  * ساخت انواع کارِ پیش‌فرض کارتابل
  *
- *   pnpm tsx scripts/seed-task-types.ts
+ *   pnpm tsx scripts/seed-task-types.ts                      # = --preset=core
+ *   pnpm tsx scripts/seed-task-types.ts --preset=mahamprint  # هسته + اختصاصی
+ *
+ * **`core`** هر چیزی است که هر فروشگاهی دارد. **`mahamprint`** روی آن،
+ * چیزهای اختصاصی این کسب‌وکار را می‌گذارد (تعمیر دستگاه، ارسال شهرستان با
+ * باربری). هیچ نام آدمی در هیچ‌کدام نیست — تخصیص کار با نقش است.
  *
  * فهرست از بخش ۴ سند می‌آید — همان کاغذی که کارکنان مهام‌پرینت نوشتند،
  * مرتب‌شده در هشت دامنه.
@@ -11,7 +16,8 @@
  *
  * ⚠️ نوع کار هرگز حذف نمی‌شود؛ فقط `isActive = false` می‌گیرد.
  *
- * مستندات: docs/features/staff-worklist.md بخش ۴
+ * مستندات: docs/features/staff-worklist.md بخش ۴ و
+ *           docs/plans/business-config.md بخش ۶
  */
 
 import "../lib/load-env";
@@ -24,6 +30,8 @@ interface Outcome {
   /** نتیجه‌ی موفق — مبنای نمودار «نرخ تبدیل» */
   isSuccess?: boolean;
 }
+
+type Preset = "core" | "mahamprint";
 
 interface TypeSeed {
   slug: string;
@@ -38,7 +46,14 @@ interface TypeSeed {
   needsAmount?: boolean;
   needsLink?: boolean;
   needsCarrier?: boolean;
+  needsRef?: boolean;
+  refLabel?: string;
+  needsPlatform?: boolean;
+  createsDeal?: boolean;
+  dealNoCommission?: boolean;
   slaMinutes?: number;
+  /** فقط در این پیش‌تنظیم ساخته می‌شود — نبودنش یعنی هسته، برای همه */
+  preset?: Preset;
 }
 
 const TYPES: TypeSeed[] = [
@@ -117,6 +132,10 @@ const TYPES: TypeSeed[] = [
     domain: "SALES",
     icon: "📑",
     needsCustomer: true,
+    // فاکتور بیرون از فروشگاه صادر می‌شود؛ اینجا فقط شماره‌اش ثبت می‌شود
+    // تا بعداً قابل پیگیری باشد (بخش ۳ سند تنظیم‌پذیری).
+    needsRef: true,
+    refLabel: "شماره فاکتور رسمی",
     outcomes: [
       { value: "issued", label: "صادر شد", isSuccess: true },
       { value: "pending_info", label: "منتظر اطلاعات مشتری" },
@@ -202,7 +221,9 @@ const TYPES: TypeSeed[] = [
     domain: "FULFILLMENT",
     icon: "🛵",
     needsCustomer: true,
-    slaMinutes: 180, // وعده‌ی سه‌ساعته
+    // وعده‌ی دوساعته. **پیش‌فرض است نه قانون** — از
+    // `/admin/worklist/settings` برای هر کسب‌وکار عوض می‌شود.
+    slaMinutes: 120,
     outcomes: [
       { value: "delivered", label: "تحویل شد", isSuccess: true },
       { value: "dispatched", label: "ارسال شد" },
@@ -216,6 +237,7 @@ const TYPES: TypeSeed[] = [
     domain: "FULFILLMENT",
     icon: "🚚",
     needsCustomer: true,
+    // باربری و کرایه انتخاب مشتری است. فهرست از `ShippingMethod` می‌آید.
     needsCarrier: true,
     slaMinutes: 1440, // وعده‌ی بیست‌وچهارساعته
     outcomes: [
@@ -249,14 +271,18 @@ const TYPES: TypeSeed[] = [
   },
   {
     slug: "marketplace-pricing",
-    title: "قیمت‌گذاری پنل‌های بازارگاه",
+    title: "قیمت‌گذاری پنل بازارگاه",
     domain: "CATALOG",
     icon: "🛍️",
+    // ⚠️ تا پیش از این، نتیجه‌ها **نام پلتفرم** بودند. با آن مدل هیچ‌وقت
+    // نمی‌شد پرسید «دیجی‌کالا امروز بروز شد یا نه»، چون انتخاب اسنپ‌شاپ
+    // بقیه را گم می‌کرد. حالا پلتفرم فیلد جداست و نتیجه، نتیجه است.
+    needsPlatform: true,
     outcomes: [
-      { value: "snapp", label: "اسنپ‌شاپ" },
-      { value: "tapsi", label: "تپسی‌شاپ" },
-      { value: "digikala", label: "دیجی‌کالا" },
-      { value: "pindo", label: "پیندو" },
+      { value: "updated", label: "بروز شد", isSuccess: true },
+      { value: "no_change", label: "تغییری لازم نبود" },
+      { value: "partial", label: "ناقص ماند" },
+      { value: "blocked", label: "پنل در دسترس نبود" },
     ],
   },
   {
@@ -359,6 +385,27 @@ const TYPES: TypeSeed[] = [
     ],
   },
   {
+    slug: "repair-service",
+    title: "تعمیر دستگاه",
+    domain: "SUPPORT",
+    icon: "🛠️",
+    needsCustomer: true,
+    needsAmount: true, // مبلغ تعمیر — بدونش معامله ساخته نمی‌شود
+    // درآمد تعمیر در **سود** می‌آید ولی **پورسانت نمی‌سازد**.
+    // محل تعمیر نتیجه است نه فیلد تازه: همان یک دکمه‌ای که کارمند
+    // به‌هرحال می‌زند، گزارش «چند درصد در محل مشتری» را هم می‌دهد.
+    createsDeal: true,
+    dealNoCommission: true,
+    preset: "mahamprint",
+    outcomes: [
+      { value: "repaired_shop", label: "تعمیر شد — در کارگاه", isSuccess: true },
+      { value: "repaired_onsite", label: "تعمیر شد — در محل مشتری", isSuccess: true },
+      { value: "estimate_sent", label: "برآورد داده شد" },
+      { value: "declined", label: "مشتری منصرف شد" },
+      { value: "not_repairable", label: "قابل تعمیر نبود" },
+    ],
+  },
+  {
     slug: "warranty-case",
     title: "رسیدگی به گارانتی",
     domain: "SUPPORT",
@@ -397,11 +444,29 @@ const TYPES: TypeSeed[] = [
   },
 ];
 
+/**
+ * پیش‌تنظیم از آرگومان — `--preset=mahamprint`. ورودی ناشناخته خطاست، نه
+ * بازگشت بی‌سروصدا به `core`: تایپ اشتباه نباید نیمی از انواع را جا بیندازد.
+ */
+function readPreset(): Preset {
+  const arg = process.argv.find((a) => a.startsWith("--preset="));
+  if (!arg) return "core";
+  const value = arg.slice("--preset=".length);
+  if (value === "core" || value === "mahamprint") return value;
+  throw new Error(`پیش‌تنظیم ناشناخته: ${value} — core یا mahamprint`);
+}
+
 async function main() {
+  const preset = readPreset();
+  // هسته برای همه؛ بسته‌ی اختصاصی فقط وقتی صریح خواسته شده باشد
+  const selected = TYPES.filter((t) => !t.preset || t.preset === preset);
+
+  console.log(`پیش‌تنظیم: ${preset} · ${selected.length} نوع کار\n`);
+
   let created = 0;
   let kept = 0;
 
-  for (const [index, seed] of TYPES.entries()) {
+  for (const [index, seed] of selected.entries()) {
     const existing = await prisma.staffTaskType.findUnique({
       where: { slug: seed.slug },
       select: { id: true },
@@ -427,6 +492,11 @@ async function main() {
         needsAmount: seed.needsAmount ?? false,
         needsLink: seed.needsLink ?? false,
         needsCarrier: seed.needsCarrier ?? false,
+        needsRef: seed.needsRef ?? false,
+        refLabel: seed.refLabel ?? null,
+        needsPlatform: seed.needsPlatform ?? false,
+        createsDeal: seed.createsDeal ?? false,
+        dealNoCommission: seed.dealNoCommission ?? false,
         slaMinutes: seed.slaMinutes ?? null,
         sortOrder: index,
       },
@@ -435,7 +505,7 @@ async function main() {
     console.log(`+ ${seed.title}  [${seed.domain}]`);
   }
 
-  console.log(`\nساخته‌شده ${created} · از قبل موجود ${kept} · مجموع ${TYPES.length}`);
+  console.log(`\nساخته‌شده ${created} · از قبل موجود ${kept} · مجموع ${selected.length}`);
 }
 
 main()

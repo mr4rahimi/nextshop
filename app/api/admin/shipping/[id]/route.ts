@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
+import { shippingWriteData } from "@/lib/shipping-methods";
 
 export const runtime = "nodejs";
 
@@ -9,15 +10,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const data = await req.json();
   const method = await prisma.shippingMethod.update({
     where: { id },
-    data: {
-      title:       data.title,
-      type:        data.type,
-      isActive:    data.isActive,
-      cities:      data.cities ?? [],
-      fee:         BigInt(data.fee ?? 0),
-      description: data.description ?? null,
-      sortOrder:   data.sortOrder ?? 0,
-    },
+    data: { ...shippingWriteData(data), isActive: data.isActive },
   });
   return NextResponse.json(serialize(method));
 }

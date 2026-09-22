@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
+import { getWorklistConfig } from "@/lib/worklist/settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,9 +38,16 @@ export async function GET() {
       needsAmount: true,
       needsLink: true,
       needsCarrier: true,
+      needsRef: true,
+      refLabel: true,
+      needsPlatform: true,
       slaMinutes: true,
     },
   });
 
-  return NextResponse.json({ types });
+  // فهرست بازارگاه‌ها با همین پاسخ می‌آید: فرم ثبت کار وگرنه باید دو درخواست
+  // بزند و تا رسیدن دومی، انتخابگر پلتفرم خالی دیده می‌شود.
+  const { platforms } = await getWorklistConfig();
+
+  return NextResponse.json({ types, platforms });
 }

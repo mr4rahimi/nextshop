@@ -8,8 +8,10 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const city = url.searchParams.get("city") ?? "";
 
+  // ⚠️ `useInCheckout` فیلترِ لازم است: روش‌هایی مثل «تیپاکس پس‌کرایه» فقط
+  // برای هماهنگی تلفنیِ کارتابل تعریف می‌شوند و نباید در سبد خرید دیده شوند.
   const methods = await prisma.shippingMethod.findMany({
-    where: { isActive: true },
+    where: { isActive: true, useInCheckout: true },
     orderBy: [{ sortOrder: "asc" }],
   });
 
