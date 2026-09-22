@@ -18,7 +18,7 @@ export async function getCategoryData(slug: string) {
 
   const catIds = [category.id, ...category.children.map(c => c.id)];
 
-  const [brands, priceAgg, attrGroups, landings] = await Promise.all([
+  const [brands, priceAgg, conditionRows, attrGroups, landings] = await Promise.all([
     prisma.brand.findMany({
       where: { isActive: true, products: { some: { isActive: true, categoryId: { in: catIds } } } },
       select: { id: true, title: true, slug: true, logoUrl: true },
@@ -27,6 +27,14 @@ export async function getCategoryData(slug: string) {
     prisma.product.aggregate({
       where: { isActive: true, categoryId: { in: catIds } },
       _min: { price: true }, _max: { price: true },
+    }),
+    // ⚠️ وضعیت‌هایی که **واقعاً در این دسته وجود دارند**. فروشگاهی که همه‌ی
+    // کالایش نو است نباید فیلتر «نو / استوک» ببیند؛ فیلتری که همیشه یک
+    // جواب دارد فقط شلوغی است.
+    prisma.product.groupBy({
+      by: ["condition"],
+      where: { isActive: true, categoryId: { in: catIds } },
+      _count: { _all: true },
     }),
     prisma.categoryAttributeGroup.findMany({
       where: { categoryId: category.id },
@@ -69,6 +77,13 @@ export async function getCategoryData(slug: string) {
     parent: category.parent,
     children: category.children,
     brands,
+    // کمتر از دو وضعیت یعنی فیلتر بی‌معنی است — خالی برمی‌گردد
+    conditions:
+      conditionRows.length > 1
+        ? conditionRows
+            .map((r) => ({ value: r.condition, count: r._count._all }))
+            .sort((a, b) => b.count - a.count)
+        : [],
     priceRange: {
       min: priceAgg._min.price ?? 0,
       max: priceAgg._max.price ?? 100_000_000,

@@ -100,8 +100,7 @@ export const MENU_GROUPS: NavGroup[] = [
   },
   {
     // کارتابل — مدیریت کار و عملکرد کارکنان.
-    // زیرمنوهای مدیریتی باقی‌مانده (گزارش تیم و امتیاز) در فاز ۶ اضافه
-    // می‌شوند؛ مستندات: docs/features/staff-worklist.md
+    // مستندات: docs/features/staff-worklist.md
     label: "کارتابل",
     items: [
       {
@@ -117,6 +116,7 @@ export const MENU_GROUPS: NavGroup[] = [
           { href: "/admin/worklist/deals", label: "سود معاملات" },
           { href: "/admin/worklist/payouts", label: "پورسانت" },
           { href: "/admin/worklist/notes", label: "یادداشت‌های من" },
+          { href: "/admin/worklist/reports", label: "گزارش عملکرد تیم" },
           { href: "/admin/worklist/suppliers", label: "تأمین‌کننده‌ها" },
           { href: "/admin/worklist/settings", label: "تنظیمات کارتابل" },
           { href: "/admin/worklist/roles", label: "نقش‌ها و دسترسی‌ها" },

@@ -280,35 +280,86 @@ model WishlistItem {
 }
 
 model Order {
-  id               String      @id @default(cuid())
+  id               String                   @id @default(cuid())
   userId           String
   addressId        String?
-  status           OrderStatus @default(PENDING_PAYMENT)
-  itemsTotal       BigInt      @default(0)
-  shippingFee      BigInt      @default(0)
-  discountTotal    BigInt      @default(0)
+  status           OrderStatus              @default(PENDING_PAYMENT)
+  itemsTotal       BigInt                   @default(0)
+  shippingFee      BigInt                   @default(0)
+  discountTotal    BigInt                   @default(0)
   /// کد تخفیف اعمال‌شده روی این سفارش — برای نمایش و گزارش
   couponCode       String?
-  grandTotal       BigInt      @default(0)
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-  orderNumber      String      @unique
+  grandTotal       BigInt                   @default(0)
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  orderNumber      String                   @unique
   note             String?
   trackingCode     String?
   /// کارمندی که این سفارش را از پنل ادمین ثبت کرده.
   /// `null` یعنی سفارش آنلاین — همین خالی‌بودن تعریفِ «سفارش سایت» است.
   createdByStaffId String?
-  address          Address?    @relation(fields: [addressId], references: [id])
-  user             User        @relation(fields: [userId], references: [id])
-  createdByStaff   User?       @relation("OrderCreatedByStaff", fields: [createdByStaffId], references: [id])
+  /// نقدی یا اعتباری. اعتباری یعنی کالا رفته و پول بعداً می‌آید.
+  /// مستندات: docs/features/staff-worklist.md بخش ۲۴
+  paymentTerm      OrderPaymentTerm         @default(CASH)
+  address          Address?                 @relation(fields: [addressId], references: [id])
+  user             User                     @relation(fields: [userId], references: [id])
+  createdByStaff   User?                    @relation("OrderCreatedByStaff", fields: [createdByStaffId], references: [id])
   staffDeal        StaffDeal?
   items            OrderItem[]
   payments         Payment[]
+  installments     OrderCreditInstallment[]
 
   @@index([userId])
   @@index([status])
   @@index([createdAt])
   @@index([createdByStaffId, createdAt])
+  @@index([paymentTerm, status])
+}
+
+enum OrderPaymentTerm {
+  CASH // نقدی — رفتار فعلی
+  CREDIT // اعتباری — یک یا چند موعد پرداخت
+}
+
+enum CreditInstallmentStatus {
+  DUE // هنوز نرسیده، یا رسیده و پرداخت نشده
+  PAID
+  CANCELED // سفارش لغو شد
+}
+
+/// یک موعد پرداخت اعتباری. سفارشِ یک‌جا یک ردیف دارد، قسطی چند ردیف.
+///
+/// ⚠️ **جمع مبلغ موعدها باید با مبلغ سفارش بخواند** — فرم تا نخواند ذخیره
+/// نمی‌کند. بدون این قاعده، «مانده‌ی بدهی» هیچ‌وقت با فاکتور نمی‌خواند.
+///
+/// مستندات: docs/features/staff-worklist.md بخش ۲۴
+model OrderCreditInstallment {
+  id              String                  @id @default(cuid())
+  orderId         String
+  /// قسط چندم — از ۱
+  seq             Int
+  /// روز موعد. ساعت ندارد؛ مقایسه با کلید روزِ تهران انجام می‌شود (تله‌ی ۲۷)
+  dueDate         DateTime                @db.Date
+  amount          BigInt
+  status          CreditInstallmentStatus @default(DUE)
+  paidAt          DateTime?
+  paidAmount      BigInt?
+  /// شماره‌ی فیش، روش واریز
+  paidNote        String?
+  confirmedById   String?
+  confirmedByName String?
+  /// زمان ارسال یادآوری ۲۴ساعته — خالی یعنی هنوز نرفته.
+  /// ⚠️ مرز «دو بار نفرست» همین است و **قبل از** صف‌کردن نوشته می‌شود.
+  reminderSentAt  DateTime?
+  /// کار پیگیری ساخته‌شده در کارتابل صاحب مشتری
+  followUpTaskId  String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, seq])
+  @@index([status, dueDate])
 }
 
 model OrderItem {

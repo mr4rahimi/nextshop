@@ -8,6 +8,7 @@ import { type ProductCardItem } from "@/components/store/product/ManaProductCard
 import { ProductCardAuto, useProductGridClass } from "@/components/store/product/ProductLayoutContext";
 import FaqSection from "@/components/store/FaqSection";
 import { normalizeFaq } from "@/lib/faq";
+import { CONDITION_LABELS, type ConditionType } from "@/lib/product-condition";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Brand {
@@ -31,6 +32,8 @@ interface Category {
   children: { id: string; title: string; slug: string; imageUrl: string | null }[];
   parent: { id: string; title: string; slug: string } | null;
   brands: Brand[];
+  /** وضعیت‌های موجود در همین دسته — خالی یعنی فیلتر نشان داده نمی‌شود */
+  conditions?: { value: string; count: number }[];
   priceRange: { min: string; max: string };
   landings?: { slug: string; h1: string }[];
   attributeGroups?: {
@@ -204,6 +207,9 @@ function FilterSidebar({
   attributeGroups,
   selectedAttributes,
   onAttributeToggle,
+  conditions,
+  selectedConditions,
+  onConditionToggle,
 }: {
   brands: Brand[];
   priceRange: { min: string; max: string };
@@ -218,9 +224,14 @@ function FilterSidebar({
   attributeGroups?: Category["attributeGroups"];
   selectedAttributes: Record<string, string[]>;
   onAttributeToggle: (attributeId: string, valueId: string) => void;
+  /** وضعیت‌های موجود در همین دسته — خالی یعنی فیلتر نشان داده نمی‌شود */
+  conditions?: { value: string; count: number }[];
+  selectedConditions: string[];
+  onConditionToggle: (value: string) => void;
 }) {
   const [priceOpen, setPriceOpen] = useState(true);
   const [brandOpen, setBrandOpen] = useState(true);
+  const [conditionOpen, setConditionOpen] = useState(true);
 
   const filteredBrands = (brands ?? []).filter((b) =>
     b.title.toLowerCase().includes(brandSearch.toLowerCase())
@@ -277,6 +288,56 @@ function FilterSidebar({
           </div>
         )}
       </div>
+
+      {/* Condition Filter — فقط وقتی دسته بیش از یک وضعیت دارد */}
+      {(conditions?.length ?? 0) > 0 && (
+        <div className="relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-gray-200/50 dark:shadow-none">
+          <button
+            className="flex items-center justify-between p-7 w-full cursor-pointer select-none"
+            onClick={() => setConditionOpen(!conditionOpen)}
+          >
+            <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-3">
+              <span className="w-3 h-3 rounded-full bg-primary-500" />
+              وضعیت کالا
+              {selectedConditions.length > 0 && (
+                <span className="text-[10px] font-black text-primary-500 bg-primary-500/10 px-3 py-1 rounded-full">
+                  {toFarsi(selectedConditions.length)}
+                </span>
+              )}
+            </h3>
+            <svg
+              className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${conditionOpen ? "rotate-180" : ""}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {conditionOpen && (
+            <ul className="px-7 pb-8 space-y-3">
+              {(conditions ?? []).map((c) => {
+                const active = selectedConditions.includes(c.value);
+                return (
+                  <li key={c.value}>
+                    <label className="flex items-center gap-3 cursor-pointer group/cond">
+                      <input
+                        type="checkbox"
+                        checked={active}
+                        onChange={() => onConditionToggle(c.value)}
+                        className="w-4 h-4 accent-primary-500 cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300 group-hover/cond:text-primary-600 transition-colors">
+                        {CONDITION_LABELS[c.value as ConditionType] ?? c.value}
+                      </span>
+                      <span className="text-[10px] text-gray-400 mr-auto">{toFarsi(c.count)}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Brand Filter */}
       {brands.length > 0 && (
@@ -428,6 +489,10 @@ export default function CategoryPageClient({
   const [appliedMin, setAppliedMin] = useState(() => searchParams.get("minPrice") ?? "");
   const [appliedMax, setAppliedMax] = useState(() => searchParams.get("maxPrice") ?? "");
   const [brandSearch, setBrandSearch] = useState("");
+  const [selectedConditions, setSelectedConditions] = useState<string[]>(() =>
+    (lockedFilters?.condition ?? searchParams.get("condition") ?? "")
+      .split(",").map(s => s.trim()).filter(Boolean)
+  );
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string[]>>(() => {
   const out: Record<string, string[]> = {};
     (category?.attributeGroups ?? []).forEach((ag) => {
@@ -496,12 +561,16 @@ export default function CategoryPageClient({
         if (vSlugs.length) p.set(aSlug, vSlugs.join(","));
       });
 
+      if (selectedConditions.length && (opts.forApi || !locked.condition)) {
+        p.set("condition", selectedConditions.join(","));
+      }
+
       if (appliedMin && appliedMin !== absMin) p.set("minPrice", appliedMin);
       if (appliedMax && appliedMax !== absMax) p.set("maxPrice", appliedMax);
 
       return p;
     },
-[categorySlug, sort, selectedBrands, selectedAttributes, appliedMin, appliedMax, absMin, absMax, attrMaps, lockedFilters]
+[categorySlug, sort, selectedBrands, selectedAttributes, selectedConditions, appliedMin, appliedMax, absMin, absMax, attrMaps, lockedFilters]
   );
 
   // ── آدرس واقعی هر صفحه — برای <a href> صفحه‌بندی (قابل کراول) ──
@@ -599,6 +668,12 @@ export default function CategoryPageClient({
   function handleBrandToggle(slug: string) {
     setSelectedBrands((prev) =>
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
+    );
+  }
+
+  function handleConditionToggle(value: string) {
+    setSelectedConditions((prev) =>
+      prev.includes(value) ? prev.filter((c) => c !== value) : [...prev, value]
     );
   }
 
@@ -820,7 +895,9 @@ export default function CategoryPageClient({
                 attributeGroups={category.attributeGroups}
                 selectedAttributes={selectedAttributes}
                 onAttributeToggle={handleAttributeToggle}
-
+                conditions={category.conditions}
+                selectedConditions={selectedConditions}
+                onConditionToggle={handleConditionToggle}
               />
             </div>
           </div>
@@ -844,7 +921,9 @@ export default function CategoryPageClient({
                 attributeGroups={category.attributeGroups}
                 selectedAttributes={selectedAttributes}
                 onAttributeToggle={handleAttributeToggle}
-
+                conditions={category.conditions}
+                selectedConditions={selectedConditions}
+                onConditionToggle={handleConditionToggle}
               />
             </aside>
 

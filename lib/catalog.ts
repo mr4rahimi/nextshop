@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
 
+import { CONDITIONS, type ConditionType } from "./product-condition";
+
+export { CONDITIONS, CONDITION_LABELS, type ConditionType } from "./product-condition";
+
 export const RESERVED_PARAMS = new Set([
   "q", "category", "brand", "sort", "page", "pageSize",
-  "minPrice", "maxPrice", "attr",
+  "minPrice", "maxPrice", "attr", "condition",
 ]);
 
 /**
@@ -78,6 +82,8 @@ export interface CatalogQuery {
   attrFilters: Record<string, string[]>;
   minPrice?: string;
   maxPrice?: string;
+  /** وضعیت کالا — خالی یعنی همه */
+  conditions: ConditionType[];
   sort: SortType;
   page: number;
   pageSize: number;
@@ -119,6 +125,10 @@ export function parseCatalogQuery(
     attrFilters,
     minPrice: get("minPrice"),
     maxPrice: get("maxPrice"),
+    // مقدار ناشناخته کنار گذاشته می‌شود، نه اینکه کل کوئری را بشکند
+    conditions: split(get("condition")).filter((c): c is ConditionType =>
+      (CONDITIONS as readonly string[]).includes(c),
+    ),
     sort: (SORTS as readonly string[]).includes(rawSort) ? (rawSort as SortType) : "newest",
     page: Number.isFinite(pageNum) && pageNum > 0 ? pageNum : 1,
     pageSize: defaults.pageSize ?? 12,
@@ -147,6 +157,10 @@ export async function buildCatalogWhere(
     });
     if (!cat) return null;
     where.categoryId = { in: [cat.id, ...cat.children.map(c => c.id)] };
+  }
+
+  if (cq.conditions.length) {
+    where.condition = cq.conditions.length > 1 ? { in: cq.conditions } : cq.conditions[0];
   }
 
   if (cq.brandSlugs.length) {

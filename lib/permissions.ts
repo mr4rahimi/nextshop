@@ -118,6 +118,19 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    key: "credit",
+    label: "خرید اعتباری",
+    items: [
+      { key: "CREDIT_VIEW_OWN", label: "دیدن موعدهای مشتریان خودم" },
+      { key: "CREDIT_VIEW_ALL", label: "دیدن همه‌ی موعدها و جمع معوقات" },
+      {
+        key: "CREDIT_MANAGE",
+        label: "تعیین اعتباری در سفارش، ثبت واریز و تمدید موعد",
+        hint: "ثبت واریز یعنی بدهی مشتری بسته می‌شود؛ با مدیر مالی هماهنگ باشد",
+      },
+    ],
+  },
+  {
     // دسترسی به بخش‌های قدیمی پنل — نقشه‌ی مسیرها در lib/admin-sections.ts
     key: "panel",
     label: "بخش‌های پنل مدیریت",
