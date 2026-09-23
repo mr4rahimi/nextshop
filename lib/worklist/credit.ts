@@ -1,20 +1,16 @@
 /**
  * خرید اعتباری — موعدهای پرداخت، یادآوری و پیگیری (فاز ۱۰، بخش ۲۴ مستندات).
  *
- * ⚠️⚠️ **این فایل هنوز به هیچ‌جا وصل نیست — زیرساختِ نیمه‌کاره.**
- * نه مسیر API دارد، نه صفحه، نه فراخوانی از زمان‌بند، نه قالب پیامک.
- * `runCreditCycle` را هیچ‌کس صدا نمی‌زند، پس روی سایت هیچ رفتاری عوض نمی‌کند.
+ * چرخه: سفارش تلفنی «اعتباری» با موعدها ثبت می‌شود (`setInstallments` یا
+ * مسیر ساخت سفارش) ← روز قبل از هر موعد پیامک یادآوری ← روز موعد کار «پیگیری
+ * پرداخت» در کارتابل صاحب مشتری ← واریز با `payInstallment` (از صفحه‌ی موعدها
+ * یا با بستن همان کار با «پرداخت شد») ← آخرین واریز، سود و امتیاز سفارش را آزاد
+ * می‌کند.
  *
- * برای تمام‌کردنش، چک‌لیست بخش ۲۴.۵ مستندات را دنبال کنید. مانده:
- *   - مسیرهای API و صفحه‌ی `/admin/worklist/credit`
- *   - فرم موعدها در سفارش تلفنی و ویرایش سفارش
- *   - قالب `credit-due-reminder` در `seed-club-templates.ts` و سه متغیر تازه
- *   - فراخوانی `runCreditCycle` از زمان‌بند ده‌دقیقه‌ای کارتابل
- *   - بدهی باز در پرونده‌ی مشتری باشگاه
- *
- * ⚠️ **وضعیت تازه‌ی سفارش ساخته نشد.** تصمیم بخش ۲۴.۳: زنجیره‌ی ارسال و
- * بسته‌بندی به وضعیت‌های فعلی وصل است. به‌جایش، سفارشِ اعتباری «بدهی باز»
- * دارد و هرکس بخواهد بداند پول رسیده یا نه، `hasOpenCredit` را می‌پرسد.
+ * ⚠️ **وضعیت تازه‌ی سفارش ساخته نشد.** تصمیم بخش ۲۴.۳: سفارش اعتباری
+ * `CONFIRMED` ثبت می‌شود (کالا رفته، موجودی کسر شده، زنجیره‌ی ارسال عادی کار
+ * می‌کند). هرکس بخواهد بداند پول رسیده یا نه، `hasOpenCredit` را می‌پرسد —
+ * امروز معامله‌ی سود (`deals.ts`) و امتیاز باشگاه (`club/rewards.ts`).
  *
  * ⚠️ سه محافظ که بدون هرکدام این قابلیت خطرناک می‌شود:
  *
@@ -22,11 +18,12 @@
  * نمی‌کند. بدون این، «مانده‌ی بدهی» هیچ‌وقت با فاکتور نمی‌خواند.
  *
  * **۲. یادآوری دو بار نمی‌رود.** `reminderSentAt` با `updateMany` شرط‌دار
- * **پیش از** صف‌کردن نوشته می‌شود — همان الگوی تصاحب اتمی فاز ۸. دو پروسه یا
+ * **پیش از** ارسال نوشته می‌شود — همان الگوی تصاحب اتمی فاز ۸. دو پروسه یا
  * دو چرخه‌ی هم‌زمان، یکی برنده می‌شود.
  *
- * **۳. هر موعد حداکثر یک کار پیگیری.** `runKey = credit:{id}` روی
- * `StaffTask` ایندکس یکتا دارد، مثل قواعد تکرارشونده.
+ * **۳. هر موعد در هر تاریخ حداکثر یک کار پیگیری.** `runKey = credit:{id}:{روز}`
+ * روی `StaffTask` ایندکس یکتا دارد. روز در کلید است تا موعدِ تمدیدشده در
+ * تاریخ تازه‌اش دوباره کار بگیرد.
  *
  * «امروز» و «فردا» همیشه به وقت تهران و از `dayKeyOf` می‌آیند، نه ساعت سرور
  * (تله‌ی ۲۷).
@@ -36,15 +33,24 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { dayKeyOf } from "./attendance";
 import { formatJalali } from "@/lib/club/jalali";
-import { enqueueMultiChannelBatch, makeJobId } from "@/lib/club/queue";
-import { renderTemplate } from "@/lib/club/sms/render";
+import { dispatchBatch, getProvider, loadSmsConfig, pickLine } from "@/lib/club/sms";
+import { applyGuards, isWithinAllowedHours, loadGuardSettings } from "@/lib/club/sms/guards";
 import { logActivityAsync } from "@/lib/activity";
 import { can, type StaffAccess } from "@/lib/permissions";
 
 const DAY_MS = 86_400_000;
+/** تهران بدون ساعت تابستانی — همان ثابت `attendance.ts` */
+const TEHRAN_OFFSET_MS = 3.5 * 3_600_000;
 
-/** کلید قالب پیامک یادآوری — در `scripts/seed-club-templates.ts` ساخته می‌شود */
+/** کلید قالب پیامک یادآوری — نبودش را `ensureReminderTemplate` خودش می‌سازد */
 export const REMINDER_TEMPLATE_KEY = "credit-due-reminder";
+
+/** متن پیش‌فرض یادآوری — مدیر از «باشگاه ← قالب‌ها» ویرایشش می‌کند */
+export const REMINDER_DEFAULT_BODY =
+  "{name} عزیز، موعد پرداخت شما بابت فاکتور {order} به مبلغ {amount} تومان فردا ({due}) می‌باشد.\n{store}";
+
+/** وضعیت‌هایی که موعدهای باز سفارش را بی‌معنی می‌کنند */
+const DEAD_ORDER_STATUSES = ["CANCELED", "REFUNDED"] as const;
 
 /** نوع کار پیگیری واریز — از `seed-task-types.ts` */
 export const FOLLOW_UP_TYPE_SLUG = "payment-followup";
@@ -202,18 +208,23 @@ export async function hasOpenCredit(orderId: string): Promise<boolean> {
 /**
  * ثبت واریز یک موعد.
  *
- * وقتی آخرین موعدِ باز بسته شد، سفارش از «در انتظار پرداخت» به `PAID` می‌رود
- * و از همان مسیر عادی، معامله‌ی سود فاز ۹ ساخته می‌شود.
+ * وقتی آخرین موعدِ باز بسته شد، بدهی سفارش تسویه است: رکورد پرداخت موفق
+ * می‌شود، معامله‌ی سود فاز ۹ ساخته می‌شود و امتیاز خرید باشگاه داده می‌شود —
+ * هر دو تا این لحظه به‌خاطر `hasOpenCredit` منتظر مانده بودند.
+ *
+ * کار پیگیری بازِ همین موعد هم با «پرداخت شد» بسته می‌شود تا در کارتابل
+ * نماند. ⚠️ مستقیم با Prisma، نه `updateTask` — آن مسیر قلاب واریز دارد و
+ * دوباره همین تابع را صدا می‌زد.
  */
 export async function payInstallment(
   installmentId: string,
   input: { amount?: unknown; note?: unknown },
-  access: StaffAccess,
+  access: Pick<StaffAccess, "userId" | "name">,
 ) {
   const inst = await prisma.orderCreditInstallment.findUnique({
     where: { id: installmentId },
     select: {
-      id: true, orderId: true, amount: true, status: true, seq: true,
+      id: true, orderId: true, amount: true, status: true, seq: true, followUpTaskId: true,
       order: { select: { orderNumber: true, status: true } },
     },
   });
@@ -224,8 +235,9 @@ export async function payInstallment(
   // مبلغ خالی یعنی «همان مبلغ موعد» — حالت رایج
   const paidAmount = toMoney(input.amount) ?? inst.amount;
 
-  await prisma.orderCreditInstallment.update({
-    where: { id: installmentId },
+  // شرط `status: DUE` مرز واقعیِ «دو بار ثبت نشود» است، نه بررسی بالا
+  const claimed = await prisma.orderCreditInstallment.updateMany({
+    where: { id: installmentId, status: "DUE" },
     data: {
       status: "PAID",
       paidAt: new Date(),
@@ -235,18 +247,39 @@ export async function payInstallment(
       confirmedByName: access.name,
     },
   });
+  if (claimed.count === 0) throw new Error("این موعد هم‌زمان ثبت شد؛ صفحه را تازه کنید");
+
+  if (inst.followUpTaskId) {
+    await prisma.staffTask
+      .updateMany({
+        where: { id: inst.followUpTaskId, status: { in: ["OPEN", "IN_PROGRESS"] } },
+        data: { status: "DONE", outcome: "paid", doneAt: new Date() },
+      })
+      .catch((e) => console.error("[credit] بستن کار پیگیری ناموفق:", e));
+  }
 
   const stillOpen = await prisma.orderCreditInstallment.count({
     where: { orderId: inst.orderId, status: "DUE" },
   });
 
   let orderClosed = false;
-  if (stillOpen === 0 && inst.order.status === "PENDING_PAYMENT") {
-    await prisma.order.update({ where: { id: inst.orderId }, data: { status: "PAID" } });
+  if (stillOpen === 0) {
     orderClosed = true;
-    // معامله‌ی سود از همان مسیر عادی ساخته می‌شود — import چرخه‌ای نشود
+    await prisma.payment
+      .updateMany({
+        where: { orderId: inst.orderId, status: "PENDING" },
+        data: { status: "SUCCEEDED", providerRef: `credit-${Date.now()}` },
+      })
+      .catch((e) => console.error("[credit] تسویه‌ی رکورد پرداخت ناموفق:", e));
+    // سفارش‌های قدیمی‌تر که «در انتظار پرداخت» ثبت شده بودند
+    if (inst.order.status === "PENDING_PAYMENT") {
+      await prisma.order.update({ where: { id: inst.orderId }, data: { status: "PAID" } });
+    }
+    // import پویا — deals و rewards هم به این فایل وابسته‌اند
     const { syncDealSafe } = await import("./deals");
     syncDealSafe(inst.orderId);
+    const { processOrderForClub } = await import("@/lib/club/rewards");
+    void processOrderForClub(inst.orderId);
   }
 
   logActivityAsync({
@@ -263,14 +296,24 @@ export async function payInstallment(
   return { orderClosed, stillOpen };
 }
 
-/** تمدید موعد — تاریخ عوض می‌شود و یادآوری از نو فرستاده می‌شود */
-export async function postponeInstallment(installmentId: string, newDate: string | Date) {
+/**
+ * تمدید موعد — تاریخ عوض می‌شود و یادآوری و کار پیگیری از نو.
+ *
+ * کار پیگیری بازِ تاریخ قبلی با نتیجه‌ی «قول پرداخت داد» بسته می‌شود؛ کار
+ * تاریخ تازه را چرخه‌ی زمان‌بند همان روز می‌سازد (`runKey` روز را دارد).
+ */
+export async function postponeInstallment(
+  installmentId: string,
+  newDate: string | Date,
+  access?: Pick<StaffAccess, "userId" | "name">,
+) {
   const day = toDay(newDate);
   if (!day) throw new Error("تاریخ نامعتبر است");
+  if (day.getTime() < dayKeyOf(new Date()).getTime()) throw new Error("تاریخ تازه نباید گذشته باشد");
 
   const inst = await prisma.orderCreditInstallment.findUnique({
     where: { id: installmentId },
-    select: { status: true },
+    select: { status: true, seq: true, orderId: true, followUpTaskId: true, dueDate: true, order: { select: { orderNumber: true } } },
   });
   if (!inst) throw new Error("موعد پیدا نشد");
   if (inst.status !== "DUE") throw new Error("فقط موعد پرداخت‌نشده تمدید می‌شود");
@@ -278,8 +321,53 @@ export async function postponeInstallment(installmentId: string, newDate: string
   // ⚠️ `reminderSentAt` پاک می‌شود وگرنه یادآوریِ تاریخ تازه هرگز نمی‌رود
   await prisma.orderCreditInstallment.update({
     where: { id: installmentId },
-    data: { dueDate: day, reminderSentAt: null },
+    data: { dueDate: day, reminderSentAt: null, followUpTaskId: null },
   });
+  if (inst.followUpTaskId) {
+    await prisma.staffTask
+      .updateMany({
+        where: { id: inst.followUpTaskId, status: { in: ["OPEN", "IN_PROGRESS"] } },
+        data: { status: "DONE", outcome: "promised", doneAt: new Date() },
+      })
+      .catch(() => {});
+  }
+
+  logActivityAsync({
+    action: "UPDATE",
+    entity: "ORDER",
+    entityId: inst.orderId,
+    entityTitle: `سفارش ${inst.order.orderNumber}`,
+    summary: `تمدید قسط ${inst.seq}: ${formatJalali(inst.dueDate)} ← ${formatJalali(day)}`,
+    ...(access ? { actor: { id: access.userId, name: access.name } } : {}),
+  });
+}
+
+/**
+ * بستن کار «پیگیری پرداخت» یک موعد با «پرداخت شد» = ثبت واریز.
+ *
+ * کار از روی `runKey` به موعد وصل است. مبلغ کار (اگر پر شده) مبلغ واریز است.
+ * هیچ‌وقت مسیر کار را نمی‌شکند — فراخواننده `creditFromTaskSafe` را صدا می‌زند.
+ */
+export async function creditFromTask(taskId: string): Promise<"paid" | "none"> {
+  const task = await prisma.staffTask.findUnique({
+    where: { id: taskId },
+    select: { status: true, outcome: true, runKey: true, amount: true, note: true, ownerId: true, ownerName: true },
+  });
+  if (!task?.runKey?.startsWith("credit:") || task.status !== "DONE" || task.outcome !== "paid") return "none";
+  const installmentId = task.runKey.split(":")[1];
+  const inst = await prisma.orderCreditInstallment.findUnique({ where: { id: installmentId }, select: { status: true } });
+  if (inst?.status !== "DUE") return "none";
+
+  await payInstallment(
+    installmentId,
+    { amount: task.amount && task.amount > 0n ? task.amount : undefined, note: task.note ?? "از کار پیگیری کارتابل" },
+    { userId: task.ownerId ?? "", name: task.ownerName ?? "کارتابل" },
+  );
+  return "paid";
+}
+
+export function creditFromTaskSafe(taskId: string): void {
+  creditFromTask(taskId).catch((e) => console.error("[credit] ثبت واریز از کار پیگیری شکست خورد:", e));
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -287,21 +375,28 @@ export async function postponeInstallment(installmentId: string, newDate: string
 // ─────────────────────────────────────────────────────────────────
 
 export interface CreditCycleResult {
-  remindersQueued: number;
+  remindersSent: number;
   tasksCreated: number;
   unowned: number;
+  canceled: number;
 }
 
 /**
- * یک چرخه: یادآوری فردا + کار پیگیری امروز.
+ * یک چرخه: لغو موعدهای سفارش لغوشده + یادآوری فردا + کار پیگیری امروز +
+ * پاپ‌آپ موعد گذشته.
  *
- * هر دو بخش مستقل‌اند و خطای یکی دیگری را متوقف نمی‌کند.
+ * هر بخش مستقل است و خطای یکی دیگری را متوقف نمی‌کند.
  */
 export async function runCreditCycle(): Promise<CreditCycleResult> {
   const today = dayKeyOf(new Date());
   const tomorrow = new Date(today.getTime() + DAY_MS);
 
-  const remindersQueued = await sendReminders(tomorrow).catch((e) => {
+  // اول لغو، تا سفارش لغوشده پیامک و کار نگیرد
+  const canceled = await cancelDeadInstallments().catch((e) => {
+    console.error("[credit] لغو موعدهای سفارش لغوشده شکست خورد:", e);
+    return 0;
+  });
+  const remindersSent = await sendReminders(tomorrow).catch((e) => {
     console.error("[credit] یادآوری موعد شکست خورد:", e);
     return 0;
   });
@@ -309,37 +404,141 @@ export async function runCreditCycle(): Promise<CreditCycleResult> {
     console.error("[credit] ساخت کار پیگیری شکست خورد:", e);
     return { created: 0, unowned: 0 };
   });
+  await popupOverdue(today).catch((e) => console.error("[credit] پاپ‌آپ موعد گذشته شکست خورد:", e));
 
-  return {
-    remindersQueued,
-    tasksCreated: followUps.created,
-    unowned: followUps.unowned,
-  };
+  return { remindersSent, tasksCreated: followUps.created, unowned: followUps.unowned, canceled };
 }
 
 /**
- * پیامک یادآوری ۲۴ساعته.
+ * موعدهای باز سفارشِ لغو یا مرجوع‌شده ← CANCELED.
  *
- * روز تعطیل عقب نمی‌افتد — موعدِ پول است نه کار. ساعت مجاز ارسال هم روی
- * پیام خدماتی اعمال نمی‌شود و همان رفتار موتور پیامک باشگاه حاکم است.
+ * در چرخه است نه در قلاب مسیر لغو، چون وضعیت سفارش از چند جا عوض می‌شود —
+ * همان دلیل `sweepDeals`. حداکثر ده دقیقه عقب می‌ماند و در آن فاصله هم
+ * `sendReminders` و `createFollowUpTasks` سفارش مرده را خودشان رد می‌کنند.
+ */
+async function cancelDeadInstallments(): Promise<number> {
+  const r = await prisma.orderCreditInstallment.updateMany({
+    where: { status: "DUE", order: { status: { in: [...DEAD_ORDER_STATUSES] } } },
+    data: { status: "CANCELED" },
+  });
+  return r.count;
+}
+
+/**
+ * قالب یادآوری. نبود ← با متن پیش‌فرض و **فعال** ساخته می‌شود، تا قابلیت روی
+ * سایت تازه بدون سید کار کند. ⚠️ اگر مدیر خاموشش کرده باشد دوباره روشن
+ * نمی‌شود — خاموش یعنی «نفرست».
+ */
+export async function ensureReminderTemplate() {
+  const select = { id: true, body: true, isActive: true, mode: true, patternCode: true, kind: true } as const;
+  const found = await prisma.smsTemplate.findUnique({ where: { key: REMINDER_TEMPLATE_KEY }, select });
+  if (found) return found;
+  try {
+    return await prisma.smsTemplate.create({
+      data: {
+        key: REMINDER_TEMPLATE_KEY,
+        title: "یادآوری موعد پرداخت اعتباری",
+        kind: "TRANSACTIONAL",
+        mode: "TEXT",
+        body: REMINDER_DEFAULT_BODY,
+        isActive: true,
+      },
+      select,
+    });
+  } catch (e) {
+    // دو پروسه هم‌زمان ساختند
+    if ((e as { code?: string }).code === "P2002") {
+      return prisma.smsTemplate.findUnique({ where: { key: REMINDER_TEMPLATE_KEY }, select });
+    }
+    throw e;
+  }
+}
+
+/**
+ * ارسال یک پیامک خدماتی با قالب — هر دو حالت قالب.
+ *
+ * - متن آزاد (`TEXT`) ← `dispatchBatch`: نگهبان‌ها، ثبت در `SmsMessage`
+ * - پترن (`PATTERN`) ← مستقیم از ارائه‌دهنده، بعد از همان نگهبان‌ها
+ *
+ * ⚠️ **عمداً از صف و worker رد نمی‌شود.** چند سایت worker پیامک ندارند؛ صف
+ * بدون worker یعنی یادآوری‌ای که «فرستاده» ثبت می‌شود ولی هرگز نمی‌رود. یک
+ * پیامک تکی از خود زمان‌بند فرستاده می‌شود.
+ */
+async function sendTemplateSms(
+  template: { mode: string; patternCode: string | null; body: string | null },
+  phone: string,
+  userId: string,
+  vars: Record<string, string>,
+): Promise<{ ok: boolean; error?: string }> {
+  if (template.mode === "PATTERN") {
+    if (!template.patternCode) return { ok: false, error: "کد پترن قالب خالی است" };
+    const { allowed, skipped } = await applyGuards([{ phone, userId }], "TRANSACTIONAL");
+    if (allowed.length === 0) return { ok: false, error: `رد شد: ${skipped[0]?.reason ?? "نامعلوم"}` };
+    const config = await loadSmsConfig();
+    const line = pickLine(config, "TRANSACTIONAL");
+    if (!line) return { ok: false, error: "خط خدماتی تنظیم نشده است" };
+    const res = await (await getProvider()).sendPattern(template.patternCode, allowed[0].phone, vars, line);
+    await prisma.smsMessage
+      .create({
+        data: {
+          phone: allowed[0].phone,
+          userId,
+          templateKey: REMINDER_TEMPLATE_KEY,
+          kind: "TRANSACTIONAL",
+          lineNumber: line,
+          body: JSON.stringify(vars),
+          providerRequestId: res.requestId ?? null,
+          status: res.ok ? "SENT" : "FAILED",
+          errorMessage: res.ok ? null : res.error ?? null,
+          sentAt: res.ok ? new Date() : null,
+        },
+      })
+      .catch(() => {});
+    return res.ok ? { ok: true } : { ok: false, error: res.error };
+  }
+
+  if (!template.body) return { ok: false, error: "متن قالب خالی است" };
+  const r = await dispatchBatch({
+    kind: "TRANSACTIONAL",
+    text: template.body,
+    recipients: [{ phone, userId, vars }],
+    templateKey: REMINDER_TEMPLATE_KEY,
+  });
+  return r.sentCount > 0 ? { ok: true } : { ok: false, error: "نگهبان پیامک رد کرد (لغو عضویت یا مسدود)" };
+}
+
+/**
+ * پیامک یادآوری روز قبل از موعد.
+ *
+ * فقط در **ساعت مجاز ارسال** (تنظیمات باشگاه، پیش‌فرض ۹ تا ۲۱ به وقت تهران).
+ * بدون این شرط، چرخه‌ی اولِ بعد از نیمه‌شب یادآوری را ساعت دوازده و ده دقیقه‌ی
+ * شب می‌فرستاد. موعدِ فردا تا پایان امروز واجد شرایط می‌ماند، پس با شروع ساعت
+ * مجاز صبح همان روز می‌رود.
+ *
+ * روز تعطیل عقب نمی‌افتد — موعدِ پول است نه کار.
  */
 async function sendReminders(tomorrow: Date): Promise<number> {
-  const template = await prisma.smsTemplate.findUnique({
-    where: { key: REMINDER_TEMPLATE_KEY },
-    select: { id: true, body: true, isActive: true, channelBodies: { select: { channel: true, body: true } } },
-  });
-  // قالب نبود یا خاموش است: یادآوری نمی‌رود و `reminderSentAt` هم دست نمی‌خورد،
-  // پس روشن‌کردن قالب، یادآوری‌های عقب‌مانده را از دست نمی‌دهد
-  if (!template?.isActive || !template.body) return 0;
+  if (!isWithinAllowedHours(await loadGuardSettings())) return 0;
+
+  const template = await ensureReminderTemplate();
+  // قالب خاموش: `reminderSentAt` دست نمی‌خورد، پس روشن‌کردن دوباره‌ی قالب
+  // یادآوری‌های همان روز را از دست نمی‌دهد
+  if (!template?.isActive) return 0;
 
   const due = await prisma.orderCreditInstallment.findMany({
-    where: { status: "DUE", dueDate: tomorrow, reminderSentAt: null },
+    where: {
+      status: "DUE",
+      dueDate: tomorrow,
+      reminderSentAt: null,
+      order: { status: { notIn: [...DEAD_ORDER_STATUSES] } },
+    },
     select: {
       id: true, amount: true, dueDate: true,
       order: {
         select: {
           orderNumber: true,
-          user: { select: { firstName: true, lastName: true, phone: true, clubProfile: { select: { id: true } } } },
+          userId: true,
+          user: { select: { firstName: true, lastName: true, phone: true } },
         },
       },
     },
@@ -347,63 +546,48 @@ async function sendReminders(tomorrow: Date): Promise<number> {
   });
   if (due.length === 0) return 0;
 
-  const store = (await prisma.storeSettings.findUnique({
-    where: { id: "singleton" },
-    select: { storeName: true },
-  }))?.storeName ?? "";
+  // پیامکِ سایت تنظیم نشده: بی‌صدا هیچ. بدون این، خطای «خط تنظیم نشده» گذرا
+  // حساب می‌شد و هر ده دقیقه تا آخر روز تکرار و لاگ می‌شد.
+  const smsConfig = await loadSmsConfig();
+  if (!pickLine(smsConfig, "TRANSACTIONAL")) return 0;
+  const store = smsConfig.storeName;
 
-  let queued = 0;
+  let sent = 0;
   for (const inst of due) {
-    const profileId = inst.order.user.clubProfile?.id;
-    // بدون پروفایل باشگاه کانالی برای ارسال نیست. `reminderSentAt` را
-    // **نمی‌نویسیم** تا اگر بعداً پروفایل ساخته شد، یادآوری برود.
-    if (!profileId) continue;
-
-    // ⚠️ تصاحب اتمی **قبل از** صف. اگر دو چرخه هم‌زمان اجرا شوند، فقط یکی
-    // `count = 1` می‌گیرد و فقط همان صف می‌کند.
+    // ⚠️ تصاحب اتمی **قبل از** ارسال. اگر دو چرخه هم‌زمان اجرا شوند، فقط یکی
+    // `count = 1` می‌گیرد و فقط همان می‌فرستد.
     const claimed = await prisma.orderCreditInstallment.updateMany({
       where: { id: inst.id, reminderSentAt: null },
       data: { reminderSentAt: new Date() },
     });
     if (claimed.count === 0) continue;
 
+    const u = inst.order.user;
     const vars = {
-      name: [inst.order.user.firstName, inst.order.user.lastName].filter(Boolean).join(" ").trim()
-        || inst.order.user.phone,
+      name: [u.firstName, u.lastName].filter(Boolean).join(" ").trim() || "مشتری",
       store,
       order: inst.order.orderNumber,
       amount: inst.amount.toLocaleString("fa-IR"),
       due: formatJalali(inst.dueDate),
     };
 
-    const bodyByChannel: Record<string, string> = { SMS: renderTemplate(template.body, vars) };
-    for (const cb of template.channelBodies) {
-      if (cb.body) bodyByChannel[cb.channel] = renderTemplate(cb.body, vars);
-    }
-
     try {
-      await enqueueMultiChannelBatch(
-        {
-          kind: "TRANSACTIONAL",
-          bodyByChannel,
-          profileIds: [profileId],
-          varsByProfile: { [profileId]: vars },
-          templateKey: REMINDER_TEMPLATE_KEY,
-        },
-        { jobId: makeJobId("credit-due", inst.id) },
-      );
-      queued++;
+      const r = await sendTemplateSms(template, u.phone, inst.order.userId, vars);
+      if (r.ok) sent++;
+      // رد نگهبان (لغو عضویت، مسدود) یا خطای ارائه‌دهنده: نشانه می‌ماند تا هر
+      // ده دقیقه دوباره تلاش نشود. در SmsMessage و لاگ دیده می‌شود.
+      else console.warn(`[credit] یادآوری قسط ${inst.id} نرفت: ${r.error}`);
     } catch (e) {
-      // صف نگرفت: نشانه را پس می‌دهیم تا چرخه‌ی بعد دوباره تلاش کند
+      // خطای گذرا (شبکه): نشانه را پس می‌دهیم تا چرخه‌ی بعد دوباره تلاش کند
       await prisma.orderCreditInstallment.updateMany({
         where: { id: inst.id },
         data: { reminderSentAt: null },
       });
-      console.error("[credit] صف یادآوری شکست خورد:", e);
+      console.error("[credit] ارسال یادآوری شکست خورد:", e);
     }
   }
 
-  return queued;
+  return sent;
 }
 
 /**
@@ -415,12 +599,17 @@ async function sendReminders(tomorrow: Date): Promise<number> {
 async function createFollowUpTasks(today: Date): Promise<{ created: number; unowned: number }> {
   const type = await prisma.staffTaskType.findUnique({
     where: { slug: FOLLOW_UP_TYPE_SLUG },
-    select: { id: true, title: true, domain: true, channel: true },
+    select: { id: true, title: true, domain: true, channel: true, isActive: true },
   });
-  if (!type) return { created: 0, unowned: 0 };
+  if (!type?.isActive) return { created: 0, unowned: 0 };
 
   const due = await prisma.orderCreditInstallment.findMany({
-    where: { status: "DUE", dueDate: { lte: today }, followUpTaskId: null },
+    where: {
+      status: "DUE",
+      dueDate: { lte: today },
+      followUpTaskId: null,
+      order: { status: { notIn: [...DEAD_ORDER_STATUSES] } },
+    },
     select: {
       id: true, amount: true, dueDate: true, seq: true, orderId: true,
       order: {
@@ -435,6 +624,7 @@ async function createFollowUpTasks(today: Date): Promise<{ created: number; unow
               clubProfile: { select: { ownerId: true, ownerName: true } },
             },
           },
+          _count: { select: { installments: true } },
         },
       },
     },
@@ -450,15 +640,18 @@ async function createFollowUpTasks(today: Date): Promise<{ created: number; unow
   for (const inst of due) {
     const ownerId = inst.order.user.clubProfile?.ownerId ?? inst.order.createdByStaffId ?? null;
     const ownerName =
-      inst.order.user.clubProfile?.ownerName ?? name(inst.order.createdByStaff) ?? null;
+      (inst.order.user.clubProfile?.ownerId ? inst.order.user.clubProfile.ownerName : null) ??
+      name(inst.order.createdByStaff);
 
     if (!ownerId || !ownerName) {
       unowned++;
       continue;
     }
 
-    // مهلت: پایان همان روزِ موعد. تا آخر روز بسته نشود، فردا قرمز است.
-    const dueAt = new Date(inst.dueDate.getTime() + DAY_MS - 1);
+    // مهلت: پایان همان روزِ موعد به وقت تهران. تا آخر روز بسته نشود، قرمز است.
+    const dueAt = new Date(inst.dueDate.getTime() + DAY_MS - TEHRAN_OFFSET_MS - 1);
+    const total = inst.order._count.installments;
+    const overdue = inst.dueDate.getTime() < today.getTime();
 
     try {
       const task = await prisma.staffTask.create({
@@ -467,23 +660,30 @@ async function createFollowUpTasks(today: Date): Promise<{ created: number; unow
           domain: type.domain,
           channel: type.channel,
           source: "RECURRING",
-          title: `پیگیری واریز قسط ${inst.seq} — سفارش ${inst.order.orderNumber}`,
+          title:
+            total > 1
+              ? `پیگیری واریز قسط ${inst.seq.toLocaleString("fa-IR")} از ${total.toLocaleString("fa-IR")} — سفارش ${inst.order.orderNumber}`
+              : `پیگیری واریز سفارش اعتباری ${inst.order.orderNumber}`,
           ownerId,
           ownerName,
           createdByName: "سیستم",
           status: "OPEN",
           // موعدِ گذشته فوری است؛ موعد امروز عادی
-          priority: inst.dueDate.getTime() < today.getTime() ? "URGENT" : "NORMAL",
+          priority: overdue ? "URGENT" : "NORMAL",
           customerId: inst.order.userId,
           contactName: name(inst.order.user),
           contactPhone: inst.order.user.phone,
           entity: "ORDER",
           entityId: inst.orderId,
           amount: inst.amount,
+          note:
+            `موعد ${formatJalali(inst.dueDate)} — ${inst.amount.toLocaleString("fa-IR")} تومان.\n` +
+            "اگر واریز شد، کار را با «پرداخت شد» ببندید؛ واریز خودکار ثبت می‌شود. " +
+            "برای تمدید موعد از «کارتابل ← موعدهای پرداخت» استفاده کنید.",
           dueAt,
           occurredAt: new Date(),
-          // یکتایی مثل قواعد تکرارشونده — هر موعد حداکثر یک کار
-          runKey: `credit:${inst.id}`,
+          // یکتایی — هر موعد در هر تاریخ حداکثر یک کار (تمدید، کار تازه می‌گیرد)
+          runKey: `credit:${inst.id}:${inst.dueDate.toISOString().slice(0, 10)}`,
         },
         select: { id: true },
       });
@@ -502,6 +702,77 @@ async function createFollowUpTasks(today: Date): Promise<{ created: number; unow
   }
 
   return { created, unowned };
+}
+
+/**
+ * پاپ‌آپ فوری برای موعدی که **گذشته** و کار پیگیری‌اش هنوز باز است.
+ *
+ * از همان راه ارجاع فوری (`StaffTaskReferral.isUrgent`) می‌رود که
+ * `WorklistNotifier` می‌خواند. ارجاعِ سیستمی (`fromId = null`) روی همان کار،
+ * نشانه‌ی «یک بار نشان داده شد» است — هر موعد یک پاپ‌آپ، نه هر ده دقیقه.
+ */
+async function popupOverdue(today: Date): Promise<number> {
+  const overdue = await prisma.orderCreditInstallment.findMany({
+    where: { status: "DUE", dueDate: { lt: today }, followUpTaskId: { not: null } },
+    select: { followUpTaskId: true, amount: true, order: { select: { orderNumber: true } } },
+    take: 100,
+  });
+  const ids = overdue.map((o) => o.followUpTaskId!);
+  if (ids.length === 0) return 0;
+
+  const [tasks, done] = await Promise.all([
+    prisma.staffTask.findMany({
+      where: { id: { in: ids }, status: { in: ["OPEN", "IN_PROGRESS"] }, ownerId: { not: null } },
+      select: { id: true, ownerId: true, ownerName: true },
+    }),
+    prisma.staffTaskReferral.findMany({
+      where: { taskId: { in: ids }, fromId: null, isUrgent: true },
+      select: { taskId: true },
+    }),
+  ]);
+  const already = new Set(done.map((d) => d.taskId));
+  const byTask = new Map(overdue.map((o) => [o.followUpTaskId!, o]));
+
+  let n = 0;
+  for (const t of tasks) {
+    if (already.has(t.id)) continue;
+    const inst = byTask.get(t.id)!;
+    await prisma.staffTaskReferral.create({
+      data: {
+        taskId: t.id,
+        fromId: null,
+        fromName: "سیستم",
+        toId: t.ownerId!,
+        toName: t.ownerName ?? "",
+        isUrgent: true,
+        note: `موعد پرداخت سفارش ${inst.order.orderNumber} (${inst.amount.toLocaleString("fa-IR")} تومان) گذشته و واریز ثبت نشده است.`,
+      },
+    });
+    await prisma.staffTask.update({ where: { id: t.id }, data: { priority: "URGENT" } });
+    n++;
+  }
+  return n;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// بدهی باز — برای پرونده‌ی مشتری و «سفارش‌های من»
+// ─────────────────────────────────────────────────────────────────
+
+/** مانده‌ی بدهی یک مشتری: جمع موعدهای باز و نزدیک‌ترین موعد */
+export async function openDebtOf(userId: string) {
+  const rows = await prisma.orderCreditInstallment.findMany({
+    where: { status: "DUE", order: { userId, status: { notIn: [...DEAD_ORDER_STATUSES] } } },
+    orderBy: { dueDate: "asc" },
+    select: { id: true, amount: true, dueDate: true, seq: true, order: { select: { id: true, orderNumber: true } } },
+  });
+  const today = dayKeyOf(new Date()).getTime();
+  return {
+    total: rows.reduce((s, r) => s + r.amount, 0n),
+    overdue: rows.filter((r) => r.dueDate.getTime() < today).reduce((s, r) => s + r.amount, 0n),
+    count: rows.length,
+    next: rows[0] ?? null,
+    rows,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────

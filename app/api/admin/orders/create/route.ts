@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
-import { requirePermission } from "@/lib/permissions";
+import { can, requirePermission } from "@/lib/permissions";
+import { validateInstallments } from "@/lib/worklist/credit";
 import { logActivityAsync } from "@/lib/activity";
 import { deductStockForOrderItems } from "@/lib/order-stock";
 import { createTask } from "@/lib/worklist/task-service";
@@ -32,6 +33,10 @@ export const dynamic = "force-dynamic";
  * معامله را همان لحظه قطعی می‌کند. **اگر قیمت خرید حتی یک ردیف معلوم نباشد،
  * کار «تأمین کالا» اجباری است** — کارمند تأمین‌کننده را پیدا می‌کند و با بستن
  * همان کار، قیمت خرید ثبت می‌شود (بخش ۲۲.۱۰).
+ *
+ * **اعتباری** (بخش ۲۴): با `paymentTerm: "CREDIT"` و موعدها. سفارش `CONFIRMED`
+ * ثبت می‌شود (کالا می‌رود، موجودی کسر می‌شود) ولی پرداختش در انتظار می‌ماند؛
+ * سود و امتیاز باشگاه با آخرین واریز آزاد می‌شوند. مجوز جدای `CREDIT_MANAGE`.
  */
 
 function generateOrderNumber(): string {
@@ -86,6 +91,10 @@ export async function POST(req: Request) {
     status?: OrderStatus;
     /** فروش ریفری — پورسانتش با قاعده‌های ریفری طرح حساب می‌شود */
     isReferral?: boolean;
+    /** نقدی (پیش‌فرض) یا اعتباری */
+    paymentTerm?: "CASH" | "CREDIT";
+    /** موعدهای پرداخت اعتباری — جمعشان باید دقیقاً مبلغ نهایی باشد */
+    installments?: { dueDate: string; amount: string | number }[];
     /** کارهای بعدی که همراه سفارش ساخته شوند */
     createPurchaseTask?: boolean;
     createShippingTask?: boolean;
@@ -102,9 +111,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "دست‌کم یک کالا انتخاب کنید" }, { status: 400 });
   }
 
-  const status: OrderStatus = ALLOWED_STATUS.includes(body.status as OrderStatus)
-    ? (body.status as OrderStatus)
-    : "PENDING_PAYMENT";
+  const credit = body.paymentTerm === "CREDIT";
+  if (credit && !can(guard.access, "CREDIT_MANAGE")) {
+    return NextResponse.json({ error: "ثبت سفارش اعتباری مجوز جدا لازم دارد" }, { status: 403 });
+  }
+
+  // ⚠️ اعتباری همیشه `CONFIRMED`: کالا تحویل می‌شود و پول بعداً می‌آید. «پول
+  // نرسیده» از موعدهای باز خوانده می‌شود، نه از وضعیت (تصمیم بخش ۲۴.۳).
+  const status: OrderStatus = credit
+    ? "CONFIRMED"
+    : ALLOWED_STATUS.includes(body.status as OrderStatus)
+      ? (body.status as OrderStatus)
+      : "PENDING_PAYMENT";
 
   // ── مشتری ─────────────────────────────────────────────────────
   let userId = body.customerId ?? null;
@@ -190,6 +208,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "تخفیف از مبلغ سفارش بیشتر است" }, { status: 400 });
   }
 
+  // موعدها **پیش از** ساخت سفارش سنجیده می‌شوند — سفارش اعتباریِ بی‌موعد نباید بماند
+  let installmentRows: { seq: number; dueDate: Date; amount: bigint }[] = [];
+  if (credit) {
+    if (grandTotal <= 0n) {
+      return NextResponse.json({ error: "سفارش بدون مبلغ اعتباری نمی‌شود" }, { status: 400 });
+    }
+    const v = validateInstallments(body.installments, grandTotal);
+    if ("error" in v) return NextResponse.json({ error: v.error }, { status: 400 });
+    installmentRows = v.rows;
+  }
+
   // ── آدرس ──────────────────────────────────────────────────────
   let addressId = body.addressId ?? null;
   const a = body.address;
@@ -213,7 +242,10 @@ export async function POST(req: Request) {
   }
 
   // ── ثبت سفارش ─────────────────────────────────────────────────
+  // «کالا رفته» — برای کسر موجودی. اعتباری هم کالا را می‌فرستد.
   const paid = status === "PAID" || status === "CONFIRMED";
+  /** پول واقعاً رسیده — اعتباری نه */
+  const moneyIn = paid && !credit;
 
   const order = await prisma.order.create({
     data: {
@@ -227,6 +259,8 @@ export async function POST(req: Request) {
       grandTotal,
       note: body.note?.trim() || null,
       isReferral: body.isReferral === true,
+      paymentTerm: credit ? "CREDIT" : "CASH",
+      ...(credit ? { installments: { create: installmentRows } } : {}),
       // ⚠️ همین فیلد تعریفِ «سفارش تلفنی» است. سفارش‌های سایت `null` می‌مانند.
       createdByStaffId: guard.access.userId,
       items: { create: orderItems },
@@ -236,9 +270,9 @@ export async function POST(req: Request) {
               create: [
                 {
                   amount: grandTotal,
-                  status: paid ? "SUCCEEDED" : "PENDING",
-                  provider: "phone_order",
-                  providerRef: paid ? `phone-${Date.now()}` : null,
+                  status: moneyIn ? "SUCCEEDED" : "PENDING",
+                  provider: credit ? "credit" : "phone_order",
+                  providerRef: moneyIn ? `phone-${Date.now()}` : null,
                 },
               ],
             }
@@ -270,15 +304,18 @@ export async function POST(req: Request) {
     via: "ORDER",
   });
 
-  // معامله‌ی سود — فقط اگر همان لحظه پرداخت‌شده ثبت شده باشد؛ بقیه با گذار وضعیت
-  if (paid) syncDealSafe(order.id);
+  // معامله‌ی سود — فقط اگر همان لحظه پرداخت‌شده ثبت شده باشد؛ بقیه با گذار وضعیت.
+  // اعتباری را خودِ syncDealForOrder تا آخرین واریز رد می‌کند.
+  if (moneyIn) syncDealSafe(order.id);
 
   logActivityAsync({
     action: "CREATE",
     entity: "ORDER",
     entityId: order.id,
     entityTitle: order.orderNumber,
-    summary: `ثبت سفارش تلفنی ${order.orderNumber}`,
+    summary: credit
+      ? `ثبت سفارش تلفنی اعتباری ${order.orderNumber} — ${installmentRows.length} موعد`
+      : `ثبت سفارش تلفنی ${order.orderNumber}`,
   });
 
   // ── کارهای بعدی زنجیره ────────────────────────────────────────

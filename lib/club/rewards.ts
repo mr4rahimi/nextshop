@@ -56,6 +56,12 @@ export async function processOrderForClub(orderId: string): Promise<RewardResult
 
     await recomputePurchaseStats(order.userId);
 
+    // سفارش اعتباری با موعد باز: خرید در آمار می‌آید ولی امتیاز و پاداش معرفی
+    // تا آخرین واریز صبر می‌کنند (کارتابل بخش ۲۴). `payInstallment` بعد از
+    // آخرین قسط همین تابع را دوباره صدا می‌زند؛ تکرارش بی‌خطر است.
+    const openCredit = await prisma.orderCreditInstallment.count({ where: { orderId: order.id, status: "DUE" } });
+    if (openCredit > 0) return { pointsAwarded: 0, tierChanged: false, newTierTitle: null };
+
     const pointsAwarded = await awardPurchasePoints(profile.id, order.id, order.grandTotal);
     const tier = await assignTier(profile.id);
 

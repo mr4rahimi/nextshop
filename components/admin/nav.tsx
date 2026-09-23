@@ -111,6 +111,7 @@ export const MENU_GROUPS: NavGroup[] = [
           { href: "/admin/club/members?owner=me", label: "مشتریان من" },
           { href: "/admin/worklist/phone-order", label: "ثبت سفارش تلفنی" },
           { href: "/admin/worklist/orders", label: "سفارش‌های من" },
+          { href: "/admin/worklist/credit", label: "موعدهای پرداخت" },
           { href: "/admin/worklist/tasks", label: "همه‌ی کارها" },
           { href: "/admin/worklist/seo", label: "کارهای سئو" },
           { href: "/admin/worklist/attendance", label: "حضور" },

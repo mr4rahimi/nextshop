@@ -17,6 +17,10 @@ interface OrderRow {
   orderNumber: string;
   status: string;
   isReferral: boolean;
+  paymentTerm: "CASH" | "CREDIT";
+  /** مانده‌ی بدهی اعتباری — `null` یعنی نقدی یا تسویه‌شده */
+  creditDue: string | null;
+  creditNext: string | null;
   itemsTotal: string;
   shippingFee: string;
   discountTotal: string;
@@ -58,6 +62,7 @@ function profitBadge(o: OrderRow) {
   const d = o.staffDeal;
   if (!d) {
     if (o.status === "PENDING_PAYMENT") return <span className="text-gray-400">بعد از پرداخت</span>;
+    if (o.creditDue) return <span className="text-gray-400">بعد از آخرین قسط</span>;
     return <span className="text-gray-400">—</span>;
   }
   if (d.status === "VOID") return <span className="text-gray-400">لغو شد</span>;
@@ -188,6 +193,9 @@ export default function MyOrdersClient() {
                         {o.isReferral && (
                           <span className="mr-1.5 text-[9px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-600">ریفری</span>
                         )}
+                        {o.paymentTerm === "CREDIT" && (
+                          <span className="mr-1.5 text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">اعتباری</span>
+                        )}
                       </p>
                     </td>
                     <td className="px-3 py-2.5">
@@ -195,7 +203,12 @@ export default function MyOrdersClient() {
                       <p className="text-[11px] text-gray-400" dir="ltr">{o.customerPhone}</p>
                     </td>
                     {showStaff && <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{o.staffName}</td>}
-                    <td className="px-3 py-2.5 text-center font-bold text-gray-900 dark:text-white">{fa(o.grandTotal)}</td>
+                    <td className="px-3 py-2.5 text-center">
+                      <p className="font-bold text-gray-900 dark:text-white">{fa(o.grandTotal)}</p>
+                      {o.creditDue && (
+                        <p className="text-[10px] font-bold text-amber-600">مانده {fa(o.creditDue)}</p>
+                      )}
+                    </td>
                     <td className="px-3 py-2.5 text-center">
                       <span className={`text-[10px] px-2 py-1 rounded-lg font-bold ${s.cls}`}>{s.label}</span>
                     </td>
@@ -235,6 +248,16 @@ export default function MyOrdersClient() {
                           )}
                           {o.staffDeal?.payoutId && <span>تسویه شده</span>}
                         </div>
+                        {o.creditDue && (
+                          <p className="mt-2 text-[11px] text-amber-600">
+                            بدهی اعتباری: {fa(o.creditDue)} تومان
+                            {o.creditNext && ` · موعد بعدی ${formatJalaliShort(new Date(o.creditNext))}`}
+                            {" · "}
+                            <Link href={`/admin/worklist/credit?tab=all&q=${encodeURIComponent(o.orderNumber)}`} className="font-bold underline">
+                              موعدها
+                            </Link>
+                          </p>
+                        )}
                         {o.note && <p className="mt-2 text-[11px] text-gray-500">یادداشت: {o.note}</p>}
                         {data.can.openOrder && (
                           <Link href={`/admin/orders/${o.id}`} className="inline-block mt-2 text-[11px] font-bold text-blue-600 hover:underline">

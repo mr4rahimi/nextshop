@@ -31,6 +31,8 @@ interface Order {
   address: { receiver: string; phone: string; province: string; city: string; addressLine: string; postalCode: string | null } | null;
   items: OrderItem[];
   payments: { id: string; status: string; provider: string | null; amount: string; createdAt: string }[];
+  paymentTerm?: "CASH" | "CREDIT";
+  installments?: { id: string; seq: number; dueDate: string; amount: string; status: string; paidAt: string | null; reminderSentAt: string | null }[];
 }
 
 interface StoreSettings {
@@ -400,7 +402,13 @@ export default function AdminOrderDetailPage() {
                 <div key={p.id} className="flex items-center justify-between px-6 py-4">
                   <div>
                     <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                      {p.provider === "card_transfer" ? "کارت به کارت" : "درگاه آنلاین"}
+                      {p.provider === "card_transfer"
+                        ? "کارت به کارت"
+                        : p.provider === "phone_order"
+                          ? "سفارش تلفنی"
+                          : p.provider === "credit"
+                            ? "اعتباری — در موعدها"
+                            : "درگاه آنلاین"}
                     </p>
                     <p className="text-[10px] text-gray-400">{formatDateTime(p.createdAt)}</p>
                   </div>
@@ -411,6 +419,47 @@ export default function AdminOrderDetailPage() {
                       p.status === "FAILED" ? "bg-red-50 dark:bg-red-900/20 text-red-500" :
                       "bg-amber-50 dark:bg-amber-900/20 text-amber-600"
                     }`}>{PAYMENT_STATUS[p.status] ?? p.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* موعدهای پرداخت اعتباری — ثبت واریز و تمدید در کارتابل */}
+          {order.installments && order.installments.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <h3 className="font-black text-sm text-gray-900 dark:text-white">موعدهای پرداخت اعتباری</h3>
+                <a
+                  href={`/admin/worklist/credit?tab=all&q=${encodeURIComponent(order.orderNumber)}`}
+                  className="text-[11px] font-bold text-blue-600 hover:underline"
+                >
+                  ثبت واریز و تمدید ←
+                </a>
+              </div>
+              {order.installments.map((i) => (
+                <div key={i.id} className="flex items-center justify-between px-6 py-3">
+                  <div>
+                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                      قسط {toFa(i.seq)} · {new Date(i.dueDate).toLocaleDateString("fa-IR")}
+                    </p>
+                    {i.status === "DUE" && i.reminderSentAt && (
+                      <p className="text-[10px] text-gray-400">یادآوری پیامکی رفت</p>
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-black text-gray-900 dark:text-white tabular-nums">{toFa(i.amount)} تومان</p>
+                    <span
+                      className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${
+                        i.status === "PAID"
+                          ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600"
+                          : i.status === "CANCELED"
+                            ? "bg-gray-100 dark:bg-gray-800 text-gray-500"
+                            : "bg-amber-50 dark:bg-amber-900/20 text-amber-600"
+                      }`}
+                    >
+                      {i.status === "PAID" ? "واریز شد" : i.status === "CANCELED" ? "لغو" : "در انتظار"}
+                    </span>
                   </div>
                 </div>
               ))}

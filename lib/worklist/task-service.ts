@@ -15,6 +15,7 @@ import type { Prisma, StaffTaskStatus } from "@prisma/client";
 import { supplierSnapshot } from "./suppliers";
 import { claimIfUnowned, CLAIMING_CHANNELS } from "@/lib/club/ownership";
 import { costFromPurchaseTaskSafe, dealFromTaskSafe } from "./deals";
+import { creditFromTaskSafe } from "./credit";
 
 /**
  * تماسی که نتیجه گرفت و مشتری ثبت‌شده دارد، مشتریِ بی‌صاحب را به نام کسی
@@ -255,6 +256,7 @@ export async function createTask(input: CreateTaskInput, access: StaffAccess) {
   if (task.status === "DONE") {
     dealFromTaskSafe(task.id);
     costFromPurchaseTaskSafe(task.id);
+    creditFromTaskSafe(task.id);
   }
 
   return task;
@@ -379,6 +381,7 @@ export async function updateTask(
   if (task.status === "DONE") {
     dealFromTaskSafe(task.id);
     costFromPurchaseTaskSafe(task.id);
+    creditFromTaskSafe(task.id);
   }
 
   return task;

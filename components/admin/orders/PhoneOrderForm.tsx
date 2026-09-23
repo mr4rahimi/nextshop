@@ -10,12 +10,16 @@
  * قیمت خرید هر ردیف اختیاری است. اگر یکی خالی بماند، کار «تأمین کالا» خودکار
  * ساخته می‌شود و تیکش قفل است (بخش ۲۲.۱۰).
  *
+ * «اعتباری» (بخش ۲۴) فقط با `CREDIT_MANAGE` دیده می‌شود: وضعیت انتخاب نمی‌شود
+ * (سرور `CONFIRMED` می‌زند) و موعدها با `InstallmentsEditor` ساخته می‌شوند.
+ *
  * مستندات: docs/features/staff-worklist.md
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import HelpButton from "@/components/admin/worklist/HelpButton";
 import type { ContactSuggestion } from "@/components/admin/worklist/types";
+import InstallmentsEditor, { installmentsSum, type InstallmentRow } from "@/components/admin/worklist/InstallmentsEditor";
 
 interface ProductHit {
   id: string;
@@ -75,6 +79,9 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
   const [purchaseTask, setPurchaseTask] = useState(false);
   const [shippingTask, setShippingTask] = useState(false);
   const [isReferral, setIsReferral] = useState(false);
+  const [credit, setCredit] = useState(false);
+  const [installments, setInstallments] = useState<InstallmentRow[]>([]);
+  const [canCredit, setCanCredit] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,12 +98,22 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
     setStatus("PENDING_PAYMENT");
     setAddr({ receiver: "", phone: "", province: "", city: "", addressLine: "", postalCode: "" });
     setShowAddr(false); setPurchaseTask(false); setShippingTask(false); setIsReferral(false);
+    setCredit(false); setInstallments([]);
     setError(null); setDone(null);
   }, []);
 
   useEffect(() => {
     if (open) reset();
   }, [open, reset]);
+
+  // «اعتباری» فقط برای کسی که `CREDIT_MANAGE` دارد — سرور هم جدا چک می‌کند
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/admin/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setCanCredit(d.isUnrestricted || (d.permissions ?? []).includes("CREDIT_MANAGE")))
+      .catch(() => {});
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -191,6 +208,10 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
       setError("تخفیف از مبلغ سفارش بیشتر است");
       return;
     }
+    if (credit && (installments.length === 0 || installmentsSum(installments) !== grandTotal)) {
+      setError("جمع موعدهای پرداخت باید دقیقاً برابر مبلغ نهایی سفارش باشد");
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -215,6 +236,8 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
           discountTotal: discountTotal.replace(/[^\d]/g, "") || null,
           note: note.trim() || null,
           status,
+          paymentTerm: credit ? "CREDIT" : "CASH",
+          installments: credit ? installments : undefined,
           createPurchaseTask: purchaseTask || missingCost,
           createShippingTask: shippingTask,
         }),
@@ -466,7 +489,40 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
                 </div>
               </div>
 
+              {/* نوع پرداخت */}
+              {canCredit && (
+                <div className="rounded-xl border border-gray-200 dark:border-white/10 p-3.5 space-y-3">
+                  <div className="flex items-center gap-1.5">
+                    {([[false, "نقدی"], [true, "اعتباری"]] as const).map(([v, l]) => (
+                      <button
+                        key={l}
+                        type="button"
+                        onClick={() => setCredit(v)}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold transition border ${
+                          credit === v
+                            ? "bg-blue-500 text-white border-blue-500"
+                            : "bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-gray-300 border-transparent"
+                        }`}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                  {credit && (
+                    <>
+                      <p className="text-[10px] text-gray-500">
+                        کالا همین حالا تحویل و از موجودی کسر می‌شود و پول در موعدها می‌آید. روز قبل از هر
+                        موعد پیامک یادآوری می‌رود و روز موعد یک کار پیگیری در کارتابل صاحب مشتری ساخته می‌شود.
+                        سود و پورسانت با آخرین واریز حساب می‌شود.
+                      </p>
+                      <InstallmentsEditor total={Math.max(0, grandTotal)} rows={installments} onChange={setInstallments} />
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* وضعیت */}
+              {!credit && (
               <div>
                 <label className={labelCls}>وضعیت سفارش</label>
                 <div className="flex flex-wrap gap-1.5">
@@ -490,6 +546,7 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
                   </p>
                 )}
               </div>
+              )}
 
               {/* آدرس */}
               <div>

@@ -71,6 +71,7 @@ export async function syncDealForOrder(orderId: string): Promise<"created" | "vo
       discountTotal: true,
       createdAt: true,
       isReferral: true,
+      paymentTerm: true,
       createdByStaffId: true,
       createdByStaff: { select: { firstName: true, lastName: true, phone: true } },
       user: {
@@ -117,6 +118,13 @@ export async function syncDealForOrder(orderId: string): Promise<"created" | "vo
   }
 
   if (!paid || order.items.length === 0) return "none";
+
+  // سفارش اعتباری `CONFIRMED` ثبت می‌شود ولی پولش هنوز نرسیده (بخش ۲۴).
+  // معامله با آخرین واریز ساخته می‌شود — `payInstallment` همین را صدا می‌زند.
+  if (order.paymentTerm === "CREDIT") {
+    const open = await prisma.orderCreditInstallment.count({ where: { orderId: order.id, status: "DUE" } });
+    if (open > 0) return "none";
+  }
 
   // درآمد: کالاها بعد از تخفیف، بدون کرایه‌ی ارسال (بخش ۲۲.۱)
   //
@@ -259,7 +267,13 @@ export async function sweepDeals(sinceDays = 45): Promise<{ created: number; voi
   const since = new Date(Date.now() - sinceDays * 86_400_000);
   const [missing, toVoid] = await Promise.all([
     prisma.order.findMany({
-      where: { status: { in: EARNING_STATUSES as never }, staffDeal: null, updatedAt: { gte: since } },
+      where: {
+        status: { in: EARNING_STATUSES as never },
+        staffDeal: null,
+        updatedAt: { gte: since },
+        // اعتباریِ با موعد باز هر ده دقیقه بی‌نتیجه بررسی نشود
+        NOT: { installments: { some: { status: "DUE" } } },
+      },
       select: { id: true },
       take: 500,
     }),

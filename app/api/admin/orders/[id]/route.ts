@@ -48,6 +48,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         },
       },
       payments: { orderBy: { createdAt: "desc" } },
+      // موعدهای اعتباری (کارتابل بخش ۲۴) — خالی برای سفارش نقدی
+      installments: {
+        orderBy: { seq: "asc" },
+        select: { id: true, seq: true, dueDate: true, amount: true, status: true, paidAt: true, reminderSentAt: true },
+      },
     },
   });
 

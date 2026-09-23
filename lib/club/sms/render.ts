@@ -17,6 +17,10 @@ export const TEMPLATE_VARIABLES = [
   { key: "store", label: "نام فروشگاه" },
   { key: "code", label: "کد تخفیف" },
   { key: "orders", label: "تعداد خرید" },
+  // فقط در یادآوری موعد پرداخت اعتباری پر می‌شوند (کارتابل بخش ۲۴)
+  { key: "order", label: "شماره سفارش (یادآوری موعد)" },
+  { key: "amount", label: "مبلغ قسط (یادآوری موعد)" },
+  { key: "due", label: "تاریخ موعد (یادآوری موعد)" },
 ] as const;
 
 const PLACEHOLDER = /\{(\w+)\}/g;

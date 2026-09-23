@@ -127,6 +127,8 @@ export default function CustomerTimeline({
           </div>
         </div>
 
+        <CustomerDebt customerId={customerId} phone={customerPhone} />
+
         {sorted.length > 0 && (
           <div className="px-5 py-2.5 border-b border-gray-100 dark:border-white/5 flex items-center gap-4 text-[11px] text-gray-500">
             <span>
@@ -237,5 +239,50 @@ export default function CustomerTimeline({
         onNoteAdded={() => reload()}
       />
     </div>
+  );
+}
+
+/**
+ * بدهی باز اعتباری مشتری (بخش ۲۴.۴) — فقط وقتی هست و کارمند اجازه‌ی دیدنش را
+ * دارد. مسیرش بی‌اجازه `null` برمی‌گرداند و این نوار اصلاً رندر نمی‌شود.
+ */
+function CustomerDebt({ customerId, phone }: { customerId: string; phone: string }) {
+  const [debt, setDebt] = useState<{
+    total: string;
+    overdue: string;
+    count: number;
+    next: { dueDate: string; amount: string } | null;
+  } | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+    fetch(`/api/admin/worklist/credit/customer/${encodeURIComponent(customerId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!ignore) setDebt(d?.debt ?? null); })
+      .catch(() => {});
+    return () => { ignore = true; };
+  }, [customerId]);
+
+  if (!debt) return null;
+  const fa = (v: string) => Number(v).toLocaleString("fa-IR");
+  const overdue = Number(debt.overdue) > 0;
+  return (
+    <a
+      href={`/admin/worklist/credit?tab=all&q=${encodeURIComponent(phone)}`}
+      className={`block px-5 py-2.5 border-b text-[11px] ${
+        overdue
+          ? "bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20 text-red-700 dark:text-red-300"
+          : "bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20 text-amber-700 dark:text-amber-300"
+      }`}
+    >
+      <b>بدهی اعتباری: {fa(debt.total)} تومان</b>
+      {" · "}
+      {debt.count.toLocaleString("fa-IR")} موعد باز
+      {overdue && <> · <b>معوق {fa(debt.overdue)}</b></>}
+      {debt.next && (
+        <> · موعد بعدی {new Date(debt.next.dueDate).toLocaleDateString("fa-IR")}</>
+      )}
+      <span className="mr-1 underline">مشاهده</span>
+    </a>
   );
 }

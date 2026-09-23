@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { runRecurringRules } from "./recurring";
 import { closeStaleSessions, aggregateRecentDays } from "./attendance";
 import { sweepDeals } from "./deals";
+import { runCreditCycle } from "./credit";
 import { runSeoSweep } from "@/lib/marketing/seo-sweep";
 
 let started = false;
@@ -62,6 +63,20 @@ async function tick() {
       }
     } catch (e) {
       console.error("[worklist] جاروب معامله شکست خورد:", e);
+    }
+
+    // خرید اعتباری — یادآوری پیامکی فردا، کار پیگیری امروز، پاپ‌آپ موعد گذشته
+    // (فاز ۱۰). جدا try/catch می‌شود مثل بقیه.
+    try {
+      const c = await runCreditCycle();
+      if (c.remindersSent + c.tasksCreated + c.canceled > 0) {
+        console.log(
+          `[credit] ${c.remindersSent} یادآوری، ${c.tasksCreated} کار پیگیری، ${c.canceled} موعد لغو` +
+            (c.unowned > 0 ? `؛ ${c.unowned} موعد بی‌مسئول` : ""),
+        );
+      }
+    } catch (e) {
+      console.error("[credit] چرخه‌ی خرید اعتباری شکست خورد:", e);
     }
 
     // کار دوره‌ای سئو و یادآوری بررسی نتیجه.

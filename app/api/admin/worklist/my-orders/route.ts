@@ -67,6 +67,8 @@ export async function GET(req: Request) {
         orderNumber: true,
         status: true,
         isReferral: true,
+        paymentTerm: true,
+        installments: { where: { status: "DUE" }, select: { amount: true, dueDate: true }, orderBy: { dueDate: "asc" } },
         itemsTotal: true,
         shippingFee: true,
         discountTotal: true,
@@ -124,6 +126,10 @@ export async function GET(req: Request) {
         staffName: name(o.createdByStaff),
         user: undefined,
         createdByStaff: undefined,
+        installments: undefined,
+        // بدهی باز اعتباری — `null` یعنی نقدی یا تسویه‌شده
+        creditDue: o.installments.length ? o.installments.reduce((s, i) => s + i.amount, 0n) : null,
+        creditNext: o.installments[0]?.dueDate ?? null,
         items: o.items.map((i) => ({
           id: i.id,
           title: i.titleSnapshot,
