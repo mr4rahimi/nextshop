@@ -21,6 +21,8 @@ export interface RuleLike {
   id: string;
   categoryId: string | null;
   condition: string | null;
+  /** فقط فروش ریفری — نبودنش یعنی «هر فروشی» */
+  referral?: boolean;
   percent: number;
   isActive: boolean;
 }
@@ -29,12 +31,19 @@ export interface ItemLike {
   categoryId: string | null;
   categoryPath: string[];
   condition: string;
+  /** فروش ریفری — از معامله، نه از ردیف */
+  referral?: boolean;
 }
 
 /**
  * مشخص‌ترین قاعده‌ی منطبق.
  *
- * امتیاز: دسته منطبق (خودش یا والدش) ۴، دقیقاً همان دسته ۲+، وضعیت منطبق ۱.
+ * امتیاز: ریفری ۸، دسته منطبق (خودش یا والدش) ۴، دقیقاً همان دسته ۲+، وضعیت منطبق ۱.
+ *
+ * ⚠️ ریفری عمداً از جمعِ بقیه (۷) بیشتر است: فروش ریفری نرخ جدا دارد و هر
+ * قاعده‌ی ریفری بر هر قاعده‌ی غیرریفری برنده است. بین قاعده‌های ریفری همان
+ * دسته و وضعیت تعیین می‌کنند. طرحی که قاعده‌ی ریفری ندارد، فروش ریفری را با
+ * قاعده‌های معمولی حساب می‌کند (بخش ۲۲.۱۰).
  * قاعده‌ی بدون شرط امتیاز صفر دارد و فقط وقتی برنده است که چیز دیگری نخورد.
  * تساوی با کمترین `id` شکسته می‌شود تا دو بار محاسبه دو جواب ندهد.
  */
@@ -45,6 +54,10 @@ export function pickRule<R extends RuleLike>(rules: R[], item: ItemLike): R | nu
   for (const r of rules) {
     if (!r.isActive) continue;
     let score = 0;
+    if (r.referral) {
+      if (!item.referral) continue;
+      score += 8;
+    }
     if (r.categoryId) {
       if (!item.categoryPath.includes(r.categoryId) && item.categoryId !== r.categoryId) continue;
       score += 4;
@@ -97,10 +110,11 @@ export function commissionFor(profit: bigint, percent: number): bigint {
 }
 
 export function ruleLabel(
-  rule: { categoryId: string | null; condition: string | null; percent: number },
+  rule: { categoryId: string | null; condition: string | null; referral?: boolean; percent: number },
   categoryTitle?: string | null,
 ): string {
   const parts = [
+    rule.referral ? "ریفری" : null,
     rule.categoryId ? categoryTitle ?? "دسته‌ی حذف‌شده" : "همه‌ی کالاها",
     rule.condition ? CONDITION_LABELS[rule.condition] ?? rule.condition : null,
   ].filter(Boolean);

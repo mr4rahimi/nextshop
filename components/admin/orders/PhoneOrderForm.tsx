@@ -7,6 +7,9 @@
  * می‌آید. دو تیک پایین فرم، کارِ **بعدی** می‌سازند: تأمین کالا و هماهنگی
  * ارسال. این‌ها زنجیره‌ی بعد از فروش‌اند نه خودِ فروش.
  *
+ * قیمت خرید هر ردیف اختیاری است. اگر یکی خالی بماند، کار «تأمین کالا» خودکار
+ * ساخته می‌شود و تیکش قفل است (بخش ۲۲.۱۰).
+ *
  * مستندات: docs/features/staff-worklist.md
  */
 
@@ -29,6 +32,8 @@ interface Line {
   /** خالی یعنی قیمت کاتالوگ */
   unitPrice: string;
   catalogPrice: string;
+  /** قیمت خرید واحد — خالی یعنی هنوز معلوم نیست */
+  unitCost: string;
 }
 
 interface Props {
@@ -69,6 +74,7 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
   const [showAddr, setShowAddr] = useState(false);
   const [purchaseTask, setPurchaseTask] = useState(false);
   const [shippingTask, setShippingTask] = useState(false);
+  const [isReferral, setIsReferral] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +90,7 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
     setShippingFee(""); setDiscountTotal(""); setNote("");
     setStatus("PENDING_PAYMENT");
     setAddr({ receiver: "", phone: "", province: "", city: "", addressLine: "", postalCode: "" });
-    setShowAddr(false); setPurchaseTask(false); setShippingTask(false);
+    setShowAddr(false); setPurchaseTask(false); setShippingTask(false); setIsReferral(false);
     setError(null); setDone(null);
   }, []);
 
@@ -150,6 +156,7 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
             qty: 1,
             unitPrice: "",
             catalogPrice: p.salePrice ?? p.price,
+            unitCost: "",
           }],
     );
     setProductQuery("");
@@ -162,6 +169,10 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
     return price * l.qty;
   };
   const itemsTotal = lines.reduce((s, l) => s + lineTotal(l), 0);
+  const digits = (v: string) => v.replace(/[^\d]/g, "");
+  // هر ردیفی بی‌قیمت خرید ← کار تأمین اجباری (سرور هم همین را اعمال می‌کند)
+  const missingCost = lines.some((l) => !Number(digits(l.unitCost)));
+  const costTotal = lines.reduce((s, l) => s + Number(digits(l.unitCost) || 0) * l.qty, 0);
   const grandTotal =
     itemsTotal +
     Number(shippingFee.replace(/[^\d]/g, "") || 0) -
@@ -196,13 +207,15 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
             productId: l.productId,
             qty: l.qty,
             unitPrice: l.unitPrice.replace(/[^\d]/g, "") || null,
+            unitCost: digits(l.unitCost) || null,
           })),
+          isReferral,
           address: showAddr && addr.addressLine.trim() ? addr : null,
           shippingFee: shippingFee.replace(/[^\d]/g, "") || null,
           discountTotal: discountTotal.replace(/[^\d]/g, "") || null,
           note: note.trim() || null,
           status,
-          createPurchaseTask: purchaseTask,
+          createPurchaseTask: purchaseTask || missingCost,
           createShippingTask: shippingTask,
         }),
       });
@@ -369,7 +382,7 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
                             حذف
                           </button>
                         </div>
-                        <div className="grid grid-cols-3 gap-2 items-center">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-center">
                           <div>
                             <label className="block text-[10px] text-gray-500 mb-1">تعداد</label>
                             <input
@@ -402,6 +415,22 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
                               className="w-full px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs text-gray-900 dark:text-white outline-none"
                             />
                           </div>
+                          <div>
+                            <label className="block text-[10px] text-gray-500 mb-1">
+                              قیمت خرید واحد
+                            </label>
+                            <input
+                              value={l.unitCost}
+                              onChange={(e) =>
+                                setLines((prev) =>
+                                  prev.map((x, j) => (j === i ? { ...x, unitCost: e.target.value } : x)),
+                                )
+                              }
+                              placeholder="هنوز معلوم نیست"
+                              inputMode="numeric"
+                              className="w-full px-2 py-1.5 rounded-lg bg-amber-50/60 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 text-xs text-gray-900 dark:text-white outline-none"
+                            />
+                          </div>
                           <div className="text-left">
                             <label className="block text-[10px] text-gray-500 mb-1">جمع</label>
                             <p className="text-xs font-bold text-gray-900 dark:text-white">
@@ -412,8 +441,15 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
                       </div>
                     ))}
                     <p className="text-[10px] text-gray-400">
-                      قیمت واحد را خالی بگذارید تا قیمت کاتالوگ اعمال شود.
+                      قیمت واحد را خالی بگذارید تا قیمت کاتالوگ اعمال شود. قیمت خرید را
+                      اگر هنوز نمی‌دانید خالی بگذارید؛ یک کار «تأمین کالا» برایتان ساخته می‌شود.
                     </p>
+                    {!missingCost && (
+                      <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                        سود تقریبی کالاها: {fa(itemsTotal - costTotal)} تومان
+                        <span className="font-normal text-gray-400"> — قبل از تخفیف</span>
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -481,14 +517,43 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
                 <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="هرچه روی تلفن توافق شد" className={`${inputCls} resize-none`} />
               </div>
 
+              {/* ریفر */}
+              <label className="flex items-start gap-2.5 cursor-pointer rounded-xl border border-gray-200 dark:border-white/10 p-3.5">
+                <input
+                  type="checkbox"
+                  checked={isReferral}
+                  onChange={(e) => setIsReferral(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded accent-violet-500"
+                />
+                <span>
+                  <span className="block text-xs font-bold text-gray-900 dark:text-white">فروش ریفری</span>
+                  <span className="block text-[10px] text-gray-500 mt-0.5">
+                    مشتری معرفی‌شده است. پورسانت این فروش با درصد «ریفری» طرح شما حساب می‌شود.
+                  </span>
+                </span>
+              </label>
+
               {/* کارهای بعدی */}
               <div className="rounded-xl bg-gray-50 dark:bg-white/5 p-3.5 space-y-2">
                 <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
                   کارهای بعدی در کارتابل ساخته شود؟
                 </p>
                 <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input type="checkbox" checked={purchaseTask} onChange={(e) => setPurchaseTask(e.target.checked)} className="w-4 h-4 rounded accent-blue-500" />
-                  <span className="text-xs text-gray-700 dark:text-gray-300">تأمین کالا از تأمین‌کننده</span>
+                  <input
+                    type="checkbox"
+                    checked={purchaseTask || missingCost}
+                    disabled={missingCost}
+                    onChange={(e) => setPurchaseTask(e.target.checked)}
+                    className="w-4 h-4 rounded accent-blue-500"
+                  />
+                  <span className="text-xs text-gray-700 dark:text-gray-300">
+                    تأمین کالا از تأمین‌کننده
+                    {missingCost && lines.length > 0 && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 mr-1">
+                        — اجباری، چون قیمت خرید کامل نیست
+                      </span>
+                    )}
+                  </span>
                 </label>
                 <label className="flex items-center gap-2.5 cursor-pointer">
                   <input type="checkbox" checked={shippingTask} onChange={(e) => setShippingTask(e.target.checked)} className="w-4 h-4 rounded accent-blue-500" />

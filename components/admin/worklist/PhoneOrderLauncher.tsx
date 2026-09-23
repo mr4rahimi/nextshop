@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import PhoneOrderForm from "@/components/admin/orders/PhoneOrderForm";
 
 export default function PhoneOrderLauncher() {
@@ -17,7 +18,8 @@ export default function PhoneOrderLauncher() {
       </button>
       {count > 0 && (
         <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-          {count.toLocaleString("fa-IR")} سفارش در این نشست ثبت شد. سودشان بعد از پرداخت در «سود معاملات» می‌آید.
+          {count.toLocaleString("fa-IR")} سفارش در این نشست ثبت شد. سودشان بعد از پرداخت در «سود معاملات» می‌آید.{" "}
+          <Link href="/admin/worklist/orders" className="underline">سفارش‌های من</Link>
         </p>
       )}
       <PhoneOrderForm open={open} onClose={() => setOpen(false)} onCreated={() => setCount((c) => c + 1)} />

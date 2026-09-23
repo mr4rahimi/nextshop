@@ -3,8 +3,8 @@
 /**
  * طرح‌های پورسانت در تنظیمات کارتابل: قاعده‌ها و وصل‌کردن طرح به کارکنان.
  *
- * فرم قاعده دو انتخابگر و یک عدد دارد: دسته (خالی = همه)، وضعیت (خالی = هر کدام)،
- * درصد. کارت برای کسی که مجوز ندارد رندر نمی‌شود.
+ * فرم قاعده دو انتخابگر، تیک ریفری و یک عدد دارد: دسته (خالی = همه)، وضعیت
+ * (خالی = هر کدام)، ریفری (فقط فروش معرفی‌شده)، درصد. کارت برای کسی که مجوز ندارد رندر نمی‌شود.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -15,6 +15,7 @@ interface Rule {
   id: string;
   categoryId: string | null;
   condition: string | null;
+  referral: boolean;
   percent: number;
   category: { title: string } | null;
 }
@@ -87,6 +88,7 @@ export default function CommissionPlansCard() {
       </div>
       <p className="text-[11px] text-gray-500">
         قاعده‌ی بدون دسته، درصدِ همه‌ی کالاهاست. هر قاعده‌ی دقیق‌تر، فقط همان‌ها را عوض می‌کند.
+        قاعده‌ی «ریفری» فقط فروش‌های معرفی‌شده را می‌گیرد و بر بقیه برنده است.
       </p>
 
       {plans.map((plan) => (
@@ -152,6 +154,7 @@ function PlanBlock({
 }) {
   const [categoryId, setCategoryId] = useState("");
   const [condition, setCondition] = useState("");
+  const [referral, setReferral] = useState(false);
   const [percent, setPercent] = useState("");
   const catTitle = (id: string | null) => {
     const c = id ? categories.find((x) => x.id === id) : undefined;
@@ -179,9 +182,12 @@ function PlanBlock({
         {plan.rules.map((r) => (
           <div key={r.id} className="flex flex-wrap items-center gap-2 py-1.5 text-xs">
             <span className="flex-1 text-gray-700 dark:text-gray-300">
+              {r.referral && (
+                <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-600 font-bold">ریفری</span>
+              )}
               {catTitle(r.categoryId)}
               {r.condition && <span className="text-violet-600 mr-1.5">· {CONDITION_LABELS[r.condition]}</span>}
-              {!r.categoryId && !r.condition && <span className="text-[10px] text-gray-400 mr-1.5">(پیش‌فرض)</span>}
+              {!r.categoryId && !r.condition && !r.referral && <span className="text-[10px] text-gray-400 mr-1.5">(پیش‌فرض)</span>}
             </span>
             {manage ? (
               <input
@@ -197,7 +203,7 @@ function PlanBlock({
             ) : (
               <span className="font-bold">{r.percent}٪</span>
             )}
-            {manage && (r.categoryId || r.condition) && (
+            {manage && (r.categoryId || r.condition || r.referral) && (
               <button onClick={() => call(`/api/admin/worklist/commission/rules/${r.id}`, "DELETE")} className="text-gray-400 hover:text-red-500" aria-label="حذف قاعده">
                 ✕
               </button>
@@ -220,14 +226,19 @@ function PlanBlock({
               <option key={k} value={k}>{v}</option>
             ))}
           </select>
+          <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+            <input type="checkbox" checked={referral} onChange={(e) => setReferral(e.target.checked)} className="w-3.5 h-3.5 accent-violet-500" />
+            ریفری
+          </label>
           <input type="number" min={0} max={100} step={0.5} value={percent} onChange={(e) => setPercent(e.target.value)} placeholder="درصد" className={`${inputCls} w-20`} dir="ltr" />
           <button
-            disabled={percent === "" || (!categoryId && !condition)}
+            disabled={percent === "" || (!categoryId && !condition && !referral)}
             onClick={() => {
               void call(`/api/admin/worklist/commission/plans/${plan.id}`, "PATCH", {
-                addRule: { categoryId: categoryId || null, condition: condition || null, percent: Number(percent) },
+                addRule: { categoryId: categoryId || null, condition: condition || null, referral, percent: Number(percent) },
               });
               setPercent("");
+              setReferral(false);
             }}
             className="px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold disabled:opacity-40"
           >

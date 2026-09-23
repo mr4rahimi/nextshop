@@ -11,7 +11,7 @@ type Params = { params: Promise<{ id: string }> };
 /**
  * ویرایش طرح یا افزودن قاعده.
  *
- * `{ title?, isActive?, addRule?: { categoryId, condition, percent } }`
+ * `{ title?, isActive?, addRule?: { categoryId, condition, referral, percent } }`
  * تغییر طرح فقط معامله‌هایی را که **بعد از این** قطعی شوند عوض می‌کند؛ درصدِ
  * معامله‌های قبلی روی خودشان اسنپ‌شات است (بخش ۲۲.۸).
  */
@@ -39,14 +39,15 @@ export async function PATCH(req: Request, { params }: Params) {
     }
     const condition = ["NEW", "STOCK", "USED", "REFURBISHED"].includes(r.condition) ? r.condition : null;
     const categoryId = typeof r.categoryId === "string" && r.categoryId ? r.categoryId : null;
+    const referral = r.referral === true;
     const duplicate = await prisma.staffCommissionRule.findFirst({
-      where: { planId: id, categoryId, condition, isActive: true },
+      where: { planId: id, categoryId, condition, referral, isActive: true },
       select: { id: true },
     });
     if (duplicate) {
-      return NextResponse.json({ error: "قاعده‌ای با همین دسته و وضعیت از قبل هست؛ همان را ویرایش کنید" }, { status: 409 });
+      return NextResponse.json({ error: "قاعده‌ای با همین دسته، وضعیت و ریفری از قبل هست؛ همان را ویرایش کنید" }, { status: 409 });
     }
-    await prisma.staffCommissionRule.create({ data: { planId: id, categoryId, condition, percent } });
+    await prisma.staffCommissionRule.create({ data: { planId: id, categoryId, condition, referral, percent } });
   }
 
   logActivityAsync({

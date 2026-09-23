@@ -14,7 +14,7 @@ import type { StaffAccess } from "@/lib/permissions";
 import type { Prisma, StaffTaskStatus } from "@prisma/client";
 import { supplierSnapshot } from "./suppliers";
 import { claimIfUnowned, CLAIMING_CHANNELS } from "@/lib/club/ownership";
-import { dealFromTaskSafe } from "./deals";
+import { costFromPurchaseTaskSafe, dealFromTaskSafe } from "./deals";
 
 /**
  * تماسی که نتیجه گرفت و مشتری ثبت‌شده دارد، مشتریِ بی‌صاحب را به نام کسی
@@ -252,7 +252,10 @@ export async function createTask(input: CreateTaskInput, access: StaffAccess) {
 
   await claimFromCall(task, access);
   // کارِ درآمدزا (تعمیرات) که همان لحظه با نتیجه و مبلغ ثبت شود
-  if (task.status === "DONE") dealFromTaskSafe(task.id);
+  if (task.status === "DONE") {
+    dealFromTaskSafe(task.id);
+    costFromPurchaseTaskSafe(task.id);
+  }
 
   return task;
 }
@@ -373,7 +376,10 @@ export async function updateTask(
   if (has("outcome")) await claimFromCall(task, access);
   // بستن کار، معامله‌ی تعمیر را می‌سازد. idempotent است، پس بازوبسته‌کردن
   // دوباره‌ی کار معامله‌ی دوم نمی‌سازد.
-  if (task.status === "DONE") dealFromTaskSafe(task.id);
+  if (task.status === "DONE") {
+    dealFromTaskSafe(task.id);
+    costFromPurchaseTaskSafe(task.id);
+  }
 
   return task;
 }

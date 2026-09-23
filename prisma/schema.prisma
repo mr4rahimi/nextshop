@@ -301,6 +301,9 @@ model Order {
   /// نقدی یا اعتباری. اعتباری یعنی کالا رفته و پول بعداً می‌آید.
   /// مستندات: docs/features/staff-worklist.md بخش ۲۴
   paymentTerm      OrderPaymentTerm         @default(CASH)
+  /// فروش ریفری — مشتری را کسی معرفی کرده. پورسانتش با قاعده‌های `referral`
+  /// طرح حساب می‌شود. مستندات: docs/features/staff-worklist.md بخش ۲۲.۱۰
+  isReferral       Boolean                  @default(false)
   address          Address?                 @relation(fields: [addressId], references: [id])
   user             User                     @relation(fields: [userId], references: [id])
   createdByStaff   User?                    @relation("OrderCreatedByStaff", fields: [createdByStaffId], references: [id])
@@ -373,9 +376,26 @@ model OrderItem {
   skuSnapshot   String?
   order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product       Product @relation(fields: [productId], references: [id])
+  cost          OrderItemCost?
 
   @@index([orderId])
   @@index([productId])
+}
+
+/// قیمت خرید یک ردیف سفارش (کل ردیف، نه واحد) — تا وقتی سفارش پرداخت نشده و معامله‌اش
+/// ساخته نشده، اینجا منتظر می‌ماند (بخش ۲۲.۱۰).
+///
+/// ⚠️ **عمداً جدول جداست، نه ستونی روی `OrderItem`.** قیمت خرید حساس‌ترین عدد
+/// کسب‌وکار است و مسیرهای سفارش (از جمله صفحه‌ی سفارش مشتری) ردیف‌های
+/// `OrderItem` را کامل برمی‌گردانند. رابطه فقط با `include` صریح می‌آید.
+model OrderItemCost {
+  orderItemId String    @id
+  /// کل قیمت خرید همین ردیف — واحد × تعداد. کل ردیف ذخیره می‌شود تا پخشِ
+  /// مبلغ یک کار خرید بین چند ردیف، ریال گرد شده گم نکند.
+  cost        BigInt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
@@ -2903,6 +2923,8 @@ model StaffDeal {
   profit           BigInt?
   commission       BigInt?
   costPerItem      Boolean         @default(false)
+  /// فروش ریفری — از `Order.isReferral` کپی می‌شود؛ قاعده‌های `referral` طرح را می‌گیرد
+  isReferral       Boolean         @default(false)
   /// معامله‌ی بدون سفارش — درآمدش را کارمند وارد کرده
   isManual         Boolean         @default(false)
   /// در سود می‌آید ولی پورسانت نمی‌سازد — مثل درآمد تعمیرات.
@@ -2986,6 +3008,9 @@ model StaffCommissionRule {
   planId     String
   categoryId String?
   condition  ProductCondition?
+  /// فقط فروش ریفری را می‌گیرد و بر هر قاعده‌ی غیرریفری برنده است (بخش ۲۲.۱۰).
+  /// `false` یعنی «هر فروشی» — قاعده‌های قبلی همان رفتار را نگه می‌دارند.
+  referral   Boolean           @default(false)
   percent    Float
   isActive   Boolean           @default(true)
   createdAt  DateTime          @default(now())

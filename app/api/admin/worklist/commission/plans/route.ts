@@ -16,7 +16,7 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
       include: {
         rules: {
-          orderBy: [{ categoryId: { sort: "asc", nulls: "first" } }, { condition: { sort: "asc", nulls: "first" } }],
+          orderBy: [{ referral: "asc" }, { categoryId: { sort: "asc", nulls: "first" } }, { condition: { sort: "asc", nulls: "first" } }],
           include: { category: { select: { title: true } } },
         },
         _count: { select: { users: true } },

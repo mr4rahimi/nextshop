@@ -70,6 +70,7 @@ export async function syncDealForOrder(orderId: string): Promise<"created" | "vo
       itemsTotal: true,
       discountTotal: true,
       createdAt: true,
+      isReferral: true,
       createdByStaffId: true,
       createdByStaff: { select: { firstName: true, lastName: true, phone: true } },
       user: {
@@ -147,6 +148,7 @@ export async function syncDealForOrder(orderId: string): Promise<"created" | "vo
         customerName: fullName(order.user),
         ownerId,
         ownerName,
+        isReferral: order.isReferral,
         title: `سفارش ${order.orderNumber}`,
         revenue: revenue > 0n ? revenue : 0n,
         monthKey: monthKeyOf(order.createdAt),
@@ -165,12 +167,82 @@ export async function syncDealForOrder(orderId: string): Promise<"created" | "vo
         },
       },
     });
-    return "created";
   } catch (e) {
     // دو مسیر هم‌زمان همان سفارش را همگام کردند — مرز واقعی ایندکس یکتاست
     if ((e as { code?: string }).code === "P2002") return "none";
     throw e;
   }
+
+  // قیمت خریدی که در سفارش تلفنی وارد شده بود — اگر همه‌اش معلوم است، معامله
+  // همین حالا قطعی می‌شود و کارمند لازم نیست دوباره واردش کند (بخش ۲۲.۱۰).
+  // ⚠️ جدا از ساخت: شکستش نباید معامله‌ی ساخته‌شده را بی‌اثر جلوه دهد.
+  await applyKnownCosts(order.id, {
+    userId: order.createdByStaffId,
+    name: ownerName,
+  }).catch((e) => console.error("[worklist] اعمال قیمت خرید سفارش روی معامله شکست خورد:", e));
+  return "created";
+}
+
+/** کسی که قیمت خرید را ثبت کرد — در مسیر خودکار ممکن است آدم مشخصی نباشد */
+export interface Confirmer {
+  userId: string | null;
+  name: string | null;
+}
+
+/**
+ * قیمت‌های خرید منتظر در `OrderItemCost` را روی معامله‌ی سفارش می‌نشاند.
+ *
+ * - معامله‌ای نیست (سفارش هنوز پرداخت نشده) ← کاری نمی‌کند؛ `syncDealForOrder`
+ *   هنگام ساخت همین را صدا می‌زند
+ * - همه‌ی ردیف‌ها قیمت دارند ← `setDealCost` ردیف‌به‌ردیف، یعنی CONFIRMED
+ * - فقط بعضی ← همان‌ها روی ردیف معامله پیش‌پر می‌شوند و معامله PENDING می‌ماند
+ *
+ * ⚠️ فقط معامله‌ی PENDING و تسویه‌نشده. قیمتی که کارمند روی معامله‌ی قطعی
+ * دستی اصلاح کرده، با این مسیر خودکار بازنویسی نمی‌شود.
+ */
+export async function applyKnownCosts(
+  orderId: string,
+  by: Confirmer,
+  extra?: { supplierId?: string | null },
+): Promise<"confirmed" | "partial" | "none"> {
+  const deal = await prisma.staffDeal.findUnique({
+    where: { orderId },
+    select: {
+      id: true,
+      status: true,
+      payoutId: true,
+      items: { orderBy: { id: "asc" }, select: { id: true, orderItemId: true } },
+    },
+  });
+  if (!deal || deal.payoutId || deal.status !== "PENDING") return "none";
+
+  const ids = deal.items.map((i) => i.orderItemId).filter((x): x is string => !!x);
+  const known = await prisma.orderItemCost.findMany({ where: { orderItemId: { in: ids } } });
+  if (known.length === 0) return "none";
+  const byItem = new Map(known.map((k) => [k.orderItemId, k.cost]));
+
+  const all = deal.items.every((i) => i.orderItemId && byItem.has(i.orderItemId));
+  if (all) {
+    await setDealCost(
+      deal.id,
+      {
+        itemCosts: Object.fromEntries(deal.items.map((i) => [i.id, byItem.get(i.orderItemId!)!.toString()])),
+        ...(extra?.supplierId ? { supplierId: extra.supplierId } : {}),
+      },
+      by,
+    );
+    return "confirmed";
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const i of deal.items) {
+      const c = i.orderItemId ? byItem.get(i.orderItemId) : undefined;
+      if (c !== undefined) await tx.staffDealItem.update({ where: { id: i.id }, data: { cost: c } });
+    }
+    // فرم معامله با همین پرچم در حالت ردیف‌به‌ردیف باز می‌شود و قیمت‌های معلوم پر است
+    await tx.staffDeal.update({ where: { id: deal.id }, data: { costPerItem: true } });
+  });
+  return "partial";
 }
 
 /** نسخه‌ی بی‌خطر برای مسیرهای سفارش (تله‌ی ۸) */
@@ -237,6 +309,7 @@ export const DEAL_SELECT = {
   costPerItem: true,
   isManual: true,
   noCommission: true,
+  isReferral: true,
   taskId: true,
   supplierId: true,
   supplierName: true,
@@ -280,12 +353,13 @@ async function applyCommission(tx: Prisma.TransactionClient, dealId: string) {
     select: {
       ownerId: true,
       noCommission: true,
+      isReferral: true,
       owner: {
         select: {
           commissionPlan: {
             select: {
               isActive: true,
-              rules: { select: { id: true, categoryId: true, condition: true, percent: true, isActive: true, category: { select: { title: true } } } },
+              rules: { select: { id: true, categoryId: true, condition: true, referral: true, percent: true, isActive: true, category: { select: { title: true } } } },
             },
           },
         },
@@ -319,7 +393,7 @@ async function applyCommission(tx: Prisma.TransactionClient, dealId: string) {
       });
       continue;
     }
-    const rule = plan ? pickRule(plan.rules, item) : null;
+    const rule = plan ? pickRule(plan.rules, { ...item, referral: deal.isReferral }) : null;
     const commission = rule ? commissionFor(item.profit ?? 0n, rule.percent) : 0n;
     total += commission;
     await tx.staffDealItem.update({
@@ -365,7 +439,7 @@ function toMoney(v: unknown): bigint | null {
  * ⚠️ دسترسی را فراخواننده (مسیر API) چک می‌کند؛ این تابع فقط قفل تسویه و
  * درستی اعداد را تضمین می‌کند.
  */
-export async function setDealCost(dealId: string, input: CostInput, access: StaffAccess) {
+export async function setDealCost(dealId: string, input: CostInput, access: StaffAccess | Confirmer) {
   const deal = await prisma.staffDeal.findUnique({
     where: { id: dealId },
     select: { id: true, status: true, payoutId: true, items: { orderBy: { id: "asc" }, select: { id: true, revenue: true } } },
@@ -625,6 +699,72 @@ export async function dealFromTask(taskId: string): Promise<"created" | "none"> 
 export function dealFromTaskSafe(taskId: string): void {
   dealFromTask(taskId).catch((e) =>
     console.error("[worklist] ساخت معامله از کار شکست خورد:", e),
+  );
+}
+
+/** نوع کاری که قیمت خرید سفارش را می‌آورد — همان کار «تأمین کالا»ی سفارش تلفنی */
+export const PURCHASE_TASK_SLUG = "purchase-coordination";
+
+/**
+ * بستن کار «تأمین کالا» با نتیجه‌ی موفق و مبلغ ← قیمت خرید سفارش (بخش ۲۲.۱۰).
+ *
+ * مبلغ کار، قیمت خرید **ردیف‌هایی است که هنوز قیمت ندارند** — همان‌هایی که کار
+ * برایشان ساخته شد. بین آن‌ها به نسبت مبلغ فروش پخش می‌شود. اگر سفارش پرداخت
+ * شده باشد معامله همین حالا قطعی می‌شود، وگرنه وقتی پرداخت شد.
+ *
+ * ⚠️ یک عدد، یک بار: کارمند مبلغ خرید را فقط روی همین کار می‌زند و دیگر لازم
+ * نیست در «سود معاملات» تکرارش کند (قاعده‌ی طلایی بخش ۱).
+ */
+export async function costFromPurchaseTask(taskId: string): Promise<"applied" | "none"> {
+  const task = await prisma.staffTask.findUnique({
+    where: { id: taskId },
+    select: {
+      status: true,
+      outcome: true,
+      amount: true,
+      entity: true,
+      entityId: true,
+      supplierId: true,
+      ownerId: true,
+      ownerName: true,
+      type: { select: { slug: true, outcomes: true } },
+    },
+  });
+  if (!task || task.type.slug !== PURCHASE_TASK_SLUG) return "none";
+  if (task.status !== "DONE" || !task.outcome || task.entity !== "ORDER" || !task.entityId) return "none";
+  if (!task.amount || task.amount <= 0n) return "none";
+  const outcomes = Array.isArray(task.type.outcomes) ? (task.type.outcomes as { value?: unknown; isSuccess?: unknown }[]) : [];
+  if (!outcomes.some((o) => o?.value === task.outcome && o?.isSuccess === true)) return "none";
+
+  const items = await prisma.orderItem.findMany({
+    where: { orderId: task.entityId },
+    orderBy: { id: "asc" },
+    select: { id: true, qty: true, unitPrice: true, unitSalePrice: true, cost: { select: { cost: true } } },
+  });
+  const missing = items.filter((i) => !i.cost);
+  if (missing.length === 0) return "none";
+
+  const shares = allocate(
+    task.amount,
+    missing.map((i) => (i.unitSalePrice ?? i.unitPrice) * BigInt(i.qty)),
+  );
+  await prisma.$transaction(
+    missing.map((i, idx) =>
+      prisma.orderItemCost.upsert({
+        where: { orderItemId: i.id },
+        create: { orderItemId: i.id, cost: shares[idx] },
+        update: { cost: shares[idx] },
+      }),
+    ),
+  );
+  await applyKnownCosts(task.entityId, { userId: task.ownerId, name: task.ownerName }, { supplierId: task.supplierId });
+  return "applied";
+}
+
+/** نسخه‌ی بی‌خطر برای مسیر کار */
+export function costFromPurchaseTaskSafe(taskId: string): void {
+  costFromPurchaseTask(taskId).catch((e) =>
+    console.error("[worklist] ثبت قیمت خرید از کار تأمین شکست خورد:", e),
   );
 }
 

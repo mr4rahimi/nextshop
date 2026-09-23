@@ -38,9 +38,9 @@ export async function DELETE(_req: Request, { params }: Params) {
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
 
   const { id } = await params;
-  const rule = await prisma.staffCommissionRule.findUnique({ where: { id }, select: { categoryId: true, condition: true, planId: true } });
+  const rule = await prisma.staffCommissionRule.findUnique({ where: { id }, select: { categoryId: true, condition: true, referral: true, planId: true } });
   if (!rule) return NextResponse.json({ error: "قاعده پیدا نشد" }, { status: 404 });
-  if (!rule.categoryId && !rule.condition) {
+  if (!rule.categoryId && !rule.condition && !rule.referral) {
     return NextResponse.json({ error: "قاعده‌ی پیش‌فرض طرح حذف نمی‌شود؛ درصدش را عوض کنید" }, { status: 400 });
   }
   await prisma.staffCommissionRule.delete({ where: { id } });

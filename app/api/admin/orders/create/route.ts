@@ -9,7 +9,7 @@ import { normalizePhone } from "@/lib/club/phone";
 import { ensureClubProfile } from "@/lib/club/profile";
 import type { OrderStatus, Prisma } from "@prisma/client";
 import { claimIfUnowned } from "@/lib/club/ownership";
-import { syncDealSafe } from "@/lib/worklist/deals";
+import { PURCHASE_TASK_SLUG, syncDealSafe } from "@/lib/worklist/deals";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +27,11 @@ export const dynamic = "force-dynamic";
  *
  * آنچه اختیاری ساخته می‌شود، کارِ **بعدی** است: هماهنگی خرید از تأمین‌کننده و
  * هماهنگی ارسال. این‌ها زنجیره‌ی بعد از فروش‌اند نه خودِ فروش.
+ *
+ * قیمت خرید هر ردیف (اختیاری) در `OrderItemCost` می‌نشیند و با پرداخت سفارش
+ * معامله را همان لحظه قطعی می‌کند. **اگر قیمت خرید حتی یک ردیف معلوم نباشد،
+ * کار «تأمین کالا» اجباری است** — کارمند تأمین‌کننده را پیدا می‌کند و با بستن
+ * همان کار، قیمت خرید ثبت می‌شود (بخش ۲۲.۱۰).
  */
 
 function generateOrderNumber(): string {
@@ -41,6 +46,8 @@ interface ItemInput {
   qty: number;
   /** قیمت دستی — وقتی روی تلفن قیمت دیگری توافق شده */
   unitPrice?: string | number | null;
+  /** قیمت خرید **واحد** از تأمین‌کننده — خالی یعنی هنوز معلوم نیست */
+  unitCost?: string | number | null;
 }
 
 function toBigInt(v: string | number | null | undefined, fallback = 0n): bigint {
@@ -77,6 +84,8 @@ export async function POST(req: Request) {
     discountTotal?: string | number | null;
     note?: string | null;
     status?: OrderStatus;
+    /** فروش ریفری — پورسانتش با قاعده‌های ریفری طرح حساب می‌شود */
+    isReferral?: boolean;
     /** کارهای بعدی که همراه سفارش ساخته شوند */
     createPurchaseTask?: boolean;
     createShippingTask?: boolean;
@@ -148,6 +157,8 @@ export async function POST(req: Request) {
 
   const orderItems: Prisma.OrderItemCreateWithoutOrderInput[] = [];
   let itemsTotal = 0n;
+  /** ردیف‌هایی که قیمت خریدشان هنوز معلوم نیست — برای کار «تأمین کالا» */
+  const noCost: string[] = [];
 
   for (const it of items) {
     const p = byId.get(it.productId)!;
@@ -157,6 +168,8 @@ export async function POST(req: Request) {
     const effective = manual > 0n ? manual : (p.salePrice ?? p.price);
 
     itemsTotal += effective * BigInt(qty);
+    const unitCost = toBigInt(it.unitCost, 0n);
+    if (unitCost <= 0n) noCost.push(`${p.title} × ${qty}`);
     orderItems.push({
       product: { connect: { id: p.id } },
       qty,
@@ -165,6 +178,8 @@ export async function POST(req: Request) {
       unitSalePrice: effective,
       titleSnapshot: p.title,
       skuSnapshot: p.sku ?? null,
+      // کل ردیف ذخیره می‌شود، نه واحد — `OrderItemCost` در schema
+      ...(unitCost > 0n ? { cost: { create: { cost: unitCost * BigInt(qty) } } } : {}),
     });
   }
 
@@ -211,6 +226,7 @@ export async function POST(req: Request) {
       discountTotal,
       grandTotal,
       note: body.note?.trim() || null,
+      isReferral: body.isReferral === true,
       // ⚠️ همین فیلد تعریفِ «سفارش تلفنی» است. سفارش‌های سایت `null` می‌مانند.
       createdByStaffId: guard.access.userId,
       items: { create: orderItems },
@@ -267,12 +283,26 @@ export async function POST(req: Request) {
 
   // ── کارهای بعدی زنجیره ────────────────────────────────────────
   // ⚠️ خودِ سفارش کار نمی‌سازد (دوباره‌شماری). این‌ها کارِ بعد از فروش‌اند.
-  const followUps: { slug: string; title: string }[] = [];
-  if (body.createPurchaseTask) {
-    followUps.push({ slug: "purchase-coordination", title: `تأمین کالای سفارش ${order.orderNumber}` });
+  const followUps: { slug: string; title: string; note?: string; amount?: string }[] = [];
+  // قیمت خرید نامعلوم ← کار تأمین اجباری است، تیک یا بی‌تیک. بدون آن معامله
+  // در «قیمت خرید ثبت‌نشده» می‌ماند و کسی دنبال تأمین‌کننده نمی‌رود.
+  if (body.createPurchaseTask || noCost.length > 0) {
+    followUps.push({
+      slug: PURCHASE_TASK_SLUG,
+      title: `تأمین کالای سفارش ${order.orderNumber}`,
+      note:
+        noCost.length > 0
+          ? `قیمت خرید این کالاها هنوز معلوم نیست:\n${noCost.map((t) => `• ${t}`).join("\n")}\n\n` +
+            "تأمین‌کننده را پیدا کنید و بعد از خرید، این کار را با «خرید شد» ببندید و کل مبلغ خرید همین کالاها را در «مبلغ» بنویسید. قیمت خرید خودکار روی سود معامله می‌نشیند."
+          : undefined,
+    });
   }
   if (body.createShippingTask) {
-    followUps.push({ slug: "shipping-coordination", title: `هماهنگی ارسال سفارش ${order.orderNumber}` });
+    followUps.push({
+      slug: "shipping-coordination",
+      title: `هماهنگی ارسال سفارش ${order.orderNumber}`,
+      amount: grandTotal.toString(),
+    });
   }
 
   const createdTasks: { id: string; title: string }[] = [];
@@ -293,7 +323,10 @@ export async function POST(req: Request) {
           contactPhone: customer.phone,
           entity: "ORDER",
           entityId: order.id,
-          amount: grandTotal.toString(),
+          // ⚠️ مبلغ کار تأمین خالی می‌ماند: همان عدد، قیمت خرید می‌شود
+          // (`costFromPurchaseTask`). پرکردنش با مبلغ فروش سود را صفر می‌کرد.
+          amount: f.amount ?? null,
+          note: f.note ?? null,
         },
         guard.access,
       );
