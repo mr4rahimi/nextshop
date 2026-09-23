@@ -6,6 +6,10 @@
  * نتیجه‌ها روی خود کارت‌اند نه پشت کلیک — بستنِ کار باید یک ضربه باشد.
  * نتیجه‌ی از قبل ثبت‌شده جمع‌شده نشان داده می‌شود با دکمه‌ی «تغییر»، تا ثبت
  * دوباره تصادفی نشود.
+ *
+ * استثنا: نتیجه‌ای که بدون یک عدد بی‌ثمر است — «خرید شد» (قیمت خرید و
+ * تأمین‌کننده)، مبلغِ نوع `needsAmount`، باربریِ نوع `needsCarrier` — اول
+ * `CloseTaskForm` را باز می‌کند.
  */
 
 import { useState } from "react";
@@ -23,6 +27,7 @@ import {
   isOverdue,
 } from "@/lib/worklist/types";
 import type { TaskItem } from "./types";
+import CloseTaskForm, { needsCloseForm, type OutcomeLite } from "./CloseTaskForm";
 
 interface Props {
   task: TaskItem;
@@ -43,6 +48,7 @@ export default function TaskCard({
   const [busy, setBusy] = useState(false);
   const [editingOutcome, setEditingOutcome] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [closing, setClosing] = useState<OutcomeLite | null>(null);
 
   const outcomes = parseOutcomes(task.type.outcomes);
   const currentOutcome = outcomeLabel(outcomes, task.outcome);
@@ -62,6 +68,7 @@ export default function TaskCard({
       if (!res.ok) throw new Error(data.error ?? "ذخیره ناموفق بود");
       onChanged(data.task);
       setEditingOutcome(false);
+      setClosing(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "ذخیره ناموفق بود");
     } finally {
@@ -190,7 +197,7 @@ export default function TaskCard({
                 <button
                   key={o.value}
                   disabled={busy}
-                  onClick={() => patch({ outcome: o.value })}
+                  onClick={() => (needsCloseForm(task, o) ? setClosing(o) : patch({ outcome: o.value }))}
                   className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition disabled:opacity-40 ${
                     o.isSuccess
                       ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20"
@@ -209,6 +216,15 @@ export default function TaskCard({
                 </button>
               )}
             </div>
+          )}
+          {closing && (
+            <CloseTaskForm
+              task={task}
+              outcome={closing}
+              busy={busy}
+              onCancel={() => setClosing(null)}
+              onSubmit={(body) => void patch(body)}
+            />
           )}
         </div>
       )}

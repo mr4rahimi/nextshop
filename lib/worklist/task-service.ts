@@ -14,7 +14,7 @@ import type { StaffAccess } from "@/lib/permissions";
 import type { Prisma, StaffTaskStatus } from "@prisma/client";
 import { supplierSnapshot } from "./suppliers";
 import { claimIfUnowned, CLAIMING_CHANNELS } from "@/lib/club/ownership";
-import { costFromPurchaseTaskSafe, dealFromTaskSafe } from "./deals";
+import { costFromPurchaseTaskSafe, dealFromTaskSafe, PURCHASE_TASK_SLUG, setOrderItemUnitCosts } from "./deals";
 import { creditFromTaskSafe } from "./credit";
 
 /**
@@ -82,6 +82,9 @@ export const TASK_SELECT = {
       refLabel: true,
       needsRef: true,
       needsPlatform: true,
+      // فرم بستن کار: مبلغ یا باربری را پیش از ثبت نتیجه می‌پرسد
+      needsAmount: true,
+      needsCarrier: true,
     },
   },
   _count: { select: { notes: true, referrals: true } },
@@ -175,7 +178,12 @@ function trimOrNull(value: string | null | undefined): string | null {
  * است که سیستم بدون دخالت آدم مهلت می‌گذارد و همان چیزی است که وعده‌ی
  * «ارسال سه‌ساعته» را قابل دفاع می‌کند.
  */
-export async function createTask(input: CreateTaskInput, access: StaffAccess) {
+export async function createTask(
+  input: CreateTaskInput,
+  access: StaffAccess,
+  /** فقط برای کد سرور (زنجیره، زمان‌بند) — از بدنه‌ی درخواست نمی‌آید */
+  opts?: { runKey?: string },
+) {
   const type = await prisma.staffTaskType.findUnique({
     where: { id: input.typeId },
     select: {
@@ -235,6 +243,7 @@ export async function createTask(input: CreateTaskInput, access: StaffAccess) {
       outcome,
       note: trimOrNull(input.note),
       parentId: input.parentId ?? null,
+      runKey: opts?.runKey ?? null,
 
       dueAt,
       occurredAt: toDate(input.occurredAt) ?? now,
@@ -282,6 +291,12 @@ export interface UpdateTaskInput {
   platform?: string | null;
   dueAt?: string | Date | null;
   occurredAt?: string | Date | null;
+  /**
+   * فقط کار «تأمین کالا»ی یک سفارش: قیمت خرید **واحد** هر کالا
+   * `{ [orderItemId]: مبلغ }`. در `OrderItemCost` می‌نشیند و جمعش مبلغ کار
+   * می‌شود (بخش ۲۲.۱۰).
+   */
+  itemCosts?: Record<string, string | number> | null;
 }
 
 /** شناسه‌ی تأمین‌کننده را به نام اسنپ‌شات تبدیل می‌کند؛ شناسه‌ی نامعتبر خطاست */
@@ -307,7 +322,10 @@ export async function updateTask(
 ) {
   const before = await prisma.staffTask.findUnique({
     where: { id },
-    select: { id: true, title: true, status: true, outcome: true, doneAt: true },
+    select: {
+      id: true, title: true, status: true, outcome: true, doneAt: true,
+      entity: true, entityId: true, type: { select: { slug: true } },
+    },
   });
   if (!before) throw new Error("کار پیدا نشد");
 
@@ -331,6 +349,16 @@ export async function updateTask(
   }
   if (has("linkUrl")) data.linkUrl = trimOrNull(input.linkUrl);
   if (has("amount")) data.amount = toBigInt(input.amount);
+
+  // قیمت خرید کالاها از فرم «خرید شد». **پیش از** نوشتن کار، تا قلاب
+  // `costFromPurchaseTask` بعد از بستن، قیمت‌ها را آماده ببیند.
+  if (input.itemCosts && Object.keys(input.itemCosts).length > 0) {
+    if (before.type.slug !== PURCHASE_TASK_SLUG || before.entity !== "ORDER" || !before.entityId) {
+      throw new Error("قیمت خرید کالا فقط روی کار تأمین کالای یک سفارش ثبت می‌شود");
+    }
+    const total = await setOrderItemUnitCosts(before.entityId, input.itemCosts);
+    if (!has("amount")) data.amount = total;
+  }
   if (has("carrier")) data.carrier = trimOrNull(input.carrier);
   if (has("refNo")) data.refNo = trimOrNull(input.refNo);
   if (has("platform")) data.platform = trimOrNull(input.platform);
@@ -382,6 +410,13 @@ export async function updateTask(
     dealFromTaskSafe(task.id);
     costFromPurchaseTaskSafe(task.id);
     creditFromTaskSafe(task.id);
+    // کار بعدی زنجیره فقط وقتی نتیجه همین حالا عوض شد — ویرایش مبلغ کار
+    // بسته‌شده نباید زنجیره را دوباره بچرخاند. import پویا: chain خودش
+    // createTask را از این فایل می‌گیرد.
+    if (has("outcome") && task.outcome !== before.outcome) {
+      const { chainNextSafe } = await import("./chain");
+      chainNextSafe(task.id, access);
+    }
   }
 
   return task;

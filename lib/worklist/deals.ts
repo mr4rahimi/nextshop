@@ -184,10 +184,19 @@ export async function syncDealForOrder(orderId: string): Promise<"created" | "vo
   // قیمت خریدی که در سفارش تلفنی وارد شده بود — اگر همه‌اش معلوم است، معامله
   // همین حالا قطعی می‌شود و کارمند لازم نیست دوباره واردش کند (بخش ۲۲.۱۰).
   // ⚠️ جدا از ساخت: شکستش نباید معامله‌ی ساخته‌شده را بی‌اثر جلوه دهد.
-  await applyKnownCosts(order.id, {
-    userId: order.createdByStaffId,
-    name: ownerName,
-  }).catch((e) => console.error("[worklist] اعمال قیمت خرید سفارش روی معامله شکست خورد:", e));
+  // تأمین‌کننده از آخرین کار «تأمین کالا»ی بسته‌شده‌ی همین سفارش — وقتی خرید
+  // پیش از پرداخت مشتری انجام شده، قیمت در OrderItemCost منتظر مانده ولی
+  // تأمین‌کننده فقط روی همان کار است.
+  const purchase = await prisma.staffTask.findFirst({
+    where: { entity: "ORDER", entityId: order.id, status: "DONE", supplierId: { not: null }, type: { slug: PURCHASE_TASK_SLUG } },
+    orderBy: { doneAt: "desc" },
+    select: { supplierId: true },
+  });
+  await applyKnownCosts(
+    order.id,
+    { userId: order.createdByStaffId, name: ownerName },
+    { supplierId: purchase?.supplierId ?? null },
+  ).catch((e) => console.error("[worklist] اعمال قیمت خرید سفارش روی معامله شکست خورد:", e));
   return "created";
 }
 
@@ -746,7 +755,6 @@ export async function costFromPurchaseTask(taskId: string): Promise<"applied" | 
   });
   if (!task || task.type.slug !== PURCHASE_TASK_SLUG) return "none";
   if (task.status !== "DONE" || !task.outcome || task.entity !== "ORDER" || !task.entityId) return "none";
-  if (!task.amount || task.amount <= 0n) return "none";
   const outcomes = Array.isArray(task.type.outcomes) ? (task.type.outcomes as { value?: unknown; isSuccess?: unknown }[]) : [];
   if (!outcomes.some((o) => o?.value === task.outcome && o?.isSuccess === true)) return "none";
 
@@ -756,8 +764,15 @@ export async function costFromPurchaseTask(taskId: string): Promise<"applied" | 
     select: { id: true, qty: true, unitPrice: true, unitSalePrice: true, cost: { select: { cost: true } } },
   });
   const missing = items.filter((i) => !i.cost);
-  if (missing.length === 0) return "none";
+  // کارمند قیمت هر کالا را در فرم بستن کار داده (`setOrderItemUnitCosts` پیش از
+  // همین قلاب نوشته): چیزی برای پخش نمانده، ولی تأمین‌کننده و قطعی‌کردن
+  // معامله‌ی منتظر هنوز باید انجام شود.
+  if (missing.length === 0) {
+    const r = await applyKnownCosts(task.entityId, { userId: task.ownerId, name: task.ownerName }, { supplierId: task.supplierId });
+    return r === "none" ? "none" : "applied";
+  }
 
+  if (!task.amount || task.amount <= 0n) return "none";
   const shares = allocate(
     task.amount,
     missing.map((i) => (i.unitSalePrice ?? i.unitPrice) * BigInt(i.qty)),
@@ -773,6 +788,56 @@ export async function costFromPurchaseTask(taskId: string): Promise<"applied" | 
   );
   await applyKnownCosts(task.entityId, { userId: task.ownerId, name: task.ownerName }, { supplierId: task.supplierId });
   return "applied";
+}
+
+/**
+ * کالاهای سفارشِ یک کار تأمین، برای فرم «خرید شد» — قیمت فروش و قیمت خرید
+ * **واحد** اگر از قبل معلوم است.
+ */
+export async function purchaseItemsOf(orderId: string) {
+  const items = await prisma.orderItem.findMany({
+    where: { orderId },
+    orderBy: { id: "asc" },
+    select: { id: true, titleSnapshot: true, qty: true, unitPrice: true, unitSalePrice: true, cost: { select: { cost: true } } },
+  });
+  return items.map((i) => ({
+    id: i.id,
+    title: i.titleSnapshot,
+    qty: i.qty,
+    unitPrice: i.unitSalePrice ?? i.unitPrice,
+    unitCost: i.cost ? i.cost.cost / BigInt(i.qty || 1) : null,
+  }));
+}
+
+/**
+ * قیمت خرید **واحد** چند کالای سفارش، از فرم بستن کار تأمین. کل ردیف
+ * (واحد × تعداد) در `OrderItemCost` می‌نشیند. جمع کل ردیف‌های نوشته‌شده را
+ * برمی‌گرداند — همان مبلغ کار.
+ *
+ * ⚠️ کالایی که مال این سفارش نیست رد می‌شود، نه نادیده: شناسه‌ی ردیف از
+ * مرورگر می‌آید.
+ */
+export async function setOrderItemUnitCosts(orderId: string, unitCosts: Record<string, unknown>): Promise<bigint> {
+  const items = await prisma.orderItem.findMany({ where: { orderId }, select: { id: true, qty: true } });
+  const byId = new Map(items.map((i) => [i.id, i.qty]));
+  const rows: { id: string; cost: bigint }[] = [];
+  for (const [id, raw] of Object.entries(unitCosts)) {
+    const qty = byId.get(id);
+    if (qty === undefined) throw new Error("کالا مال این سفارش نیست");
+    const unit = toMoney(raw);
+    if (unit === null || unit <= 0n) throw new Error("قیمت خرید همه‌ی کالاها را وارد کنید");
+    rows.push({ id, cost: unit * BigInt(qty) });
+  }
+  await prisma.$transaction(
+    rows.map((r) =>
+      prisma.orderItemCost.upsert({
+        where: { orderItemId: r.id },
+        create: { orderItemId: r.id, cost: r.cost },
+        update: { cost: r.cost },
+      }),
+    ),
+  );
+  return rows.reduce((a, r) => a + r.cost, 0n);
 }
 
 /** نسخه‌ی بی‌خطر برای مسیر کار */

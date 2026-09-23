@@ -85,6 +85,8 @@ export interface TaskItem {
     refLabel: string | null;
     needsRef: boolean;
     needsPlatform: boolean;
+    needsAmount: boolean;
+    needsCarrier: boolean;
   };
   _count: { notes: number; referrals: number };
 }
