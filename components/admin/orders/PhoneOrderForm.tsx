@@ -19,7 +19,7 @@ interface ProductHit {
   title: string;
   price: string;
   salePrice: string | null;
-  mainImage: string | null;
+  image: string | null;
 }
 
 interface Line {
@@ -131,7 +131,10 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
       productAbort.current = c;
       fetch(`/api/admin/products-search?q=${encodeURIComponent(productQuery)}`, { signal: c.signal })
         .then((r) => r.json())
-        .then((d) => setHits((d.products ?? d.items ?? []).slice(0, 8)))
+        // ⚠️ /api/admin/products-search آرایه‌ی خالص برمی‌گرداند، نه {products}
+        .then((d: ProductHit[] | { items?: ProductHit[] }) =>
+          setHits((Array.isArray(d) ? d : d.items ?? []).slice(0, 8)),
+        )
         .catch(() => {});
     }, 250);
     return () => clearTimeout(h);
