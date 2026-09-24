@@ -22,9 +22,9 @@ export const ACC_EVENT_TYPES = {
   PAYMENT_REFUNDED: "استرداد وجه",
   PURCHASE_RECORDED: "فاکتور خرید",
   PURCHASE_RETURNED: "برگشت از خرید",
+  INSTALLMENT_PAID: "واریز قسط",
   COMMISSION_PAID: "تسویه‌ی پورسانت",
-  WALLET_USED: "پرداخت از کیف پول",
-  MARKETPLACE_SETTLED: "تسویه‌ی بازارگاه",
+  WALLET_ADJUSTED: "شارژ یا کسر کیف پول",
   STOCK_TRANSFERRED: "حواله‌ی انبار",
   STOCK_ADJUSTED: "انبارگردانی",
 } as const;
@@ -86,9 +86,9 @@ export async function emitAccEventSafe(input: AccEventInput): Promise<void> {
 }
 
 /**
- * دریافت خودکار پرداخت‌های موفق یک سفارش (فاز ۵) — **بعد از** کسر موجودی صدا
- * زده شود تا رویداد روی همان aggregate سفارش پشت فاکتور فروش بیاید.
- * کیف پول و اعتباری رد می‌شوند (`cash/channel.ts`). تکرار بی‌اثر است.
+ * دریافت خودکار پرداخت‌های موفق یک سفارش (فاز ۵، کیف پول از فاز ۶) — **بعد از**
+ * کسر موجودی صدا زده شود تا رویداد روی همان aggregate سفارش پشت فاکتور فروش
+ * بیاید. اعتباری رد می‌شود؛ هر قسطش `INSTALLMENT_PAID` جدا دارد. تکرار بی‌اثر است.
  */
 export async function emitPaymentsReceived(orderId: string): Promise<void> {
   try {
@@ -97,7 +97,7 @@ export async function emitPaymentsReceived(orderId: string): Promise<void> {
       select: { id: true, provider: true },
     });
     for (const p of payments) {
-      if (["wallet", "credit"].includes((p.provider ?? "").toLowerCase())) continue;
+      if ((p.provider ?? "").toLowerCase() === "credit") continue;
       await emitAccEventSafe({
         type: "PAYMENT_RECEIVED",
         aggregate: { type: "Order", id: orderId },

@@ -27,6 +27,8 @@ export default function AdminWalletPage() {
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [type, setType] = useState<"increase" | "decrease">("increase");
+  // «بابت» فقط برای حسابداری داخلی معنا دارد: طلب مشتری یا هدیه (lib/accounting/cash/wallet.ts)
+  const [purpose, setPurpose] = useState<"credit" | "gift">("credit");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -58,7 +60,7 @@ export default function AdminWalletPage() {
       const res = await fetch("/api/admin/wallet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, amount: Number(amount), reason, type }),
+        body: JSON.stringify({ userId: user.id, amount: Number(amount), reason, type, purpose }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "خطا در عملیات");
@@ -166,6 +168,17 @@ export default function AdminWalletPage() {
                 <label className="block text-xs font-black text-gray-700 dark:text-gray-300">دلیل *</label>
                 <input required value={reason} onChange={e => setReason(e.target.value)}
                   className={inp} placeholder="مثلاً: شارژ دستی توسط ادمین، بازگشت وجه سفارش..." />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-gray-700 dark:text-gray-300">بابت (برای حسابداری)</label>
+                <select value={purpose} onChange={e => setPurpose(e.target.value as "credit" | "gift")} className={inp}>
+                  <option value="credit">طلب مشتری — استرداد وجه، جبران پرداخت اضافه</option>
+                  <option value="gift">هدیه یا جبران — هزینه‌ی فروشگاه</option>
+                </select>
+                <p className="text-[11px] text-gray-400 leading-5">
+                  اگر حسابداری داخلی روشن است: «طلب مشتری» از حساب همان مشتری برداشته می‌شود؛ «هدیه» هزینه‌ی فروشگاه ثبت می‌شود.
+                </p>
               </div>
 
               <button type="submit" disabled={saving || !amount || !reason}

@@ -9,6 +9,8 @@
  * - بعد از انتخاب شخص فاکتورهای بازش می‌آید و مبلغ خودکار از قدیمی‌ترین تخصیص
  *   می‌یابد (قابل تغییر). مازاد = پیش‌دریافت/پیش‌پرداخت.
  * - یک جمله‌ی خلاصه به زبان کسب‌وکار بالای دکمه‌ی ثبت.
+ * - تسویه‌ی بازارگاه (`?role=marketplace`): دریافت از شخصِ بازارگاه با «کارمزد
+ *   کسرشده» — مبلغ ردیف فروش تسویه‌شده است و واریزی = مبلغ − کارمزد.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -58,6 +60,7 @@ interface FormData {
   open: OpenInv[];
   cheques: InHandCheque[];
   partyBalance: string | null;
+  isMarketplace: boolean;
   nextSerial: Record<string, { serial: string; bookId: string } | null>;
 }
 
@@ -66,6 +69,8 @@ interface Item {
   method: Method;
   treasuryId: string;
   amount: string;
+  /** تسویه‌ی بازارگاه: کارمزد کسرشده از واریزی */
+  fee: string;
   trackingCode: string;
   serialNo: string;
   sayadId: string;
@@ -77,7 +82,7 @@ interface Item {
   endorseChequeId: string;
 }
 
-export const KIND_LABELS: Record<Kind, string> = { RECEIPT: "دریافت", PAYMENT: "پرداخت", TRANSFER: "انتقال وجه" };
+export const KIND_LABELS: Record<Kind | "EXPENSE", string> = { RECEIPT: "دریافت", PAYMENT: "پرداخت", TRANSFER: "انتقال وجه", EXPENSE: "هزینه" };
 const METHOD_LABEL: Record<Method, string> = {
   CASH: "نقد",
   CARD_TRANSFER: "کارت‌به‌کارت",
@@ -101,6 +106,7 @@ const blank = (method: Method = "CASH"): Item => ({
   method,
   treasuryId: "",
   amount: "",
+  fee: "",
   trackingCode: "",
   serialNo: "",
   sayadId: "",
@@ -131,6 +137,8 @@ export default function MoneyForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const focusInvoice = sp.get("invoiceId");
+  const marketplaceOnly = sp.get("role") === "marketplace";
+  const feeAllowed = kind === "RECEIPT" && !!party && !!data?.isMarketplace;
 
   // شخص از آدرس (دکمه‌ی «دریافت» صفحه‌ی شخص یا فاکتور)
   useEffect(() => {
@@ -227,6 +235,7 @@ export default function MoneyForm() {
                 method: i.method === "ENDORSE" ? "CHEQUE" : i.method,
                 treasuryId: i.method === "CHEQUE" && kind === "RECEIPT" ? null : i.treasuryId || null,
                 amount: i.amount || "0",
+                fee: feeAllowed && i.method !== "CHEQUE" ? i.fee || "0" : "0",
                 trackingCode: i.trackingCode || null,
                 endorseChequeId: i.method === "ENDORSE" ? i.endorseChequeId : null,
                 cheque:
@@ -259,11 +268,12 @@ export default function MoneyForm() {
       .filter((i) => i.amount)
       .map((i) => {
         const t = treasuries.find((x) => x.id === i.treasuryId)?.name;
-        return `${METHOD_LABEL[i.method]}${t && i.method !== "CHEQUE" ? ` ${kind === "RECEIPT" ? "به" : "از"} ${t}` : ""}`;
+        const fee = feeAllowed && i.fee && i.fee !== "0" ? ` (کارمزد ${formatAmount(i.fee)})` : "";
+        return `${METHOD_LABEL[i.method]}${t && i.method !== "CHEQUE" ? ` ${kind === "RECEIPT" ? "به" : "از"} ${t}` : ""}${fee}`;
       })
       .join(" + ");
     return `${formatAmount(total)} تومان ${kind === "RECEIPT" ? "از" : "به"} ${party.name} — ${ways}`;
-  }, [total, kind, party, items, treasuries, fromId, toId, fee]);
+  }, [total, kind, party, items, treasuries, fromId, toId, fee, feeAllowed]);
 
   const canSave = !busy && total > 0n && (kind === "TRANSFER" ? !!fromId && !!toId : !!party);
   const fixedKind = !!sp.get("kind");
@@ -271,7 +281,7 @@ export default function MoneyForm() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={`${KIND_LABELS[kind]} تازه`}
+        title={marketplaceOnly ? "تسویه‌ی بازارگاه" : `${KIND_LABELS[kind]} تازه`}
         help="accountingMoneyForm"
         back={{ href: `/admin/accounting/money?kind=${kind}`, label: "دریافت و پرداخت" }}
       />
@@ -295,7 +305,13 @@ export default function MoneyForm() {
       <Card className="p-4 grid gap-4 md:grid-cols-[1fr_220px]">
         {kind !== "TRANSFER" ? (
           <Field label={kind === "RECEIPT" ? "از چه کسی" : "به چه کسی"}>
-            <PartyPicker value={party} onChange={(p) => { setParty(p); setAllocTouched(false); }} canCreate />
+            <PartyPicker
+              value={party}
+              onChange={(p) => { setParty(p); setAllocTouched(false); }}
+              canCreate={!marketplaceOnly}
+              role={marketplaceOnly ? "marketplace" : undefined}
+              placeholder={marketplaceOnly ? "کدام بازارگاه (باسلام، دیجی‌کالا، …)" : undefined}
+            />
             {party && data?.partyBalance !== null && data?.partyBalance !== undefined && (
               <div className="mt-2 text-xs flex items-center gap-2">
                 <span className="text-gray-500">مانده‌ی فعلی:</span>
@@ -429,6 +445,19 @@ export default function MoneyForm() {
                       </Field>
                     )}
                   </div>
+                )}
+
+                {feeAllowed && it.method !== "CHEQUE" && (
+                  <Field
+                    label="کارمزد کسرشده‌ی بازارگاه (اختیاری)"
+                    hint={
+                      it.fee && it.fee !== "0" && it.amount
+                        ? `واریزی به حساب: ${formatAmount(BigInt(it.amount) - BigInt(it.fee))} تومان — مبلغ بالا فروشی است که تسویه شد`
+                        : "مبلغ بالا را فروش تسویه‌شده بنویسید؛ کارمزد از آن کم و به «کارمزد بازارگاه» زده می‌شود"
+                    }
+                  >
+                    <AmountInput value={it.fee} onChange={(v) => patch(it.key, { fee: v })} />
+                  </Field>
                 )}
 
                 {["CARD_TRANSFER", "BANK_TRANSFER", "POS", "GATEWAY"].includes(it.method) && (

@@ -21,6 +21,9 @@ interface OpeningData {
   treasuries: { treasuryId: string; amount: string }[];
   parties: { partyId: string; amount: string }[];
   partyInfo: PartyOption[];
+  /** کیف پول‌ها در سند فعلی (null = نیامده) و عددی که ذخیره‌ی دوباره می‌سازد */
+  wallets: string | null;
+  walletPreview: { count: number; total: string };
   can: { manage: boolean };
 }
 
@@ -39,6 +42,7 @@ export default function OpeningClient() {
   const [treasuries, setTreasuries] = useState<TreasuryRecord[]>([]);
   const [tAmounts, setTAmounts] = useState<Record<string, string>>({});
   const [rows, setRows] = useState<PartyRow[]>([]);
+  const [wallets, setWallets] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -50,6 +54,8 @@ export default function OpeningClient() {
     ])
       .then(([o, t]) => {
         setData(o);
+        // پیش‌فرض: اگر سند هنوز نیست و مشتری‌ها کیف پول پر دارند، بیاید
+        setWallets(o.voucher ? o.wallets !== null : o.walletPreview.count > 0);
         setTreasuries(t.items);
         setTAmounts(Object.fromEntries(o.treasuries.map((x) => [x.treasuryId, x.amount])));
         const info = new Map(o.partyInfo.map((p) => [p.id, p]));
@@ -72,8 +78,9 @@ export default function OpeningClient() {
       if (r.dir === "owesUs") rec += BigInt(r.amount);
       else pay += BigInt(r.amount);
     }
+    if (wallets && data) pay += BigInt(data.walletPreview.total);
     return { cash, rec, pay, capital: cash + rec - pay };
-  }, [tAmounts, rows]);
+  }, [tAmounts, rows, wallets, data]);
 
   async function save() {
     if (!data) return;
@@ -89,6 +96,7 @@ export default function OpeningClient() {
           parties: rows
             .filter((r) => r.party && r.amount)
             .map((r) => ({ partyId: r.party!.id, amount: r.dir === "owesUs" ? r.amount : `-${r.amount}` })),
+          wallets,
         },
       });
       setSaved(d.voucher ? `ذخیره شد — سند شماره‌ی ${faNum(d.voucher.number)}` : "مانده‌ها پاک شد");
@@ -179,6 +187,26 @@ export default function OpeningClient() {
           )}
         </div>
       </section>
+
+      {(data.walletPreview.count > 0 || data.wallets !== null) && (
+        <section>
+          <SectionTitle title="کیف پول مشتریان سایت" help="accountingOpening" />
+          <Card className="p-4">
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" className="mt-1" checked={wallets} onChange={(e) => setWallets(e.target.checked)} disabled={readOnly} />
+              <span>
+                موجودی کیف پول‌ها بدهی شما به مشتریان است و در اول دوره بیاید
+                <span className="block text-xs text-gray-500 mt-1">
+                  {faNum(data.walletPreview.count)} مشتری · جمع <Money value={data.walletPreview.total} tone="red" /> تومان
+                </span>
+                <span className="block text-[11px] text-gray-400 leading-5 mt-1">
+                  عدد خودکار است: موجودی امروز کیف پول‌ها منهای شارژ و خرجی که بعد از راه‌اندازی در حسابداری ثبت شده. ذخیره‌ی دوباره آن را دو بار حساب نمی‌کند.
+                </span>
+              </span>
+            </label>
+          </Card>
+        </section>
+      )}
 
       <Card className="p-3 md:p-4 sticky bottom-20 md:bottom-4 z-20 shadow-lg">
         <div className="hidden md:grid grid-cols-4 gap-3 text-xs">

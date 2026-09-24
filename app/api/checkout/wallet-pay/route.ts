@@ -4,6 +4,8 @@ import { getAuthUser } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { processOrderForClub } from "@/lib/club/rewards";
 import { syncDealSafe } from "@/lib/worklist/deals";
+import { deductStockForOrderItems } from "@/lib/order-stock";
+import { emitPaymentsReceived } from "@/lib/accounting/events";
 
 export const runtime = "nodejs";
 
@@ -16,7 +18,7 @@ export async function POST(req: Request) {
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { id: true, userId: true, grandTotal: true, status: true },
+    select: { id: true, userId: true, grandTotal: true, status: true, items: { select: { productId: true, qty: true } } },
   });
 
   if (!order) return NextResponse.json({ error: "سفارش یافت نشد" }, { status: 404 });
@@ -77,6 +79,12 @@ export async function POST(req: Request) {
   if (remaining === 0n) {
     void processOrderForClub(orderId);
     syncDealSafe(orderId);
+    // همان کاری که callback درگاه بعد از پرداخت کامل می‌کند: کسر موجودی (= فاکتور
+    // فروش حسابداری) و بعد دریافت از کیف پول
+    await deductStockForOrderItems(order.items, orderId).catch((e: unknown) =>
+      console.error("[order-stock] کسر موجودی پرداخت کیف‌پولی ناموفق:", e),
+    );
+    await emitPaymentsReceived(orderId);
   }
 
   return NextResponse.json(serialize({

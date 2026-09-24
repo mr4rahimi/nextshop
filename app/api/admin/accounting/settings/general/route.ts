@@ -18,7 +18,7 @@ const TEXT_FIELDS = [
   "sellerAddress", "sellerPhone", "stampImage", "signatureImage", "invoiceFooterNote",
 ] as const;
 
-/** تنظیمات عمومی حسابداری — مالیات، تاریخ قفل، سال جاری، اطلاعات فروشنده */
+/** تنظیمات عمومی حسابداری — مالیات، تاریخ قفل، سال جاری، اطلاعات فروشنده، صندوقِ ثبت خودکار */
 export async function GET() {
   const guard = await requirePermission(["ACC_VIEW", "ACC_SETTINGS"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
@@ -51,6 +51,16 @@ export async function PATCH(req: Request) {
       const y = await prisma.accFiscalYear.findUnique({ where: { id: String(body.currentYearId) } });
       if (!y) throw new AccError("سال مالی پیدا نشد");
       data.currentYearId = y.id;
+    }
+    // ثبت خودکار: اقساط کارتابل و تسویه‌ی پورسانت روی کدام صندوق/بانک (فاز ۶)
+    for (const k of ["installmentTreasuryId", "payoutTreasuryId"] as const) {
+      if (!(k in body)) continue;
+      const id = typeof body[k] === "string" && body[k] ? String(body[k]) : null;
+      if (id) {
+        const t = await prisma.accTreasury.findUnique({ where: { id } });
+        if (!t?.isActive) throw new AccError("صندوق یا بانک انتخاب‌شده پیدا نشد یا غیرفعال است");
+      }
+      data[k] = id;
     }
     if ("lockDate" in body) {
       const d = body.lockDate ? parseDay(body.lockDate) : null;

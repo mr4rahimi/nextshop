@@ -141,6 +141,24 @@ export async function partyForUser(tx: Tx, userId: string): Promise<AccParty> {
   });
 }
 
+/** شخص کارمند (پورسانت) — همان کاربر پنل؛ اگر مشتری هم هست همان شخص نقش کارمند می‌گیرد */
+export async function partyForEmployee(tx: Tx, userId: string): Promise<AccParty> {
+  const existing = await tx.accParty.findUnique({ where: { userId } });
+  if (existing) return existing.isEmployee ? existing : tx.accParty.update({ where: { id: existing.id }, data: { isEmployee: true } });
+  const u = await tx.user.findUnique({ where: { id: userId }, select: { firstName: true, lastName: true, phone: true } });
+  if (!u) throw new AccError("کاربر پیدا نشد", 404);
+  const byMobile = u.phone ? await tx.accParty.findFirst({ where: { mobile: u.phone, userId: null } }) : null;
+  if (byMobile) return tx.accParty.update({ where: { id: byMobile.id }, data: { userId, isEmployee: true } });
+  return createParty(tx, {
+    firstName: u.firstName,
+    lastName: u.lastName,
+    name: [u.firstName, u.lastName].filter(Boolean).join(" ").trim() || u.phone,
+    mobile: u.phone,
+    isEmployee: true,
+    userId,
+  });
+}
+
 /** شخص تأمین‌کننده‌ی کارتابل */
 export async function partyForSupplier(tx: Tx, supplierId: string): Promise<AccParty> {
   const existing = await tx.accParty.findUnique({ where: { supplierId } });

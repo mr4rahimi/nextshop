@@ -1,6 +1,9 @@
 "use client";
 
-/** جزئیات یک دریافت/پرداخت/انتقال — روش‌ها، چک‌ها، تخصیص به فاکتورها، ابطال */
+/**
+ * جزئیات یک دریافت/پرداخت/انتقال/هزینه — روش‌ها، چک‌ها، تخصیص به فاکتورها،
+ * «بابت چه»ی هزینه و بخش نسیه‌اش، ابطال.
+ */
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -16,25 +19,29 @@ import { CHEQUE_LABEL } from "./ChequesList";
 interface Data {
   doc: {
     id: string;
-    kind: "RECEIPT" | "PAYMENT" | "TRANSFER";
+    kind: "RECEIPT" | "PAYMENT" | "TRANSFER" | "EXPENSE";
     number: number;
     date: string;
     total: string;
     status: "POSTED" | "VOID";
     description: string | null;
     voidReason: string | null;
+    sourceKey: string | null;
+    payable: string;
+    vatAmount: string;
     createdByName: string;
     createdAt: string;
     party: { id: string; code: number; name: string; mobile: string | null } | null;
     items: { id: string; method: string; treasuryId: string | null; toTreasuryId: string | null; chequeId: string | null; amount: string; fee: string; trackingCode: string | null }[];
     allocations: { invoiceId: string; amount: string }[];
+    lines: { id: string; amount: string; description: string | null; account: { id: string; code: string; name: string } }[];
   };
   treasuries: { id: string; name: string }[];
   cheques: { id: string; serialNo: string; dueDate: string; status: string; direction: "RECEIVED" | "ISSUED"; bankName: string }[];
   voucher: { id: string; number: number; status: string } | null;
   order: { id: string; orderNumber: string } | null;
   allocatable: { id: string; type: InvoiceTypeKey; number: number | null; date: string; total: string; open: string; allocated: string }[];
-  can: { write: boolean };
+  can: { write: boolean; pay: boolean };
 }
 
 export default function MoneyDetail({ id }: { id: string }) {
@@ -67,13 +74,16 @@ export default function MoneyDetail({ id }: { id: string }) {
   const tName = (tid: string | null) => d.treasuries.find((t) => t.id === tid)?.name ?? "—";
   const allocated = doc.allocations.reduce((s, a) => s + BigInt(a.amount), 0n);
   const excess = BigInt(doc.total) - allocated;
+  const isExpense = doc.kind === "EXPENSE";
+  const payable = BigInt(doc.payable);
+  const auto = d.order ? "خودکار از سایت" : doc.sourceKey?.startsWith("installment:") ? "خودکار از قسط اعتباری" : doc.sourceKey?.startsWith("payout:") ? "خودکار از تسویه‌ی پورسانت" : null;
 
   return (
     <div className="space-y-4">
       <PageHeader
         title={`${KIND_LABELS[doc.kind]} ${faNum(doc.number)}`}
-        help="accountingMoney"
-        back={{ href: `/admin/accounting/money?kind=${doc.kind}`, label: "دریافت و پرداخت" }}
+        help={isExpense ? "accountingExpenses" : "accountingMoney"}
+        back={isExpense ? { href: "/admin/accounting/expenses", label: "هزینه‌ها" } : { href: `/admin/accounting/money?kind=${doc.kind}`, label: "دریافت و پرداخت" }}
         actions={
           d.can.write &&
           doc.status === "POSTED" && (
@@ -96,7 +106,8 @@ export default function MoneyDetail({ id }: { id: string }) {
         <div className="space-y-2">
           <div className="flex flex-wrap gap-1.5">
             {doc.status === "VOID" ? <Badge tone="red">باطل</Badge> : <Badge tone="green">ثبت شده</Badge>}
-            {d.order && <Badge tone="blue">خودکار از سایت</Badge>}
+            {auto && <Badge tone="blue">{auto}</Badge>}
+            {doc.status === "POSTED" && payable > 0n && <Badge tone="amber">نسیه {formatAmount(payable)}</Badge>}
           </div>
           {doc.party && (
             <p className="text-sm">
@@ -112,6 +123,11 @@ export default function MoneyDetail({ id }: { id: string }) {
           {doc.description && <p className="text-xs text-gray-600 dark:text-gray-300">{doc.description}</p>}
           {doc.voidReason && <p className="text-xs text-red-600">دلیل ابطال: {doc.voidReason}</p>}
           <div className="flex flex-wrap gap-2 pt-1">
+            {doc.status === "POSTED" && payable > 0n && doc.party && d.can.pay && (
+              <Link href={`/admin/accounting/money/new?kind=PAYMENT&partyId=${doc.party.id}`} className={btn.small}>
+                📤 پرداخت بدهی
+              </Link>
+            )}
             {d.order && (
               <Link href={`/admin/orders/${d.order.id}`} className={btn.small}>
                 🛒 سفارش {d.order.orderNumber}
@@ -131,8 +147,32 @@ export default function MoneyDetail({ id }: { id: string }) {
         </div>
       </Card>
 
+      {isExpense && (
+        <Card className="p-4">
+          <SectionTitle title="بابت چه" />
+          <div className="divide-y divide-gray-100 dark:divide-white/5">
+            {doc.lines.map((l) => (
+              <div key={l.id} className="py-2.5 flex items-center gap-3">
+                <div className="flex-1 min-w-0 text-sm">
+                  <p className="font-bold">{l.account.name}</p>
+                  {l.description && <p className="text-[11px] text-gray-400">{l.description}</p>}
+                </div>
+                <Money value={l.amount} className="text-sm" />
+              </div>
+            ))}
+            {BigInt(doc.vatAmount) > 0n && (
+              <div className="py-2.5 flex items-center justify-between text-sm">
+                <span className="text-gray-500">مالیات بر ارزش افزوده</span>
+                <Money value={doc.vatAmount} className="text-sm" />
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
       <Card className="p-4">
-        <SectionTitle title="روش‌ها" />
+        <SectionTitle title={isExpense ? "پرداخت" : "روش‌ها"} />
+        {isExpense && !doc.items.length && <p className="text-xs text-gray-400">هنوز چیزی پرداخت نشده؛ کل مبلغ نسیه است.</p>}
         <div className="divide-y divide-gray-100 dark:divide-white/5">
           {doc.items.map((it) => {
             const ch = d.cheques.find((c) => c.id === it.chequeId);
@@ -154,9 +194,18 @@ export default function MoneyDetail({ id }: { id: string }) {
                         {ch.bankName} · سررسید {formatJalali(new Date(ch.dueDate))} · {CHEQUE_LABEL(ch.direction, ch.status)}
                       </span>
                     </p>
+                  ) : it.method === "WALLET" ? (
+                    <p className="font-bold">
+                      کیف پول <span className="text-xs font-normal text-gray-500">— از موجودی کیف پول مشتری در سایت</span>
+                    </p>
                   ) : (
                     <p className="font-bold">
                       {METHOD_FA[it.method]} <span className="text-xs font-normal text-gray-500">— {tName(it.treasuryId)}</span>
+                    </p>
+                  )}
+                  {doc.kind === "RECEIPT" && BigInt(it.fee) > 0n && (
+                    <p className="text-[11px] text-gray-500">
+                      کارمزد کسرشده {formatAmount(it.fee)} · واریزی {formatAmount(BigInt(it.amount) - BigInt(it.fee))}
                     </p>
                   )}
                   {it.trackingCode && <p className="text-[11px] text-gray-400" dir="ltr">{it.trackingCode}</p>}
@@ -166,9 +215,14 @@ export default function MoneyDetail({ id }: { id: string }) {
             );
           })}
         </div>
+        {isExpense && payable > 0n && (
+          <p className="text-xs text-amber-600 mt-2">
+            {formatAmount(payable)} تومان پرداخت نشده و بدهی شما{doc.party ? ` به ${doc.party.name}` : ""} است. با «پرداخت» به همین شخص تسویه می‌شود.
+          </p>
+        )}
       </Card>
 
-      {doc.kind !== "TRANSFER" && (
+      {(doc.kind === "RECEIPT" || doc.kind === "PAYMENT") && (
         <Card className="p-4 space-y-3">
           <SectionTitle
             title="بابت فاکتورها"

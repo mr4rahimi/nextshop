@@ -7,6 +7,7 @@ import { quoteRedeem, loadPointRules, redeemPointsForOrder } from "@/lib/club/po
 import { validateCoupon, consumeCoupon } from "@/lib/club/coupons";
 import { setClubConsent } from "@/lib/club/consent";
 import { ensureClubProfile } from "@/lib/club/profile";
+import { emitPaymentsReceived } from "@/lib/accounting/events";
 
 export const runtime = "nodejs";
 
@@ -247,6 +248,8 @@ export async function POST(req: Request) {
     await deductStockForOrderItems(orderItems, order.id).catch((e: unknown) =>
       console.error("[order-stock] کسر موجودی سفارش کیف‌پولی ناموفق:", e)
     );
+    // حسابداری داخلی — دریافت از کیف پول، بعد از فاکتور فروش
+    await emitPaymentsReceived(order.id);
   }
 
   return NextResponse.json(serialize({ orderId: order.id, orderNumber: order.orderNumber }));

@@ -21,6 +21,7 @@ interface Row {
   status: "POSTED" | "VOID";
   description: string | null;
   paymentId: string | null;
+  sourceKey: string | null;
   party: { id: string; name: string } | null;
   items: { method: string; treasuryId: string | null; toTreasuryId: string | null }[];
   _count: { allocations: number };
@@ -33,6 +34,7 @@ export const METHOD_FA: Record<string, string> = {
   POS: "کارتخوان",
   GATEWAY: "درگاه",
   CHEQUE: "چک",
+  WALLET: "کیف پول",
 };
 
 export default function MoneyList() {
@@ -107,6 +109,7 @@ export default function MoneyList() {
               <p className="text-[11px] text-gray-400 truncate">
                 {KIND_LABELS[r.kind]} {faNum(r.number)} · {formatJalali(new Date(r.date))} · {r.party ? where(r) : "بین صندوق و بانک"}
                 {r.paymentId && " · خودکار از سایت"}
+                {r.sourceKey?.startsWith("installment:") && " · خودکار از قسط"}
                 {r.description && ` · ${r.description}`}
               </p>
             </div>

@@ -15,6 +15,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import type { StaffAccess } from "@/lib/permissions";
+import { emitAccEventSafe } from "@/lib/accounting/events";
 
 export interface Statement {
   userId: string;
@@ -106,7 +107,7 @@ export async function recordPayout(
   input: { userId: string; amount: bigint; expectedDue: bigint; note?: string | null },
   access: StaffAccess,
 ) {
-  return prisma.$transaction(
+  const payout = await prisma.$transaction(
     async (tx) => {
       const s = await computeStatement(input.userId, tx);
 
@@ -162,6 +163,14 @@ export async function recordPayout(
     },
     { isolationLevel: "Serializable" },
   );
+  // حسابداری داخلی — هزینه‌ی پورسانت از صندوق/بانکِ تنظیمات (فاز ۶)
+  await emitAccEventSafe({
+    type: "COMMISSION_PAID",
+    aggregate: { type: "StaffPayout", id: payout.id },
+    dedupeKey: `payout:${payout.id}:paid`,
+    payload: { payoutId: payout.id },
+  });
+  return payout;
 }
 
 /** کارکنانی که پورسانت دارند یا داشته‌اند — ردیف‌های جدول مدیر */

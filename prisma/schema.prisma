@@ -3679,31 +3679,35 @@ enum AccMode {
 }
 
 model AccSettings {
-  id                 String    @id @default("singleton")
-  mode               AccMode   @default(NONE)
-  modeChangedAt      DateTime?
-  modeChangedBy      String?
+  id                    String    @id @default("singleton")
+  mode                  AccMode   @default(NONE)
+  modeChangedAt         DateTime?
+  modeChangedBy         String?
   /// سال مالی پیش‌فرض فرم‌ها و گزارش‌ها
-  currentYearId      String?
+  currentYearId         String?
   /// تا این روز (شامل) هیچ سندی ساخته، بازسازی یا ابطال نمی‌شود
-  lockDate           DateTime? @db.Date
+  lockDate              DateTime? @db.Date
   /// نرخ پیش‌فرض ارزش افزوده به صدم درصد — ۱۰٪ = 1000
-  vatRateBp          Int       @default(1000)
-  pricesIncludeVat   Boolean   @default(false)
+  vatRateBp             Int       @default(1000)
+  pricesIncludeVat      Boolean   @default(false)
   /// کسب‌وکار مشمول ارزش افزوده است؟ خاموش = فاکتورها بی‌مالیات (فاز ۴)
-  vatEnabled         Boolean   @default(false)
+  vatEnabled            Boolean   @default(false)
   /// اطلاعات فروشنده — فاکتور رسمی و مودیان
-  sellerName         String?
-  sellerNationalId   String?
-  sellerEconomicCode String?
-  sellerRegNo        String?
-  sellerPostalCode   String?
-  sellerAddress      String?
-  sellerPhone        String?
-  stampImage         String?
-  signatureImage     String?
-  invoiceFooterNote  String?
-  updatedAt          DateTime  @updatedAt
+  sellerName            String?
+  sellerNationalId      String?
+  sellerEconomicCode    String?
+  sellerRegNo           String?
+  sellerPostalCode      String?
+  sellerAddress         String?
+  sellerPhone           String?
+  stampImage            String?
+  signatureImage        String?
+  invoiceFooterNote     String?
+  /// ثبت خودکار (فاز ۶): واریز اقساط کارتابل روی کدام صندوق/بانک می‌نشیند
+  installmentTreasuryId String?
+  /// ثبت خودکار (فاز ۶): تسویه‌ی پورسانت از کدام صندوق/بانک پرداخت می‌شود
+  payoutTreasuryId      String?
+  updatedAt             DateTime  @updatedAt
 }
 
 enum AccYearStatus {
@@ -3780,9 +3784,10 @@ model AccAccount {
   hesabanId  Int?
   createdAt  DateTime      @default(now())
 
-  parent   AccAccount?      @relation("AccTree", fields: [parentId], references: [id])
-  children AccAccount[]     @relation("AccTree")
-  lines    AccVoucherLine[]
+  parent     AccAccount?      @relation("AccTree", fields: [parentId], references: [id])
+  children   AccAccount[]     @relation("AccTree")
+  lines      AccVoucherLine[]
+  moneyLines AccMoneyLine[]
 
   @@index([parentId])
 }
@@ -3881,6 +3886,7 @@ enum AccSource {
   OPENING
   CLOSING
   IMPORT
+  WALLET // شارژ یا کسر دستی کیف پول مشتری (فاز ۶)
 }
 
 /// سند حسابداری. ⚠️ فقط از `lib/accounting/ledger/post.ts` نوشته می‌شود —
@@ -4285,6 +4291,7 @@ enum AccMoneyKind {
   RECEIPT
   PAYMENT
   TRANSFER
+  EXPENSE // هزینه — فاز ۶
 }
 
 enum AccMoneyMethod {
@@ -4294,6 +4301,7 @@ enum AccMoneyMethod {
   POS // کارتخوان
   GATEWAY // درگاه اینترنتی
   CHEQUE // چک — دریافت: چک تازه؛ پرداخت: چک تازه‌ی ما یا خرج چک دریافتی
+  WALLET // کیف پول مشتری — فقط دریافت خودکار سفارش سایت (فاز ۶)
 }
 
 /// دریافت از شخص، پرداخت به شخص، یا انتقال بین صندوق و بانک.
@@ -4314,8 +4322,12 @@ model AccMoneyDoc {
   voidReason    String?
   /// پرداخت آنلاین سایت (`Payment`) — دریافت خودکار
   paymentId     String?      @unique
-  /// کلید یکتای منبع خودکار
+  /// کلید یکتای منبع خودکار — `payment:` `installment:` `payout:`
   sourceKey     String?      @unique
+  /// هزینه: بخشی که پرداخت نشد و بدهی به شخص شد (نسیه)
+  payable       BigInt       @default(0)
+  /// هزینه: مالیات بر ارزش افزوده‌ی قابل کسر
+  vatAmount     BigInt       @default(0)
   createdById   String?
   createdByName String
   createdAt     DateTime     @default(now())
@@ -4323,6 +4335,7 @@ model AccMoneyDoc {
 
   party       AccParty?       @relation(fields: [partyId], references: [id])
   items       AccMoneyItem[]
+  lines       AccMoneyLine[]
   allocations AccAllocation[]
 
   @@unique([yearId, kind, number])
@@ -4350,6 +4363,22 @@ model AccMoneyItem {
 
   @@index([moneyDocId])
   @@index([chequeId])
+}
+
+/// ردیف هزینه — «بابت چه»: یک سند هزینه چند سرفصل می‌گیرد (اجاره + قبض).
+model AccMoneyLine {
+  id          String  @id @default(cuid())
+  moneyDocId  String
+  seq         Int
+  accountId   String
+  amount      BigInt
+  description String?
+
+  moneyDoc AccMoneyDoc @relation(fields: [moneyDocId], references: [id], onDelete: Cascade)
+  account  AccAccount  @relation(fields: [accountId], references: [id])
+
+  @@index([moneyDocId])
+  @@index([accountId])
 }
 
 /// تسویه‌ی فاکتور با دریافت/پرداخت. ⚠️ `AccInvoice.paidTotal` کش همین جدول

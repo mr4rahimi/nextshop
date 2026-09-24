@@ -37,6 +37,7 @@ import { dispatchBatch, getProvider, loadSmsConfig, pickLine } from "@/lib/club/
 import { applyGuards, isWithinAllowedHours, loadGuardSettings } from "@/lib/club/sms/guards";
 import { logActivityAsync } from "@/lib/activity";
 import { can, type StaffAccess } from "@/lib/permissions";
+import { emitAccEventSafe } from "@/lib/accounting/events";
 
 const DAY_MS = 86_400_000;
 /** تهران بدون ساعت تابستانی — همان ثابت `attendance.ts` */
@@ -248,6 +249,14 @@ export async function payInstallment(
     },
   });
   if (claimed.count === 0) throw new Error("این موعد هم‌زمان ثبت شد؛ صفحه را تازه کنید");
+
+  // حسابداری داخلی — دریافت روی صندوق/بانکِ تنظیمات، بابت فاکتور همین سفارش (فاز ۶)
+  await emitAccEventSafe({
+    type: "INSTALLMENT_PAID",
+    aggregate: { type: "Order", id: inst.orderId },
+    dedupeKey: `installment:${installmentId}:paid`,
+    payload: { installmentId, orderId: inst.orderId },
+  });
 
   if (inst.followUpTaskId) {
     await prisma.staffTask

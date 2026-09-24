@@ -46,6 +46,8 @@ export async function GET(req: Request) {
       open,
       cheques,
       partyBalance: partyBalance?.balance ?? null,
+      // تسویه‌ی بازارگاه: فرم دریافت فیلد «کارمزد کسرشده» را نشان می‌دهد
+      isMarketplace: partyId ? !!(await prisma.accParty.findUnique({ where: { id: partyId }, select: { isMarketplace: true } }))?.isMarketplace : false,
       nextSerial,
     }),
   );

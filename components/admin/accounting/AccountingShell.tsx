@@ -32,6 +32,7 @@ export const SECTIONS: Section[] = [
   { href: "/admin/accounting/purchases", label: "خرید", icon: "📥", perm: ["ACC_VIEW", "ACC_PURCHASE"] },
   { href: "/admin/accounting/money", label: "دریافت و پرداخت", icon: "💸", perm: ["ACC_VIEW", "ACC_TREASURY"] },
   { href: "/admin/accounting/cheques", label: "چک‌ها", icon: "🧾", perm: ["ACC_VIEW", "ACC_CHEQUE"] },
+  { href: "/admin/accounting/expenses", label: "هزینه‌ها", icon: "🧮", perm: ["ACC_VIEW", "ACC_EXPENSE"] },
   { href: "/admin/accounting/parties", label: "اشخاص", icon: "👥", perm: ["ACC_VIEW", "ACC_PARTY_MANAGE"] },
   { href: "/admin/accounting/treasury", label: "صندوق و بانک", icon: "🏦", perm: ["ACC_VIEW", "ACC_SETTINGS"] },
   { href: "/admin/accounting/inventory", label: "کالا و انبار", icon: "📦", perm: ["ACC_VIEW", "ACC_INVENTORY"] },
@@ -52,10 +53,12 @@ interface QuickAction {
 const QUICK: QuickAction[] = [
   { href: "/admin/accounting/money/new?kind=RECEIPT", label: "دریافت", icon: "📥", perm: ["ACC_TREASURY"] },
   { href: "/admin/accounting/money/new?kind=PAYMENT", label: "پرداخت", icon: "📤", perm: ["ACC_TREASURY"] },
+  { href: "/admin/accounting/expenses/new", label: "ثبت هزینه", icon: "🧮", perm: ["ACC_EXPENSE"] },
   { href: "/admin/accounting/invoices/new?type=SALES", label: "فاکتور فروش", icon: "🛒", perm: ["ACC_SALES"] },
   { href: "/admin/accounting/invoices/new?type=PURCHASE", label: "فاکتور خرید", icon: "📥", perm: ["ACC_PURCHASE"] },
   { href: "/admin/accounting/invoices/new?type=PROFORMA", label: "پیش‌فاکتور", icon: "📄", perm: ["ACC_SALES"] },
   { href: "/admin/accounting/money/new?kind=TRANSFER", label: "انتقال وجه", icon: "🔁", perm: ["ACC_TREASURY"] },
+  { href: "/admin/accounting/money/new?kind=RECEIPT&role=marketplace", label: "تسویه‌ی بازارگاه", icon: "🏬", perm: ["ACC_TREASURY"] },
   { href: "/admin/accounting/cheques", label: "چک‌ها", icon: "🧾", perm: ["ACC_CHEQUE"] },
   { href: "/admin/accounting/parties?new=1", label: "شخص تازه", icon: "👤", perm: ["ACC_PARTY_MANAGE"] },
   { href: "/admin/accounting/treasury?new=1", label: "صندوق یا بانک تازه", icon: "🏦", perm: ["ACC_SETTINGS"] },
@@ -63,7 +66,6 @@ const QUICK: QuickAction[] = [
   { href: "/admin/accounting/inventory/counts", label: "انبارگردانی", icon: "📋", perm: ["ACC_INVENTORY"] },
   { href: "/admin/accounting/inventory/transfers", label: "حواله‌ی انتقال", icon: "🔁", perm: ["ACC_INVENTORY"] },
   { href: "/admin/accounting/vouchers/new", label: "سند دستی", icon: "📝", perm: ["ACC_VOUCHER"] },
-  { href: "#", label: "ثبت هزینه", icon: "🧾", perm: [], soon: "فاز ۶" },
 ];
 
 function isActive(pathname: string, s: Section) {

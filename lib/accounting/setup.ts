@@ -17,6 +17,7 @@ import { ensureFiscalYear } from "./ledger/fiscal-year";
 import { postVoucher, rebuildVoucher, voidVoucher, type Actor, type LineInput } from "./ledger/post";
 import { createTreasury, TREASURY_ACCOUNT_KEY } from "./treasury";
 import { ensureDefaultWarehouse } from "./inventory/docs";
+import { walletOpeningLines } from "./cash/wallet";
 
 type Tx = Prisma.TransactionClient;
 
@@ -52,6 +53,8 @@ export interface OpeningBalances {
   treasuries: { treasuryId: string; amount: bigint }[];
   /** مثبت = طلب ما از شخص (بدهکار)، منفی = بدهی ما به شخص (بستانکار) */
   parties: { partyId: string; amount: bigint }[];
+  /** موجودی کیف پول مشتریان سایت هم بیاید؟ عددش خودکار است (`walletOpeningLines`) */
+  wallets?: boolean;
 }
 
 export const openingKey = (yearId: string) => `opening:${yearId}:balances`;
@@ -63,11 +66,13 @@ export async function readOpening(db: Tx | typeof prisma, yearId: string) {
   });
   const treasuries: { treasuryId: string; amount: bigint }[] = [];
   const parties: { partyId: string; amount: bigint }[] = [];
+  let wallets: bigint | null = null;
   for (const l of v?.lines ?? []) {
-    if (l.treasuryId) treasuries.push({ treasuryId: l.treasuryId, amount: l.debit - l.credit });
+    if (l.account.systemKey === "WALLET_LIABILITY") wallets = (wallets ?? 0n) + l.credit - l.debit;
+    else if (l.treasuryId) treasuries.push({ treasuryId: l.treasuryId, amount: l.debit - l.credit });
     else if (l.partyId) parties.push({ partyId: l.partyId, amount: l.debit - l.credit });
   }
-  return { voucher: v ? { id: v.id, number: v.number, date: v.date } : null, treasuries, parties };
+  return { voucher: v ? { id: v.id, number: v.number, date: v.date } : null, treasuries, parties, wallets };
 }
 
 export async function saveOpening(yearId: string, input: OpeningBalances, actor: Actor) {
@@ -107,6 +112,7 @@ export async function saveOpening(yearId: string, input: OpeningBalances, actor:
     const existing = await tx.accVoucher.findFirst({
       where: { source: "OPENING", sourceId: openingKey(yearId), status: "POSTED" },
     });
+    if (input.wallets) lines.push(...(await walletOpeningLines(tx, existing?.id ?? null)).lines);
     if (!lines.length) {
       if (existing) await voidVoucher(tx, existing.id, "مانده‌های اول دوره پاک شد", actor, { fromSource: true });
       return null;

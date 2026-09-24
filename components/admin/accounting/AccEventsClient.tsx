@@ -40,9 +40,9 @@ const TYPE_LABELS: Record<string, string> = {
   PAYMENT_REFUNDED: "استرداد وجه",
   PURCHASE_RECORDED: "فاکتور خرید",
   PURCHASE_RETURNED: "برگشت از خرید",
+  INSTALLMENT_PAID: "واریز قسط",
   COMMISSION_PAID: "تسویه‌ی پورسانت",
-  WALLET_USED: "پرداخت از کیف پول",
-  MARKETPLACE_SETTLED: "تسویه‌ی بازارگاه",
+  WALLET_ADJUSTED: "شارژ یا کسر کیف پول",
   STOCK_TRANSFERRED: "حواله‌ی انبار",
   STOCK_ADJUSTED: "انبارگردانی",
 };

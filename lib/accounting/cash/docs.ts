@@ -6,6 +6,12 @@
  *   پرداخت:  بدهکار بدهی به شخص  —  بستانکار صندوق/بانک، اسناد پرداختنی (چک ما)
  *            یا اسناد دریافتنی صاحب چک (خرج چک دریافتی)
  *   انتقال:  بدهکار مقصد + کارمزد بانکی  —  بستانکار مبدأ
+ *   هزینه:   بدهکار حساب‌های هزینه (+ مالیات خرید)  —  بستانکار صندوق/بانک/چک،
+ *            و بخش پرداخت‌نشده بدهی به شخص (نسیه) — فاز ۶
+ *
+ *   کیف پول (فقط دریافت خودکار سفارش): بدهکار «کیف پول مشتریان» همان شخص.
+ *   تسویه‌ی بازارگاه: دریافت از شخصِ بازارگاه با «کارمزد کسرشده» — بانک خالص
+ *   واریزی را می‌گیرد، کارمزد به «کارمزد بازارگاه»، طلب به‌اندازه‌ی ناخالص کم می‌شود.
  *
  * تخصیص به فاکتورها اختیاری است؛ مازاد روی شخص می‌ماند (پیش‌دریافت/پیش‌پرداخت).
  *
@@ -30,6 +36,7 @@ export const MONEY_KIND_LABELS: Record<AccMoneyKind, string> = {
   RECEIPT: "دریافت",
   PAYMENT: "پرداخت",
   TRANSFER: "انتقال وجه",
+  EXPENSE: "هزینه",
 };
 
 export const METHOD_LABELS: Record<AccMoneyMethod, string> = {
@@ -39,10 +46,11 @@ export const METHOD_LABELS: Record<AccMoneyMethod, string> = {
   POS: "کارتخوان",
   GATEWAY: "درگاه اینترنتی",
   CHEQUE: "چک",
+  WALLET: "کیف پول",
 };
 
 /** هر روش روی کدام نوع خزانه می‌نشیند */
-const METHOD_TREASURY: Record<Exclude<AccMoneyMethod, "CHEQUE">, AccTreasuryKind[]> = {
+const METHOD_TREASURY: Record<Exclude<AccMoneyMethod, "CHEQUE" | "WALLET">, AccTreasuryKind[]> = {
   CASH: ["CASH"],
   CARD_TRANSFER: ["BANK"],
   BANK_TRANSFER: ["BANK"],
@@ -55,6 +63,7 @@ export interface MoneyItemInput {
   treasuryId?: string | null;
   toTreasuryId?: string | null;
   amount: bigint;
+  /** انتقال: کارمزد بانکی از مبدأ. دریافت از بازارگاه: کارمزد کسرشده از واریزی */
   fee?: bigint;
   trackingCode?: string | null;
   /** چک تازه — دریافت: چک مشتری؛ پرداخت: چک ما (`treasuryId` = حساب چک) */
@@ -73,17 +82,44 @@ export interface MoneyDocInput {
   allocations?: { invoiceId: string; amount: bigint }[] | "auto";
   paymentId?: string | null;
   sourceKey?: string | null;
+  /** فقط هزینه: بابت چه — هر ردیف یک حساب هزینه */
+  lines?: { accountId: string; amount: bigint; description?: string | null }[];
+  /** فقط هزینه: مالیات بر ارزش افزوده‌ی قابل کسر */
+  vatAmount?: bigint;
 }
+
+/** حساب‌هایی که «هزینه» نیستند و فقط از مسیر خودشان سند می‌گیرند */
+const NOT_EXPENSE_KEYS = ["COGS", "INVENTORY_ADJUSTMENT"];
 
 export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor): Promise<AccMoneyDoc> {
   const year = await assertPostable(tx, input.date);
   const kind = input.kind;
-  if (!input.items.length) throw new AccError("دست‌کم یک روش و مبلغ لازم است");
+  if (!input.items.length && kind !== "EXPENSE") throw new AccError("دست‌کم یک روش و مبلغ لازم است");
 
   const party = input.partyId ? await tx.accParty.findUnique({ where: { id: input.partyId } }) : null;
-  if (kind !== "TRANSFER") {
+  if (kind === "RECEIPT" || kind === "PAYMENT") {
     if (!party) throw new AccError(kind === "RECEIPT" ? "از چه کسی دریافت شد؟" : "به چه کسی پرداخت شد؟");
-    if (!party.isActive) throw new AccError(`«${party.name}» غیرفعال است`);
+  }
+  if (party && !party.isActive) throw new AccError(`«${party.name}» غیرفعال است`);
+
+  // ── ردیف‌های هزینه ──
+  const expLines: { accountId: string; partyId: string | null; amount: bigint; description: string | null; name: string }[] = [];
+  const vat = kind === "EXPENSE" ? input.vatAmount ?? 0n : 0n;
+  if (kind === "EXPENSE") {
+    if (!input.lines?.length) throw new AccError("بابت چه هزینه‌ای؟ دست‌کم یک ردیف لازم است");
+    if (vat < 0n) throw new AccError("مالیات منفی نمی‌شود");
+    const accs = new Map((await tx.accAccount.findMany({ where: { id: { in: input.lines.map((l) => l.accountId) } } })).map((a) => [a.id, a]));
+    input.lines.forEach((l, i) => {
+      const at = `ردیف هزینه‌ی ${faNum(i + 1)}`;
+      const a = accs.get(l.accountId);
+      if (!a) throw new AccError(`${at}: بابت چه؟ یک سرفصل هزینه انتخاب کنید`);
+      if (a.class !== "EXPENSE" || a.level !== "SUBLEDGER" || (a.systemKey && NOT_EXPENSE_KEYS.includes(a.systemKey))) throw new AccError(`${at}: «${a.name}» سرفصل هزینه نیست`);
+      if (!a.isActive) throw new AccError(`${at}: «${a.name}» غیرفعال است`);
+      if (a.detailKind === "TREASURY") throw new AccError(`${at}: «${a.name}» تفصیلی صندوق می‌خواهد و در هزینه نمی‌آید`);
+      if (a.detailKind === "PARTY" && !party) throw new AccError(`${at}: «${a.name}» به نام یک شخص ثبت می‌شود — «به چه کسی» را انتخاب کنید`);
+      if (l.amount <= 0n) throw new AccError(`${at}: مبلغ باید بیشتر از صفر باشد`);
+      expLines.push({ accountId: a.id, partyId: a.detailKind === "PARTY" ? party!.id : null, amount: l.amount, description: l.description?.trim() || null, name: a.name });
+    });
   }
 
   const treasuryIds = [...new Set(input.items.flatMap((i) => [i.treasuryId, i.toTreasuryId]).filter((x): x is string => !!x))];
@@ -106,11 +142,20 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
       if (from.id === to.id) throw new AccError("مبدأ و مقصد یکی‌اند");
       return;
     }
-    if (it.fee) throw new AccError(`${at}: کارمزد فقط در انتقال وجه است`);
+    if (it.fee) {
+      if (kind !== "RECEIPT" || !party?.isMarketplace) throw new AccError(`${at}: کارمزد فقط در انتقال وجه و تسویه‌ی بازارگاه است`);
+      if (it.method === "CHEQUE" || it.method === "WALLET") throw new AccError(`${at}: کارمزد بازارگاه روی واریز به بانک یا صندوق است`);
+      if (it.fee >= it.amount) throw new AccError(`${at}: کارمزد باید کمتر از مبلغ تسویه باشد`);
+    }
+    if (it.method === "WALLET") {
+      if (kind !== "RECEIPT") throw new AccError(`${at}: کیف پول فقط روش دریافت است`);
+      return;
+    }
     if (it.method === "CHEQUE") {
       if (kind === "RECEIPT" && !it.cheque) throw new AccError(`${at}: مشخصات چک را وارد کنید`);
-      if (kind === "PAYMENT" && !it.cheque && !it.endorseChequeId) throw new AccError(`${at}: چک تازه صادر کنید یا یک چک دریافتی را خرج کنید`);
-      if (kind === "PAYMENT" && it.cheque) {
+      if (kind !== "RECEIPT" && !party) throw new AccError(`${at}: چک به نام یک شخص است — «به چه کسی» را انتخاب کنید`);
+      if (kind !== "RECEIPT" && !it.cheque && !it.endorseChequeId) throw new AccError(`${at}: چک تازه صادر کنید یا یک چک دریافتی را خرج کنید`);
+      if (kind !== "RECEIPT" && it.cheque) {
         const bank = tr(it.treasuryId, at);
         if (bank.kind !== "BANK") throw new AccError(`${at}: چک از حساب بانکی صادر می‌شود`);
       }
@@ -122,7 +167,12 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
   });
   if (kind === "TRANSFER" && input.items.length !== 1) throw new AccError("انتقال وجه یک ردیف دارد");
 
-  const total = input.items.reduce((s, i) => s + i.amount, 0n);
+  const paid = input.items.reduce((s, i) => s + i.amount, 0n);
+  const total = kind === "EXPENSE" ? expLines.reduce((s, l) => s + l.amount, 0n) + vat : paid;
+  // هزینه: بخش پرداخت‌نشده بدهی به شخص می‌شود
+  const payable = kind === "EXPENSE" ? total - paid : 0n;
+  if (payable < 0n) throw new AccError(`جمع پرداخت (${formatAmount(paid)}) از مبلغ هزینه (${formatAmount(total)}) بیشتر است`);
+  if (payable > 0n && !party) throw new AccError(`${formatAmount(payable)} تومان پرداخت نشده — «به چه کسی» بدهکار می‌شوید؟`);
   const number = await nextNumber(tx, year.id, `money:${kind}`);
   const doc = await tx.accMoneyDoc.create({
     data: {
@@ -135,6 +185,8 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
       description: input.description?.trim() || null,
       paymentId: input.paymentId ?? null,
       sourceKey: input.sourceKey ?? null,
+      payable,
+      vatAmount: vat,
       createdById: actor.id ?? null,
       createdByName: actor.name,
     },
@@ -143,6 +195,13 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
   // ── چک‌ها و ردیف‌ها ──
   const lines: LineInput[] = [];
   const pName = party?.name ?? "";
+  if (kind === "EXPENSE") {
+    for (const l of expLines) lines.push({ accountId: l.accountId, partyId: l.partyId, debit: l.amount, description: l.description ?? l.name });
+    if (vat > 0n) lines.push({ accountKey: "VAT_PURCHASE", debit: vat, description: "مالیات بر ارزش افزوده‌ی هزینه" });
+    await tx.accMoneyLine.createMany({
+      data: expLines.map((l, i) => ({ moneyDocId: doc.id, seq: i + 1, accountId: l.accountId, amount: l.amount, description: l.description })),
+    });
+  }
   for (const [i, it] of input.items.entries()) {
     let chequeId: string | null = null;
     if (kind === "TRANSFER") {
@@ -168,17 +227,21 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
           ? { accountKey: "CHEQUE_RECEIVABLE", partyId: party!.id, debit: it.amount, description: `چک ${faNum(c.serialNo)} سررسید ${formatJalali(c.dueDate)}` }
           : { accountKey: "CHEQUE_PAYABLE", partyId: party!.id, credit: it.amount, description: `چک ${faNum(c.serialNo)}` },
       );
+    } else if (it.method === "WALLET") {
+      lines.push({ accountKey: "WALLET_LIABILITY", partyId: party!.id, debit: it.amount, description: "پرداخت از کیف پول" });
     } else {
       const t = tr(it.treasuryId, "");
+      const fee = it.fee ?? 0n;
       const desc = [METHOD_LABELS[it.method], it.trackingCode && `پیگیری ${it.trackingCode}`].filter(Boolean).join(" — ");
-      lines.push({ accountKey: TREASURY_ACCOUNT_KEY[t.kind], treasuryId: t.id, [kind === "RECEIPT" ? "debit" : "credit"]: it.amount, description: desc });
+      lines.push({ accountKey: TREASURY_ACCOUNT_KEY[t.kind], treasuryId: t.id, [kind === "RECEIPT" ? "debit" : "credit"]: it.amount - fee, description: desc });
+      if (fee > 0n) lines.push({ accountKey: "MARKETPLACE_FEE", debit: fee, description: `کارمزد ${pName}` });
     }
     await tx.accMoneyItem.create({
       data: {
         moneyDocId: doc.id,
         seq: i + 1,
         method: kind === "TRANSFER" ? "BANK_TRANSFER" : it.method,
-        treasuryId: it.method === "CHEQUE" && kind === "RECEIPT" ? null : it.treasuryId ?? null,
+        treasuryId: (it.method === "CHEQUE" && kind === "RECEIPT") || it.method === "WALLET" ? null : it.treasuryId ?? null,
         toTreasuryId: it.toTreasuryId ?? null,
         chequeId,
         amount: it.amount,
@@ -189,9 +252,10 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
   }
   if (kind === "RECEIPT") lines.push({ accountKey: "AR", partyId: party!.id, credit: total, description: "دریافت" });
   if (kind === "PAYMENT") lines.unshift({ accountKey: "AP", partyId: party!.id, debit: total, description: "پرداخت" });
+  if (payable > 0n) lines.push({ accountKey: "AP", partyId: party!.id, credit: payable, description: "هزینه‌ی پرداخت‌نشده" });
 
   // ── تخصیص ──
-  if (kind !== "TRANSFER" && input.allocations) {
+  if ((kind === "RECEIPT" || kind === "PAYMENT") && input.allocations) {
     const side = kind === "RECEIPT" ? "sales" : "purchase";
     const allocs = input.allocations === "auto" ? autoAllocate(total, await openInvoicesOf(tx, party!.id, side)) : input.allocations.filter((a) => a.amount > 0n);
     const sum = allocs.reduce((s, a) => s + a.amount, 0n);
@@ -215,8 +279,12 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
   const label = MONEY_KIND_LABELS[kind];
   const v = await postVoucher(tx, {
     date: input.date,
-    description: `${label} ${faNum(number)}${pName ? (kind === "RECEIPT" ? ` از ${pName}` : ` به ${pName}`) : ""}${input.description ? ` — ${input.description.trim()}` : ""}`,
-    source: kind === "RECEIPT" ? "RECEIPT" : kind === "PAYMENT" ? "PAYMENT" : "TRANSFER",
+    description:
+      `${label} ${faNum(number)}` +
+      (kind === "EXPENSE" ? ` — ${[...new Set(expLines.map((l) => l.name))].join("، ")}` : "") +
+      (pName ? (kind === "RECEIPT" ? ` از ${pName}` : ` به ${pName}`) : "") +
+      (input.description ? ` — ${input.description.trim()}` : ""),
+    source: kind,
     sourceId: doc.id,
     lines,
     actor,
@@ -261,7 +329,7 @@ export async function voidMoneyDoc(tx: Tx, id: string, reason: string, actor: Ac
 /** تخصیص بعدی — دریافت ثبت‌شده‌ی بی‌تخصیص (یا با مازاد) را به فاکتور وصل می‌کند */
 export async function allocateExisting(tx: Tx, moneyDocId: string, allocations: { invoiceId: string; amount: bigint }[]): Promise<void> {
   const doc = await tx.accMoneyDoc.findUnique({ where: { id: moneyDocId }, include: { allocations: true } });
-  if (!doc || doc.status !== "POSTED" || doc.kind === "TRANSFER" || !doc.partyId) throw new AccError("پیدا نشد", 404);
+  if (!doc || doc.status !== "POSTED" || (doc.kind !== "RECEIPT" && doc.kind !== "PAYMENT") || !doc.partyId) throw new AccError("پیدا نشد", 404);
   const wanted = allocations.filter((a) => a.amount > 0n);
   const sum = wanted.reduce((s, a) => s + a.amount, 0n);
   if (sum > doc.total) throw new AccError(`جمع تخصیص از مبلغ ${formatAmount(doc.total)} بیشتر است`);

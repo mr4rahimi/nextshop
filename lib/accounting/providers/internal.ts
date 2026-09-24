@@ -14,10 +14,20 @@ import { prisma } from "@/lib/prisma";
 import type { AccountingProvider, ApplyResult } from "../port";
 import { AccError } from "../errors";
 import { purchaseFromTask, reverseOrderSale, saleFromIntegOrder, saleFromOrder, voidIntegSale } from "../invoices/channel";
-import { receiptFromPayment } from "../cash/channel";
+import { expenseFromPayout, receiptFromInstallment, receiptFromPayment } from "../cash/channel";
+import { voucherFromWalletTx } from "../cash/wallet";
 
 type Handler = (event: AccEvent) => Promise<ApplyResult>;
-type Payload = { orderId?: string; integOrderId?: string; taskId?: string; paymentId?: string; reason?: string };
+type Payload = {
+  orderId?: string;
+  integOrderId?: string;
+  taskId?: string;
+  paymentId?: string;
+  installmentId?: string;
+  payoutId?: string;
+  walletTxId?: string;
+  reason?: string;
+};
 
 /** یک تراکنش برای هر رویداد — فاکتور، کاردکس و سند با هم ثبت یا با هم لغو */
 function invoiceHandler(fn: (tx: Prisma.TransactionClient, p: Payload, e: AccEvent) => Promise<{ id: string } | null>, empty: string): Handler {
@@ -48,7 +58,10 @@ const HANDLERS: Partial<Record<string, Handler>> = {
     "فاکتوری برای برگشت نبود (فروش پیش از حسابداری داخلی ثبت شده)",
   ),
   PURCHASE_RECORDED: invoiceHandler((tx, p) => purchaseFromTask(tx, p.taskId!), "کالای قیمت‌دار یا سفارش مرتبطی نبود"),
-  PAYMENT_RECEIVED: invoiceHandler((tx, p, e) => receiptFromPayment(tx, p.paymentId!, e.createdAt), "پرداخت کیف پول، اعتباری یا بی‌مبلغ دریافت جدا نمی‌سازد"),
+  PAYMENT_RECEIVED: invoiceHandler((tx, p, e) => receiptFromPayment(tx, p.paymentId!, e.createdAt), "پرداخت اعتباری یا بی‌مبلغ دریافت جدا نمی‌سازد"),
+  INSTALLMENT_PAID: invoiceHandler((tx, p, e) => receiptFromInstallment(tx, p.installmentId!, e.createdAt), "قسط پرداخت‌نشده یا بی‌مبلغ"),
+  COMMISSION_PAID: invoiceHandler((tx, p) => expenseFromPayout(tx, p.payoutId!), "تسویه‌ی بی‌مبلغ (فقط بستن حساب مرجوعی‌ها) هزینه نمی‌سازد"),
+  WALLET_ADJUSTED: invoiceHandler((tx, p) => voucherFromWalletTx(tx, p.walletTxId!), "تراکنش پرداخت سفارش است و با دریافت همان سفارش ثبت می‌شود"),
 };
 
 export const internalProvider: AccountingProvider = {

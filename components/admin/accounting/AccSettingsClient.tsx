@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * تنظیمات حسابداری — عمومی (مالیات، قفل دفاتر)، اطلاعات کسب‌وکار، سال مالی.
+ * تنظیمات حسابداری — عمومی (مالیات، قفل دفاتر، ثبت خودکار)، اطلاعات کسب‌وکار، سال مالی.
  * `?tab=seller` مستقیم زبانه‌ی کسب‌وکار را باز می‌کند (از «شروع کار»).
  */
 
@@ -29,6 +29,8 @@ interface Settings {
   stampImage: string | null;
   signatureImage: string | null;
   invoiceFooterNote: string | null;
+  installmentTreasuryId: string | null;
+  payoutTreasuryId: string | null;
 }
 interface Year {
   id: string;
@@ -50,6 +52,7 @@ export default function AccSettingsClient() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [treasuries, setTreasuries] = useState<{ id: string; name: string; kind: string }[]>([]);
 
   const load = useCallback(() => {
     api<{ settings: Settings; years: Year[]; can: { settings: boolean } }>("/api/admin/accounting/settings/general")
@@ -61,6 +64,11 @@ export default function AccSettingsClient() {
       .catch((e) => setError(e.message));
   }, []);
   useEffect(load, [load]);
+  useEffect(() => {
+    api<{ items: { id: string; name: string; kind: string }[] }>("/api/admin/accounting/treasury")
+      .then((d) => setTreasuries(d.items.filter((t) => t.kind === "CASH" || t.kind === "BANK")))
+      .catch(() => {});
+  }, []);
 
   async function save(patch: Partial<Settings> & { lockDate?: string | null }) {
     setBusy(true);
@@ -153,6 +161,42 @@ export default function AccSettingsClient() {
             {!ro && (
               <button onClick={() => save({ lockDate: s.lockDate })} disabled={busy} className={btn.primary}>
                 ذخیره‌ی قفل
+              </button>
+            )}
+          </Card>
+          <Card className="p-4 space-y-4 md:col-span-2">
+            <SectionTitle title="ثبت خودکار از بخش‌های دیگر" help="accountingAutoPosting" />
+            <p className="text-xs text-gray-500 leading-6">
+              این پول‌ها بیرون از حسابداری ثبت می‌شوند و حسابداری باید بداند روی کدام صندوق یا بانک بنشانَدشان. تا انتخاب نکنید، در «رویدادها» منتظر می‌مانند و بعد از انتخاب خودشان ثبت می‌شوند.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="واریز اقساط اعتباری (کارتابل)" hint="«پرداخت شد» یک قسط ← دریافت از مشتری روی این حساب">
+                <select value={s.installmentTreasuryId ?? ""} onChange={(e) => set("installmentTreasuryId", e.target.value || null)} className={inputCls} disabled={ro}>
+                  <option value="">— انتخاب نشده —</option>
+                  {treasuries.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="تسویه‌ی پورسانت کارکنان" hint="ثبت پرداخت پورسانت ← هزینه‌ی پورسانت از این حساب">
+                <select value={s.payoutTreasuryId ?? ""} onChange={(e) => set("payoutTreasuryId", e.target.value || null)} className={inputCls} disabled={ro}>
+                  <option value="">— انتخاب نشده —</option>
+                  {treasuries.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <p className="text-[11px] text-gray-400 leading-5">
+              پرداخت آنلاین سایت با نام درگاه روی هر حساب در «صندوق و بانک» تعیین می‌شود؛ پرداخت از کیف پول و شارژ دستی کیف پول به صندوق نیاز ندارند.
+            </p>
+            {!ro && (
+              <button onClick={() => save({ installmentTreasuryId: s.installmentTreasuryId, payoutTreasuryId: s.payoutTreasuryId })} disabled={busy} className={btn.primary}>
+                ذخیره
               </button>
             )}
           </Card>
