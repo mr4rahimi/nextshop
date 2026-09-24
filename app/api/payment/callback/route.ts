@@ -98,7 +98,7 @@ async function handleCallback(req: Request, p: CallbackParams) {
       syncDealSafe(orderId);
 
       // کسر موجودی سایت و نگاشت — دقیقاً یک بار (گارد PENDING_PAYMENT بالا)
-      await deductStockForOrderItems(order.items).catch((e: unknown) =>
+      await deductStockForOrderItems(order.items, order.id).catch((e: unknown) =>
         console.error("[order-stock] کسر موجودی بعد از پرداخت ناموفق:", e)
       );
 

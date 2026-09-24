@@ -20,6 +20,10 @@ export interface ProductOption {
   qty: number;
   byWarehouse: Record<string, number>;
   avgCost?: string;
+  /** فقط با `priceFor` — قیمت پیش‌فرض فرم فاکتور */
+  price?: string;
+  vatRateBp?: number | null;
+  taxCode?: string | null;
 }
 
 export default function ProductPicker({
@@ -27,12 +31,17 @@ export default function ProductPicker({
   warehouseId,
   placeholder = "نام کالا، کد کالا یا اسکن بارکد",
   autoFocus,
+  priceFor,
+  partyId,
 }: {
   onPick: (p: ProductOption) => void;
   /** موجودی همین انبار کنار هر نتیجه نشان داده می‌شود */
   warehouseId?: string;
   placeholder?: string;
   autoFocus?: boolean;
+  /** قیمت پیش‌فرض فاکتور: فروش از سایت، خرید از آخرین خرید همین طرف حساب */
+  priceFor?: "sales" | "purchase";
+  partyId?: string | null;
 }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
@@ -45,7 +54,10 @@ export default function ProductPicker({
   async function search(term: string) {
     setLoading(true);
     try {
-      const d = await api<{ items: ProductOption[]; exactId: string | null }>(`/api/admin/accounting/inventory/products?q=${encodeURIComponent(term)}`);
+      const p = new URLSearchParams({ q: term });
+      if (priceFor) p.set("for", priceFor);
+      if (partyId) p.set("partyId", partyId);
+      const d = await api<{ items: ProductOption[]; exactId: string | null }>(`/api/admin/accounting/inventory/products?${p}`);
       setItems(d.items);
       setExactId(d.exactId);
       return d;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { decrementMappingStockForOrder, restoreMappingStockForCancel } from "@/lib/integration/core/inventory";
+import { emitAccEventSafe } from "@/lib/accounting/events";
 import { writeLog } from "@/lib/integration/core/log";
 import { decryptCredentials } from "@/lib/integration/core/crypto";
 import { enrollMarketplaceCustomer } from "@/lib/club/marketplace";
@@ -173,14 +174,27 @@ export async function POST(req: NextRequest) {
           await restoreMappingStockForCancel(PLATFORM, externalId, qty).catch(() => {});
         }
         // ردیف سفارش مرتبط را کنسل‌شده علامت بزن (اگر هنوز فاکتور نخورده)
-        await prisma.integOrder.updateMany({
+        const toCancel = await prisma.integOrder.findMany({
           where: {
             platformCode: PLATFORM,
             platformOrderId: { in: bothKeys },
             status: { in: ["PENDING", "NEEDS_MAPPING"] },
           },
+          select: { id: true },
+        }).catch(() => [] as { id: string }[]);
+        await prisma.integOrder.updateMany({
+          where: { id: { in: toCancel.map((r) => r.id) } },
           data:  { status: "CANCELLED" },
         }).catch(() => {});
+        // حسابداری داخلی — ابطال فاکتور فروش همان قلم
+        for (const r of toCancel) {
+          await emitAccEventSafe({
+            type: "SALE_VOIDED",
+            aggregate: { type: "IntegOrder", id: r.id },
+            dedupeKey: `integ:${r.id}:void`,
+            payload: { integOrderId: r.id },
+          });
+        }
         cancelled++;
       } else {
         // ── خرید: dedup، کسر موجودی، ساخت IntegOrder (فاکتور خودکار توسط worker) ──
@@ -201,7 +215,7 @@ export async function POST(req: NextRequest) {
           await decrementMappingStockForOrder(PLATFORM, externalId, qty).catch(() => {});
         }
 
-        await prisma.integOrder.create({
+        const row = await prisma.integOrder.create({
           data: {
             mappingId:           link?.mappingId ?? null,
             platformCode:        PLATFORM,
@@ -220,6 +234,13 @@ export async function POST(req: NextRequest) {
                 ? `محصول «${sku}» در تپسی‌شاپ به هیچ نگاشتی وصل نیست`
                 : "تپسی‌شاپ برای این قلم شناسه‌ی محصول نفرستاد — دستی رسیدگی کنید",
           },
+        });
+        // فاکتور فروش حسابداری داخلی — طرف حساب خود بازارگاه
+        await emitAccEventSafe({
+          type: "SALE_ISSUED",
+          aggregate: { type: "IntegOrder", id: row.id },
+          dedupeKey: `integ:${row.id}:sale`,
+          payload: { integOrderId: row.id },
         });
         purchased++;
       }

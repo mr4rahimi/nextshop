@@ -244,7 +244,7 @@ export async function POST(req: Request) {
   // کسر موجودی فقط وقتی سفارش همین لحظه پرداخت‌شده ساخته شده (پرداخت کامل با کیف پول)
   // سایر سفارش‌ها بعد از پرداخت موفق (callback درگاه یا تأیید ادمین) کسر می‌شوند
   if (order.status === "PAID") {
-    await deductStockForOrderItems(orderItems).catch((e: unknown) =>
+    await deductStockForOrderItems(orderItems, order.id).catch((e: unknown) =>
       console.error("[order-stock] کسر موجودی سفارش کیف‌پولی ناموفق:", e)
     );
   }

@@ -58,3 +58,29 @@ export async function emitAccEvent(input: AccEventInput, db: Db = prisma): Promi
   });
   return res.count > 0;
 }
+
+let kickTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * «یک تلاش فوری بعد از commit» (بخش ۴.۲) — صف همین حالا یک بار می‌چرخد تا
+ * فاکتور منتظر چرخه‌ی ۳۰ ثانیه‌ای worker نماند. چند صدا زدن پشت سر هم یکی
+ * می‌شود. خطا مسیر فراخواننده را نمی‌شکند؛ worker بعداً همان را برمی‌دارد.
+ */
+export function kickAccDispatch(): void {
+  if (kickTimer) return;
+  kickTimer = setTimeout(() => {
+    kickTimer = null;
+    import("./dispatcher")
+      .then((m) => m.dispatchAccEvents())
+      .catch((e: unknown) => console.error("[acc-dispatch] اجرای فوری ناموفق:", e));
+  }, 300);
+}
+
+/** ثبت رویداد بیرون از تراکنش + اجرای فوری صف. خطا فقط لاگ می‌شود. */
+export async function emitAccEventSafe(input: AccEventInput): Promise<void> {
+  try {
+    if (await emitAccEvent(input)) kickAccDispatch();
+  } catch (e) {
+    console.error("[acc-event] ثبت رویداد ناموفق:", input.dedupeKey, e);
+  }
+}

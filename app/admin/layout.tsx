@@ -56,6 +56,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <>{children}</>;
   }
 
+  // صفحه‌های چاپ (فاکتور حسابداری) بی‌قاب‌اند — فقط برگه روی کاغذ می‌آید
+  if (pathname?.startsWith("/admin/accounting/") && pathname.endsWith("/print")) {
+    return <>{children}</>;
+  }
+
   return (
     <ThemeProvider>
       <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-[#080b12]" dir="rtl">

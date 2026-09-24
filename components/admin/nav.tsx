@@ -197,6 +197,8 @@ export const MENU_GROUPS: NavGroup[] = [
         href: "/admin/accounting", label: "حسابداری", icon: "wallet",
         children: [
           { href: "/admin/accounting",        label: "خانه‌ی حسابداری" },
+          { href: "/admin/accounting/sales",     label: "فروش" },
+          { href: "/admin/accounting/purchases", label: "خرید" },
           { href: "/admin/accounting/events", label: "رویدادهای مالی" },
         ],
       },
@@ -329,5 +331,6 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   accounting: "حسابداری", parties: "اشخاص", treasury: "صندوق و بانک",
   vouchers: "اسناد", accounts: "سرفصل حساب‌ها", opening: "اول دوره",
   events: "رویدادهای مالی", setup: "راه‌اندازی", new: "تازه",
+  sales: "فروش", purchases: "خرید", invoices: "فاکتورها", edit: "ویرایش", print: "چاپ",
   inventory: "کالا و انبار", warehouses: "انبارها", transfers: "حواله‌ها", counts: "انبارگردانی",
 };

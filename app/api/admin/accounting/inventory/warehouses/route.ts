@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const guard = await requirePermission(["ACC_VIEW", "ACC_INVENTORY"]);
+  const guard = await requirePermission(["ACC_VIEW", "ACC_INVENTORY", "ACC_SALES", "ACC_PURCHASE"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   await prisma.$transaction((tx) => ensureDefaultWarehouse(tx));
   const [items, sums] = await Promise.all([

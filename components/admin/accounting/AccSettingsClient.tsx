@@ -16,6 +16,7 @@ import { api, Badge, btn, Card, Chips, ErrorText, Field, inputCls, PageHeader, S
 interface Settings {
   vatRateBp: number;
   pricesIncludeVat: boolean;
+  vatEnabled: boolean;
   lockDate: string | null;
   currentYearId: string | null;
   sellerName: string | null;
@@ -113,7 +114,14 @@ export default function AccSettingsClient() {
       {tab === "general" && (
         <div className="grid gap-4 md:grid-cols-2">
           <Card className="p-4 space-y-4">
-            <SectionTitle title="مالیات بر ارزش افزوده" />
+            <SectionTitle title="مالیات بر ارزش افزوده" help="accountingVat" />
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" className="mt-1" checked={s.vatEnabled} onChange={(e) => set("vatEnabled", e.target.checked)} disabled={ro} />
+              <span>
+                کسب‌وکار مشمول ارزش افزوده است
+                <span className="block text-[11px] text-gray-400 leading-5">خاموش: فاکتورها بی‌مالیات صادر می‌شوند. روشن: مالیات روی ردیف‌ها می‌آید و از فروش سایت جدا می‌شود.</span>
+              </span>
+            </label>
             <Field label="نرخ پیش‌فرض (درصد)" hint="روی هر ردیف فاکتور قابل تغییر است">
               <input
                 value={s.vatRateBp / 100}
@@ -126,10 +134,10 @@ export default function AccSettingsClient() {
             </Field>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={s.pricesIncludeVat} onChange={(e) => set("pricesIncludeVat", e.target.checked)} disabled={ro} />
-              قیمت‌های فروش شامل مالیات‌اند
+              قیمت‌هایی که در فاکتور دستی وارد می‌شود شامل مالیات است
             </label>
             {!ro && (
-              <button onClick={() => save({ vatRateBp: s.vatRateBp, pricesIncludeVat: s.pricesIncludeVat })} disabled={busy} className={btn.primary}>
+              <button onClick={() => save({ vatEnabled: s.vatEnabled, vatRateBp: s.vatRateBp, pricesIncludeVat: s.pricesIncludeVat })} disabled={busy} className={btn.primary}>
                 ذخیره
               </button>
             )}

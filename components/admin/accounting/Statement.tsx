@@ -22,6 +22,7 @@ export interface StatementData {
     voucherId: string;
     voucherNumber: number;
     source: string;
+    sourceId?: string | null;
     description: string;
     accountName: string;
     debit: string;
@@ -53,6 +54,13 @@ export const SOURCE_LABELS: Record<string, string> = {
   CLOSING: "اختتامیه",
   IMPORT: "انتقال از نرم‌افزار قبلی",
 };
+
+const INVOICE_SOURCES = ["SALES_INVOICE", "PURCHASE_INVOICE", "SALES_RETURN", "PURCHASE_RETURN"];
+
+/** ردیف گردش ← فاکتورش (زبان کسب‌وکار)؛ بقیه ← سند */
+export function rowHref(r: { source: string; sourceId?: string | null; voucherId: string }): string {
+  return INVOICE_SOURCES.includes(r.source) && r.sourceId ? `/admin/accounting/invoices/${r.sourceId}` : `/admin/accounting/vouchers/${r.voucherId}`;
+}
 
 export function rangeFor(preset: Range["preset"]): Range {
   const today = new Date();
@@ -125,7 +133,7 @@ export default function StatementView({ data, kind }: { data: StatementData; kin
       {/* موبایل */}
       <div className="md:hidden divide-y divide-gray-100 dark:divide-white/5">
         {data.rows.map((r) => (
-          <Link key={r.id} href={`/admin/accounting/vouchers/${r.voucherId}`} className="block px-4 py-3">
+          <Link key={r.id} href={rowHref(r)} className="block px-4 py-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{r.description}</p>
@@ -166,7 +174,7 @@ export default function StatementView({ data, kind }: { data: StatementData; kin
                 <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
                   <td className="px-4 py-2.5 whitespace-nowrap text-gray-600 dark:text-gray-300">{formatJalali(new Date(r.date))}</td>
                   <td className="px-2 py-2.5">
-                    <Link href={`/admin/accounting/vouchers/${r.voucherId}`} className="text-blue-600 font-bold tabular-nums">
+                    <Link href={rowHref(r)} className="text-blue-600 font-bold tabular-nums">
                       {faNum(r.voucherNumber)}
                     </Link>
                   </td>

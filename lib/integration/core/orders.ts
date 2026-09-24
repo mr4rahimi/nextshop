@@ -3,6 +3,7 @@ import type { BaseAdapter } from "@/lib/integration/adapters/base.adapter";
 import { decrementMappingStockForOrder, restoreMappingStockForCancel } from "./inventory";
 import { writeLog } from "./log";
 import { enrollMarketplaceCustomer } from "@/lib/club/marketplace";
+import { emitAccEventSafe } from "@/lib/accounting/events";
 
 export async function fetchAndProcessOrders(
   jobId: string,
@@ -68,7 +69,7 @@ export async function fetchAndProcessOrders(
       // هر چرخه دوباره تلاش شود، صریحاً NEEDS_MAPPING می‌شود تا در ادمین دیده شود.
       const needsMapping = !link;
 
-      await prisma.integOrder.create({
+      const row = await prisma.integOrder.create({
         data: {
           mappingId:           link?.mappingId ?? null,
           platformCode,
@@ -87,6 +88,14 @@ export async function fetchAndProcessOrders(
               ? `محصول «${item.platformProductId}» در این پلتفرم به هیچ نگاشتی وصل نیست`
               : "پلتفرم برای این قلم شناسه‌ی محصول نفرستاد — نگاشت خودکار ممکن نیست، دستی رسیدگی کنید",
         },
+      });
+
+      // فاکتور فروش حسابداری داخلی — طرف حساب خود بازارگاه (docs/plans/accounting.md تصمیم ۹)
+      await emitAccEventSafe({
+        type: "SALE_ISSUED",
+        aggregate: { type: "IntegOrder", id: row.id },
+        dedupeKey: `integ:${row.id}:sale`,
+        payload: { integOrderId: row.id },
       });
 
        void enrollMarketplaceCustomer({
@@ -140,6 +149,12 @@ export async function fetchAndProcessOrders(
         }
       }
       await prisma.integOrder.update({ where: { id: row.id }, data: { status: "CANCELLED" } }).catch(() => {});
+      await emitAccEventSafe({
+        type: "SALE_VOIDED",
+        aggregate: { type: "IntegOrder", id: row.id },
+        dedupeKey: `integ:${row.id}:void`,
+        payload: { integOrderId: row.id },
+      });
       cancelled++;
     }
   }

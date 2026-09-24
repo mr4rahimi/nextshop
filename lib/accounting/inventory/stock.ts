@@ -85,73 +85,115 @@ async function lockProducts(tx: Tx, productIds: string[]) {
 /**
  * بازسازی کاردکس یک کالا از `fromDate` به بعد. برمی‌گرداند منابعی که بهای
  * خروجشان عوض شد.
+ *
+ * **کسری و جبرانش:** خروجی که از موجودی بیشتر است، بخشِ بی‌پشتوانه‌اش را با
+ * آخرین بها «برآورد» می‌کند و در صف کسری می‌گذارد. اولین ورود بعدی (خرید،
+ * برگشت از فروش) آن واحدها را با بهای واقعی خودش **جبران** می‌کند: بهای همان
+ * خروج قبلی اصلاح و سندش بازسازی می‌شود. بدون این، کالایی که بعد از فروش
+ * خریده می‌شود (سفارشی/دراپ‌شیپ) بهای تمام‌شده‌ی صفر می‌گرفت و ارزشش با
+ * موجودی صفر در دفتر می‌ماند.
  */
 export async function recalcProduct(tx: Tx, productId: string, fromDate: Date | null): Promise<AffectedSource[]> {
-  let qty = 0;
-  let value = 0n;
-  let lastCost = 0n;
-
-  if (fromDate) {
-    const prev = await tx.accStockMove.findFirst({
-      where: { productId, date: { lt: fromDate } },
+  const prevOf = (d: Date) =>
+    tx.accStockMove.findFirst({
+      where: { productId, date: { lt: d } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
     });
-    if (prev) {
-      qty = prev.balanceQty;
-      value = prev.balanceValue;
-      const lastIn = await tx.accStockMove.findFirst({
-        where: { productId, date: { lt: fromDate }, type: { in: [...INBOUND_GIVEN, ...INBOUND_AVG] }, unitCost: { gt: 0 } },
-        orderBy: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-        select: { unitCost: true },
-      });
-      lastCost = lastIn?.unitCost ?? 0n;
+
+  // اگر پیش از شروع موجودی منفی است، کسری‌های باز آنجا هستند — از عقب‌تر
+  // شروع می‌شود تا دیده شوند. کسریِ پیش از تاریخ قفل دیگر جبران نمی‌شود.
+  let start = fromDate;
+  let prev = start ? await prevOf(start) : null;
+  if (prev && prev.balanceQty < 0) {
+    const lock = (await tx.accSettings.findUnique({ where: { id: "singleton" }, select: { lockDate: true } }))?.lockDate;
+    while (prev && prev.balanceQty < 0 && !(lock && prev.date <= lock)) {
+      start = prev.date;
+      prev = await prevOf(start);
     }
   }
 
+  let qty = 0;
+  let value = 0n;
+  let lastCost = 0n;
+  if (start && prev) {
+    qty = prev.balanceQty;
+    value = prev.balanceValue;
+    const lastIn = await tx.accStockMove.findFirst({
+      where: { productId, date: { lt: start }, type: { in: [...INBOUND_GIVEN, ...INBOUND_AVG] }, unitCost: { gt: 0 } },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+      select: { unitCost: true },
+    });
+    lastCost = lastIn?.unitCost ?? 0n;
+  }
+
   const moves = await tx.accStockMove.findMany({
-    where: { productId, ...(fromDate ? { date: { gte: fromDate } } : {}) },
+    where: { productId, ...(start ? { date: { gte: start } } : {}) },
     orderBy: [{ date: "asc" }, { createdAt: "asc" }, { id: "asc" }],
   });
 
-  const affected = new Map<string, AffectedSource>();
-  for (const m of moves) {
+  const rows = moves.map((m) => ({ m, unitCost: m.unitCost, totalCost: m.totalCost, balanceQty: m.balanceQty, balanceValue: m.balanceValue }));
+  /** واحدهایی که بی‌موجودی خارج شدند و هنوز جبران نشده‌اند — به ترتیب */
+  const deficits: { row: (typeof rows)[number]; units: number; est: bigint }[] = [];
+
+  const settleDeficits = (units: number, unitCost: bigint) => {
+    while (units > 0 && deficits.length) {
+      const d = deficits[0];
+      const k = Math.min(units, d.units);
+      const delta = (unitCost - d.est) * BigInt(k);
+      d.row.totalCost += delta;
+      value -= delta;
+      d.units -= k;
+      units -= k;
+      if (!d.units) deficits.shift();
+    }
+  };
+
+  for (const r of rows) {
+    const m = r.m;
     const avg = qty > 0 ? value / BigInt(qty) : lastCost;
-    let unitCost = m.unitCost;
-    let totalCost = m.totalCost;
 
     if (INBOUND_GIVEN.includes(m.type)) {
-      totalCost = m.unitCost * BigInt(m.qty);
+      settleDeficits(m.qty, m.unitCost);
+      r.totalCost = m.unitCost * BigInt(m.qty);
       qty += m.qty;
-      value += totalCost;
+      value += r.totalCost;
       if (m.unitCost > 0n) lastCost = m.unitCost;
     } else if (INBOUND_AVG.includes(m.type)) {
-      unitCost = avg;
-      totalCost = avg * BigInt(m.qty);
+      r.unitCost = avg;
+      r.totalCost = avg * BigInt(m.qty);
+      settleDeficits(m.qty, avg);
       qty += m.qty;
-      value += totalCost;
+      value += r.totalCost;
     } else if (OUTBOUND.includes(m.type)) {
       const out = -m.qty;
-      // به نسبت از ارزش کل؛ اگر موجودی کافی نیست، بقیه با آخرین بها (موجودی منفی — هشدار، نه منع)
-      if (qty <= 0) totalCost = lastCost * BigInt(out);
-      else if (out >= qty) totalCost = value + (out > qty ? lastCost * BigInt(out - qty) : 0n);
-      else totalCost = (value * BigInt(out) + BigInt(qty) / 2n) / BigInt(qty);
-      unitCost = out ? totalCost / BigInt(out) : 0n;
+      // بخش پوشش‌داده به نسبت از ارزش کل؛ باقی با آخرین بها (موجودی منفی — هشدار، نه منع)
+      const covered = Math.max(0, Math.min(out, qty));
+      const short = out - covered;
+      const coveredCost = covered === 0 ? 0n : covered === qty ? value : (value * BigInt(covered) + BigInt(qty) / 2n) / BigInt(qty);
+      r.totalCost = coveredCost + lastCost * BigInt(short);
+      if (short > 0) deficits.push({ row: r, units: short, est: lastCost });
       qty -= out;
-      value -= totalCost;
+      value -= r.totalCost;
     } else if (TRANSFER.includes(m.type)) {
-      unitCost = avg;
-      totalCost = avg * BigInt(Math.abs(m.qty));
+      r.unitCost = avg;
+      r.totalCost = avg * BigInt(Math.abs(m.qty));
     }
+    r.balanceQty = qty;
+    r.balanceValue = value;
+  }
 
-    if (unitCost !== m.unitCost || totalCost !== m.totalCost || qty !== m.balanceQty || value !== m.balanceValue) {
-      if (OUTBOUND.includes(m.type) && totalCost !== m.totalCost) {
-        affected.set(`${m.sourceType}|${m.sourceId}`, { sourceType: m.sourceType, sourceId: m.sourceId });
-      }
-      await tx.accStockMove.update({
-        where: { id: m.id },
-        data: { unitCost, totalCost, balanceQty: qty, balanceValue: value },
-      });
+  const affected = new Map<string, AffectedSource>();
+  for (const r of rows) {
+    const m = r.m;
+    if (OUTBOUND.includes(m.type)) r.unitCost = m.qty ? r.totalCost / BigInt(-m.qty) : 0n;
+    if (r.unitCost === m.unitCost && r.totalCost === m.totalCost && r.balanceQty === m.balanceQty && r.balanceValue === m.balanceValue) continue;
+    if (OUTBOUND.includes(m.type) && r.totalCost !== m.totalCost) {
+      affected.set(`${m.sourceType}|${m.sourceId}`, { sourceType: m.sourceType, sourceId: m.sourceId });
     }
+    await tx.accStockMove.update({
+      where: { id: m.id },
+      data: { unitCost: r.unitCost, totalCost: r.totalCost, balanceQty: r.balanceQty, balanceValue: r.balanceValue },
+    });
   }
 
   await tx.accProductCost.upsert({
@@ -180,9 +222,9 @@ async function syncStockRows(tx: Tx, productId: string) {
 /**
  * `Product.stock` در حالت داخلی.
  *
- * ⚠️ **تفاضلی**، نه مطلق (تله‌ی ۳ و ۱۵): تا فاز ۴، فروش سایت هنوز مستقیم از
- *    `Product.stock` کم می‌کند و از کاردکس نمی‌گذرد. نوشتن مطلق جمع کاردکس،
- *    آن کسرها را پاک می‌کرد. استثنا: موجودی اول دوره که `absolute` می‌فرستد.
+ * ⚠️ **تفاضلی**، نه مطلق (تله‌ی ۳ و ۱۵): فروش سایت خودش مستقیم از
+ *    `Product.stock` کم می‌کند و فاکتورش با `shopStock: false` می‌آید. نوشتن
+ *    مطلق جمع کاردکس، کسرهای بیرون از کاردکس را پاک می‌کرد. استثنا: موجودی اول دوره که `absolute` می‌فرستد.
  */
 async function syncShopStock(tx: Tx, deltas: Map<string, number>, absolute: Set<string>) {
   const mode = await tx.accSettings.findUnique({ where: { id: "singleton" }, select: { mode: true } });
@@ -229,12 +271,17 @@ async function finish(
  * ثبت حرکت‌ها. همه‌ی تاریخ‌ها باید باز باشند. `sellableDelta` خودکار از انبار
  * قابل فروش حساب می‌شود.
  */
-export async function applyMoves(
-  tx: Tx,
-  moves: MoveInput[],
-  actor: Actor,
-  opts: { absoluteShopStock?: boolean } = {},
-): Promise<void> {
+export interface ShopStockOpts {
+  /** اول دوره: `Product.stock` مطلق با جمع کاردکس یکی می‌شود */
+  absoluteShopStock?: boolean;
+  /**
+   * `false` = موجودی سایت دست نمی‌خورد. فقط برای حرکتی که فروشگاه خودش
+   * موجودی‌اش را جابه‌جا کرده (کسر سفارش، سفارش بازارگاه) — تله‌ی ۱۵.
+   */
+  shopStock?: boolean;
+}
+
+export async function applyMoves(tx: Tx, moves: MoveInput[], actor: Actor, opts: ShopStockOpts = {}): Promise<void> {
   if (!moves.length) return;
   for (const d of new Set(moves.map((m) => m.date.getTime()))) await assertPostable(tx, new Date(d));
   await lockProducts(tx, moves.map((m) => m.productId));
@@ -267,14 +314,14 @@ export async function applyMoves(
     });
     const prev = touched.get(m.productId);
     if (!prev || m.date < prev) touched.set(m.productId, m.date);
-    if (wh.sellable) deltas.set(m.productId, (deltas.get(m.productId) ?? 0) + qty);
+    if (wh.sellable && opts.shopStock !== false) deltas.set(m.productId, (deltas.get(m.productId) ?? 0) + qty);
   }
   const absolute = opts.absoluteShopStock ? new Set(moves.map((m) => m.productId)) : new Set<string>();
   await finish(tx, touched, deltas, absolute, actor, { sourceType: moves[0].sourceType, sourceId: moves[0].sourceId });
 }
 
 /** حذف همه‌ی حرکت‌های یک منبع (ابطال حواله، انبارگردانی، بازسازی اول دوره) */
-export async function removeMoves(tx: Tx, sourceType: string, sourceId: string, actor: Actor, opts: { absoluteShopStock?: boolean } = {}) {
+export async function removeMoves(tx: Tx, sourceType: string, sourceId: string, actor: Actor, opts: ShopStockOpts = {}) {
   const moves = await tx.accStockMove.findMany({ where: { sourceType, sourceId } });
   if (!moves.length) return;
   for (const d of new Set(moves.map((m) => m.date.getTime()))) await assertPostable(tx, new Date(d));
@@ -286,7 +333,7 @@ export async function removeMoves(tx: Tx, sourceType: string, sourceId: string, 
   for (const m of moves) {
     const prev = touched.get(m.productId);
     if (!prev || m.date < prev) touched.set(m.productId, m.date);
-    if (sellable.has(m.warehouseId)) deltas.set(m.productId, (deltas.get(m.productId) ?? 0) - m.qty);
+    if (sellable.has(m.warehouseId) && opts.shopStock !== false) deltas.set(m.productId, (deltas.get(m.productId) ?? 0) - m.qty);
   }
   await tx.accStockMove.deleteMany({ where: { sourceType, sourceId } });
   const absolute = opts.absoluteShopStock ? new Set(touched.keys()) : new Set<string>();

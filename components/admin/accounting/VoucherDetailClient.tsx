@@ -8,7 +8,7 @@ import { formatJalali } from "@/lib/club/jalali";
 import { dayValue, todayKey } from "@/lib/accounting/dates";
 import { faNum, formatAmount } from "@/lib/accounting/money";
 import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
-import { SOURCE_LABELS } from "./Statement";
+import { rowHref, SOURCE_LABELS } from "./Statement";
 import { api, Badge, btn, Card, ErrorText, Field, inputCls, Money, PageHeader, Sheet } from "./ui";
 
 interface Line {
@@ -29,6 +29,7 @@ interface Data {
     description: string;
     status: "POSTED" | "VOID";
     source: string;
+    sourceId: string | null;
     totalDebit: string;
     voidReason: string | null;
     createdByName: string;
@@ -107,6 +108,11 @@ export default function VoucherDetailClient({ id }: { id: string }) {
       <Card className="p-4 space-y-2">
         <div className="flex flex-wrap gap-1.5">
           <Badge tone={manual ? "amber" : "blue"}>{SOURCE_LABELS[v.source] ?? v.source}</Badge>
+          {rowHref({ source: v.source, sourceId: v.sourceId, voucherId: v.id }).includes("/invoices/") && (
+            <Link href={rowHref({ source: v.source, sourceId: v.sourceId, voucherId: v.id })} className="text-[10px] font-bold text-blue-600">
+              دیدن فاکتور ←
+            </Link>
+          )}
           <Badge>سال مالی {faNum(v.year.title)}</Badge>
           {v.status === "VOID" && <Badge tone="red">باطل شده</Badge>}
         </div>

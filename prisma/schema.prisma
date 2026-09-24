@@ -366,16 +366,16 @@ model OrderCreditInstallment {
 }
 
 model OrderItem {
-  id            String  @id @default(cuid())
+  id            String         @id @default(cuid())
   orderId       String
   productId     String
-  qty           Int     @default(1)
-  unitPrice     BigInt  @default(0)
+  qty           Int            @default(1)
+  unitPrice     BigInt         @default(0)
   unitSalePrice BigInt?
   titleSnapshot String
   skuSnapshot   String?
-  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product       Product @relation(fields: [productId], references: [id])
+  order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product       Product        @relation(fields: [productId], references: [id])
   cost          OrderItemCost?
 
   @@index([orderId])
@@ -3689,6 +3689,8 @@ model AccSettings {
   /// نرخ پیش‌فرض ارزش افزوده به صدم درصد — ۱۰٪ = 1000
   vatRateBp          Int       @default(1000)
   pricesIncludeVat   Boolean   @default(false)
+  /// کسب‌وکار مشمول ارزش افزوده است؟ خاموش = فاکتورها بی‌مالیات (فاز ۴)
+  vatEnabled         Boolean   @default(false)
   /// اطلاعات فروشنده — فاکتور رسمی و مودیان
   sellerName         String?
   sellerNationalId   String?
@@ -3820,7 +3822,8 @@ model AccParty {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  lines AccVoucherLine[]
+  lines    AccVoucherLine[]
+  invoices AccInvoice[]
 
   @@index([mobile])
   @@index([name])
@@ -4033,26 +4036,26 @@ enum AccMoveType {
 ///    `recalcProduct` می‌نویسد — ثبت با تاریخ گذشته ردیف‌های بعدی را بازسازی
 ///    می‌کند (تله‌ی ۲).
 model AccStockMove {
-  id           String      @id @default(cuid())
-  productId    String
-  warehouseId  String
-  date         DateTime    @db.Date
-  type         AccMoveType
+  id            String      @id @default(cuid())
+  productId     String
+  warehouseId   String
+  date          DateTime    @db.Date
+  type          AccMoveType
   /// علامت‌دار: ورود مثبت، خروج منفی
-  qty          Int
+  qty           Int
   /// ورودی: بهای خرید واحد (داده‌ی کاربر)؛ خروجی: میانگین لحظه (محاسبه)
-  unitCost     BigInt      @default(0)
+  unitCost      BigInt      @default(0)
   /// |qty| × بها — همیشه نامنفی
-  totalCost    BigInt      @default(0)
+  totalCost     BigInt      @default(0)
   /// موجودی و ارزش سراسری کالا بعد از این ردیف
-  balanceQty   Int         @default(0)
-  balanceValue BigInt      @default(0)
-  sourceType   String
-  sourceId     String
-  sourceLineId String?
-  note         String?
+  balanceQty    Int         @default(0)
+  balanceValue  BigInt      @default(0)
+  sourceType    String
+  sourceId      String
+  sourceLineId  String?
+  note          String?
   createdByName String
-  createdAt    DateTime    @default(now())
+  createdAt     DateTime    @default(now())
 
   @@index([productId, date, createdAt])
   @@index([sourceType, sourceId])
@@ -4132,4 +4135,142 @@ model AccStockCountLine {
   count AccStockCount @relation(fields: [countId], references: [id], onDelete: Cascade)
 
   @@unique([countId, productId])
+}
+
+// ── حسابداری — فاکتورها (فاز ۴، docs/plans/accounting.md بخش ۶.۶ و ۱۰) ──
+
+enum AccInvoiceType {
+  SALES
+  PURCHASE
+  SALES_RETURN
+  PURCHASE_RETURN
+  PROFORMA
+}
+
+/// پیش‌نویس نه شماره دارد، نه سند، نه کاردکس. صدور هر سه را می‌سازد.
+enum AccInvoiceStatus {
+  DRAFT
+  ISSUED
+  VOID
+}
+
+/// فقط پیش‌فاکتور — «منقضی» ذخیره نمی‌شود، از `validUntil` خوانده می‌شود
+enum AccProformaState {
+  OPEN
+  CONVERTED
+  CANCELED
+}
+
+/// از کجا آمد — فاکتور خودکار (سایت، تلفنی، بازارگاه، کارتابل) از مسیر منبعش
+/// اصلاح می‌شود، نه از فرم.
+enum AccChannel {
+  SHOP
+  PHONE
+  MARKETPLACE
+  WORKLIST
+  MANUAL
+}
+
+/// فاکتور فروش، خرید، برگشتی‌ها و پیش‌فاکتور.
+///
+/// ⚠️ فقط از `lib/accounting/invoices/service.ts` نوشته می‌شود — سند و کاردکس
+///    هم‌زمان با فاکتور ساخته، بازسازی یا باطل می‌شوند.
+/// ⚠️ مبالغ اسنپ‌شات محاسبه‌ی `invoices/calc.ts` است؛ گزارش‌ها از سند
+///    می‌خوانند، نه از این جدول (بخش ۱۱).
+model AccInvoice {
+  id                String            @id @default(cuid())
+  type              AccInvoiceType
+  yearId            String
+  /// در صدور گرفته می‌شود — پیش‌نویس شماره ندارد
+  number            Int?
+  date              DateTime          @db.Date
+  dueDate           DateTime?         @db.Date
+  status            AccInvoiceStatus  @default(DRAFT)
+  proformaState     AccProformaState?
+  /// اعتبار پیش‌فاکتور
+  validUntil        DateTime?         @db.Date
+  partyId           String
+  channel           AccChannel        @default(MANUAL)
+  platformCode      String?
+  /// سفارش سایت/تلفنی — فروش و برگشت همان سفارش هر دو این را دارند
+  orderId           String?
+  /// کلید یکتای منبع خودکار: `order:<id>:sale`، `integ:<id>:sale`، `task:<id>:purchase`
+  sourceKey         String?           @unique
+  /// برگشتی ← فاکتور مرجع
+  refInvoiceId      String?
+  /// فاکتور ساخته‌شده از پیش‌فاکتور ← پیش‌فاکتور
+  convertedFromId   String?           @unique
+  warehouseId       String?
+  /// قیمت‌های ردیف با مالیات است؟ (فاکتور خودکار فروشگاه همیشه: مشتری همان را پرداخته)
+  pricesIncludeVat  Boolean           @default(false)
+  /// اسنپ‌شات طرف حساب در لحظه‌ی صدور — چاپ رسمی و مودیان
+  partyName         String
+  partyNationalId   String?
+  partyEconomicCode String?
+  partyPostalCode   String?
+  partyAddress      String?
+  partyPhone        String?
+  /// Σ تعداد × فی
+  subtotal          BigInt            @default(0)
+  lineDiscount      BigInt            @default(0)
+  invoiceDiscount   BigInt            @default(0)
+  /// کرایه و اضافات — فروش: درآمد ارسال؛ خرید: روی بهای کالا پخش می‌شود
+  additions         BigInt            @default(0)
+  additionsTitle    String?
+  vatTotal          BigInt            @default(0)
+  total             BigInt            @default(0)
+  /// کش تخصیص دریافت/پرداخت (فاز ۵، تله‌ی ۶)
+  paidTotal         BigInt            @default(0)
+  note              String?
+  voucherId         String?           @unique
+  voidReason        String?
+  /// مودیان — فاز ۹
+  taxId             String?
+  taxStatus         String?
+  createdById       String?
+  createdByName     String
+  issuedAt          DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  party AccParty         @relation(fields: [partyId], references: [id])
+  lines AccInvoiceLine[]
+
+  @@unique([yearId, type, number])
+  @@index([partyId, date])
+  @@index([type, status, date])
+  @@index([orderId])
+  @@index([refInvoiceId])
+}
+
+model AccInvoiceLine {
+  id                   String  @id @default(cuid())
+  invoiceId            String
+  seq                  Int
+  /// خالی = خدمت (بدون کاردکس) — حسابش در `accountId`
+  productId            String?
+  title                String
+  unit                 String?
+  qty                  Int
+  unitPrice            BigInt
+  /// تخفیف همین ردیف (کل ردیف)
+  discount             BigInt  @default(0)
+  /// سهم این ردیف از تخفیف فاکتور — `calc.ts` پخش می‌کند، باقی گرد به ردیف آخر
+  invoiceDiscountShare BigInt  @default(0)
+  vatRateBp            Int     @default(0)
+  vatAmount            BigInt  @default(0)
+  /// ردیف پس از تخفیف‌ها + مالیات (در حالت قیمت با مالیات: همان مبلغ پس از تخفیف)
+  lineTotal            BigInt
+  /// ردیف خدمت: حساب درآمد (فروش) یا هزینه (خرید)
+  accountId            String?
+  /// برگشتی ← ردیف فاکتور مرجع (سقف تعداد قابل برگشت)
+  refLineId            String?
+  orderItemId          String?
+  taxCode              String?
+
+  invoice AccInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([productId])
+  @@index([refLineId])
 }

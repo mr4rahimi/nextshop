@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * بدون leaf: کل درخت با مانده‌ی هر حساب (همه‌ی سال‌ها، بدون باطل).
  */
 export async function GET(req: Request) {
-  const guard = await requirePermission(["ACC_VIEW", "ACC_VOUCHER", "ACC_SETTINGS"]);
+  const guard = await requirePermission(["ACC_VIEW", "ACC_VOUCHER", "ACC_SETTINGS", "ACC_SALES", "ACC_PURCHASE"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   const url = new URL(req.url);
   const leaf = url.searchParams.get("leaf") === "1";

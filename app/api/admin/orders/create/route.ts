@@ -286,6 +286,7 @@ export async function POST(req: Request) {
   if (paid) {
     await deductStockForOrderItems(
       items.map((i) => ({ productId: i.productId, qty: Math.max(1, Math.floor(Number(i.qty))) })),
+      order.id,
     ).catch((e: unknown) =>
       console.error("[order-stock] کسر موجودی سفارش تلفنی ناموفق:", e),
     );

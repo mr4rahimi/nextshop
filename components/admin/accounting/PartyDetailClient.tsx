@@ -6,7 +6,10 @@ import { useCallback, useEffect, useState } from "react";
 import { faNum } from "@/lib/accounting/money";
 import PartyForm, { type PartyRecord } from "./PartyForm";
 import StatementView, { RangeBar, rangeFor, rangeQuery, type Range, type StatementData } from "./Statement";
-import { api, Badge, BalanceLabel, btn, Card, ErrorText, PageHeader, SectionTitle } from "./ui";
+import { api, Badge, BalanceLabel, btn, Card, ErrorText, Money, PageHeader, SectionTitle } from "./ui";
+import Link from "next/link";
+import { formatJalali } from "@/lib/club/jalali";
+import { invoiceTitle, StatusBadge, type InvoiceRow } from "./invoices/InvoicesList";
 
 interface Data {
   party: PartyRecord;
@@ -21,6 +24,16 @@ export default function PartyDetailClient({ id }: { id: string }) {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [edit, setEdit] = useState(false);
+  const [invoices, setInvoices] = useState<InvoiceRow[] | null>(null);
+
+  // فاکتورهای این شخص — هر سمتی که کاربر اجازه‌ی دیدنش را دارد
+  useEffect(() => {
+    Promise.all(
+      (["sales", "purchases"] as const).map((side) =>
+        api<{ items: InvoiceRow[] }>(`/api/admin/accounting/invoices?side=${side}&partyId=${id}&take=30`).then((d) => d.items).catch(() => [] as InvoiceRow[]),
+      ),
+    ).then(([a, b]) => setInvoices([...a, ...b].sort((x, y) => y.date.localeCompare(x.date))));
+  }, [id]);
 
   const load = useCallback(() => {
     api<Data>(`/api/admin/accounting/parties/${id}?${rangeQuery(range)}`)
@@ -89,6 +102,24 @@ export default function PartyDetailClient({ id }: { id: string }) {
         </div>
         <StatementView data={data.statement} kind="party" />
       </section>
+
+      {invoices && invoices.length > 0 && (
+        <section>
+          <SectionTitle title="فاکتورها" help="accountingInvoice" />
+          <Card className="divide-y divide-gray-100 dark:divide-white/5 overflow-hidden">
+            {invoices.map((inv) => (
+              <Link key={inv.id} href={`/admin/accounting/invoices/${inv.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5">
+                <span className={`flex-1 text-sm font-bold ${inv.status === "VOID" ? "line-through text-gray-400" : ""}`}>
+                  {invoiceTitle(inv)}
+                  <span className="text-[11px] font-normal text-gray-400 mr-2">{formatJalali(new Date(inv.date))}</span>
+                </span>
+                <StatusBadge inv={inv} />
+                <Money value={inv.total} className="text-sm" />
+              </Link>
+            ))}
+          </Card>
+        </section>
+      )}
 
       {edit && (
         <PartyForm

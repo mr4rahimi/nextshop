@@ -8,6 +8,7 @@ import { processOrderForClub } from "@/lib/club/rewards";
 import { refundOrderPoints } from "@/lib/club/points";
 import { releaseCoupon } from "@/lib/club/coupons";
 import { syncDealSafe } from "@/lib/worklist/deals";
+import { emitAccEventSafe } from "@/lib/accounting/events";
 
 export const runtime = "nodejs";
 
@@ -100,6 +101,7 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (shouldDeductStock && prevOrder.items.length > 0) {
     await deductStockForOrderItems(
       prevOrder.items.map((item) => ({ productId: item.productId, qty: item.qty })),
+      id,
     ).catch((e: unknown) => console.error("[order-stock] کسر موجودی در تأیید ادمین ناموفق:", e));
   }
 
@@ -127,6 +129,20 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
       void refundOrderPoints(id);
       void releaseCoupon(id);
     }
+  }
+
+  // حسابداری داخلی — لغو پیش از ارسال فاکتور فروش را باطل می‌کند؛ لغو بعد از
+  // ارسال یا «مسترد شد» برگشت از فروش می‌زند (docs/plans/accounting.md بخش ۴.۳).
+  // اگر فاکتوری نبوده (سفارش پرداخت‌نشده یا پیش از حسابداری داخلی)، رویداد رد می‌شود.
+  if (prevOrder && (data.status === "CANCELED" || data.status === "REFUNDED") && data.status !== prevOrder.status) {
+    const shipped = ["SHIPPED", "DELIVERED", "COMPLETED"].includes(prevOrder.status);
+    const kind = data.status === "REFUNDED" || shipped ? "return" : "void";
+    await emitAccEventSafe({
+      type: kind === "return" ? "SALE_RETURNED" : "SALE_VOIDED",
+      aggregate: { type: "Order", id },
+      dedupeKey: `order:${id}:${kind}`,
+      payload: { orderId: id, reason: kind === "return" ? "مرجوعی سفارش" : "لغو سفارش" },
+    });
   }
 
   // ثبت ردیف‌های فاکتور خودکار حسابداری — فقط در اولین گذار به CONFIRMED

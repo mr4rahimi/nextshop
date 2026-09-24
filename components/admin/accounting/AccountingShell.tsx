@@ -4,7 +4,7 @@
  * قاب همه‌ی صفحه‌های حسابداری — docs/plans/accounting.md بخش ۱۳.۳ و ۱۳.۴.
  *
  * دسکتاپ: نوار زبانه‌ی بخش‌ها بالای صفحه.
- * موبایل: نوار پایین «خانه · اشخاص · ➕ · صندوق و بانک · بیشتر»؛ ➕ کارهای
+ * موبایل: نوار پایین «خانه · فروش · ➕ · اشخاص · بیشتر»؛ ➕ کارهای
  * پرتکرار را در یک پنجره‌ی پایین‌کش باز می‌کند.
  *
  * هر بخش تازه‌ی حسابداری اینجا یک ردیف در `SECTIONS` می‌گیرد.
@@ -28,6 +28,8 @@ interface Section {
 
 export const SECTIONS: Section[] = [
   { href: "/admin/accounting", label: "خانه", icon: "🏠", perm: ["ACC_VIEW", "ACC_SETTINGS"], exact: true },
+  { href: "/admin/accounting/sales", label: "فروش", icon: "🧾", perm: ["ACC_VIEW", "ACC_SALES"] },
+  { href: "/admin/accounting/purchases", label: "خرید", icon: "📥", perm: ["ACC_VIEW", "ACC_PURCHASE"] },
   { href: "/admin/accounting/parties", label: "اشخاص", icon: "👥", perm: ["ACC_VIEW", "ACC_PARTY_MANAGE"] },
   { href: "/admin/accounting/treasury", label: "صندوق و بانک", icon: "🏦", perm: ["ACC_VIEW", "ACC_SETTINGS"] },
   { href: "/admin/accounting/inventory", label: "کالا و انبار", icon: "📦", perm: ["ACC_VIEW", "ACC_INVENTORY"] },
@@ -46,6 +48,9 @@ interface QuickAction {
 }
 
 const QUICK: QuickAction[] = [
+  { href: "/admin/accounting/invoices/new?type=SALES", label: "فاکتور فروش", icon: "🛒", perm: ["ACC_SALES"] },
+  { href: "/admin/accounting/invoices/new?type=PURCHASE", label: "فاکتور خرید", icon: "📥", perm: ["ACC_PURCHASE"] },
+  { href: "/admin/accounting/invoices/new?type=PROFORMA", label: "پیش‌فاکتور", icon: "📄", perm: ["ACC_SALES"] },
   { href: "/admin/accounting/parties?new=1", label: "شخص تازه", icon: "👤", perm: ["ACC_PARTY_MANAGE"] },
   { href: "/admin/accounting/treasury?new=1", label: "صندوق یا بانک تازه", icon: "🏦", perm: ["ACC_SETTINGS"] },
   { href: "/admin/accounting/opening", label: "مانده‌های اول دوره", icon: "🧮", perm: ["ACC_SETTINGS"] },
@@ -55,7 +60,6 @@ const QUICK: QuickAction[] = [
   { href: "#", label: "دریافت از مشتری", icon: "📥", perm: [], soon: "فاز ۵" },
   { href: "#", label: "پرداخت", icon: "📤", perm: [], soon: "فاز ۵" },
   { href: "#", label: "ثبت هزینه", icon: "🧾", perm: [], soon: "فاز ۶" },
-  { href: "#", label: "فاکتور فروش", icon: "🛒", perm: [], soon: "فاز ۴" },
 ];
 
 function isActive(pathname: string, s: Section) {
@@ -68,11 +72,13 @@ export default function AccountingShell({ children }: { children: ReactNode }) {
   const [quick, setQuick] = useState(false);
   const [more, setMore] = useState(false);
 
+  // چاپ فاکتور بی‌قاب است (قاب پنل هم در app/admin/layout.tsx کنار می‌رود)
+  if (pathname.endsWith("/print")) return <>{children}</>;
   // صفحه‌ی راه‌اندازی قاب نمی‌خواهد — تمام‌صفحه است
   if (pathname.startsWith("/admin/accounting/setup")) return <div className="p-4 lg:p-6 max-w-3xl mx-auto text-gray-900 dark:text-gray-100">{children}</div>;
 
   const sections = SECTIONS.filter((s) => !ready || can(s.perm));
-  const bottom = ["/admin/accounting", "/admin/accounting/parties", "/admin/accounting/treasury"];
+  const bottom = ["/admin/accounting", "/admin/accounting/sales", "/admin/accounting/parties"];
   const moreItems = sections.filter((s) => !bottom.includes(s.href));
 
   return (
@@ -104,7 +110,12 @@ export default function AccountingShell({ children }: { children: ReactNode }) {
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-white/10 pb-[env(safe-area-inset-bottom)]">
         <div className="grid grid-cols-5 items-end h-16">
           <BottomLink href="/admin/accounting" icon="🏠" label="خانه" active={pathname === "/admin/accounting"} />
-          <BottomLink href="/admin/accounting/parties" icon="👥" label="اشخاص" active={pathname.startsWith("/admin/accounting/parties")} />
+          <BottomLink
+            href="/admin/accounting/sales"
+            icon="🧾"
+            label="فروش"
+            active={pathname.startsWith("/admin/accounting/sales") || pathname.startsWith("/admin/accounting/invoices")}
+          />
           <div className="flex justify-center">
             <button
               onClick={() => setQuick(true)}
@@ -114,7 +125,7 @@ export default function AccountingShell({ children }: { children: ReactNode }) {
               +
             </button>
           </div>
-          <BottomLink href="/admin/accounting/treasury" icon="🏦" label="صندوق و بانک" active={pathname.startsWith("/admin/accounting/treasury")} />
+          <BottomLink href="/admin/accounting/parties" icon="👥" label="اشخاص" active={pathname.startsWith("/admin/accounting/parties")} />
           <button onClick={() => setMore(true)} className="flex flex-col items-center justify-center gap-0.5 h-full text-gray-500">
             <span className="text-lg leading-none">☰</span>
             <span className="text-[10px] font-bold">بیشتر</span>

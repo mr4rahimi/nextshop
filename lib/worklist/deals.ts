@@ -17,6 +17,7 @@ import type { Prisma, StaffDealStatus } from "@prisma/client";
 import { toJalali } from "@/lib/club/jalali";
 import type { StaffAccess } from "@/lib/permissions";
 import { allocate, commissionFor, pickRule, ruleLabel } from "./commission-rules";
+import { emitAccEventSafe } from "@/lib/accounting/events";
 
 /** وضعیت‌هایی که سفارش از آن‌ها «پرداخت‌شده» حساب می‌شود — همان مبنای باشگاه */
 export const EARNING_STATUSES = ["PAID", "CONFIRMED", "PROCESSING", "PACKAGING", "SHIPPED", "DELIVERED", "COMPLETED"];
@@ -769,6 +770,7 @@ export async function costFromPurchaseTask(taskId: string): Promise<"applied" | 
   // معامله‌ی منتظر هنوز باید انجام شود.
   if (missing.length === 0) {
     const r = await applyKnownCosts(task.entityId, { userId: task.ownerId, name: task.ownerName }, { supplierId: task.supplierId });
+    await emitPurchase(taskId);
     return r === "none" ? "none" : "applied";
   }
 
@@ -787,7 +789,21 @@ export async function costFromPurchaseTask(taskId: string): Promise<"applied" | 
     ),
   );
   await applyKnownCosts(task.entityId, { userId: task.ownerId, name: task.ownerName }, { supplierId: task.supplierId });
+  await emitPurchase(taskId);
   return "applied";
+}
+
+/**
+ * فاکتور خرید حسابداری داخلی از همین «خرید شد» (docs/plans/accounting.md بخش ۸).
+ * یک بار برای هر کار؛ قیمتی که بعداً عوض شود، در خود فاکتور خرید اصلاح می‌شود.
+ */
+async function emitPurchase(taskId: string) {
+  await emitAccEventSafe({
+    type: "PURCHASE_RECORDED",
+    aggregate: { type: "StaffTask", id: taskId },
+    dedupeKey: `task:${taskId}:purchase`,
+    payload: { taskId },
+  });
 }
 
 /**
