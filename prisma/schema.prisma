@@ -3678,11 +3678,258 @@ enum AccMode {
 }
 
 model AccSettings {
-  id            String    @id @default("singleton")
-  mode          AccMode   @default(NONE)
-  modeChangedAt DateTime?
-  modeChangedBy String?
-  updatedAt     DateTime  @updatedAt
+  id                 String    @id @default("singleton")
+  mode               AccMode   @default(NONE)
+  modeChangedAt      DateTime?
+  modeChangedBy      String?
+  /// سال مالی پیش‌فرض فرم‌ها و گزارش‌ها
+  currentYearId      String?
+  /// تا این روز (شامل) هیچ سندی ساخته، بازسازی یا ابطال نمی‌شود
+  lockDate           DateTime? @db.Date
+  /// نرخ پیش‌فرض ارزش افزوده به صدم درصد — ۱۰٪ = 1000
+  vatRateBp          Int       @default(1000)
+  pricesIncludeVat   Boolean   @default(false)
+  /// اطلاعات فروشنده — فاکتور رسمی و مودیان
+  sellerName         String?
+  sellerNationalId   String?
+  sellerEconomicCode String?
+  sellerRegNo        String?
+  sellerPostalCode   String?
+  sellerAddress      String?
+  sellerPhone        String?
+  stampImage         String?
+  signatureImage     String?
+  invoiceFooterNote  String?
+  updatedAt          DateTime  @updatedAt
+}
+
+enum AccYearStatus {
+  OPEN
+  CLOSED
+}
+
+/// سال مالی. تاریخ‌ها روز تهران‌اند (UTC نیمه‌شبِ همان روز، مثل `dayKeyOf`).
+model AccFiscalYear {
+  id           String        @id @default(cuid())
+  title        String
+  startDate    DateTime      @unique @db.Date
+  endDate      DateTime      @db.Date
+  status       AccYearStatus @default(OPEN)
+  closedAt     DateTime?
+  closedByName String?
+  createdAt    DateTime      @default(now())
+
+  vouchers AccVoucher[]
+}
+
+/// شماره‌گذاری پیوسته. ⚠️ فقط از `nextNumber` — یک UPSERT اتمیک، نه max+1 (تله‌ی ۵)
+model AccSequence {
+  yearId String
+  key    String
+  next   Int    @default(1)
+
+  @@id([yearId, key])
+}
+
+enum AccLevel {
+  GROUP // گروه
+  LEDGER // کل
+  SUBLEDGER // معین — فقط این سطح در سند می‌نشیند
+}
+
+enum AccNature {
+  DEBIT
+  CREDIT
+  BOTH
+}
+
+enum AccClass {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+/// تفصیلیِ مجاز روی یک معین
+enum AccDetailKind {
+  NONE
+  PARTY
+  TREASURY
+}
+
+/// سرفصل حساب‌ها — گروه، کل، معین.
+///
+/// ⚠️ کد هیچ‌وقت کد حساب را hardcode نمی‌کند؛ حساب‌های سیستمی با `systemKey`
+///    پیدا می‌شوند (`accountByKey`). حساب سیستمی حذف و غیرفعال نمی‌شود.
+model AccAccount {
+  id         String        @id @default(cuid())
+  code       String        @unique
+  name       String
+  level      AccLevel
+  parentId   String?
+  class      AccClass
+  nature     AccNature
+  detailKind AccDetailKind @default(NONE)
+  systemKey  String?       @unique
+  isActive   Boolean       @default(true)
+  /// شناسه در حسابان — فقط برای انتقال (فاز ۸)
+  hesabanId  Int?
+  createdAt  DateTime      @default(now())
+
+  parent   AccAccount?      @relation("AccTree", fields: [parentId], references: [id])
+  children AccAccount[]     @relation("AccTree")
+  lines    AccVoucherLine[]
+
+  @@index([parentId])
+}
+
+enum AccPersonType {
+  REAL
+  LEGAL
+}
+
+/// شخص — طرف حساب (تفصیلی). مانده ذخیره نمی‌شود؛ از ردیف‌های سند جمع زده می‌شود.
+model AccParty {
+  id            String        @id @default(cuid())
+  code          Int           @unique
+  personType    AccPersonType @default(REAL)
+  name          String
+  firstName     String?
+  lastName      String?
+  companyName   String?
+  nationalId    String?
+  economicCode  String?
+  regNo         String?
+  mobile        String?
+  phone         String?
+  postalCode    String?
+  address       String?
+  city          String?
+  isCustomer    Boolean       @default(false)
+  isSupplier    Boolean       @default(false)
+  isEmployee    Boolean       @default(false)
+  isMarketplace Boolean       @default(false)
+  creditLimit   BigInt?
+  userId        String?       @unique
+  supplierId    String?       @unique
+  platformCode  String?       @unique
+  hesabanId     Int?
+  note          String?
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  lines AccVoucherLine[]
+
+  @@index([mobile])
+  @@index([name])
+}
+
+enum AccTreasuryKind {
+  CASH
+  BANK
+  POS
+  GATEWAY
+}
+
+/// صندوق، حساب بانکی، کارتخوان یا درگاه — تفصیلیِ حساب‌های نقد.
+model AccTreasury {
+  id         String          @id @default(cuid())
+  code       Int             @unique
+  kind       AccTreasuryKind
+  name       String
+  bankName   String?
+  accountNo  String?
+  sheba      String?
+  cardNo     String?
+  /// کارتخوان/درگاه به کدام بانک تسویه می‌شود
+  settleToId String?
+  /// درگاه‌های پرداخت سایت (`Payment.provider`) که به این خزانه می‌نشینند
+  providers  String[]        @default([])
+  isActive   Boolean         @default(true)
+  hesabanId  Int?
+  createdAt  DateTime        @default(now())
+
+  lines AccVoucherLine[]
+}
+
+enum AccVoucherStatus {
+  POSTED
+  VOID
+}
+
+enum AccSource {
+  MANUAL
+  SALES_INVOICE
+  PURCHASE_INVOICE
+  SALES_RETURN
+  PURCHASE_RETURN
+  RECEIPT
+  PAYMENT
+  EXPENSE
+  TRANSFER
+  CHEQUE
+  INVENTORY
+  PAYOUT
+  OPENING
+  CLOSING
+  IMPORT
+}
+
+/// سند حسابداری. ⚠️ فقط از `lib/accounting/ledger/post.ts` نوشته می‌شود —
+/// ناورداها (توازن، یک‌طرفه بودن ردیف، تفصیلی، تاریخ باز) همان‌جا چک می‌شوند.
+model AccVoucher {
+  id            String           @id @default(cuid())
+  yearId        String
+  number        Int
+  date          DateTime         @db.Date
+  description   String
+  status        AccVoucherStatus @default(POSTED)
+  source        AccSource
+  sourceId      String?
+  /// سند معکوسی که این سند را خنثی کرد، یا سندی که این معکوسِ آن است
+  reversalOfId  String?          @unique
+  totalDebit    BigInt
+  voidReason    String?
+  createdById   String?
+  createdByName String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  year  AccFiscalYear    @relation(fields: [yearId], references: [id])
+  lines AccVoucherLine[]
+
+  @@unique([yearId, number])
+  @@index([source, sourceId])
+  @@index([date])
+}
+
+model AccVoucherLine {
+  id          String   @id @default(cuid())
+  voucherId   String
+  seq         Int
+  accountId   String
+  partyId     String?
+  treasuryId  String?
+  debit       BigInt   @default(0)
+  credit      BigInt   @default(0)
+  description String?
+  /// denormalize برای گزارش بدون join — همیشه با سند هم‌زمان نوشته می‌شود
+  date        DateTime @db.Date
+  yearId      String
+  isVoid      Boolean  @default(false)
+
+  voucher  AccVoucher   @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  account  AccAccount   @relation(fields: [accountId], references: [id])
+  party    AccParty?    @relation(fields: [partyId], references: [id])
+  treasury AccTreasury? @relation(fields: [treasuryId], references: [id])
+
+  @@index([voucherId])
+  @@index([accountId, date])
+  @@index([partyId, date])
+  @@index([treasuryId, date])
+  @@index([yearId, isVoid])
 }
 
 enum AccEventStatus {

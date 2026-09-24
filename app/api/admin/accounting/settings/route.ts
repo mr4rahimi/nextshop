@@ -5,6 +5,8 @@ import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { ACC_MODE_LABELS, SELECTABLE_MODES, getAccSettings } from "@/lib/accounting/settings";
+import { canLeaveInternal } from "@/lib/accounting/setup";
+import { currentYear } from "@/lib/accounting/ledger/fiscal-year";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,13 +19,14 @@ export async function GET() {
   const guard = await requirePermission(["ACC_VIEW", "ACC_SETTINGS"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
 
-  const [settings, hesaban, counts] = await Promise.all([
+  const [settings, hesaban, counts, year] = await Promise.all([
     getAccSettings(),
     prisma.integConnection.findFirst({
       where: { platformCode: "hesaban" },
       select: { status: true, config: true, lastError: true },
     }),
     prisma.accEvent.groupBy({ by: ["status"], _count: { _all: true } }),
+    currentYear(),
   ]);
 
   const cfg = (hesaban?.config ?? {}) as { autoInvoiceEnabled?: boolean; invoiceMode?: string };
@@ -43,6 +46,8 @@ export async function GET() {
           }
         : null,
       counts: Object.fromEntries(counts.map((c) => [c.status, c._count._all])),
+      year: year ? { id: year.id, title: year.title, startDate: year.startDate, endDate: year.endDate, status: year.status } : null,
+      canLeaveInternal: settings.mode === "INTERNAL" ? await canLeaveInternal() : true,
       can: { settings: can(guard.access, "ACC_SETTINGS") },
     }),
   );
@@ -62,10 +67,11 @@ export async function PATCH(req: Request) {
   const before = await getAccSettings();
   if (before.mode === mode) return NextResponse.json({ ok: true, mode });
 
-  // حالت داخلی فقط از ویزارد سال مالی/انتقال خارج می‌شود، نه از این فرم
-  if (before.mode === "INTERNAL") {
+  // خروج از حالت داخلی فقط تا وقتی هیچ سندی ثبت نشده — بعد از آن فقط در
+  // ابتدای سال مالی و با بستن سال (فاز ۹)
+  if (before.mode === "INTERNAL" && !(await canLeaveInternal())) {
     return NextResponse.json(
-      { error: "خروج از حسابداری داخلی فقط در ابتدای سال مالی ممکن است" },
+      { error: "حسابداری داخلی سند ثبت‌شده دارد؛ خروج فقط در ابتدای سال مالی بعد ممکن است" },
       { status: 409 },
     );
   }

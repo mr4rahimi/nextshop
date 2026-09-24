@@ -325,4 +325,8 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   "attribute-groups": "گروه ویژگی‌ها", "bulk-price": "ویرایش گروهی قیمت",
   "bulk-stock": "ویرایش گروهی موجودی", "bulk-edit": "ویرایش گروهی",
   login: "ورود",
+  // حسابداری — docs/plans/accounting.md
+  accounting: "حسابداری", parties: "اشخاص", treasury: "صندوق و بانک",
+  vouchers: "اسناد", accounts: "سرفصل حساب‌ها", opening: "مانده‌های اول دوره",
+  events: "رویدادهای مالی", setup: "راه‌اندازی", new: "تازه",
 };

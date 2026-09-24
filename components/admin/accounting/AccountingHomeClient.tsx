@@ -8,9 +8,12 @@
  */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { formatJalali } from "@/lib/club/jalali";
 import HelpButton from "@/components/admin/worklist/HelpButton";
+import { PageHeader } from "./ui";
+import InternalDashboard from "./InternalDashboard";
 
 type Mode = "NONE" | "HESABAN" | "INTERNAL";
 
@@ -21,6 +24,7 @@ interface Data {
   selectable: Mode[];
   hesaban: { status: string; autoInvoice: boolean; invoiceMode: "AUTO" | "MANUAL"; lastError: string | null } | null;
   counts: Record<string, number>;
+  canLeaveInternal: boolean;
   can: { settings: boolean };
 }
 
@@ -28,8 +32,7 @@ const MODES: { key: Mode; title: string; body: string; soon?: string }[] = [
   {
     key: "INTERNAL",
     title: "حسابداری داخلی",
-    body: "فاکتور، دریافت و پرداخت، چک، انبار و گزارش‌های مالی همه داخل همین پنل. بدون نیاز به نرم‌افزار دیگر.",
-    soon: "به‌زودی — با راه‌اندازی سال مالی باز می‌شود",
+    body: "اشخاص، صندوق و بانک، اسناد و مانده‌ها داخل همین پنل؛ فاکتور، چک، انبار و گزارش‌ها در نسخه‌های بعد به همین اضافه می‌شوند.",
   },
   {
     key: "HESABAN",
@@ -56,6 +59,7 @@ export default function AccountingHomeClient() {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<Mode | null>(null);
+  const router = useRouter();
 
   const load = useCallback(() => {
     fetch("/api/admin/accounting/settings")
@@ -72,6 +76,10 @@ export default function AccountingHomeClient() {
 
   async function choose(mode: Mode) {
     if (!data || mode === data.mode) return;
+    if (mode === "INTERNAL") {
+      router.push("/admin/accounting/setup");
+      return;
+    }
     const msg =
       mode === "HESABAN"
         ? "حسابان وب به‌عنوان حسابداری کسب‌وکار انتخاب شود؟"
@@ -99,10 +107,17 @@ export default function AccountingHomeClient() {
     );
   }
 
+  if (data.mode === "INTERNAL") return <InternalDashboard canLeave={data.canLeaveInternal && data.can.settings} onLeft={load} />;
+
   const blocked = (data.counts.BLOCKED ?? 0) + (data.counts.FAILED ?? 0);
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title="حسابداری"
+        help="accounting"
+        desc="انتخاب کنید حساب‌وکتاب کسب‌وکار کجا نگه داشته شود."
+      />
       {error && <p className="text-xs font-bold text-red-600">{error}</p>}
 
       <section>
@@ -110,7 +125,7 @@ export default function AccountingHomeClient() {
         <div className="grid gap-3 md:grid-cols-3">
           {MODES.map((m) => {
             const active = data.mode === m.key;
-            const selectable = data.can.settings && data.selectable.includes(m.key) && !active;
+            const selectable = data.can.settings && (data.selectable.includes(m.key) || m.key === "INTERNAL") && !active;
             return (
               <button
                 key={m.key}
@@ -133,8 +148,8 @@ export default function AccountingHomeClient() {
                   {saving === m.key && <span className="text-[10px] text-gray-400">در حال ذخیره…</span>}
                 </div>
                 <p className="text-xs text-gray-500 mt-2 leading-6">{m.body}</p>
-                {m.soon && !active && (
-                  <p className="text-[11px] font-bold text-amber-600 mt-2">{m.soon}</p>
+                {m.key === "INTERNAL" && selectable && (
+                  <p className="text-[11px] font-bold text-blue-600 mt-2">راه‌اندازی ←</p>
                 )}
               </button>
             );

@@ -144,7 +144,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     // docs/plans/accounting.md بخش ۱۴ — هر route مجوز دقیق را خودش چک می‌کند
     key: "accounting",
     label: "حسابداری",
-    permissions: ["ACC_VIEW", "ACC_SETTINGS"],
+    permissions: ["ACC_VIEW", "ACC_PARTY_MANAGE", "ACC_VOUCHER", "ACC_SETTINGS"],
     prefixes: ["/admin/accounting", "/api/admin/accounting"],
   },
   {

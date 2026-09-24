@@ -27,7 +27,7 @@
 |---|---|---|
 | ۰ | زیرساخت: درگاه حسابداری، صف رویداد مالی، تنظیم حالت | ✅ انجام شد (۲.۵۳.۰) |
 | ۱ | ~~بهبود حالت حسابان~~ | ❌ لغو شد (تصمیم ۱۴) |
-| ۲ | هسته‌ی دفتر: سال مالی، سرفصل، سند، اشخاص | ⏳ |
+| ۲ | هسته‌ی دفتر: سال مالی، سرفصل، سند، اشخاص | ✅ انجام شد (۲.۵۴.۰ — محلی) |
 | ۳ | کالا و انبار: چند انبار، کاردکس، میانگین موزون | ⏳ |
 | ۴ | فاکتورها: فروش، خرید، برگشتی، پیش‌فاکتور، چاپ رسمی | ⏳ |
 | ۵ | خزانه: صندوق، بانک، کارتخوان، دریافت و پرداخت، چک | ⏳ |
@@ -42,7 +42,7 @@
 3. کد حسابداری در `lib/accounting/` و صفحه‌ها در `app/admin/accounting/` است (بخش ۱۸).
 4. هر صفحه‌ی تازه: `HelpButton` کنار عنوان + کلید `accounting*` در `components/admin/worklist/help-content.ts` (تصمیم ۱۶).
 5. بعد از هر فاز: نسخه، changelog، این جدول، دیپلوی دمو (روند انتشار).
-6. **فاز بعدی: ۲ — هسته‌ی دفتر.**
+6. **فاز بعدی: ۳ — کالا و انبار.**
 
 ---
 
@@ -1021,6 +1021,7 @@ model AccImportMap {                // idempotency انتقال
 | کلید | برچسب |
 |---|---|
 | `ACC_VIEW` | دیدن داشبورد و فهرست‌های حسابداری |
+| `ACC_PARTY_MANAGE` | افزودن و ویرایش اشخاص ✅ (فاز ۲، به فهرست اضافه شد) |
 | `ACC_SALES` | ثبت و ویرایش فاکتور فروش و پیش‌فاکتور |
 | `ACC_PURCHASE` | ثبت فاکتور خرید |
 | `ACC_TREASURY` | ثبت دریافت، پرداخت و انتقال |
@@ -1162,6 +1163,11 @@ scripts/seed-accounting.ts   ← سرفصل پیش‌فرض، انبار پیش�
 11. **حسابان ریال است.** تبدیل ×۱۰ فقط در `providers/hesaban.ts` و `migrate/hesaban/`.
 12. **گرد کردن مالیات.** مالیات هر ردیف گرد می‌شود؛ جمع فاکتور = جمع ردیف‌ها. اختلاف
     یک‌تومانی پخش تخفیف فاکتور به ردیف آخر داده می‌شود، نه حساب `ROUNDING`.
+13. **متن بی‌رنگ در حالت تاریک.** پس‌زمینه‌ی پنل تیره است ولی رنگ پیش‌فرض متن
+    نه؛ متنی که کلاس رنگ ندارد نامرئی می‌شود. `AccountingShell` رنگ پایه می‌دهد؛
+    کامپوننتی که بیرون از این قاب رندر شود (portal) باید خودش رنگ بگیرد.
+14. **`groupBy` روی `accountId`.** `accountId` اجباری است و `{ not: null }` را
+    Prisma رد می‌کند؛ `balancesBy` فقط برای تفصیلی‌ها این شرط را می‌گذارد.
 
 ---
 
@@ -1198,12 +1204,40 @@ scripts/seed-accounting.ts   ← سرفصل پیش‌فرض، انبار پیش�
 
 ### فاز ۱ — ❌ لغو شد (تصمیم ۱۴)
 
-### فاز ۲ — هسته‌ی دفتر
-- سال مالی، سرفصل + سید، `AccParty` (+ همگام‌سازی با `User`/`StaffSupplier`/بازارگاه)،
-  `AccTreasury`، `AccVoucher` با ناورداها، سند دستی، `lockDate`.
-- صفحه‌های اشخاص، سرفصل، اسناد، تنظیمات (اطلاعات فروشنده، مالیات).
-- ✅ **وقتی:** سند دستی نامتوازن رد می‌شود؛ صورت‌حساب شخص از سندها درست است؛
-  سند قبل از تاریخ قفل قابل ثبت نیست.
+### فاز ۲ — هسته‌ی دفتر ✅ انجام شد (۲.۵۴.۰)
+
+**آنچه ساخته شد:**
+
+| چیز | کجا |
+|---|---|
+| مدل‌ها | مهاجرت `20260925120000_accounting_ledger`: `AccFiscalYear`، `AccSequence`، `AccAccount`، `AccParty`، `AccTreasury`، `AccVoucher`، `AccVoucherLine`؛ `AccSettings` + سال جاری، تاریخ قفل، مالیات، اطلاعات فروشنده |
+| سرفصل پیش‌فرض | `lib/accounting/chart.ts` (۶۶ ردیف، ۳۰ کلید سیستمی) — `seedDefaultChart` idempotent، ردیف موجود دست نمی‌خورد |
+| شماره‌گذاری | `ledger/sequence.ts` — UPSERT اتمیک؛ کد شخص از ۱۰۰۱، کد خزانه از ۱۰۱، سند پیوسته در هر سال |
+| سال مالی و قفل | `ledger/fiscal-year.ts` — `assertPostable` (سال باز + بعد از `lockDate`) |
+| ثبت سند | `ledger/post.ts` — `postVoucher` / `rebuildVoucher` (سند خودکار، همان شماره) / `voidVoucher` (خودکار فقط `fromSource`) / `reverseVoucher` (فقط دستی) |
+| مانده و گردش | `ledger/balances.ts` — `balancesBy`، `balanceOf`، `statement` با مانده‌ی ابتدا و جاری |
+| اشخاص | `parties.ts` — اعتبارسنجی موبایل/کد ملی/کد پستی، جلوگیری از موبایل تکراری، `partyForUser` / `partyForSupplier` / `partyForPlatform` برای فاز ۴ |
+| خزانه | `treasury.ts` — `TREASURY_ACCOUNT_KEY` نوع ← حساب سیستمی؛ فرم‌ها حساب نمی‌پرسند |
+| راه‌اندازی و اول دوره | `setup.ts` — `activateInternal` (سرفصل + سال + صندوق + حالت، یک تراکنش)؛ `saveOpening` یک سند OPENING بازسازی‌شونده با اختلاف روی «تراز افتتاحیه» |
+| API | `app/api/admin/accounting/`: `setup`، `summary`، `settings/general`، `years`، `accounts[/id]`، `parties[/id]`، `treasury[/id]`، `vouchers[/id]`، `opening` |
+| UI مشترک | `components/admin/accounting/ui.tsx` (Card، Sheet پایین‌کش، Money، BalanceLabel، …)، `AmountInput` (جداکننده، به حروف، میانبر k/m)، `PartyPicker` (جستجو + ساخت درجا)، `AccountPicker`، `Statement` (گردش موبایل/دسکتاپ + بازه) |
+| قاب | `app/admin/accounting/layout.tsx` ← `AccountingShell`: زبانه‌ها در دسکتاپ، نوار پایین + دکمه‌ی ➕ «ثبت سریع» در موبایل |
+| صفحه‌ها | خانه (داشبورد داخلی + «شروع کار»)، `setup` (سه قدم)، `parties` و `parties/[id]`، `treasury` و `treasury/[id]`، `opening`، `vouchers`، `vouchers/new`، `vouchers/[id]`، `accounts` و `accounts/[id]`، `settings` (عمومی، کسب‌وکار با آپلود مهر و امضا، سال مالی) |
+| راهنما | `components/admin/accounting/help.ts` — ۱۲ موضوع، در `help-content.ts` با `...ACCOUNTING_HELP` ادغام |
+| مجوز | + `ACC_PARTY_MANAGE`، `ACC_VOUCHER` (بخش ۱۴) |
+
+**تصمیم‌های این فاز:**
+- حالت `INTERNAL` فقط از `setup` روشن می‌شود. خروج از آن تا وقتی **هیچ سند POSTED**
+  نیست آزاد است (`canLeaveInternal`)؛ بعد از آن ۴۰۹.
+- مانده‌ی اول دوره جدول ندارد؛ فرم از روی ردیف‌های همان سند OPENING پر می‌شود.
+- اختلاف دارایی و بدهی اول دوره روی `OPENING_BALANCE` می‌نشیند، نه `CAPITAL`
+  (سرمایه تفصیلی شخص/شریک می‌خواهد؛ حسابدار با سند دستی جابه‌جا می‌کند).
+- رنگ متن پایه‌ی کل بخش در `AccountingShell` تعریف شده — متن بی‌رنگ در حالت
+  تاریک نامرئی بود (تله‌ی ۱۳).
+
+**آزمون:** `scratchpad/ledger-test.ts` (۳۱ بررسی: ناورداها، قفل، ابطال، معکوس،
+افتتاحیه، شماره‌ی هم‌زمان، کاربر سایت) + آزمون API با کوکی ادمین (۱۱ بررسی) +
+تصویر همه‌ی صفحه‌ها در ۱۴۰۰ و ۳۹۰ پیکسل.
 
 ### فاز ۳ — کالا و انبار
 - `AccWarehouse`، `AccStock`، `AccProductCost`، `AccStockMove`؛ میانگین موزون،
