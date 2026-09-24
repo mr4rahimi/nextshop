@@ -9,5 +9,9 @@ export async function register() {
     // (`StoreSettings.worklistEnabled`). مستندات: docs/features/staff-worklist.md
     const { startWorklistScheduler } = await import("@/lib/worklist/scheduler");
     startWorklistScheduler();
+
+    // حسابداری — یادآوری سررسید چک. مستندات: docs/plans/accounting.md بخش ۹.۲
+    const { startAccountingScheduler } = await import("@/lib/accounting/scheduler");
+    startAccountingScheduler();
   }
 }

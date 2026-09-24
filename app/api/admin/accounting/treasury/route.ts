@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 /** GET — صندوق‌ها و حساب‌های بانکی با موجودی */
 export async function GET(req: Request) {
-  const guard = await requirePermission(["ACC_VIEW", "ACC_VOUCHER", "ACC_SETTINGS"]);
+  const guard = await requirePermission(["ACC_VIEW", "ACC_VOUCHER", "ACC_SETTINGS", "ACC_TREASURY", "ACC_CHEQUE"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   const url = new URL(req.url);
   const all = url.searchParams.get("inactive") === "1";

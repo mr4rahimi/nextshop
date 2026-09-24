@@ -84,3 +84,28 @@ export async function emitAccEventSafe(input: AccEventInput): Promise<void> {
     console.error("[acc-event] ثبت رویداد ناموفق:", input.dedupeKey, e);
   }
 }
+
+/**
+ * دریافت خودکار پرداخت‌های موفق یک سفارش (فاز ۵) — **بعد از** کسر موجودی صدا
+ * زده شود تا رویداد روی همان aggregate سفارش پشت فاکتور فروش بیاید.
+ * کیف پول و اعتباری رد می‌شوند (`cash/channel.ts`). تکرار بی‌اثر است.
+ */
+export async function emitPaymentsReceived(orderId: string): Promise<void> {
+  try {
+    const payments = await prisma.payment.findMany({
+      where: { orderId, status: "SUCCEEDED", amount: { gt: 0 } },
+      select: { id: true, provider: true },
+    });
+    for (const p of payments) {
+      if (["wallet", "credit"].includes((p.provider ?? "").toLowerCase())) continue;
+      await emitAccEventSafe({
+        type: "PAYMENT_RECEIVED",
+        aggregate: { type: "Order", id: orderId },
+        dedupeKey: `payment:${p.id}:received`,
+        payload: { paymentId: p.id, orderId },
+      });
+    }
+  } catch (e) {
+    console.error("[acc-event] ثبت رویداد پرداخت ناموفق:", orderId, e);
+  }
+}

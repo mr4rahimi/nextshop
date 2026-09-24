@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/permissions";
 import { balancesBy } from "@/lib/accounting/ledger/balances";
 import { currentYear } from "@/lib/accounting/ledger/fiscal-year";
 import { openingKey } from "@/lib/accounting/setup";
+import { todayKey } from "@/lib/accounting/dates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +46,13 @@ export async function GET() {
     (await prisma.accParty.findMany({ where: { id: { in: top.map((t) => t.id) } }, select: { id: true, name: true } })).map((p) => [p.id, p.name]),
   );
 
+  // چک‌های سررسید تا ۷ روز آینده (با سررسیدگذشته‌های باز) — بخش ۱۱ داشبورد
+  const week = new Date(todayKey().getTime() + 7 * 86_400_000);
+  const [chequesIn, chequesOut] = await Promise.all([
+    prisma.accCheque.aggregate({ where: { direction: "RECEIVED", status: { in: ["IN_HAND", "IN_COLLECTION"] }, dueDate: { lte: week } }, _sum: { amount: true }, _count: true }),
+    prisma.accCheque.aggregate({ where: { direction: "ISSUED", status: "ISSUED", dueDate: { lte: week } }, _sum: { amount: true }, _count: true }),
+  ]);
+
   const hasOpening = year
     ? !!(await prisma.accVoucher.findFirst({ where: { source: "OPENING", sourceId: openingKey(year.id), status: "POSTED" }, select: { id: true } }))
     : false;
@@ -66,6 +74,10 @@ export async function GET() {
         parties: (await prisma.accParty.count()) > 0,
       },
       voucherCount,
+      cheques: {
+        in: { count: chequesIn._count, total: chequesIn._sum.amount ?? 0n },
+        out: { count: chequesOut._count, total: chequesOut._sum.amount ?? 0n },
+      },
     }),
   );
 }

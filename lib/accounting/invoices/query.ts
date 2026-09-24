@@ -12,6 +12,7 @@ import { AccError, toAmount } from "../errors";
 import { parseDay } from "../dates";
 import { toLatinDigits } from "../money";
 import { returnedQty, INVOICE_SOURCE, type InvoiceInput } from "./service";
+import { invoiceOpenAmounts } from "../cash/allocation";
 
 export const SALES_TYPES: AccInvoiceType[] = ["SALES", "SALES_RETURN", "PROFORMA"];
 export const PURCHASE_TYPES: AccInvoiceType[] = ["PURCHASE", "PURCHASE_RETURN"];
@@ -188,6 +189,14 @@ export async function invoiceDetail(id: string, access: StaffAccess) {
     returnedQty: returned.get(l.id) ?? 0,
     ...(withCost && l.productId ? { cost: costByLine.get(l.id) ?? 0n } : {}),
   }));
+  // تسویه — دریافت/پرداخت‌های تخصیص‌یافته و مانده‌ی باز (فاز ۵)
+  const [allocations, openMap] = await Promise.all([
+    prisma.accAllocation.findMany({
+      where: { invoiceId: inv.id, moneyDoc: { status: "POSTED" } },
+      include: { moneyDoc: { select: { id: true, kind: true, number: true, date: true } } },
+    }),
+    invoiceOpenAmounts(prisma, [inv.id]),
+  ]);
   const cost = withCost && (inv.type === "SALES" || inv.type === "SALES_RETURN") ? moves.reduce((s, m) => s + m.totalCost, 0n) : null;
   const productNet = lines.filter((l) => l.productId).reduce((s, l) => s + l.net, 0n);
 
@@ -201,5 +210,10 @@ export async function invoiceDetail(id: string, access: StaffAccess) {
     voucher,
     order,
     profit: cost !== null && inv.status === "ISSUED" ? { cost, gross: productNet - cost } : null,
+    settlement: {
+      allocations: allocations.map((a) => ({ amount: a.amount, ...a.moneyDoc })),
+      returned: openMap.get(inv.id)?.returned ?? 0n,
+      open: openMap.get(inv.id)?.open ?? 0n,
+    },
   };
 }

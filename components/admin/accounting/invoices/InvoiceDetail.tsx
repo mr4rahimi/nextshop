@@ -70,6 +70,7 @@ export interface InvoiceData {
     additionsTitle: string | null;
     vatTotal: string;
     total: string;
+    paidTotal: string;
     note: string | null;
     voidReason: string | null;
     createdByName: string;
@@ -85,7 +86,8 @@ export interface InvoiceData {
   voucher: { id: string; number: number; status: string } | null;
   order: { id: string; orderNumber: string; status: string } | null;
   profit: { cost: string; gross: string } | null;
-  can: { write: boolean; voucher: boolean };
+  settlement: { allocations: { id: string; kind: "RECEIPT" | "PAYMENT"; number: number; date: string; amount: string }[]; returned: string; open: string };
+  can: { write: boolean; voucher: boolean; pay: boolean };
 }
 
 const RETURN_TYPE: Partial<Record<InvoiceTypeKey, InvoiceTypeKey>> = { SALES: "SALES_RETURN", PURCHASE: "PURCHASE_RETURN" };
@@ -355,6 +357,49 @@ export default function InvoiceDetail({ id }: { id: string }) {
           </div>
         </div>
       </Card>
+
+      {inv.status === "ISSUED" && (inv.type === "SALES" || inv.type === "PURCHASE") && (
+        <Card className="p-4 space-y-3">
+          <SectionTitle
+            title={sales ? "دریافت‌ها" : "پرداخت‌ها"}
+            help="accountingMoney"
+            actions={
+              d.can.pay &&
+              BigInt(d.settlement.open) > 0n && (
+                <Link href={`/admin/accounting/money/new?kind=${sales ? "RECEIPT" : "PAYMENT"}&partyId=${inv.party.id}&invoiceId=${inv.id}`} className={btn.primary}>
+                  {sales ? "📥 ثبت دریافت" : "📤 ثبت پرداخت"}
+                </Link>
+              )
+            }
+          />
+          <div className="grid grid-cols-3 gap-3 text-sm">
+            <div>
+              <p className="text-[11px] text-gray-500">{sales ? "دریافت‌شده" : "پرداخت‌شده"}</p>
+              <Money value={inv.paidTotal} tone="green" />
+            </div>
+            <div>
+              <p className="text-[11px] text-gray-500">برگشتی</p>
+              <Money value={d.settlement.returned} />
+            </div>
+            <div>
+              <p className="text-[11px] text-gray-500">مانده</p>
+              <Money value={d.settlement.open} tone={BigInt(d.settlement.open) > 0n ? "red" : "gray"} />
+            </div>
+          </div>
+          {d.settlement.allocations.length > 0 && (
+            <div className="divide-y divide-gray-100 dark:divide-white/5">
+              {d.settlement.allocations.map((a) => (
+                <Link key={a.id} href={`/admin/accounting/money/${a.id}`} className="py-2 flex items-center justify-between text-sm hover:text-blue-600">
+                  <span>
+                    {a.kind === "RECEIPT" ? "دریافت" : "پرداخت"} {faNum(a.number)} <span className="text-[11px] text-gray-400">{formatJalali(new Date(a.date))}</span>
+                  </span>
+                  <Money value={a.amount} className="text-sm" />
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       {d.profit && (
         <Card className="p-4">

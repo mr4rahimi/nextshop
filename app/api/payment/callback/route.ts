@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deductStockForOrderItems } from "@/lib/order-stock";
+import { emitPaymentsReceived } from "@/lib/accounting/events";
 import { processOrderForClub } from "@/lib/club/rewards";
 import { syncDealSafe } from "@/lib/worklist/deals";
 
@@ -101,6 +102,8 @@ async function handleCallback(req: Request, p: CallbackParams) {
       await deductStockForOrderItems(order.items, order.id).catch((e: unknown) =>
         console.error("[order-stock] کسر موجودی بعد از پرداخت ناموفق:", e)
       );
+      // حسابداری داخلی — دریافت خودکار روی درگاه، بعد از فاکتور فروش
+      await emitPaymentsReceived(order.id);
 
       return redirect(`/checkout/success/${orderId}`);
     }

@@ -3634,6 +3634,7 @@ enum StaffNotificationType {
   SEO_TASK
   CONTENT_TASK
   LINK_NODE
+  ACC_CHEQUE // سررسید چک — حسابداری فاز ۵
 }
 
 /// اعلان درون‌پنلی کارمند.
@@ -3822,8 +3823,10 @@ model AccParty {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  lines    AccVoucherLine[]
-  invoices AccInvoice[]
+  lines     AccVoucherLine[]
+  invoices  AccInvoice[]
+  moneyDocs AccMoneyDoc[]
+  cheques   AccCheque[]
 
   @@index([mobile])
   @@index([name])
@@ -4233,8 +4236,9 @@ model AccInvoice {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  party AccParty         @relation(fields: [partyId], references: [id])
-  lines AccInvoiceLine[]
+  party       AccParty         @relation(fields: [partyId], references: [id])
+  lines       AccInvoiceLine[]
+  allocations AccAllocation[]
 
   @@unique([yearId, type, number])
   @@index([partyId, date])
@@ -4273,4 +4277,182 @@ model AccInvoiceLine {
   @@index([invoiceId])
   @@index([productId])
   @@index([refLineId])
+}
+
+// ── حسابداری — دریافت، پرداخت، انتقال و چک (فاز ۵، docs/plans/accounting.md بخش ۶.۷، ۶.۸ و ۹) ──
+
+enum AccMoneyKind {
+  RECEIPT
+  PAYMENT
+  TRANSFER
+}
+
+enum AccMoneyMethod {
+  CASH // نقد به صندوق
+  CARD_TRANSFER // کارت‌به‌کارت
+  BANK_TRANSFER // واریز/حواله‌ی بانکی (پایا، ساتنا)
+  POS // کارتخوان
+  GATEWAY // درگاه اینترنتی
+  CHEQUE // چک — دریافت: چک تازه؛ پرداخت: چک تازه‌ی ما یا خرج چک دریافتی
+}
+
+/// دریافت از شخص، پرداخت به شخص، یا انتقال بین صندوق و بانک.
+///
+/// ⚠️ فقط از `lib/accounting/treasury/money.ts` — سند، چک‌های ساخته‌شده و
+///    تخصیص به فاکتورها با هم ثبت یا با هم باطل می‌شوند. ویرایش ندارد؛ ابطال و ثبت دوباره.
+model AccMoneyDoc {
+  id            String       @id @default(cuid())
+  kind          AccMoneyKind
+  yearId        String
+  number        Int
+  date          DateTime     @db.Date
+  partyId       String?
+  total         BigInt
+  description   String?
+  status        AccDocStatus @default(POSTED)
+  voucherId     String?      @unique
+  voidReason    String?
+  /// پرداخت آنلاین سایت (`Payment`) — دریافت خودکار
+  paymentId     String?      @unique
+  /// کلید یکتای منبع خودکار
+  sourceKey     String?      @unique
+  createdById   String?
+  createdByName String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  party       AccParty?       @relation(fields: [partyId], references: [id])
+  items       AccMoneyItem[]
+  allocations AccAllocation[]
+
+  @@unique([yearId, kind, number])
+  @@index([partyId, date])
+  @@index([kind, date])
+}
+
+/// یک روش در یک دریافت/پرداخت — «بخشی نقد، بخشی چک»
+model AccMoneyItem {
+  id           String         @id @default(cuid())
+  moneyDocId   String
+  seq          Int
+  method       AccMoneyMethod
+  /// صندوق/بانک — انتقال: مبدأ
+  treasuryId   String?
+  /// فقط انتقال: مقصد
+  toTreasuryId String?
+  chequeId     String?
+  amount       BigInt
+  /// کارمزد بانکی (انتقال) — از مبدأ کم می‌شود
+  fee          BigInt         @default(0)
+  trackingCode String?
+
+  moneyDoc AccMoneyDoc @relation(fields: [moneyDocId], references: [id], onDelete: Cascade)
+
+  @@index([moneyDocId])
+  @@index([chequeId])
+}
+
+/// تسویه‌ی فاکتور با دریافت/پرداخت. ⚠️ `AccInvoice.paidTotal` کش همین جدول
+/// است و فقط `recalcPaid` می‌نویسدش (تله‌ی ۶).
+model AccAllocation {
+  id         String @id @default(cuid())
+  moneyDocId String
+  invoiceId  String
+  amount     BigInt
+
+  moneyDoc AccMoneyDoc @relation(fields: [moneyDocId], references: [id], onDelete: Cascade)
+  invoice  AccInvoice  @relation(fields: [invoiceId], references: [id])
+
+  @@unique([moneyDocId, invoiceId])
+  @@index([invoiceId])
+}
+
+enum AccChequeDir {
+  RECEIVED
+  ISSUED
+}
+
+enum AccChequeStatus {
+  IN_HAND // دریافتی: نزد ما
+  IN_COLLECTION // دریافتی: به بانک سپرده شد
+  CLEARED // وصول شد / پاس شد
+  BOUNCED // برگشتی
+  ENDORSED // دریافتی: خرج شد به شخص دیگر
+  RETURNED // عودت به صاحب / ابطال چک صادره
+  ISSUED // صادره: منتظر سررسید
+}
+
+/// چک. وضعیت فقط با `lib/accounting/treasury/cheques.ts` عوض می‌شود — هر
+/// گذار یک `AccChequeEvent` و سند خودش را دارد؛ گذار غیرمجاز رد می‌شود.
+model AccCheque {
+  id              String          @id @default(cuid())
+  direction       AccChequeDir
+  status          AccChequeStatus
+  serialNo        String
+  /// شناسه‌ی صیادی ۱۶ رقمی
+  sayadId         String?
+  sayadRegistered Boolean         @default(false)
+  bankName        String
+  branch          String?
+  /// صاحب حساب (دریافتی)
+  ownerName       String?
+  amount          BigInt
+  issueDate       DateTime?       @db.Date
+  dueDate         DateTime        @db.Date
+  /// دریافتی: از چه کسی؛ صادره: به چه کسی
+  partyId         String
+  /// خرج‌شده به
+  holderPartyId   String?
+  /// صادره: حساب بانکی ما؛ دریافتی: بانکی که برای وصول سپرده شد
+  treasuryId      String?
+  chequeBookId    String?
+  /// دریافت/پرداختی که چک را ساخت
+  moneyDocId      String?
+  /// زمان یادآوری سررسید — ⚠️ **قبل از** ارسال نوشته می‌شود (مرز «دو بار نفرست»)
+  reminderSentAt  DateTime?
+  followUpTaskId  String?
+  note            String?
+  createdById     String?
+  createdByName   String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  party  AccParty         @relation(fields: [partyId], references: [id])
+  events AccChequeEvent[]
+
+  @@index([direction, status, dueDate])
+  @@index([partyId])
+  @@index([moneyDocId])
+}
+
+model AccChequeEvent {
+  id         String           @id @default(cuid())
+  chequeId   String
+  from       AccChequeStatus?
+  to         AccChequeStatus
+  date       DateTime         @db.Date
+  voucherId  String?          @unique
+  /// خرج چک: به چه کسی — بانک وصول/پاس
+  partyId    String?
+  treasuryId String?
+  moneyDocId String?
+  note       String?
+  byName     String
+  createdAt  DateTime         @default(now())
+
+  cheque AccCheque @relation(fields: [chequeId], references: [id], onDelete: Cascade)
+
+  @@index([chequeId, createdAt])
+}
+
+/// دسته‌چک — پیشنهاد شماره‌ی بعدی چک صادره
+model AccChequeBook {
+  id         String   @id @default(cuid())
+  treasuryId String
+  fromSerial String
+  toSerial   String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@index([treasuryId])
 }

@@ -17,7 +17,7 @@ const ROLES: PartyRole[] = ["customer", "supplier", "employee", "marketplace"];
  * `picker=1`: فقط شناسه، نام، کد و مانده — برای انتخابگر فرم‌ها.
  */
 export async function GET(req: Request) {
-  const guard = await requirePermission(["ACC_VIEW", "ACC_PARTY_MANAGE", "ACC_VOUCHER", "ACC_SALES", "ACC_PURCHASE"]);
+  const guard = await requirePermission(["ACC_VIEW", "ACC_PARTY_MANAGE", "ACC_VOUCHER", "ACC_SALES", "ACC_PURCHASE", "ACC_TREASURY", "ACC_CHEQUE"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   const url = new URL(req.url);
   const roleParam = url.searchParams.get("role") as PartyRole | null;

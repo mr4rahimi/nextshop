@@ -8,7 +8,7 @@ import { processOrderForClub } from "@/lib/club/rewards";
 import { refundOrderPoints } from "@/lib/club/points";
 import { releaseCoupon } from "@/lib/club/coupons";
 import { syncDealSafe } from "@/lib/worklist/deals";
-import { emitAccEventSafe } from "@/lib/accounting/events";
+import { emitAccEventSafe, emitPaymentsReceived } from "@/lib/accounting/events";
 
 export const runtime = "nodejs";
 
@@ -111,6 +111,8 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
       where: { orderId: id, status: "PENDING" },
       data:  { status: "SUCCEEDED", providerRef: `manual-admin-${Date.now()}` },
     }).catch((e: unknown) => console.error("[order] تسویه پرداخت دستی ناموفق:", e));
+    // حسابداری داخلی — دریافت خودکار (کارت‌به‌کارت تأییدشده)، بعد از فاکتور فروش
+    await emitPaymentsReceived(id);
   }
 
   // باشگاه مشتریان — آمار خرید، امتیاز و سطح

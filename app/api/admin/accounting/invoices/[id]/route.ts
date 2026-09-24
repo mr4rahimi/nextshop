@@ -54,7 +54,7 @@ export async function GET(req: Request, { params }: Params) {
         officialReady: !!(acc?.sellerName && acc?.sellerNationalId && acc?.sellerAddress && acc?.sellerPostalCode),
       };
     }
-    return NextResponse.json(serialize({ ...d, print, can: { write, voucher: can(guard.access, "ACC_VOUCHER") } }));
+    return NextResponse.json(serialize({ ...d, print, can: { write, voucher: can(guard.access, "ACC_VOUCHER"), pay: can(guard.access, "ACC_TREASURY") } }));
   } catch (e) {
     return accErrorResponse(e, "[acc-invoice]");
   }

@@ -55,11 +55,19 @@ export default function PartyDetailClient({ id }: { id: string }) {
         help="accountingParty"
         back={{ href: "/admin/accounting/parties", label: "اشخاص" }}
         actions={
-          data.can.manage && (
-            <button onClick={() => setEdit(true)} className={btn.soft}>
-              ✏️ ویرایش
-            </button>
-          )
+          <>
+            <Link href={`/admin/accounting/money/new?kind=RECEIPT&partyId=${id}`} className={btn.soft}>
+              📥 دریافت
+            </Link>
+            <Link href={`/admin/accounting/money/new?kind=PAYMENT&partyId=${id}`} className={btn.soft}>
+              📤 پرداخت
+            </Link>
+            {data.can.manage && (
+              <button onClick={() => setEdit(true)} className={btn.soft}>
+                ✏️ ویرایش
+              </button>
+            )}
+          </>
         }
       />
 

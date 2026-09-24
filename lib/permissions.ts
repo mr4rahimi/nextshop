@@ -159,6 +159,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       },
       { key: "ACC_SALES", label: "فاکتور فروش، پیش‌فاکتور و برگشت از فروش", hint: "ثبت، ویرایش، ابطال و چاپ" },
       { key: "ACC_PURCHASE", label: "فاکتور خرید و برگشت از خرید" },
+      { key: "ACC_TREASURY", label: "دریافت، پرداخت و انتقال وجه", hint: "ثبت و ابطال؛ دیدن گردش صندوق و بانک" },
+      { key: "ACC_CHEQUE", label: "چک‌ها: وصول، برگشت، عودت و دسته‌چک", hint: "یادآوری سررسید هم برای همین مجوز می‌آید" },
       { key: "ACC_INVENTORY", label: "انبار: حواله، انبارگردانی، موجودی اول دوره و تعریف انبار" },
       {
         key: "ACC_COST_VIEW",

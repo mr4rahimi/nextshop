@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 /** GET ?from&to — گردش یک صندوق یا حساب بانکی */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requirePermission(["ACC_VIEW", "ACC_SETTINGS"]);
+  const guard = await requirePermission(["ACC_VIEW", "ACC_SETTINGS", "ACC_TREASURY"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   const { id } = await params;
   const item = await prisma.accTreasury.findUnique({ where: { id } });

@@ -5,6 +5,7 @@ import { can, requirePermission } from "@/lib/permissions";
 import { validateInstallments } from "@/lib/worklist/credit";
 import { logActivityAsync } from "@/lib/activity";
 import { deductStockForOrderItems } from "@/lib/order-stock";
+import { emitPaymentsReceived } from "@/lib/accounting/events";
 import { createTask } from "@/lib/worklist/task-service";
 import { normalizePhone } from "@/lib/club/phone";
 import { ensureClubProfile } from "@/lib/club/profile";
@@ -290,6 +291,8 @@ export async function POST(req: Request) {
     ).catch((e: unknown) =>
       console.error("[order-stock] کسر موجودی سفارش تلفنی ناموفق:", e),
     );
+    // حسابداری داخلی — دریافت خودکار پرداخت همان لحظه (اعتباری رد می‌شود)
+    if (moneyIn) await emitPaymentsReceived(order.id);
   }
 
   // پروفایل باشگاه — هیچ‌وقت نباید ثبت سفارش را بشکند.

@@ -9,17 +9,18 @@
  * ناقص است ← «مسدود» با همان پیام. هر خطای دیگری «تلاش دوباره» است.
  */
 
-import type { AccEvent, AccInvoice, Prisma } from "@prisma/client";
+import type { AccEvent, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { AccountingProvider, ApplyResult } from "../port";
 import { AccError } from "../errors";
 import { purchaseFromTask, reverseOrderSale, saleFromIntegOrder, saleFromOrder, voidIntegSale } from "../invoices/channel";
+import { receiptFromPayment } from "../cash/channel";
 
 type Handler = (event: AccEvent) => Promise<ApplyResult>;
-type Payload = { orderId?: string; integOrderId?: string; taskId?: string; reason?: string };
+type Payload = { orderId?: string; integOrderId?: string; taskId?: string; paymentId?: string; reason?: string };
 
 /** یک تراکنش برای هر رویداد — فاکتور، کاردکس و سند با هم ثبت یا با هم لغو */
-function invoiceHandler(fn: (tx: Prisma.TransactionClient, p: Payload, e: AccEvent) => Promise<AccInvoice | null>, empty: string): Handler {
+function invoiceHandler(fn: (tx: Prisma.TransactionClient, p: Payload, e: AccEvent) => Promise<{ id: string } | null>, empty: string): Handler {
   return async (event) => {
     const p = (event.payload ?? {}) as Payload;
     try {
@@ -47,6 +48,7 @@ const HANDLERS: Partial<Record<string, Handler>> = {
     "فاکتوری برای برگشت نبود (فروش پیش از حسابداری داخلی ثبت شده)",
   ),
   PURCHASE_RECORDED: invoiceHandler((tx, p) => purchaseFromTask(tx, p.taskId!), "کالای قیمت‌دار یا سفارش مرتبطی نبود"),
+  PAYMENT_RECEIVED: invoiceHandler((tx, p, e) => receiptFromPayment(tx, p.paymentId!, e.createdAt), "پرداخت کیف پول، اعتباری یا بی‌مبلغ دریافت جدا نمی‌سازد"),
 };
 
 export const internalProvider: AccountingProvider = {

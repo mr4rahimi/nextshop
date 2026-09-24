@@ -23,6 +23,7 @@ interface Summary {
   topDebtors: { id: string; name: string; balance: string }[];
   checklist: { bank: boolean; opening: boolean; seller: boolean; parties: boolean };
   voucherCount: number;
+  cheques: { in: { count: number; total: string }; out: { count: number; total: string } };
 }
 
 const KIND_ICON: Record<string, string> = { CASH: "💵", BANK: "🏦", POS: "💳", GATEWAY: "🌐" };
@@ -83,6 +84,26 @@ export default function InternalDashboard({ canLeave, onLeft }: { canLeave: bool
         <Stat label="طلب از اشخاص" value={<Money value={data.receivable} tone="green" />} href="/admin/accounting/parties?balance=debtor" />
         <Stat label="بدهی به اشخاص" value={<Money value={data.payable} tone="red" />} href="/admin/accounting/parties?balance=creditor" />
       </div>
+
+      {(data.cheques.in.count > 0 || data.cheques.out.count > 0) && (
+        <Card className="p-4">
+          <SectionTitle title="چک‌های ۷ روز آینده" help="accountingCheques" />
+          <div className="grid grid-cols-2 gap-3">
+            <Stat
+              label={`دریافتی — ${faNum(data.cheques.in.count)} چک`}
+              value={<Money value={data.cheques.in.total} tone="green" />}
+              sub="وصول کنید"
+              href="/admin/accounting/cheques?dir=RECEIVED&view=week"
+            />
+            <Stat
+              label={`صادره — ${faNum(data.cheques.out.count)} چک`}
+              value={<Money value={data.cheques.out.total} tone="amber" />}
+              sub="موجودی بانک را چک کنید"
+              href="/admin/accounting/cheques?dir=ISSUED&view=week"
+            />
+          </div>
+        </Card>
+      )}
 
       {pending > 0 && (
         <Card className="p-4">
@@ -157,10 +178,10 @@ export default function InternalDashboard({ canLeave, onLeft }: { canLeave: bool
 
       <Card className="p-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-bold text-gray-900 dark:text-white">در راه: فاکتور، دریافت و پرداخت، چک، انبار و گزارش‌ها</p>
+          <p className="text-sm font-bold text-gray-900 dark:text-white">در راه: هزینه‌ها، کیف پول و اقساط، گزارش‌های مالی</p>
           <p className="text-xs text-gray-500 mt-1 leading-6">
-            فروش‌های فروشگاه از نسخه‌ی فاکتورها خودکار در دفتر می‌نشینند. تا آن موقع می‌توانید اشخاص، صندوق و بانک و مانده‌های
-            اول دوره را آماده کنید.
+            فروش سایت، دریافت درگاه، فاکتور، انبار و چک همین حالا خودکار یا دستی در دفتر می‌نشینند. ثبت هزینه، کیف پول مشتریان،
+            اقساط اعتباری و گزارش‌های سود و زیان در نسخه‌های بعدی می‌آیند.
           </p>
         </div>
         {canLeave && data.voucherCount === 0 && (
