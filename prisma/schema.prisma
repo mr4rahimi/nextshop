@@ -3660,3 +3660,69 @@ model StaffNotification {
   @@index([userId, readAt, createdAt])
   @@index([type, entityId])
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// حسابداری — داخلی یا حسابان وب، پشت یک درگاه
+// مستندات: docs/plans/accounting.md
+//
+// ⚠️ بخش‌های فروشگاه هرگز مستقیم حسابان یا دفتر داخلی را صدا نمی‌زنند؛ فقط
+// `AccEvent` ثبت می‌کنند و `lib/accounting/dispatcher.ts` آن را به حسابداری
+// فعال می‌رساند.
+// ═══════════════════════════════════════════════════════════════════
+
+/// حسابداری فعال — انحصاری (تصمیم ۱ سند).
+enum AccMode {
+  NONE // حسابداری انتخاب نشده؛ رویدادها ثبت می‌شوند ولی جایی نمی‌روند
+  HESABAN // حسابان وب
+  INTERNAL // حسابداری داخلی (از فاز ۲)
+}
+
+model AccSettings {
+  id            String    @id @default("singleton")
+  mode          AccMode   @default(NONE)
+  modeChangedAt DateTime?
+  modeChangedBy String?
+  updatedAt     DateTime  @updatedAt
+}
+
+enum AccEventStatus {
+  PENDING // منتظر پردازش (یا در حالت دستی حسابان، منتظر ادمین)
+  DONE // کامل در حسابداری ثبت شد
+  BLOCKED // داده ناقص است (مثلاً نگاشت) — با رفع مشکل خودش برمی‌گردد
+  FAILED // چند بار تلاش شد و نشد — فقط با «تلاش دوباره»ی ادمین برمی‌گردد
+  SKIPPED // چیزی برای ثبت نماند (مثلاً همه‌ی اقلام لغو شدند)
+}
+
+/// یک رویداد مالی — صف outbox.
+///
+/// ⚠️ `dedupeKey` یکتاست: گذار تکراری یا webhook تکراری رویداد دوم نمی‌سازد.
+/// ⚠️ رویداد فروش بازارگاه/سایت در فاز ۰ «تصویر گروهی» ردیف‌های `IntegOrder`
+///    همان سفارش است: وضعیتش از وضعیت آن ردیف‌ها حساب می‌شود
+///    (`syncSaleEvent`)، نه جداگانه نوشته می‌شود.
+model AccEvent {
+  id            String         @id @default(cuid())
+  /// "SALE_ISSUED" | … — فهرست در lib/accounting/events.ts
+  type          String
+  aggregateType String
+  aggregateId   String
+  dedupeKey     String         @unique
+  payload       Json           @default("{}")
+  status        AccEventStatus @default(PENDING)
+  /// حالتی که آخرین بار با آن پردازش شد
+  mode          AccMode?
+  attempts      Int            @default(0)
+  nextAttemptAt DateTime       @default(now())
+  /// قفل کوتاه‌مدت پردازش — worker و دکمه‌ی دستی هم‌زمان یک رویداد را نگیرند
+  lockedUntil   DateTime?
+  lastError     String?
+  blockedReason String?
+  /// شناسه در مقصد — مثلاً GUID فاکتور حسابان
+  resultRef     String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  processedAt   DateTime?
+
+  @@index([status, nextAttemptAt])
+  @@index([aggregateType, aggregateId])
+  @@index([createdAt])
+}

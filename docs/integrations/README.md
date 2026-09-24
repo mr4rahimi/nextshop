@@ -52,6 +52,8 @@
 ### حسابان وب
 `vendors/hesaban/openapi.json` مشخصات OpenAPI است — **منبع حقیقت همین فایل است**.
 `swagger-ui.html` فقط یک نمایشگر آفلاین است؛ در مرورگر بازش کنید تا API را مرور کنید.
+جدول پوشش API (چه endpointی استفاده می‌شود و محدودیت‌ها) و طرح حالت «حسابداری داخلی»
+در [`plans/accounting.md`](../plans/accounting.md) بخش ۳ و ۱۲ است.
 
 ### ایران پیامک
 پوشه‌ی `vendors/iranpayamak/` بیش از ۵۰ سند دارد، هر endpoint یک فایل — ارسال پیامک،

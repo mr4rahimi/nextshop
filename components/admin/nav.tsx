@@ -190,6 +190,19 @@ export const MENU_GROUPS: NavGroup[] = [
     ],
   },
   {
+    // حسابداری — docs/plans/accounting.md
+    label: "حسابداری",
+    items: [
+      {
+        href: "/admin/accounting", label: "حسابداری", icon: "wallet",
+        children: [
+          { href: "/admin/accounting",        label: "خانه‌ی حسابداری" },
+          { href: "/admin/accounting/events", label: "رویدادهای مالی" },
+        ],
+      },
+    ],
+  },
+  {
     label: "یکپارچه‌سازی",
     items: [
       {

@@ -13,6 +13,7 @@ import { fetchAndProcessOrders } from "./orders";
 import { fetchAndStoreChats, sendPendingMessage } from "./chat";
 import { enqueue } from "./queue";
 import { processPendingInvoices } from "./invoicing";
+import { dispatchAccEvents } from "@/lib/accounting/dispatcher";
 import { recordPushedPrice, recordPushedStock } from "./snapshot";
 
 // ── jobهای زمان‌بندی‌شده خودکار (خودترمیم) ─────────────────────────
@@ -168,6 +169,9 @@ export async function runWorkerCycle(maxJobs = 5): Promise<void> {
   await applyDiscountWindowChanges().catch((e: unknown) => console.error("[integ] بازه‌ی تخفیف:", e));
 
   await processPendingInvoices().catch((e: unknown) => console.error("[integ-invoice] چرخه فاکتور ناموفق:", e));
+
+  // صف رویداد مالی حسابداری داخلی — docs/plans/accounting.md بخش ۴.۲
+  await dispatchAccEvents().catch((e: unknown) => console.error("[acc-dispatch] چرخه‌ی رویداد مالی ناموفق:", e));
 
   const concurrent = Math.min(maxJobs, settings.maxConcurrentJobs);
 

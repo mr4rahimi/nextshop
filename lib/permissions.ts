@@ -146,6 +146,19 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    // حسابداری — docs/plans/accounting.md بخش ۱۴. کلیدهای بعدی با فاز خودشان می‌آیند.
+    key: "accounting",
+    label: "حسابداری",
+    items: [
+      { key: "ACC_VIEW", label: "دیدن بخش حسابداری و صف رویدادها" },
+      {
+        key: "ACC_SETTINGS",
+        label: "انتخاب حالت حسابداری و تلاش دوباره‌ی رویدادها",
+        hint: "حالت حسابداری تعیین می‌کند کدام سیستم منبع حقیقت مالی است",
+      },
+    ],
+  },
+  {
     key: "staff",
     label: "کارکنان",
     items: [

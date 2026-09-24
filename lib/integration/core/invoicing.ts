@@ -4,6 +4,7 @@ import { getAdapter } from "./adapter-registry";
 import { decryptCredentials } from "./crypto";
 import { writeLog } from "./log";
 import type { HesabanAdapter } from "@/lib/integration/adapters/accounting/hesaban.adapter";
+import { isHesabanInvoicingAllowed } from "@/lib/accounting/settings";
 
 const ACCOUNTING_CODE = "hesaban";
 const PLATFORM_SUFFIX: Record<string, string> = { shop: "سایت", basalam: "باسلام", tapsi_shop: "تپسی‌شاپ", snappshop: "اسنپ‌شاپ" };
@@ -126,6 +127,12 @@ export async function processPendingInvoices(
   onlyIds?: string[],
 ): Promise<{ invoiced: number; skipped: string | null }> {
   const manualRun = Array.isArray(onlyIds);
+
+  // حسابداری داخلی فعال است — حسابان دیگر منبع حقیقت نیست و نباید فاکتور بگیرد
+  // (docs/plans/accounting.md تصمیم ۱). ردیف‌ها همچنان ثبت و در پنل دیده می‌شوند.
+  if (!(await isHesabanInvoicingAllowed())) {
+    return { invoiced: 0, skipped: "حسابداری داخلی فعال است؛ فاکتور حسابان خاموش است" };
+  }
 
   const connection = await prisma.integConnection.findFirst({
     where: { platformCode: ACCOUNTING_CODE, status: { in: ["CONNECTED", "SYNCING"] } },
