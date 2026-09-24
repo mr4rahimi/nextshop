@@ -327,6 +327,7 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   login: "ورود",
   // حسابداری — docs/plans/accounting.md
   accounting: "حسابداری", parties: "اشخاص", treasury: "صندوق و بانک",
-  vouchers: "اسناد", accounts: "سرفصل حساب‌ها", opening: "مانده‌های اول دوره",
+  vouchers: "اسناد", accounts: "سرفصل حساب‌ها", opening: "اول دوره",
   events: "رویدادهای مالی", setup: "راه‌اندازی", new: "تازه",
+  inventory: "کالا و انبار", warehouses: "انبارها", transfers: "حواله‌ها", counts: "انبارگردانی",
 };

@@ -16,6 +16,7 @@ import { seedDefaultChart, missingSystemKeys } from "./ledger/accounts";
 import { ensureFiscalYear } from "./ledger/fiscal-year";
 import { postVoucher, rebuildVoucher, voidVoucher, type Actor, type LineInput } from "./ledger/post";
 import { createTreasury, TREASURY_ACCOUNT_KEY } from "./treasury";
+import { ensureDefaultWarehouse } from "./inventory/docs";
 
 type Tx = Prisma.TransactionClient;
 
@@ -32,6 +33,7 @@ export async function activateInternal(input: { jalaliYear: number; actor: Actor
     if (!(await tx.accTreasury.count({ where: { kind: "CASH" } }))) {
       await createTreasury(tx, { kind: "CASH", name: "صندوق فروشگاه" });
     }
+    await ensureDefaultWarehouse(tx);
     await tx.accSettings.upsert({
       where: { id: "singleton" },
       update: { mode: "INTERNAL", modeChangedAt: new Date(), modeChangedBy: input.actor.name, currentYearId: year.id },

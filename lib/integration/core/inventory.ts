@@ -3,6 +3,7 @@ import { getAdapter } from "./adapter-registry";
 import { decryptCredentials } from "./crypto";
 import { writeLog } from "./log";
 import { recordPushedStock } from "./snapshot";
+import { isHesabanInvoicingAllowed } from "@/lib/accounting/settings";
 
 async function getPlatformType(platformCode: string): Promise<"ACCOUNTING" | "MARKETPLACE" | null> {
   const p = await prisma.integPlatform.findUnique({ where: { code: platformCode }, select: { type: true } });
@@ -130,6 +131,20 @@ export async function resyncStockFromAccounting(
   jobId: string,
   accountingPlatformCode: string,
 ): Promise<{ updatedCount: number; pages: number }> {
+  // حسابداری داخلی فعال است: موجودی از کاردکس پنل می‌آید، نه از حسابان
+  // (docs/plans/accounting.md تله‌ی ۳) — دو نویسنده برای Product.stock یعنی عدد غلط
+  if (!(await isHesabanInvoicingAllowed())) {
+    await writeLog({
+      jobId,
+      platformCode:  accountingPlatformCode,
+      operationType: "SYNC_ALL_STOCK",
+      direction:     "INBOUND",
+      entityType:    "STOCK",
+      status:        "SUCCESS",
+      responseData:  { skipped: "حسابداری داخلی فعال است؛ موجودی از حسابان خوانده نشد" },
+    }).catch(() => {});
+    return { updatedCount: 0, pages: 0 };
+  }
   const connection = await prisma.integConnection.findFirst({
     where: { platformCode: accountingPlatformCode, status: { in: ["CONNECTED", "SYNCING"] } },
   });

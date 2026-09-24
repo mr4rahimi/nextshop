@@ -135,9 +135,9 @@ export default function StatementView({ data, kind }: { data: StatementData; kin
               </div>
               <div className="text-left shrink-0">
                 {BigInt(r.debit) > 0n ? (
-                  <p className="text-sm font-black tabular-nums text-gray-900 dark:text-white">+{formatAmount(r.debit)}</p>
+                  <p dir="ltr" className="text-sm font-black tabular-nums text-gray-900 dark:text-white">+{formatAmount(r.debit)}</p>
                 ) : (
-                  <p className="text-sm font-black tabular-nums text-gray-500">−{formatAmount(r.credit)}</p>
+                  <p dir="ltr" className="text-sm font-black tabular-nums text-gray-500">−{formatAmount(r.credit)}</p>
                 )}
                 <p className="text-[10px] text-gray-400 tabular-nums">مانده {signed(r.running, kind)}</p>
               </div>
