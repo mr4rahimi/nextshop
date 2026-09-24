@@ -48,3 +48,24 @@ export function jalaliYearBounds(jy: number): { start: Date; end: Date } {
 export function jalaliYearOf(d: Date): number {
   return toJalali(d).year;
 }
+
+/** ماه شمسیِ یک روز → اول تا آخر همان ماه */
+export function jalaliMonthBounds(d: Date): { start: Date; end: Date } {
+  const j = toJalali(d);
+  const start = fromJalali(j.year, j.month, 1)!;
+  const next = j.month === 12 ? fromJalali(j.year + 1, 1, 1)! : fromJalali(j.year, j.month + 1, 1)!;
+  return { start, end: new Date(next.getTime() - DAY_MS) };
+}
+
+/** بازه‌ی هم‌طولِ درست قبل از `[from, to]` — «مقایسه با دوره‌ی قبل» */
+export function previousRange(from: Date, to: Date): { from: Date; to: Date } {
+  const len = to.getTime() - from.getTime() + DAY_MS;
+  return { from: new Date(from.getTime() - len), to: new Date(from.getTime() - DAY_MS) };
+}
+
+/** همه‌ی روزهای بازه، شامل دو سر */
+export function daysBetween(from: Date, to: Date): Date[] {
+  const out: Date[] = [];
+  for (let t = from.getTime(); t <= to.getTime(); t += DAY_MS) out.push(new Date(t));
+  return out;
+}

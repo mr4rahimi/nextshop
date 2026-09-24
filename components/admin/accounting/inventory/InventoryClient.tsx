@@ -7,6 +7,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { faNum } from "@/lib/accounting/money";
 import InventoryTabs from "./InventoryTabs";
 import { api, Badge, Card, Chips, Empty, ErrorText, inputCls, Money, PageHeader, Stat } from "../ui";
@@ -41,7 +42,9 @@ type Filter = "instock" | "all" | "low" | "negative";
 
 export default function InventoryClient() {
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<Filter>("instock");
+  const sp = useSearchParams();
+  // `?filter=negative|low` از «کارهای مانده»ی خانه‌ی حسابداری
+  const [filter, setFilter] = useState<Filter>(() => (["all", "low", "negative"].includes(sp.get("filter") ?? "") ? (sp.get("filter") as Filter) : "instock"));
   const [wh, setWh] = useState("");
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);

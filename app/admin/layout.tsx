@@ -152,7 +152,7 @@ function Breadcrumb() {
                 : "text-gray-400 dark:text-gray-600"
             }`}
           >
-            {BREADCRUMB_LABELS[part] ?? (/^c[a-z0-9]{20,}$/.test(part) ? "جزئیات" : part)}
+            {BREADCRUMB_LABELS[`${parts[i - 1]}/${part}`] ?? BREADCRUMB_LABELS[part] ?? (/^c[a-z0-9]{20,}$/.test(part) ? "جزئیات" : part)}
           </span>
         </span>
       ))}

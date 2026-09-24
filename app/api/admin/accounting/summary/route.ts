@@ -1,16 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
-import { requirePermission } from "@/lib/permissions";
+import { can, requirePermission } from "@/lib/permissions";
 import { balancesBy } from "@/lib/accounting/ledger/balances";
 import { currentYear } from "@/lib/accounting/ledger/fiscal-year";
 import { openingKey } from "@/lib/accounting/setup";
 import { todayKey } from "@/lib/accounting/dates";
+import { monthDashboard } from "@/lib/accounting/reports/dashboard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** داشبورد حسابداری داخلی — نقد، طلب، بدهی، بدهکاران اصلی و فهرست «شروع کار» */
+/**
+ * داشبورد حسابداری داخلی — نقد، طلب، بدهی، بدهکاران اصلی، «شروع کار»، و عددهای
+ * ماه جاری (فروش، هزینه، سری روزانه، کارهای مانده). بها و سود ناخالص فقط با
+ * `ACC_COST_VIEW`.
+ */
 export async function GET() {
   const guard = await requirePermission(["ACC_VIEW", "ACC_SETTINGS"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
@@ -53,6 +58,20 @@ export async function GET() {
     prisma.accCheque.aggregate({ where: { direction: "ISSUED", status: "ISSUED", dueDate: { lte: week } }, _sum: { amount: true }, _count: true }),
   ]);
 
+  const cost = can(guard.access, "ACC_COST_VIEW");
+  const m = settings?.mode === "INTERNAL" ? await monthDashboard(prisma) : null;
+  const month = m && {
+    from: m.month.from,
+    to: m.month.to,
+    netSales: m.totals.netSales,
+    expenses: m.totals.expenses,
+    gross: cost ? m.totals.gross : null,
+    net: cost ? m.totals.net : null,
+    prev: m.prevTotals && { netSales: m.prevTotals.netSales, expenses: m.prevTotals.expenses, gross: cost ? m.prevTotals.gross : null, net: cost ? m.prevTotals.net : null },
+    series: { days: m.series.days, sales: m.series.sales, expenses: m.series.expenses, gross: cost ? m.series.sales.map((v, i) => v - m.series.cogs[i]) : null },
+    alerts: m.alerts,
+  };
+
   const hasOpening = year
     ? !!(await prisma.accVoucher.findFirst({ where: { source: "OPENING", sourceId: openingKey(year.id), status: "POSTED" }, select: { id: true } }))
     : false;
@@ -74,6 +93,8 @@ export async function GET() {
         parties: (await prisma.accParty.count()) > 0,
       },
       voucherCount,
+      month,
+      can: { reports: can(guard.access, "ACC_REPORTS"), cost },
       cheques: {
         in: { count: chequesIn._count, total: chequesIn._sum.amount ?? 0n },
         out: { count: chequesOut._count, total: chequesOut._sum.amount ?? 0n },

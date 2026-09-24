@@ -33,6 +33,7 @@ export const SECTIONS: Section[] = [
   { href: "/admin/accounting/money", label: "دریافت و پرداخت", icon: "💸", perm: ["ACC_VIEW", "ACC_TREASURY"] },
   { href: "/admin/accounting/cheques", label: "چک‌ها", icon: "🧾", perm: ["ACC_VIEW", "ACC_CHEQUE"] },
   { href: "/admin/accounting/expenses", label: "هزینه‌ها", icon: "🧮", perm: ["ACC_VIEW", "ACC_EXPENSE"] },
+  { href: "/admin/accounting/reports", label: "گزارش‌ها", icon: "📊", perm: ["ACC_REPORTS"] },
   { href: "/admin/accounting/parties", label: "اشخاص", icon: "👥", perm: ["ACC_VIEW", "ACC_PARTY_MANAGE"] },
   { href: "/admin/accounting/treasury", label: "صندوق و بانک", icon: "🏦", perm: ["ACC_VIEW", "ACC_SETTINGS"] },
   { href: "/admin/accounting/inventory", label: "کالا و انبار", icon: "📦", perm: ["ACC_VIEW", "ACC_INVENTORY"] },

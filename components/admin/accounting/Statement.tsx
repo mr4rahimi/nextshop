@@ -53,6 +53,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   OPENING: "اول دوره",
   CLOSING: "اختتامیه",
   IMPORT: "انتقال از نرم‌افزار قبلی",
+  WALLET: "کیف پول",
 };
 
 const INVOICE_SOURCES = ["SALES_INVOICE", "PURCHASE_INVOICE", "SALES_RETURN", "PURCHASE_RETURN"];

@@ -4,12 +4,18 @@
  * خانه‌ی حسابداری داخلی — docs/plans/accounting.md بخش ۱۱ (داشبورد) و ۱۳.
  *
  * بالا: سه عددی که صاحب کسب‌وکار هر روز می‌خواهد (پول نقد، طلب، بدهی).
+ * «این ماه»: فروش خالص، سود ناخالص، هزینه و سود خالص از اول ماه شمسی، با
+ * نمودار روزانه (نمای جدول هم دارد) و مقایسه با همین تعداد روزِ قبل.
+ * «کارهای مانده»: رویداد گیرکرده، فاکتور سررسیدگذشته، کالای منفی یا کم.
  * «شروع کار»: تا وقتی کامل نشده، قدم بعدی را جلوی چشم نگه می‌دارد.
+ * سود ناخالص و خالص فقط با مجوز «دیدن بهای تمام‌شده» از سرور می‌آید.
  */
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatJalali } from "@/lib/club/jalali";
+import { dayLabel, MultiLineChart, type Series } from "@/components/admin/reports/charts";
+import { Amt, Change, SERIES, useIsDark } from "./reports/kit";
 import { api, BalanceLabel, Card, Money, PageHeader, SectionTitle, Stat, btn } from "./ui";
 import { faNum, formatAmount } from "@/lib/accounting/money";
 
@@ -24,6 +30,18 @@ interface Summary {
   checklist: { bank: boolean; opening: boolean; seller: boolean; parties: boolean };
   voucherCount: number;
   cheques: { in: { count: number; total: string }; out: { count: number; total: string } };
+  month: {
+    from: string;
+    to: string;
+    netSales: string;
+    expenses: string;
+    gross: string | null;
+    net: string | null;
+    prev: { netSales: string; expenses: string; gross: string | null; net: string | null } | null;
+    series: { days: string[]; sales: string[]; expenses: string[]; gross: string[] | null };
+    alerts: { events: number; overdue: string; overdueCount: number; negative: number; lowStock: number };
+  } | null;
+  can: { reports: boolean; cost: boolean };
 }
 
 const KIND_ICON: Record<string, string> = { CASH: "💵", BANK: "🏦", POS: "💳", GATEWAY: "🌐" };
@@ -84,6 +102,8 @@ export default function InternalDashboard({ canLeave, onLeft }: { canLeave: bool
         <Stat label="طلب از اشخاص" value={<Money value={data.receivable} tone="green" />} href="/admin/accounting/parties?balance=debtor" />
         <Stat label="بدهی به اشخاص" value={<Money value={data.payable} tone="red" />} href="/admin/accounting/parties?balance=creditor" />
       </div>
+
+      {data.month && <MonthSection m={data.month} canReports={data.can.reports} />}
 
       {(data.cheques.in.count > 0 || data.cheques.out.count > 0) && (
         <Card className="p-4">
@@ -176,20 +196,143 @@ export default function InternalDashboard({ canLeave, onLeft }: { canLeave: bool
         </section>
       </div>
 
-      <Card className="p-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-bold text-gray-900 dark:text-white">در راه: هزینه‌ها، کیف پول و اقساط، گزارش‌های مالی</p>
-          <p className="text-xs text-gray-500 mt-1 leading-6">
-            فروش سایت، دریافت درگاه، فاکتور، انبار و چک همین حالا خودکار یا دستی در دفتر می‌نشینند. ثبت هزینه، کیف پول مشتریان،
-            اقساط اعتباری و گزارش‌های سود و زیان در نسخه‌های بعدی می‌آیند.
-          </p>
+      {(data.can.reports || (canLeave && data.voucherCount === 0)) && (
+        <Card className="p-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">گزارش‌های مالی</p>
+            <p className="text-xs text-gray-500 mt-1 leading-6">سود و زیان، ترازنامه، سنی بدهی، سود هر کالا، ارزش افزوده و بقیه — با خروجی اکسل و چاپ.</p>
+          </div>
+          <div className="flex gap-2">
+            {data.can.reports && (
+              <Link href="/admin/accounting/reports" className={btn.primary}>
+                📊 گزارش‌ها
+              </Link>
+            )}
+            {canLeave && data.voucherCount === 0 && (
+              <button onClick={leave} className={btn.soft}>
+                خاموش کردن حسابداری داخلی
+              </button>
+            )}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+type Month = NonNullable<Summary["month"]>;
+
+/** عددهای ماه جاری + نمودار روزانه + کارهای مانده */
+function MonthSection({ m, canReports }: { m: Month; canReports: boolean }) {
+  const dark = useIsDark();
+  const [table, setTable] = useState(false);
+  const c = dark ? SERIES.dark : SERIES.light;
+  const series: Series[] = [
+    { key: "sales", label: "فروش خالص", color: c.sales, data: m.series.sales.map(Number) },
+    ...(m.series.gross ? [{ key: "gross", label: "سود ناخالص", color: c.gross, data: m.series.gross.map(Number) }] : []),
+    { key: "expenses", label: "هزینه‌ها", color: c.expenses, data: m.series.expenses.map(Number) },
+  ];
+  const tiles = [
+    { label: "فروش خالص", v: m.netSales, p: m.prev?.netSales ?? null, href: "/admin/accounting/reports/pl" },
+    ...(m.gross !== null ? [{ label: "سود ناخالص", v: m.gross, p: m.prev?.gross ?? null, href: "/admin/accounting/reports/profit" }] : []),
+    { label: "هزینه‌ها", v: m.expenses, p: m.prev?.expenses ?? null, href: "/admin/accounting/reports/expenses", bad: true },
+    ...(m.net !== null ? [{ label: "سود خالص", v: m.net, p: m.prev?.net ?? null, href: "/admin/accounting/reports/pl" }] : []),
+  ];
+  const a = m.alerts;
+  const alerts = [
+    a.events > 0 && { icon: "⚡", text: `${faNum(a.events)} ثبت خودکار گیر کرده`, href: "/admin/accounting/events", tone: "text-red-600" },
+    a.overdueCount > 0 && { icon: "⏰", text: `${faNum(a.overdueCount)} فاکتور سررسیدگذشته — ${formatAmount(a.overdue)} تومان`, href: "/admin/accounting/reports/aging", tone: "text-red-600" },
+    a.negative > 0 && { icon: "📉", text: `${faNum(a.negative)} کالا با موجودی منفی`, href: "/admin/accounting/inventory?filter=negative", tone: "text-amber-600" },
+    a.lowStock > 0 && { icon: "📦", text: `${faNum(a.lowStock)} کالا زیر نقطه‌ی سفارش`, href: "/admin/accounting/inventory?filter=low", tone: "text-amber-600" },
+  ].filter(Boolean) as { icon: string; text: string; href: string; tone: string }[];
+
+  return (
+    <>
+      <section>
+        <SectionTitle title={`این ماه — از ${formatJalali(new Date(m.from))}`} help="accounting" />
+        {/* موبایل: کارت‌های افقی قابل اسکرول (بخش ۱۳.۳) */}
+        <div className="flex sm:grid sm:grid-cols-4 gap-3 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 snap-x">
+          {tiles.map((t) => {
+            const inner = (
+              <Card className="p-4 min-w-[10.5rem] snap-start h-full">
+                <p className="text-[11px] text-gray-500">{t.label}</p>
+                <p className="text-lg mt-1">
+                  <Amt v={t.v} strong />
+                </p>
+                <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                  <Change cur={t.v} prev={t.p} goodWhenUp={!t.bad} />
+                  {t.p !== null && <span>نسبت به همین روزهای ماه قبل</span>}
+                </div>
+              </Card>
+            );
+            return canReports ? (
+              <Link key={t.label} href={t.href} className="shrink-0 sm:shrink">
+                {inner}
+              </Link>
+            ) : (
+              <div key={t.label} className="shrink-0 sm:shrink">
+                {inner}
+              </div>
+            );
+          })}
         </div>
-        {canLeave && data.voucherCount === 0 && (
-          <button onClick={leave} className={btn.soft}>
-            خاموش کردن حسابداری داخلی
-          </button>
+      </section>
+
+      <Card className="p-4 space-y-3">
+        <SectionTitle
+          title="روز به روز"
+          actions={
+            <button onClick={() => setTable((x) => !x)} className={btn.small}>
+              {table ? "📈 نمودار" : "🔢 نمای جدول"}
+            </button>
+          }
+        />
+        {table ? (
+          <div className="overflow-x-auto max-h-80">
+            <table className="w-full text-xs">
+              <thead className="text-gray-500">
+                <tr>
+                  <th className="text-right py-1.5 px-2">روز</th>
+                  {series.map((s) => (
+                    <th key={s.key} className="text-left py-1.5 px-2">
+                      {s.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                {m.series.days.map((d, i) => (
+                  <tr key={d}>
+                    <td className="py-1.5 px-2 whitespace-nowrap">{dayLabel(d)}</td>
+                    {series.map((s) => (
+                      <td key={s.key} className="py-1.5 px-2 text-left">
+                        <Amt v={String(s.data[i])} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <MultiLineChart id="acc-month" days={m.series.days} series={series} height={240} />
         )}
       </Card>
-    </div>
+
+      {alerts.length > 0 && (
+        <Card className="p-4">
+          <SectionTitle title="کارهای مانده" />
+          <div className="divide-y divide-gray-100 dark:divide-white/5">
+            {alerts.map((x) => (
+              <Link key={x.href} href={x.href} className="flex items-center gap-3 py-2.5 text-sm hover:text-blue-600">
+                <span>{x.icon}</span>
+                <span className={`font-bold ${x.tone}`}>{x.text}</span>
+                <span className="mr-auto text-xs text-gray-400">←</span>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
+    </>
   );
 }
