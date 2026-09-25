@@ -300,6 +300,16 @@ npx tsx scripts/seed-staff-roles.ts --grant-new   # CREDIT_VIEW_OWN / VIEW_ALL /
 
 ### گام‌های بعد از استقرار نسخه‌ی ۲.۶۰.۰ (کارهای محتوا و لینک‌سازی)
 
+> **تجربه‌ی استقرار ۲.۶۰.۰ روی ۹dm (۱۴۰۵/۰۷/۰۳):** اینترنت وسط
+> `Running TypeScript ...` قطع شد، ولی این بار **بیلد روی سرور تمام شده بود** و
+> فقط `deploy.mjs` روی اتصال مرده گیر کرد — یعنی `pm2 restart` و health check
+> اجرا نشده بودند و سایت هنوز بیلد قبلی را در حافظه داشت. تشخیص در سه قدم:
+> (۱) `ls -la .next/BUILD_ID` زمانش بعد از زمان فایل مهاجرتِ rsyncشده است؟
+> (۲) مسیر تازه در `.next/server/app/...` هست؟ (۳) `pm_uptime` پروسه در
+> `pm2 jlist` قبل از بیلد است؟ اگر هر سه بله: فقط `pm2 restart <name> --update-env`
+> — بیلد دوباره لازم نیست. اسکریپت محلیِ گیرکرده را با `kill` ببندید.
+
+
 `migrate deploy` یک مهاجرت کوچک و **فقط افزودنی** اجرا می‌کند
 (`20260930120000_link_building_ui`): عضو `LINK_CAMPAIGN` در `ActivityEntity`،
 ستون‌های `LinkNode.createdById/createdByName/assignedAt/startedAt/returnCount`،
