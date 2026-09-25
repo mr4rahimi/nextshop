@@ -19,6 +19,7 @@ import { prisma } from "@/lib/prisma";
 import { logActivityAsync } from "@/lib/activity";
 import { can, type StaffAccess } from "@/lib/permissions";
 import { notify, usersWithPermission } from "./notifications";
+import { parseMarketingDate } from "./dates";
 import {
   SEO_ALLOWED_FROM,
   SEO_NEXT_STATUS,
@@ -129,11 +130,10 @@ export async function canSeeSeoTask(
   return !!hit;
 }
 
-function toDate(value: unknown): Date | null {
-  if (!value) return null;
-  const d = value instanceof Date ? value : new Date(String(value));
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+/** ⚠️ `new Date(string)` روی سرور UTC مهلت را ۳:۳۰ جابه‌جا می‌کرد (تله‌ی ۳) */
+const toDate = (v: unknown) => parseMarketingDate(v);
+/** تاریخ بررسی «از آن روز» است، نه «تا آخر آن روز» */
+const toReviewDate = (v: unknown) => parseMarketingDate(v, "start");
 
 function clean(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -201,7 +201,7 @@ export async function createSeoTask(input: CreateSeoTaskInput, access: StaffAcce
       createdByName: access.name,
       priority: input.priority ?? "NORMAL",
       dueAt: toDate(input.dueAt),
-      reviewAt: toDate(input.reviewAt),
+      reviewAt: toReviewDate(input.reviewAt),
       checklist: {
         create: items.map((t, i) => ({ title: t, sortOrder: i })),
       },
@@ -281,7 +281,7 @@ export async function updateSeoTask(
   if (input.pageUrls !== undefined) data.pageUrls = clean(input.pageUrls);
   if (input.priority !== undefined) data.priority = input.priority;
   if (input.dueAt !== undefined) data.dueAt = toDate(input.dueAt);
-  if (input.reviewAt !== undefined) data.reviewAt = toDate(input.reviewAt);
+  if (input.reviewAt !== undefined) data.reviewAt = toReviewDate(input.reviewAt);
 
   if (input.categoryId !== undefined) {
     const category = await prisma.seoTaskCategory.findFirst({

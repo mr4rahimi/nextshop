@@ -2396,6 +2396,7 @@ enum ActivityEntity {
   SEO_TASK
   CONTENT_TASK
   LINK_NODE
+  LINK_CAMPAIGN
   OTHER
 }
 
@@ -3439,6 +3440,8 @@ model LinkType {
   sampleSites        String?
   /// پیش‌فرض‌های هوشمند فرم گره؛ قفل نیستند
   defaultContentKind LinkContentKind @default(NONE)
+  /// شبکه‌ی اجتماعی تقریباً همیشه نوفالو است — پیش‌فرض فرم از همین می‌آید
+  defaultFollow      Boolean         @default(true)
   defaultUgc         Boolean         @default(false)
   defaultSponsored   Boolean         @default(false)
   /// PBN — روشِ لینک‌سازی ریسک جریمه دارد. هشدار قرمز در فرم.
@@ -3509,6 +3512,8 @@ model LinkTarget {
   id             String   @id @default(cuid())
   campaignId     String
   url            String
+  /// برچسب کوتاه روی بوم — «تعمیر سامسونگ» خواناتر از آدرس کامل است
+  label          String?
   primaryKeyword String?
   isActive       Boolean  @default(true)
   posX           Float    @default(0)
@@ -3547,14 +3552,17 @@ model LinkNode {
   contentBrief String?
   profileTitle String?
 
-  assigneeId   String?
-  assigneeName String?
-  status       LinkNodeStatus @default(PLANNED)
-  dueAt        DateTime?
-  publishedUrl String?
-  /// هزینه‌ی ریالی اگر پولی بود — از حالا ثبت می‌شود هرچند گزارش بازدهی
+  assigneeId    String?
+  assigneeName  String?
+  /// اعلان «لینک ثبت شد» به سازنده‌ی گره می‌رود
+  createdById   String?
+  createdByName String?
+  status        LinkNodeStatus @default(PLANNED)
+  dueAt         DateTime?
+  publishedUrl  String?
+  /// هزینه به **تومان** (قرارداد کل فروشگاه) اگر پولی بود — از حالا ثبت می‌شود هرچند گزارش بازدهی
   /// فاز بعد است؛ هزینه‌ای که موقعش ثبت نشود بعداً بازسازی نمی‌شود.
-  cost         BigInt?
+  cost          BigInt?
 
   contentTaskId String? @unique
 
@@ -3563,9 +3571,13 @@ model LinkNode {
   posX Float @default(0)
   posY Float @default(0)
 
+  assignedAt   DateTime?
+  startedAt    DateTime?
   submittedAt  DateTime?
   liveAt       DateTime?
   lostAt       DateTime?
+  /// چند بار برگشت خورد — مبنای «کیفیت اول‌بار» در گزارش‌های بعدی
+  returnCount  Int       @default(0)
   failReason   String?
   returnReason String?
   deletedAt    DateTime?
@@ -3605,6 +3617,10 @@ model LinkEdge {
   toNode   LinkNode?    @relation("LinkEdgeTo", fields: [toNodeId], references: [id], onDelete: Cascade)
   toTarget LinkTarget?  @relation(fields: [toTargetId], references: [id], onDelete: Cascade)
 
+  // یال تکراری معنی ندارد؛ NULLها در پستگرس متمایزند، پس هر قید فقط روی
+  // همان نوع مقصد خودش اثر دارد
+  @@unique([fromNodeId, toNodeId])
+  @@unique([fromNodeId, toTargetId])
   @@index([campaignId])
   @@index([fromNodeId])
   @@index([toNodeId])

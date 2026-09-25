@@ -16,7 +16,10 @@ const ACTION_COLORS: Record<string, string> = {
 const ENTITY_LABELS: Record<string, string> = {
   PRODUCT: "محصول", CATEGORY: "دسته‌بندی", BRAND: "برند", MEDIA: "رسانه",
   WIDGET: "ویجت", PAGE: "برگه", ORDER: "سفارش", STORY: "استوری",
-  HERO_SLIDE: "اسلاید", BLOG: "بلاگ", USER: "کاربر", SETTINGS: "تنظیمات", OTHER: "سایر",
+  HERO_SLIDE: "اسلاید", BLOG: "بلاگ", USER: "کاربر", SETTINGS: "تنظیمات",
+  STAFF_ROLE: "نقش کارکنان", STAFF_TASK: "کار کارتابل", SEO_TASK: "کار سئو",
+  CONTENT_TASK: "کار محتوا", LINK_NODE: "گره لینک‌سازی", LINK_CAMPAIGN: "کمپین لینک‌سازی",
+  OTHER: "سایر",
 };
 const ENTITY_COLORS = ["#6366f1", "#0891b2", "#16a34a", "#d97706", "#e11d48", "#8b5cf6", "#0d9488", "#6b7280"];
 

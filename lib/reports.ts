@@ -87,5 +87,11 @@ export const ENTITY_LABELS: Record<string, string> = {
   BLOG: "بلاگ",
   USER: "کاربر",
   SETTINGS: "تنظیمات",
+  STAFF_ROLE: "نقش کارکنان",
+  STAFF_TASK: "کار کارتابل",
+  SEO_TASK: "کار سئو",
+  CONTENT_TASK: "کار محتوا",
+  LINK_NODE: "گره لینک‌سازی",
+  LINK_CAMPAIGN: "کمپین لینک‌سازی",
   OTHER: "سایر",
 };

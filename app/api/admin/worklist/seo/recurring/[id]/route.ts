@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { parseMarketingDate } from "@/lib/marketing/dates";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { requirePermission } from "@/lib/permissions";
@@ -78,8 +79,9 @@ export async function PATCH(req: Request, { params }: Params) {
     }
 
     if (body.nextRunAt) {
-      const d = new Date(body.nextRunAt);
-      if (!Number.isNaN(d.getTime())) data.nextRunAt = d;
+      // ⚠️ ورودی به وقت تهران است — همان تله‌ی `new Date(string)`
+      const d = parseMarketingDate(body.nextRunAt, "start");
+      if (d) data.nextRunAt = d;
     }
 
     if (typeof body.isActive === "boolean") data.isActive = body.isActive;

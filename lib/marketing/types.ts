@@ -12,9 +12,18 @@ import type {
   SeoReviewOutcome,
   SeoRecurrenceUnit,
   MarketingEventAction,
+  ContentTaskStatus,
+  ContentDestination,
 } from "@prisma/client";
 
-export type { SeoTaskStatus, SeoReviewOutcome, SeoRecurrenceUnit, MarketingEventAction };
+export type {
+  SeoTaskStatus,
+  SeoReviewOutcome,
+  SeoRecurrenceUnit,
+  MarketingEventAction,
+  ContentTaskStatus,
+  ContentDestination,
+};
 
 export const SEO_STATUS_LABELS: Record<SeoTaskStatus, string> = {
   ASSIGNED: "واگذارشده",
@@ -163,4 +172,127 @@ export function parsePageUrls(raw: string | null | undefined): string[] {
     if (url) seen.add(url);
   }
   return [...seen];
+}
+
+// ─────────────────────────────────────────────────────────────────
+// گردش کار محتوا — بخش ۶ مستندات
+// ─────────────────────────────────────────────────────────────────
+
+export const CONTENT_STATUS_LABELS: Record<ContentTaskStatus, string> = {
+  ASSIGNED: "واگذارشده",
+  WRITING: "در حال نوشتن",
+  AWAITING_PUBLISH: "منتظر انتشار",
+  PUBLISHING: "در حال انتشار",
+  AWAITING_APPROVAL: "منتظر تأیید",
+  DONE: "تأیید شد",
+  CANCELED: "لغو شد",
+};
+
+export const CONTENT_STATUS_COLORS: Record<ContentTaskStatus, string> = {
+  ASSIGNED: "text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/5",
+  WRITING: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10",
+  AWAITING_PUBLISH: "text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10",
+  PUBLISHING: "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10",
+  AWAITING_APPROVAL: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10",
+  DONE: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10",
+  CANCELED: "text-gray-500 dark:text-gray-500 bg-gray-100 dark:bg-gray-500/10",
+};
+
+/**
+ * برچسب رویدادها در تاریخچه‌ی **کار محتوا**.
+ *
+ * همان enum مشترک است، ولی «گزارش ثبت شد» در محتوا یعنی ارسال متن به
+ * محتواگذار و «تکمیل شد» یعنی انتشار — جمله‌ی عمومی اینجا گمراه می‌کرد.
+ */
+export const CONTENT_EVENT_LABELS: Record<MarketingEventAction, string> = {
+  ...EVENT_LABELS,
+  STARTED: "نوشتن شروع شد",
+  REPORTED: "متن به محتواگذار رسید",
+  PUBLISHING: "انتشار شروع شد",
+  SUBMITTED: "انتشار تکمیل شد",
+};
+
+export const DESTINATION_LABELS: Record<ContentDestination, string> = {
+  BLOG: "مجله‌ی همین فروشگاه",
+  EXTERNAL: "سایت بیرونی (مهمان‌نویسی / رپورتاژ)",
+};
+
+export const CONTENT_ACTIONS = [
+  "start",
+  "submit",
+  "take",
+  "complete",
+  "approve",
+  "return",
+  "cancel",
+  "reopen",
+] as const;
+export type ContentAction = (typeof CONTENT_ACTIONS)[number];
+
+export const CONTENT_ACTION_LABELS: Record<ContentAction, string> = {
+  start: "شروع نوشتن",
+  submit: "ارسال به محتواگذار",
+  take: "در حال انتشار",
+  complete: "تکمیل انتشار",
+  approve: "تأیید",
+  return: "برگشت با دلیل",
+  cancel: "لغو",
+  reopen: "بازگشایی",
+};
+
+export const CONTENT_ALLOWED_FROM: Record<ContentAction, ContentTaskStatus[]> = {
+  start: ["ASSIGNED"],
+  submit: ["WRITING"],
+  take: ["AWAITING_PUBLISH"],
+  complete: ["PUBLISHING"],
+  approve: ["AWAITING_APPROVAL"],
+  // برگشت از هر مرحله‌ای که متن از دست نویسنده بیرون رفته
+  return: ["AWAITING_PUBLISH", "PUBLISHING", "AWAITING_APPROVAL"],
+  cancel: ["ASSIGNED", "WRITING", "AWAITING_PUBLISH", "PUBLISHING", "AWAITING_APPROVAL"],
+  reopen: ["DONE", "CANCELED"],
+};
+
+/** کنش‌هایی که فقط مدیر (`CONTENT_TASK_MANAGE`) می‌زند — لغو قضاوتِ مدیر است */
+export const CONTENT_MANAGER_ACTIONS: ContentAction[] = ["approve", "cancel", "reopen"];
+
+/**
+ * وضعیت‌هایی که یعنی «متن آماده است».
+ *
+ * گره‌ی لینک‌سازیِ متصل از همین‌جا آزاد می‌شود. ⚠️ منتظر `DONE` ماندن اشتباه
+ * است: در مهمان‌نویسی، انتشار **خودِ ساختن لینک** است (بخش ۷.۶).
+ */
+export const CONTENT_READY_STATUSES: ContentTaskStatus[] = [
+  "AWAITING_PUBLISH",
+  "PUBLISHING",
+  "AWAITING_APPROVAL",
+  "DONE",
+];
+
+export function isContentOpen(status: ContentTaskStatus): boolean {
+  return status !== "DONE" && status !== "CANCELED";
+}
+
+export function isContentOverdue(task: {
+  dueAt: string | Date | null;
+  status: ContentTaskStatus;
+}): boolean {
+  if (!task.dueAt) return false;
+  if (!isContentOpen(task.status)) return false;
+  return new Date(task.dueAt).getTime() < Date.now();
+}
+
+/**
+ * تعداد کلمه‌ی متن HTML. تگ‌ها و فاصله‌ی بی‌معنی حذف می‌شوند.
+ *
+ * ⚠️ `&nbsp;` و موجودیت‌های HTML هم فاصله حساب می‌شوند، وگرنه متنی که از
+ * ورد چسبانده شده یک کلمه‌ی خیلی بلند می‌شود.
+ */
+export function countWords(html: string | null | undefined): number {
+  if (!html) return 0;
+  const text = html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&[a-z#0-9]+;/gi, " ")
+    .trim();
+  if (!text) return 0;
+  return text.split(/\s+/).filter(Boolean).length;
 }

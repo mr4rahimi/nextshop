@@ -86,3 +86,17 @@ export async function usersWithPermission(permission: string): Promise<
     name: [u.firstName, u.lastName].filter(Boolean).join(" ").trim() || u.phone || "بدون نام",
   }));
 }
+
+/**
+ * نام کارمند از روی شناسه — اسنپ‌شات کنار شناسه ذخیره می‌شود، چون حساب
+ * حذف‌شده نباید گزارش پارسال را خالی کند. کارمند غیرفعال `null` می‌دهد.
+ */
+export async function staffName(userId: string | null | undefined): Promise<string | null> {
+  if (!userId) return null;
+  const u = await prisma.user.findFirst({
+    where: { id: userId, isActive: true, role: { in: ["ADMIN", "SELLER"] } },
+    select: { firstName: true, lastName: true, phone: true },
+  });
+  if (!u) return null;
+  return [u.firstName, u.lastName].filter(Boolean).join(" ").trim() || u.phone || "بدون نام";
+}

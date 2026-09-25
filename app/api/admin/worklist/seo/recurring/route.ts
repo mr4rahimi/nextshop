@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { parseMarketingDate } from "@/lib/marketing/dates";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { requirePermission } from "@/lib/permissions";
@@ -68,9 +69,10 @@ export async function POST(req: Request) {
 
     // اولین اجرا: اگر داده نشده، یک دوره بعد از حالا
     const now = new Date();
-    const firstRun = body.firstRunAt ? new Date(body.firstRunAt) : null;
+    // ⚠️ ورودی به وقت تهران است؛ `new Date(string)` روی سرور UTC جابه‌جایش می‌کرد
+    const firstRun = parseMarketingDate(body.firstRunAt, "start");
     const nextRunAt =
-      firstRun && !Number.isNaN(firstRun.getTime())
+      firstRun
         ? firstRun
         : nextRunAfter(now, base.unit, base.intervalCount);
 

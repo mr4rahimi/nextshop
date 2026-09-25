@@ -44,6 +44,8 @@ interface TypeSeed {
   seoNote: string;
   sampleSites?: string;
   contentKind?: LinkContentKind;
+  /** پیش‌فرض فالو؛ فقط `false` نوشته می‌شود */
+  follow?: boolean;
   ugc?: boolean;
   sponsored?: boolean;
   risky?: boolean;
@@ -97,7 +99,7 @@ const TYPES: TypeSeed[] = [
     ],
   },
   {
-    key: "COMMENT", title: "کامنت", icon: "message-square", contentKind: "TEXT", ugc: true,
+    key: "COMMENT", title: "کامنت", icon: "message-square", contentKind: "TEXT", follow: false, ugc: true,
     description: "نظر زیر مطلب یک سایت دیگر، با لینک.",
     seoNote: "تقریباً همیشه ugc می‌خورد. فقط کامنت واقعاً مرتبط؛ کامنت بی‌ربط اسپم است.",
     sampleSites: "وبلاگ‌ها و سایت‌های خبری",
@@ -132,7 +134,7 @@ const TYPES: TypeSeed[] = [
     ],
   },
   {
-    key: "SOCIAL", title: "شبکه‌ی اجتماعی", icon: "share-2", contentKind: "IMAGE",
+    key: "SOCIAL", title: "شبکه‌ی اجتماعی", icon: "share-2", contentKind: "IMAGE", follow: false,
     description: "لینک در بایو یا پست شبکه‌های اجتماعی.",
     seoNote: "تقریباً همیشه نوفالو؛ ارزشش کشف برند و ترافیک است نه انتقال اعتبار.",
     sampleSites: "اینستاگرام، لینکدین، تلگرام، ایکس",
@@ -186,7 +188,7 @@ const TYPES: TypeSeed[] = [
     ],
   },
   {
-    key: "WIKI", title: "ویکی", icon: "book-open", contentKind: "TEXT",
+    key: "WIKI", title: "ویکی", icon: "book-open", contentKind: "TEXT", follow: false,
     description: "منبع در ویکی‌پدیا یا ویکی‌های تخصصی.",
     seoNote: "سخت‌ترین و پرارزش‌ترین. منبع باید واقعاً معتبر باشد وگرنه همان روز پاک می‌شود.",
     sampleSites: "ویکی‌پدیا و ویکی‌های تخصصی",
@@ -204,7 +206,7 @@ const TYPES: TypeSeed[] = [
     sampleSites: "دامنه‌های gov، اتحادیه‌ها، سازمان‌های صنفی",
   },
   {
-    key: "BANNER", title: "بنری", icon: "rectangle-horizontal", contentKind: "IMAGE", sponsored: true,
+    key: "BANNER", title: "بنری", icon: "rectangle-horizontal", contentKind: "IMAGE", follow: false, sponsored: true,
     description: "تبلیغ نمایشی روی سایت دیگر.",
     seoNote: "تبلیغ است؛ sponsored اجباری. بدون آن، لینک خریداری‌شده حساب می‌شود.",
     sampleSites: "تبلیغات نمایشی سایت‌ها",
@@ -299,6 +301,7 @@ async function main() {
           seoNote: seed.seoNote,
           sampleSites: seed.sampleSites ?? null,
           defaultContentKind: seed.contentKind ?? "NONE",
+          defaultFollow: seed.follow ?? true,
           defaultUgc: seed.ugc ?? false,
           defaultSponsored: seed.sponsored ?? false,
           isRisky: seed.risky ?? false,

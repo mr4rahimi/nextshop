@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { faqForPrisma } from "@/lib/faq-db";
+import { getStaffAccess } from "@/lib/permissions";
+import { detachDeletedBlogPost } from "@/lib/marketing/content-publish";
 
 export const runtime = "nodejs";
 
@@ -66,6 +68,10 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
 
 export async function DELETE(_: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
+  // مقاله‌ای که کار محتوا ساخته: متنش به کار برمی‌گردد و رویداد ثبت می‌شود
+  // (docs/plans/seo-marketing.md بخش ۶.۲، قاعده‌ی ۳)
+  const access = await getStaffAccess();
+  await detachDeletedBlogPost(id, access ? { id: access.userId, name: access.name } : null);
   await prisma.blogPost.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

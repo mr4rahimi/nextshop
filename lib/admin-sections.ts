@@ -116,10 +116,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     ],
   },
   {
-    // رسانه و آپلود را محصول، مقاله و بنر همه لازم دارند
+    // رسانه و آپلود را محصول، مقاله و بنر همه لازم دارند.
+    // ⚠️ کارمند سئو و محتوا و لینک‌سازی هم: پیوست کار، عکس داخل متن و کاور
+    // مقاله از همین مسیر آپلود می‌گذرند و مسیر آپلود دوم ساخته نمی‌شود
+    // (docs/plans/seo-marketing.md بخش ۱۰.۶، درس ۳).
     key: "media",
     label: "رسانه و آپلود",
-    permissions: ["PANEL_CATALOG", "PANEL_CONTENT"],
+    permissions: ["PANEL_CATALOG", "PANEL_CONTENT", "SEO_TASK_WORK", "CONTENT_TASK_WORK", "LINK_WORK"],
     prefixes: ["/admin/media", "/api/admin/media", "/api/admin/upload"],
   },
   {

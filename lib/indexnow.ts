@@ -78,3 +78,8 @@ export async function submitToIndexNow(urls: string[]): Promise<void> {
 export function productUrl(slug: string) {
   return `${SITE_URL}/products/${encodeURIComponent(slug)}`;
 }
+
+/** میان‌بر برای یک مقاله‌ی مجله */
+export function blogPostUrl(slug: string) {
+  return `${SITE_URL}/mag/${encodeURIComponent(slug)}`;
+}
