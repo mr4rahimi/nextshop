@@ -18,6 +18,12 @@ import { dayLabel, MultiLineChart, type Series } from "@/components/admin/report
 import { Amt, Change, SERIES, useIsDark } from "./reports/kit";
 import { api, BalanceLabel, Card, Money, PageHeader, SectionTitle, Stat, btn } from "./ui";
 import { faNum, formatAmount } from "@/lib/accounting/money";
+import {
+  AlarmClock, ChartColumn, ChartLine, ChevronLeft, CreditCard, Globe, Landmark, Package, Plus,
+  Table2, TrendingDown, Wallet, Zap, type LucideIcon,
+} from "lucide-react";
+import { AppGrid } from "../AppGrid";
+import { useAccountingShell } from "./AccountingShell";
 
 interface Summary {
   year: { title: string; startDate: string; endDate: string } | null;
@@ -44,11 +50,17 @@ interface Summary {
   can: { reports: boolean; cost: boolean };
 }
 
-const KIND_ICON: Record<string, string> = { CASH: "💵", BANK: "🏦", POS: "💳", GATEWAY: "🌐" };
+const KIND_ICON: Record<string, { icon: LucideIcon; cls: string }> = {
+  CASH: { icon: Wallet, cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+  BANK: { icon: Landmark, cls: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
+  POS: { icon: CreditCard, cls: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
+  GATEWAY: { icon: Globe, cls: "bg-sky-500/10 text-sky-600 dark:text-sky-400" },
+};
 
 export default function InternalDashboard({ canLeave, onLeft }: { canLeave: boolean; onLeft: () => void }) {
   const [data, setData] = useState<Summary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const shell = useAccountingShell();
 
   const load = useCallback(() => {
     api<Summary>("/api/admin/accounting/summary")
@@ -95,7 +107,25 @@ export default function InternalDashboard({ canLeave, onLeft }: { canLeave: bool
             "سال مالی جاری تعریف نشده است"
           )
         }
+        actions={
+          shell && (
+            <button onClick={shell.openQuick} className={`${btn.primary} hidden md:inline-flex shadow-lg shadow-blue-600/20`}>
+              <Plus className="h-4 w-4" aria-hidden />
+              ثبت سریع
+            </button>
+          )
+        }
       />
+
+      {/* بخش‌ها به شکل کاشی اپ — «خانه» همین صفحه است و کاشی نمی‌خواهد */}
+      {shell && (
+        <Card className="px-2 py-2 sm:px-3">
+          <AppGrid
+            apps={shell.apps.filter((a) => a.href !== "/admin/accounting")}
+            badges={data.month?.alerts.events ? { "/admin/accounting/events": data.month.alerts.events } : undefined}
+          />
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Stat label="پول نقد و بانک" value={<Money value={data.cash} />} href="/admin/accounting/treasury" />
@@ -165,8 +195,8 @@ export default function InternalDashboard({ canLeave, onLeft }: { canLeave: bool
           <Card className="divide-y divide-gray-100 dark:divide-white/5">
             {data.treasuries.map((t) => (
               <Link key={t.id} href={`/admin/accounting/treasury/${t.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5">
-                <span className="flex items-center gap-2 min-w-0">
-                  <span className="text-lg">{KIND_ICON[t.kind]}</span>
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <KindIcon kind={t.kind} />
                   <span className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">{t.name}</span>
                 </span>
                 <BalanceLabel balance={t.balance} kind="treasury" />
@@ -205,7 +235,8 @@ export default function InternalDashboard({ canLeave, onLeft }: { canLeave: bool
           <div className="flex gap-2">
             {data.can.reports && (
               <Link href="/admin/accounting/reports" className={btn.primary}>
-                📊 گزارش‌ها
+                <ChartColumn className="h-4 w-4" aria-hidden />
+                گزارش‌ها
               </Link>
             )}
             {canLeave && data.voucherCount === 0 && (
@@ -240,11 +271,11 @@ function MonthSection({ m, canReports }: { m: Month; canReports: boolean }) {
   ];
   const a = m.alerts;
   const alerts = [
-    a.events > 0 && { icon: "⚡", text: `${faNum(a.events)} ثبت خودکار گیر کرده`, href: "/admin/accounting/events", tone: "text-red-600" },
-    a.overdueCount > 0 && { icon: "⏰", text: `${faNum(a.overdueCount)} فاکتور سررسیدگذشته — ${formatAmount(a.overdue)} تومان`, href: "/admin/accounting/reports/aging", tone: "text-red-600" },
-    a.negative > 0 && { icon: "📉", text: `${faNum(a.negative)} کالا با موجودی منفی`, href: "/admin/accounting/inventory?filter=negative", tone: "text-amber-600" },
-    a.lowStock > 0 && { icon: "📦", text: `${faNum(a.lowStock)} کالا زیر نقطه‌ی سفارش`, href: "/admin/accounting/inventory?filter=low", tone: "text-amber-600" },
-  ].filter(Boolean) as { icon: string; text: string; href: string; tone: string }[];
+    a.events > 0 && { icon: Zap, text: `${faNum(a.events)} ثبت خودکار گیر کرده`, href: "/admin/accounting/events", tone: "text-red-600" },
+    a.overdueCount > 0 && { icon: AlarmClock, text: `${faNum(a.overdueCount)} فاکتور سررسیدگذشته — ${formatAmount(a.overdue)} تومان`, href: "/admin/accounting/reports/aging", tone: "text-red-600" },
+    a.negative > 0 && { icon: TrendingDown, text: `${faNum(a.negative)} کالا با موجودی منفی`, href: "/admin/accounting/inventory?filter=negative", tone: "text-amber-600" },
+    a.lowStock > 0 && { icon: Package, text: `${faNum(a.lowStock)} کالا زیر نقطه‌ی سفارش`, href: "/admin/accounting/inventory?filter=low", tone: "text-amber-600" },
+  ].filter(Boolean) as { icon: LucideIcon; text: string; href: string; tone: string }[];
 
   return (
     <>
@@ -283,7 +314,8 @@ function MonthSection({ m, canReports }: { m: Month; canReports: boolean }) {
           title="روز به روز"
           actions={
             <button onClick={() => setTable((x) => !x)} className={btn.small}>
-              {table ? "📈 نمودار" : "🔢 نمای جدول"}
+              {table ? <ChartLine className="h-3.5 w-3.5" aria-hidden /> : <Table2 className="h-3.5 w-3.5" aria-hidden />}
+              {table ? "نمودار" : "نمای جدول"}
             </button>
           }
         />
@@ -324,15 +356,26 @@ function MonthSection({ m, canReports }: { m: Month; canReports: boolean }) {
           <SectionTitle title="کارهای مانده" />
           <div className="divide-y divide-gray-100 dark:divide-white/5">
             {alerts.map((x) => (
-              <Link key={x.href} href={x.href} className="flex items-center gap-3 py-2.5 text-sm hover:text-blue-600">
-                <span>{x.icon}</span>
+              <Link key={x.href} href={x.href} className="group flex items-center gap-3 py-2.5 text-sm">
+                <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] bg-current/10 ${x.tone}`}>
+                  <x.icon className="h-4 w-4" aria-hidden />
+                </span>
                 <span className={`font-bold ${x.tone}`}>{x.text}</span>
-                <span className="mr-auto text-xs text-gray-400">←</span>
+                <ChevronLeft className="mr-auto h-4 w-4 text-gray-400 transition-transform group-hover:-translate-x-0.5" aria-hidden />
               </Link>
             ))}
           </div>
         </Card>
       )}
     </>
+  );
+}
+
+function KindIcon({ kind }: { kind: string }) {
+  const k = KIND_ICON[kind] ?? KIND_ICON.CASH;
+  return (
+    <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] ${k.cls}`}>
+      <k.icon className="h-4 w-4" aria-hidden />
+    </span>
   );
 }

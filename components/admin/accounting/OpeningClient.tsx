@@ -14,6 +14,7 @@ import AmountInput from "./AmountInput";
 import PartyPicker, { type PartyOption } from "./PartyPicker";
 import { KIND_META, type TreasuryRecord } from "./TreasuryForm";
 import { api, btn, Card, ErrorText, Money, PageHeader, Segmented, SectionTitle } from "./ui";
+import { Plus } from "lucide-react";
 
 interface OpeningData {
   year: { id: string; title: string; startDate: string };
@@ -144,8 +145,9 @@ export default function OpeningClient() {
             </div>
           ))}
           <div className="px-4 py-2.5">
-            <Link href="/admin/accounting/treasury?new=1" className="text-xs font-bold text-blue-600">
-              ➕ حساب بانکی تازه
+            <Link href="/admin/accounting/treasury?new=1" className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600">
+              <Plus className="h-4 w-4" aria-hidden />
+              حساب بانکی تازه
             </Link>
           </div>
         </Card>
@@ -182,7 +184,8 @@ export default function OpeningClient() {
           ))}
           {!readOnly && (
             <button onClick={() => setRows((x) => [...x, { key: ++rowKey, party: null, dir: "owesUs", amount: "" }])} className={btn.soft}>
-              ➕ شخص دیگر
+              <Plus className="h-4 w-4" aria-hidden />
+              شخص دیگر
             </button>
           )}
         </div>

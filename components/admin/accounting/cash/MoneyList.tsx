@@ -10,6 +10,7 @@ import { faNum } from "@/lib/accounting/money";
 import { RangeBar, rangeFor, rangeQuery, type Range } from "../Statement";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, inputCls, Money, PageHeader } from "../ui";
 import { KIND_LABELS } from "./MoneyForm";
+import { Plus } from "lucide-react";
 
 type Kind = "RECEIPT" | "PAYMENT" | "TRANSFER";
 interface Row {
@@ -71,7 +72,8 @@ export default function MoneyList() {
         actions={
           data?.can.write && (
             <Link href={`/admin/accounting/money/new?kind=${kind}`} className={btn.primary}>
-              ➕ {KIND_LABELS[kind]} تازه
+              <Plus className="h-4 w-4" aria-hidden />
+              {KIND_LABELS[kind]} تازه
             </Link>
           )
         }
@@ -130,7 +132,8 @@ export default function MoneyList() {
             action={
               data.can.write && (
                 <Link href={`/admin/accounting/money/new?kind=${kind}`} className={btn.primary}>
-                  ➕ {KIND_LABELS[kind]} تازه
+                  <Plus className="h-4 w-4" aria-hidden />
+                  {KIND_LABELS[kind]} تازه
                 </Link>
               )
             }

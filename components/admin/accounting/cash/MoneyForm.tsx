@@ -22,6 +22,7 @@ import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import AmountInput from "../AmountInput";
 import PartyPicker, { type PartyOption } from "../PartyPicker";
 import { api, BalanceLabel, btn, Card, ErrorText, Field, inputCls, Money, PageHeader, Segmented, SectionTitle } from "../ui";
+import { Plus } from "lucide-react";
 
 type Kind = "RECEIPT" | "PAYMENT" | "TRANSFER";
 type Method = "CASH" | "CARD_TRANSFER" | "BANK_TRANSFER" | "POS" | "GATEWAY" | "CHEQUE" | "ENDORSE";
@@ -372,7 +373,8 @@ export default function MoneyForm() {
             help="accountingMoneyForm"
             actions={
               <button type="button" onClick={() => setItems((x) => [...x, blank(kind === "RECEIPT" ? "CHEQUE" : "CASH")])} className={btn.small}>
-                ➕ روش دیگر
+                <Plus className="h-4 w-4" aria-hidden />
+                روش دیگر
               </button>
             }
           />

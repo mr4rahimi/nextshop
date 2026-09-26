@@ -1,0 +1,96 @@
+/*
+ * پایه‌ی بصری پنل مدیریت — رنگ سطح‌ها، سایه‌ها و حرکت‌ها.
+ *
+ * فقط زیر `.admin-shell` اثر دارد، پس فروشگاه دست نمی‌خورد. رنگ‌ها متغیرند تا
+ * حالت روز و شب از یک جا عوض شوند؛ کامپوننت‌ها با `bg-[var(--adm-…)]`
+ * یا کلاس‌های `adm-*` از آن‌ها استفاده می‌کنند.
+ *
+ * مستندات: docs/features/admin-ui.md
+ */
+
+.admin-shell {
+  --adm-bg: #f4f6fa;
+  --adm-chrome: rgb(255 255 255 / 0.86);
+  --adm-surface: #ffffff;
+  --adm-border: rgb(15 23 42 / 0.08);
+  --adm-border-strong: rgb(15 23 42 / 0.14);
+  --adm-hover: rgb(15 23 42 / 0.045);
+  --adm-text: #0f172a;
+  --adm-muted: #64748b;
+  --adm-accent: #2563eb;
+  --adm-accent-soft: rgb(37 99 235 / 0.09);
+  --adm-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.03);
+  --adm-shadow-lg: 0 12px 32px -12px rgb(16 24 40 / 0.18), 0 2px 6px rgb(16 24 40 / 0.05);
+  background: var(--adm-bg);
+  color: var(--adm-text);
+}
+
+.dark .admin-shell {
+  --adm-bg: #090c12;
+  --adm-chrome: rgb(14 18 26 / 0.86);
+  --adm-surface: #111620;
+  --adm-border: rgb(255 255 255 / 0.07);
+  --adm-border-strong: rgb(255 255 255 / 0.13);
+  --adm-hover: rgb(255 255 255 / 0.05);
+  --adm-text: #e8ecf3;
+  --adm-muted: #8b95a7;
+  --adm-accent: #5b8def;
+  --adm-accent-soft: rgb(91 141 239 / 0.13);
+  --adm-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  --adm-shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.05);
+}
+
+/* نوار اسکرول باریک و بی‌صدا در همه‌ی پنل */
+.admin-shell * {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184 / 0.35) transparent;
+}
+.admin-shell *::-webkit-scrollbar { width: 8px; height: 8px; }
+.admin-shell *::-webkit-scrollbar-track { background: transparent; }
+.admin-shell *::-webkit-scrollbar-thumb {
+  background: rgb(148 163 184 / 0.28);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.admin-shell *::-webkit-scrollbar-thumb:hover { background-color: rgb(148 163 184 / 0.5); }
+
+/* حلقه‌ی فوکوس یکدست برای کیبورد — با ماوس دیده نمی‌شود */
+.admin-shell :where(a, button, [role="button"], input, select, textarea):focus-visible {
+  outline: 2px solid var(--adm-accent);
+  outline-offset: 2px;
+}
+
+/* ── حرکت‌ها ─────────────────────────────────────────────────────────── */
+
+@keyframes adm-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes adm-pop-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes adm-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes adm-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.adm-fade-in { animation: adm-fade-in 0.18s ease-out both; }
+.adm-pop-in { animation: adm-pop-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+/* پنجره‌ی پایین‌کش در موبایل از پایین می‌آید، در دسکتاپ وسط صفحه باز می‌شود */
+.adm-sheet-in { animation: adm-sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@media (min-width: 768px) {
+  .adm-sheet-in { animation: adm-pop-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+}
+
+/* کاشی‌های شبکه‌ی بخش‌ها پشت سر هم ظاهر می‌شوند؛ تأخیر از `--i` می‌آید */
+.adm-rise { animation: adm-rise 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 18ms); }
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell *,
+  .admin-shell *::before,
+  .admin-shell *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { faNum } from "@/lib/accounting/money";
 import InventoryTabs from "./InventoryTabs";
 import { api, Badge, btn, Card, ErrorText, Field, inputCls, PageHeader, Sheet } from "../ui";
+import { Plus } from "lucide-react";
 
 interface W {
   id: string;
@@ -39,7 +40,8 @@ export default function WarehousesClient() {
         actions={
           data?.can.manage && (
             <button onClick={() => setForm({ item: null })} className={btn.primary}>
-              ➕ انبار تازه
+              <Plus className="h-4 w-4" aria-hidden />
+              انبار تازه
             </button>
           )
         }

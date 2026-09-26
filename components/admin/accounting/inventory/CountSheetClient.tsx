@@ -13,6 +13,7 @@ import { formatJalali } from "@/lib/club/jalali";
 import { faNum, toLatinDigits } from "@/lib/accounting/money";
 import ProductPicker, { type ProductOption } from "../ProductPicker";
 import { api, Badge, btn, Card, ErrorText, PageHeader, SectionTitle, Stat } from "../ui";
+import { Plus } from "lucide-react";
 
 interface Line {
   id: string;
@@ -146,7 +147,8 @@ export default function CountSheetClient({ id }: { id: string }) {
             editable &&
             data.uncounted > 0 && (
               <button onClick={() => act("fill")} disabled={busy} className={btn.small} title="کالاهای شمرده‌نشده با عدد دفتری اضافه می‌شوند؛ فقط اختلاف‌ها را عوض کنید">
-                ➕ بقیه با عدد دفتری
+                <Plus className="h-4 w-4" aria-hidden />
+                بقیه با عدد دفتری
               </button>
             )
           }

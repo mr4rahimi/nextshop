@@ -10,6 +10,7 @@ import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import ProductPicker, { type ProductOption } from "../ProductPicker";
 import InventoryTabs from "./InventoryTabs";
 import { api, Badge, btn, Card, Empty, ErrorText, Field, inputCls, PageHeader, Sheet } from "../ui";
+import { Plus } from "lucide-react";
 
 interface W {
   id: string;
@@ -72,7 +73,8 @@ export default function TransfersClient() {
           data?.can.manage &&
           activeW.length > 1 && (
             <button onClick={() => setForm(true)} className={btn.primary}>
-              ➕ حواله‌ی تازه
+              <Plus className="h-4 w-4" aria-hidden />
+              حواله‌ی تازه
             </button>
           )
         }

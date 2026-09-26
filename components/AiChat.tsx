@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import type { FlowNode } from "@/lib/chat-flow";
 
 // ── Markdown inline parser ─────────────────────────────────────────────────
@@ -165,7 +166,17 @@ function getSessionId(): string {
 
 // ── Main component ─────────────────────────────────────────────────────────
 
+/**
+ * گفتگوی مشتری فقط در فروشگاه است. در پنل مدیریت روی دکمه‌ی خروج سایدبار و
+ * دکمه‌ی «ثبت کار» می‌نشست و کارمند با آن کاری ندارد.
+ */
 export default function AiChat() {
+  const pathname = usePathname();
+  if (pathname?.startsWith("/admin")) return null;
+  return <AiChatWidget />;
+}
+
+function AiChatWidget() {
   const [open, setOpen] = useState(false);
   const [config, setConfig] = useState<ChatConfig | null>(null);
 

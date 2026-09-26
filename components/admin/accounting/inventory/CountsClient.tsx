@@ -11,6 +11,7 @@ import { faNum } from "@/lib/accounting/money";
 import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import InventoryTabs from "./InventoryTabs";
 import { api, Badge, btn, Card, Empty, ErrorText, Field, inputCls, PageHeader, Sheet } from "../ui";
+import { Plus } from "lucide-react";
 
 interface C {
   id: string;
@@ -75,7 +76,8 @@ export default function CountsClient() {
         actions={
           data?.can.manage && (
             <button onClick={() => setOpen(true)} className={btn.primary}>
-              ➕ انبارگردانی تازه
+              <Plus className="h-4 w-4" aria-hidden />
+              انبارگردانی تازه
             </button>
           )
         }

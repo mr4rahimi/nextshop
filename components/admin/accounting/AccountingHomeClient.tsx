@@ -14,6 +14,8 @@ import { formatJalali } from "@/lib/club/jalali";
 import HelpButton from "@/components/admin/worklist/HelpButton";
 import { PageHeader } from "./ui";
 import InternalDashboard from "./InternalDashboard";
+import { useAccountingShell } from "./AccountingShell";
+import { AppGrid } from "../AppGrid";
 
 type Mode = "NONE" | "HESABAN" | "INTERNAL";
 
@@ -60,6 +62,7 @@ export default function AccountingHomeClient() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState<Mode | null>(null);
   const router = useRouter();
+  const shell = useAccountingShell();
 
   const load = useCallback(() => {
     fetch("/api/admin/accounting/settings")
@@ -234,6 +237,15 @@ export default function AccountingHomeClient() {
           رویدادها «رد شده» می‌مانند.
         </p>
       </section>
+
+      {shell && (
+        <section>
+          <h2 className="text-sm font-black text-gray-900 dark:text-white mb-3">بخش‌های حسابداری</h2>
+          <div className="rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] px-2 py-2 shadow-[var(--adm-shadow)] sm:px-3">
+            <AppGrid apps={shell.apps.filter((a) => a.href !== "/admin/accounting")} />
+          </div>
+        </section>
+      )}
     </div>
   );
 }

@@ -116,9 +116,9 @@ export default function OnlineOrderSound() {
       onClick={toggle}
       aria-label={enabled ? "خاموش کردن صدای سفارش آنلاین" : "روشن کردن صدای سفارش آنلاین"}
       title={enabled ? "صدای سفارش آنلاین روشن است" : "صدای سفارش آنلاین خاموش است"}
-      className={`flex h-8 w-8 items-center justify-center rounded-xl border transition-colors ${
+      className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${
         enabled
-          ? "border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:border-white/[0.06] dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white"
+          ? "border-transparent text-gray-500 hover:bg-[var(--adm-hover)] hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
           : "border-red-200 bg-red-50 text-red-500 hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400"
       }`}
     >

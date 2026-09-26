@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { faNum } from "@/lib/accounting/money";
 import TreasuryForm, { KIND_META, type TreasuryKind, type TreasuryRecord } from "./TreasuryForm";
 import { api, BalanceLabel, btn, Card, Empty, ErrorText, Money, PageHeader, SectionTitle, Stat } from "./ui";
+import { Plus } from "lucide-react";
 
 type Row = TreasuryRecord & { balance: string };
 interface Data {
@@ -47,7 +48,8 @@ export default function TreasuryClient() {
         actions={
           data?.can.manage && (
             <button onClick={() => setForm({ item: null })} className={btn.primary}>
-              ➕ صندوق یا بانک تازه
+              <Plus className="h-4 w-4" aria-hidden />
+              صندوق یا بانک تازه
             </button>
           )
         }

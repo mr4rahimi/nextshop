@@ -17,6 +17,7 @@ import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import AmountInput from "../AmountInput";
 import PartyPicker, { type PartyOption } from "../PartyPicker";
 import { api, btn, Card, ErrorText, Field, inputCls, Money, PageHeader, Segmented, SectionTitle } from "../ui";
+import { Plus } from "lucide-react";
 
 type Method = "CASH" | "CARD_TRANSFER" | "BANK_TRANSFER" | "CHEQUE";
 interface Account {
@@ -249,7 +250,8 @@ export default function ExpenseForm() {
         })}
         <div className="flex flex-wrap items-end gap-3">
           <button type="button" onClick={() => setLines((x) => [...x, blankLine()])} className={btn.small}>
-            ➕ ردیف دیگر
+            <Plus className="h-4 w-4" aria-hidden />
+            ردیف دیگر
           </button>
           {data?.vatEnabled && (
             <div className="w-48 mr-auto">
@@ -277,7 +279,8 @@ export default function ExpenseForm() {
           actions={
             paidNow && (
               <button type="button" onClick={() => { setPayTouched(true); setPays((x) => [...x, blankPay("BANK_TRANSFER")]); }} className={btn.small}>
-                ➕ روش دیگر
+                <Plus className="h-4 w-4" aria-hidden />
+                روش دیگر
               </button>
             )
           }

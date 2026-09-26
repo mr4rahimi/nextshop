@@ -14,6 +14,7 @@ import { faNum } from "@/lib/accounting/money";
 import { CHANNEL_LABELS, INVOICE_TYPE_LABELS, type InvoiceTypeKey } from "@/lib/accounting/invoices/calc";
 import { RangeBar, rangeFor, rangeQuery, type Range } from "../Statement";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, inputCls, Money, PageHeader } from "../ui";
+import { Plus } from "lucide-react";
 
 export interface InvoiceRow {
   id: string;
@@ -131,7 +132,8 @@ export default function InvoicesList({ side }: { side: Side }) {
           canWrite &&
           !isReturn && (
             <Link href={`/admin/accounting/invoices/new?type=${type}`} className={btn.primary}>
-              ➕ {INVOICE_TYPE_LABELS[type]} تازه
+              <Plus className="h-4 w-4" aria-hidden />
+              {INVOICE_TYPE_LABELS[type]} تازه
             </Link>
           )
         }
@@ -244,7 +246,8 @@ export default function InvoicesList({ side }: { side: Side }) {
               canWrite &&
               !isReturn && (
                 <Link href={`/admin/accounting/invoices/new?type=${type}`} className={btn.primary}>
-                  ➕ {INVOICE_TYPE_LABELS[type]} تازه
+                  <Plus className="h-4 w-4" aria-hidden />
+                  {INVOICE_TYPE_LABELS[type]} تازه
                 </Link>
               )
             }

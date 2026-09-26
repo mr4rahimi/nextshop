@@ -220,7 +220,7 @@ export default function WorklistClient({ scope }: Props) {
               className={`rounded-2xl border p-3 text-right transition ${
                 tab === c.tab
                   ? "border-blue-400 dark:border-blue-500/50 bg-blue-50/50 dark:bg-blue-500/5"
-                  : "border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03] hover:border-gray-300 dark:hover:border-white/20"
+                  : "border-[var(--adm-border)] bg-[var(--adm-surface)] shadow-[var(--adm-shadow)] hover:border-[var(--adm-border-strong)]"
               }`}
             >
               <p className={`text-xl font-black ${c.tone}`}>{fa(c.value)}</p>
@@ -232,15 +232,15 @@ export default function WorklistClient({ scope }: Props) {
 
       {/* تب و جستجو */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex gap-1 overflow-x-auto pb-1 flex-1">
+        <div className="flex flex-1 gap-1 overflow-x-auto rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-1 shadow-[var(--adm-shadow)]">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${
                 tab === t.key
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/25"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-[var(--adm-hover)] hover:text-gray-900 dark:hover:text-white"
               }`}
             >
               {t.label}
@@ -253,12 +253,12 @@ export default function WorklistClient({ scope }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="جستجو در عنوان، نام، شماره"
-            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-transparent focus:border-blue-400 text-xs text-gray-900 dark:text-white outline-none w-full sm:w-56"
+            className="h-11 px-3.5 rounded-2xl bg-[var(--adm-surface)] border border-[var(--adm-border)] shadow-[var(--adm-shadow)] focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 text-xs text-gray-900 dark:text-white outline-none w-full sm:w-56 transition"
           />
           <select
             value={domain}
             onChange={(e) => setDomain(e.target.value as StaffDomain | "")}
-            className="px-2.5 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 border border-transparent focus:border-blue-400 text-xs text-gray-900 dark:text-white outline-none"
+            className="h-11 px-3 rounded-2xl bg-[var(--adm-surface)] border border-[var(--adm-border)] shadow-[var(--adm-shadow)] focus:border-blue-400 text-xs text-gray-900 dark:text-white outline-none"
           >
             <option value="">همه دامنه‌ها</option>
             {DOMAINS.map((d) => (

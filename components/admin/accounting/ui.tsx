@@ -49,10 +49,10 @@ export function PageHeader({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-black text-gray-900 dark:text-white">{title}</h1>
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-gray-900 dark:text-white">{title}</h1>
             {help && <HelpButton topic={help} />}
           </div>
-          {desc && <p className="text-xs text-gray-500 mt-1 leading-6">{desc}</p>}
+          {desc && <p className="text-xs sm:text-[13px] text-gray-500 dark:text-gray-400 mt-1 leading-6">{desc}</p>}
         </div>
         {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
       </div>
@@ -74,7 +74,7 @@ export function SectionTitle({ title, help, actions }: { title: ReactNode; help?
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 ${className}`}>
+    <div className={`rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] shadow-[var(--adm-shadow)] ${className}`}>
       {children}
     </div>
   );
@@ -99,14 +99,14 @@ const TONE_BADGE: Record<Tone, string> = {
 export function Stat({ label, value, sub, tone = "gray", href }: { label: string; value: ReactNode; sub?: ReactNode; tone?: Tone; href?: string }) {
   const body = (
     <>
-      <p className="text-[11px] text-gray-500">{label}</p>
-      <p className={`text-base sm:text-lg font-black mt-1 ${TONE_TEXT[tone]}`}>{value}</p>
-      {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
+      <p className="text-xs font-bold text-gray-500 dark:text-gray-400">{label}</p>
+      <p className={`text-lg sm:text-xl font-black mt-1.5 tracking-tight ${TONE_TEXT[tone]}`}>{value}</p>
+      {sub && <p className="text-[11px] text-gray-400 mt-1">{sub}</p>}
     </>
   );
-  const cls = "block rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 p-3.5";
+  const cls = "block rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 shadow-[var(--adm-shadow)]";
   return href ? (
-    <a href={href} className={`${cls} hover:border-blue-400 transition`}>
+    <a href={href} className={`${cls} transition duration-200 hover:-translate-y-0.5 hover:border-[var(--adm-border-strong)] hover:shadow-[var(--adm-shadow-lg)]`}>
       {body}
     </a>
   ) : (
@@ -215,16 +215,17 @@ export function Sheet({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="adm-fade-in absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={onClose} />
       <div
-        className={`relative w-full ${wide ? "md:max-w-3xl" : "md:max-w-lg"} max-h-[92vh] flex flex-col bg-white dark:bg-gray-900 rounded-t-3xl md:rounded-2xl shadow-2xl`}
+        className={`adm-sheet-in relative w-full ${wide ? "md:max-w-3xl" : "md:max-w-lg"} max-h-[92vh] flex flex-col bg-white dark:bg-[#111620] border border-transparent dark:border-white/[0.07] rounded-t-[28px] md:rounded-3xl shadow-2xl`}
       >
+        <div className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-gray-300 md:hidden dark:bg-white/15" aria-hidden />
         <div className="flex items-center justify-between gap-2 px-5 pt-4 pb-3 border-b border-gray-100 dark:border-white/5">
           <div className="flex items-center gap-1.5">
             <h3 className="text-base font-black text-gray-900 dark:text-white">{title}</h3>
             {help && <HelpButton topic={help} size="sm" />}
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 text-gray-500 text-lg leading-none" aria-label="بستن">
+          <button onClick={onClose} className="w-9 h-9 rounded-full bg-gray-100 dark:bg-white/5 text-gray-500 text-xl leading-none transition-colors hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white" aria-label="بستن">
             ×
           </button>
         </div>

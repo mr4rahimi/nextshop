@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { faNum } from "@/lib/accounting/money";
 import { loadLeafAccounts } from "./AccountPicker";
 import { api, Badge, BalanceLabel, btn, Card, ErrorText, Field, inputCls, PageHeader, Segmented, Sheet } from "./ui";
+import { Plus } from "lucide-react";
 
 interface Acc {
   id: string;
@@ -105,7 +106,7 @@ export default function AccountsClient() {
             <span className="flex gap-1">
               {a.level !== "SUBLEDGER" && (
                 <button onClick={() => setForm({ mode: "new", parent: a })} className="text-xs text-blue-600 px-1" title="حساب زیرمجموعه">
-                  ➕
+                  <Plus className="h-4 w-4" aria-hidden />
                 </button>
               )}
               <button onClick={() => setForm({ mode: "edit", acc: a })} className="text-xs text-gray-400 px-1" title="ویرایش">

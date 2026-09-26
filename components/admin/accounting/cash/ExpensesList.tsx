@@ -11,6 +11,7 @@ import { formatJalali } from "@/lib/club/jalali";
 import { faNum, formatAmount } from "@/lib/accounting/money";
 import { RangeBar, rangeFor, rangeQuery, type Range } from "../Statement";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, inputCls, Money, PageHeader, SectionTitle } from "../ui";
+import { Plus } from "lucide-react";
 
 interface Row {
   id: string;
@@ -67,7 +68,8 @@ export default function ExpensesList() {
         actions={
           data?.can.write && (
             <Link href="/admin/accounting/expenses/new" className={btn.primary}>
-              ➕ ثبت هزینه
+              <Plus className="h-4 w-4" aria-hidden />
+              ثبت هزینه
             </Link>
           )
         }
@@ -165,7 +167,8 @@ export default function ExpensesList() {
             action={
               data.can.write && (
                 <Link href="/admin/accounting/expenses/new" className={btn.primary}>
-                  ➕ ثبت هزینه
+                  <Plus className="h-4 w-4" aria-hidden />
+                  ثبت هزینه
                 </Link>
               )
             }

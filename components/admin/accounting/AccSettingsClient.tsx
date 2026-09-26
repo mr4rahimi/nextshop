@@ -12,6 +12,7 @@ import { dayValue } from "@/lib/accounting/dates";
 import { faNum } from "@/lib/accounting/money";
 import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import { api, Badge, btn, Card, Chips, ErrorText, Field, inputCls, PageHeader, SectionTitle } from "./ui";
+import { Plus } from "lucide-react";
 
 interface Settings {
   vatRateBp: number;
@@ -267,7 +268,8 @@ export default function AccSettingsClient() {
               actions={
                 !ro && (
                   <button onClick={addYear} className={btn.small}>
-                    ➕ سال بعد
+                    <Plus className="h-4 w-4" aria-hidden />
+                    سال بعد
                   </button>
                 )
               }

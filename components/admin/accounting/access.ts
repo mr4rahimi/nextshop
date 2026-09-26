@@ -6,28 +6,13 @@
  */
 
 import { useEffect, useState } from "react";
-
-interface Me {
-  isUnrestricted: boolean;
-  permissions: string[];
-}
-
-let cache: Promise<Me | null> | null = null;
-
-function loadMe(): Promise<Me | null> {
-  if (!cache) {
-    cache = fetch("/api/admin/me")
-      .then((r) => (r.ok ? (r.json() as Promise<Me>) : null))
-      .catch(() => null);
-  }
-  return cache;
-}
+import { loadAdminMe, type AdminMe } from "../useAdminMe";
 
 export function useAccess(): { ready: boolean; can: (perm: string | string[]) => boolean } {
-  const [me, setMe] = useState<Me | null | undefined>(undefined);
+  const [me, setMe] = useState<AdminMe | null | undefined>(undefined);
   useEffect(() => {
     let alive = true;
-    loadMe().then((m) => alive && setMe(m));
+    loadAdminMe().then((m) => alive && setMe(m));
     return () => {
       alive = false;
     };

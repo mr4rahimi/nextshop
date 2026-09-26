@@ -21,6 +21,7 @@ import AmountInput from "../AmountInput";
 import PartyPicker, { type PartyOption } from "../PartyPicker";
 import ProductPicker, { type ProductOption } from "../ProductPicker";
 import { api, btn, Card, ErrorText, Field, inputCls, Money, PageHeader, SectionTitle } from "../ui";
+import { Plus } from "lucide-react";
 
 interface FormCfg {
   mode: string;
@@ -414,7 +415,8 @@ export default function InvoiceEditor({ type: typeProp, id, refId }: { type?: In
           actions={
             !hasRef && (
               <button type="button" onClick={addService} className={btn.small}>
-                ➕ {salesSide ? "ردیف خدمت" : "ردیف خدمت یا هزینه"}
+                <Plus className="h-4 w-4" aria-hidden />
+                {salesSide ? "ردیف خدمت" : "ردیف خدمت یا هزینه"}
               </button>
             )
           }

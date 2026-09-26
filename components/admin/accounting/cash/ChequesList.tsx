@@ -12,6 +12,7 @@ import { formatJalali } from "@/lib/club/jalali";
 import { dayValue, todayKey } from "@/lib/accounting/dates";
 import { faNum, formatAmount } from "@/lib/accounting/money";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, Field, inputCls, Money, PageHeader, Segmented, Sheet } from "../ui";
+import { Plus } from "lucide-react";
 
 type Dir = "RECEIVED" | "ISSUED";
 const LABELS: Record<string, string> = {
@@ -81,7 +82,8 @@ export default function ChequesList() {
         actions={
           data?.can.pay && (
             <Link href={`/admin/accounting/money/new?kind=${dir === "RECEIVED" ? "RECEIPT" : "PAYMENT"}`} className={btn.primary}>
-              ➕ {dir === "RECEIVED" ? "دریافت چک" : "صدور چک"}
+              <Plus className="h-4 w-4" aria-hidden />
+              {dir === "RECEIVED" ? "دریافت چک" : "صدور چک"}
             </Link>
           )
         }
@@ -193,7 +195,8 @@ function ChequeBooks() {
         <p className="text-xs text-gray-500 leading-6">فرم پرداخت شماره‌ی چک بعدی را از دسته‌چک فعال همان حساب پیشنهاد می‌کند.</p>
         {data?.can.manage && data.banks.length > 0 && (
           <button onClick={() => setForm({ treasuryId: data.banks.find((b) => b.isActive)?.id ?? "", fromSerial: "", toSerial: "" })} className={btn.soft}>
-            ➕ دسته‌چک
+            <Plus className="h-4 w-4" aria-hidden />
+            دسته‌چک
           </button>
         )}
       </div>

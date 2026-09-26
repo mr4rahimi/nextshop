@@ -8,8 +8,13 @@
  * | حالت | کِی | رفتار |
  * |------|-----|-------|
  * | باز | دسکتاپ، پیش‌فرض | آیکن + عنوان + زیرمنوی آکاردئونی |
- * | جمع | دسکتاپ، بعد از کلیک روی دکمه‌ی جمع‌کردن | فقط آیکن؛ زیرمنو با هاور به شکل پنل شناور کنار ریل باز می‌شود |
+ * | جمع | دسکتاپ، با دکمه‌ی پایین سایدبار یا Ctrl+B | فقط آیکن؛ زیرمنو با هاور به شکل پنل شناور کنار ریل باز می‌شود |
  * | کشویی | زیر `lg` | از سمت راست باز می‌شود، همیشه کامل است و با انتخاب هر لینک بسته می‌شود |
+ *
+ * ⚠️ **هندسه‌ی ثابت:** فاصله‌ی افقی هر ردیف در دو حالت یکی است و فقط عرض
+ * سایدبار عوض می‌شود؛ متن‌ها محو می‌شوند و لبه‌ی سایدبار آن‌ها را می‌بُرد.
+ * برای همین آیکن‌ها هنگام جمع‌شدن سر جایشان می‌مانند و چیزی نمی‌پرد. هر
+ * padding تازه باید در هر دو حالت برابر بماند.
  *
  * ⚠️ **چرا جمع‌بودن با کلاس روی `<html>` کار می‌کند و نه با state؟**
  * اگر عرض سایدبار از state می‌آمد، هر بار بعد از رفرش یک لحظه باز رندر می‌شد و
@@ -24,11 +29,13 @@
  */
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { ChevronDown, LogOut, PanelRightClose, PanelRightOpen, Search, X } from "lucide-react";
 import { Icon, MENU_GROUPS, type NavChild, type NavGroup, type NavItem } from "./nav";
 import { canOpenPath, type GateAccess } from "@/lib/admin-sections";
+import { initialOf, useAdminMe } from "./useAdminMe";
 
 const STORAGE_KEY = "admin:sidebar";
 const COLLAPSED_CLASS = "admin-nav-collapsed";
@@ -74,7 +81,7 @@ function isItemActive(pathname: string, item: NavItem): boolean {
 // ── جستجو ─────────────────────────────────────────────────────────────────────
 
 /** ی/ي و ک/ك و اعراب را یکسان می‌کند تا جستجو به شکل تایپ حساس نباشد */
-function normalize(s: string): string {
+export function normalize(s: string): string {
   return s
     .replace(/[يى]/g, "ی")
     .replace(/ك/g, "ک")
@@ -109,7 +116,7 @@ function filterGroups(groups: NavGroup[], query: string): NavGroup[] {
  * ⚠️ فقط راحتی است، نه امنیت — مرز واقعی proxy.ts است. تا وقتی دسترسی
  * نیامده (`null`) همه‌چیز نشان داده می‌شود تا منو پرش نکند.
  */
-function filterByAccess(groups: NavGroup[], access: GateAccess | null): NavGroup[] {
+export function filterByAccess(groups: NavGroup[], access: GateAccess | null): NavGroup[] {
   if (!access || access.isUnrestricted) return groups;
   const open = (href: string) => canOpenPath(href.split("?")[0], access);
 
@@ -153,6 +160,7 @@ function Flyout({
 }) {
   const { item } = state;
   const activeChild = activeChildHref(pathname, item.children);
+  const hasChildren = !!item.children?.length;
 
   return createPortal(
     <div
@@ -160,19 +168,23 @@ function Flyout({
       onMouseEnter={onHold}
       onMouseLeave={onRelease}
       style={{ top: state.top, right: state.right }}
-      className="admin-nav-flyout fixed z-[80] w-60 rounded-2xl border border-gray-200 bg-white/95 p-2 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#12151d]/95"
+      className={`admin-nav-flyout fixed z-[80] rounded-2xl border border-gray-200/80 bg-white/95 shadow-[0_16px_40px_-12px_rgba(16,24,40,.25)] backdrop-blur-xl dark:border-white/10 dark:bg-[#141922]/95 ${
+        hasChildren ? "w-60 p-1.5" : "p-1"
+      }`}
     >
       <Link
         href={item.href}
         onClick={onNavigate}
-        className="mb-1 block rounded-xl px-3 py-2 text-xs font-black text-gray-900 transition-colors hover:bg-gray-100 dark:text-white dark:hover:bg-white/5"
+        className={`block rounded-xl px-3 py-2 text-[13px] font-black text-gray-900 transition-colors hover:bg-gray-100 dark:text-white dark:hover:bg-white/5 ${
+          hasChildren ? "mb-1 border-b border-gray-100 rounded-b-none dark:border-white/5" : "whitespace-nowrap"
+        }`}
       >
         {item.label}
       </Link>
 
-      {item.children && item.children.length > 0 && (
+      {hasChildren && (
         <ul className="max-h-[60vh] space-y-0.5 overflow-y-auto">
-          {item.children.map(child => {
+          {item.children!.map(child => {
             const active = basePath(child.href) === activeChild;
             return (
               <li key={child.href + child.label}>
@@ -180,13 +192,13 @@ function Flyout({
                   href={child.href}
                   target={child.target ? "_blank" : undefined}
                   onClick={onNavigate}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${
                     active
-                      ? "bg-blue-500/10 text-blue-500 dark:text-blue-400"
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200"
+                      ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-100"
                   }`}
                 >
-                  <span className="h-1 w-1 flex-shrink-0 rounded-full bg-current" />
+                  <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${active ? "bg-blue-500" : "bg-gray-300 dark:bg-white/20"}`} />
                   {child.label}
                 </Link>
               </li>
@@ -200,6 +212,10 @@ function Flyout({
 }
 
 // ── یک آیتم منو ───────────────────────────────────────────────────────────────
+
+/** کلاس مشترک هر ردیف — padding افقی در هر دو حالت یکی است (هندسه‌ی ثابت) */
+const ROW =
+  "nav-row group relative flex h-10 w-full items-center gap-2.5 rounded-xl px-[7px] text-[13px] font-bold transition-colors duration-150";
 
 function NavRow({
   item,
@@ -228,25 +244,28 @@ function NavRow({
   // با رفتن به صفحه‌ای از این شاخه، شاخه خودش باز می‌شود — بدون این، کاربر بعد
   // از کلیک روی نتیجه‌ی جستجو زیرمنوی بسته می‌دید.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- باز شدن شاخه دنبال مسیر است، نه رویداد کاربر
     if (activeChild) setOpen(true);
   }, [activeChild]);
 
+  const expanded = (open || forceOpen) && !collapsed;
+
   const chip = (
     <span
-      className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] text-[13px] transition-all ${
+      className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[10px] transition-all duration-200 ${
         active
           ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-600/30"
-          : "bg-gray-100 text-gray-500 group-hover:text-gray-900 dark:bg-white/[0.06] dark:text-gray-400 dark:group-hover:text-gray-200"
+          : "text-gray-500 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100"
       }`}
     >
-      <Icon name={item.icon} className="h-4 w-4" />
+      <Icon name={item.icon} className="h-[18px] w-[18px]" />
     </span>
   );
 
-  const rowClass = `nav-row group relative flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-[13px] font-bold transition-all ${
+  const rowClass = `${ROW} ${
     active
-      ? "bg-blue-500/10 text-blue-600 dark:text-blue-300"
-      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.04] dark:hover:text-gray-100"
+      ? "text-gray-900 dark:text-white"
+      : "text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.04] dark:hover:text-gray-100"
   }`;
 
   const hoverProps = {
@@ -257,6 +276,11 @@ function NavRow({
     onBlur: onHoverEnd,
   };
 
+  /** نوار باریک کنار ردیف فعال، چسبیده به لبه‌ی سایدبار */
+  const indicator = active && (
+    <span aria-hidden className="absolute -right-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-l-full bg-blue-500" />
+  );
+
   // در حالت جمع هیچ آکاردئونی باز نمی‌شود؛ همه‌چیز از پنل شناور می‌آید.
   if (collapsed || !hasChildren) {
     return (
@@ -264,12 +288,13 @@ function NavRow({
         <Link
           href={item.href}
           onClick={onNavigate}
-          aria-current={active ? "page" : undefined}
+          aria-current={active && !hasChildren ? "page" : undefined}
           className={rowClass}
           {...hoverProps}
         >
+          {indicator}
           {chip}
-          <span className="nav-expanded-only flex-1 truncate text-right">{item.label}</span>
+          <span className="nav-label flex-1 truncate text-right">{item.label}</span>
         </Link>
       </li>
     );
@@ -277,51 +302,51 @@ function NavRow({
 
   return (
     <li>
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open || forceOpen}
-        className={rowClass}
-      >
+      <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={expanded} className={rowClass}>
+        {indicator}
         {chip}
-        <span className="nav-expanded-only flex-1 truncate text-right">{item.label}</span>
-        <Icon
-          name="chevron"
-          className={`nav-expanded-only h-3.5 w-3.5 flex-shrink-0 opacity-60 transition-transform duration-200 ${
-            open || forceOpen ? "rotate-180" : ""
-          }`}
+        <span className="nav-label flex-1 truncate text-right">{item.label}</span>
+        <ChevronDown
+          className={`nav-label h-4 w-4 flex-shrink-0 text-gray-400 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+          aria-hidden
         />
       </button>
 
-      {(open || forceOpen) && (
-        <ul className="nav-expanded-only mt-1 mr-5 space-y-0.5 border-r border-gray-200 pr-3 dark:border-white/[0.07]">
-          {item.children!.map(child => {
-            const childActive = basePath(child.href) === activeChild;
-            return (
-              <li key={child.href + child.label}>
-                <Link
-                  href={child.href}
-                  target={child.target ? "_blank" : undefined}
-                  onClick={onNavigate}
-                  aria-current={childActive ? "page" : undefined}
-                  className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold transition-colors ${
-                    childActive
-                      ? "bg-blue-500/10 text-blue-600 dark:text-blue-300"
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-500 dark:hover:bg-white/[0.04] dark:hover:text-gray-200"
-                  }`}
-                >
-                  <span
-                    className={`h-1.5 w-1.5 flex-shrink-0 rounded-full transition-colors ${
-                      childActive ? "bg-blue-500" : "bg-gray-300 dark:bg-white/20"
+      {/* آکاردئون نرم: ارتفاع با grid-template-rows از ۰ تا اندازه‌ی واقعی می‌رود */}
+      <div
+        className={`nav-sub grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
+          expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        }`}
+        inert={!expanded}
+      >
+        <div className="overflow-hidden">
+          <ul className="mr-[23px] mt-0.5 mb-1 space-y-px border-r border-gray-200 pr-2 dark:border-white/[0.08]">
+            {item.children!.map(child => {
+              const childActive = basePath(child.href) === activeChild;
+              return (
+                <li key={child.href + child.label}>
+                  <Link
+                    href={child.href}
+                    target={child.target ? "_blank" : undefined}
+                    onClick={onNavigate}
+                    aria-current={childActive ? "page" : undefined}
+                    className={`relative flex h-8 items-center rounded-lg px-3 text-[12.5px] font-bold transition-colors ${
+                      childActive
+                        ? "bg-blue-500/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-300"
+                        : "text-gray-500 hover:bg-gray-100/80 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.04] dark:hover:text-gray-100"
                     }`}
-                  />
-                  <span className="truncate">{child.label}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                  >
+                    {childActive && (
+                      <span aria-hidden className="absolute -right-[9px] top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-blue-500" />
+                    )}
+                    <span className="truncate">{child.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
     </li>
   );
 }
@@ -338,7 +363,6 @@ export default function AdminSidebar({
   storeName?: string;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const asideRef = useRef<HTMLElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -347,6 +371,7 @@ export default function AdminSidebar({
   const [query, setQuery] = useState("");
   const [flyout, setFlyout] = useState<FlyoutState | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const me = useAdminMe();
 
   // هم‌گام‌سازی state با کلاسی که BOOT_SCRIPT گذاشته است
   useEffect(() => {
@@ -366,10 +391,27 @@ export default function AdminSidebar({
     setQuery("");
   }, []);
 
-  // با هر جابه‌جایی، کشوی موبایل و پنل شناور بسته می‌شوند
+  // Ctrl+B (یا ⌘B) — همان میان‌بر ویرایشگرها برای جمع/باز کردن نوار کناری
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === "KeyB" && window.innerWidth >= 1024) {
+        e.preventDefault();
+        toggleCollapsed();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggleCollapsed]);
+
+  // با هر جابه‌جایی، پنل شناور بسته می‌شود
   useEffect(() => {
     setFlyout(null);
   }, [pathname]);
+
+  // ردیف فعال در بار اول دیده شود — در منوی بلند ممکن بود پایین‌تر از دید باشد
+  useEffect(() => {
+    asideRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: "nearest" });
+  }, []);
 
   // کشوی موبایل: قفل اسکرول صفحه و بستن با Escape
   useEffect(() => {
@@ -411,25 +453,25 @@ export default function AdminSidebar({
       const aside = asideRef.current.getBoundingClientRect();
       // ارتفاع تخمینی: سرصفحه + هر زیرمنو یک ردیف. دقیق نیست، فقط برای این است
       // که پنل از پایین پنجره بیرون نزند.
-      const estimated = 52 + (item.children?.length ?? 0) * 30;
-      const top = Math.max(12, Math.min(row.top - 6, window.innerHeight - estimated - 16));
+      const hasKids = !!item.children?.length;
+      const estimated = hasKids ? 56 + item.children!.length * 34 : 40;
+      const top = hasKids
+        ? Math.max(12, Math.min(row.top - 6, window.innerHeight - estimated - 16))
+        : row.top + (row.height - estimated) / 2;
 
-      setFlyout({ item, top, right: window.innerWidth - aside.left + 10 });
+      setFlyout({ item, top, right: window.innerWidth - aside.left + 8 });
     },
     [collapsed, holdFlyout],
   );
 
   useEffect(() => () => holdFlyout(), [holdFlyout]);
 
-  const [access, setAccess] = useState<GateAccess | null>(null);
-  useEffect(() => {
-    fetch("/api/admin/me")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setAccess({ isUnrestricted: d.isUnrestricted, permissions: d.permissions ?? [] }))
-      .catch(() => {});
-  }, []);
-
-  const groups = useMemo(() => filterGroups(filterByAccess(MENU_GROUPS, access), query), [access, query]);
+  const access: GateAccess | null = me ? { isUnrestricted: me.isUnrestricted, permissions: me.permissions } : null;
+  const groups = useMemo(
+    () => filterGroups(filterByAccess(MENU_GROUPS, access), query),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `access` از `me` ساخته می‌شود
+    [me, query],
+  );
   const searching = query.trim().length > 0;
 
   async function handleLogout() {
@@ -437,8 +479,8 @@ export default function AdminSidebar({
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch {}
-    router.push("/admin/login");
-    router.refresh();
+    // حساب بعدی ممکن است کس دیگری باشد — بارگذاری کامل تا کش دسترسی هم پاک شود
+    window.location.href = "/admin/login";
   }
 
   /** روی موبایل هر انتخابی کشو را می‌بندد؛ روی دسکتاپ کاری نمی‌کند */
@@ -455,75 +497,58 @@ export default function AdminSidebar({
       <div
         onClick={onClose}
         aria-hidden
-        className={`fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+        className={`fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
 
       <aside
         ref={asideRef}
-        className={`admin-nav fixed top-0 right-0 z-50 flex h-full flex-col border-l border-gray-200 bg-white lg:relative lg:z-auto dark:border-white/[0.06] dark:bg-[#0f1117] ${
+        aria-label="منوی پنل"
+        className={`admin-nav fixed top-0 right-0 z-50 flex h-full flex-col overflow-hidden border-l border-[var(--adm-border)] bg-white lg:relative lg:z-auto dark:bg-[#0d1118] ${
           mobileOpen ? "translate-x-0 shadow-2xl" : "translate-x-full lg:translate-x-0"
         }`}
       >
-        {/* دکمه‌ی جمع/باز — روی لبه‌ی داخلی سایدبار می‌نشیند */}
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          aria-label={collapsed ? "باز کردن منو" : "جمع کردن منو"}
-          title={collapsed ? "باز کردن منو" : "جمع کردن منو"}
-          className="absolute top-[3.9rem] -left-3 z-10 hidden h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-md transition-all hover:border-blue-400 hover:text-blue-500 lg:flex dark:border-white/10 dark:bg-[#171b24] dark:text-gray-400 dark:hover:text-blue-400"
-        >
-          <Icon
-            name="chevron"
-            className={`h-3 w-3 transition-transform duration-200 ${collapsed ? "rotate-90" : "-rotate-90"}`}
-          />
-        </button>
-
         {/* سرصفحه */}
-        <div className="nav-head flex h-14 flex-shrink-0 items-center gap-3 border-b border-gray-200 px-4 dark:border-white/[0.06]">
+        <div className="flex h-16 flex-shrink-0 items-center gap-2.5 px-3">
           <Link
             href="/admin"
             onClick={handleNavigate}
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-600/30"
+            className="mr-[7px] flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[11px] bg-gradient-to-br from-blue-500 via-indigo-500 to-violet-600 shadow-lg shadow-indigo-600/30 ring-1 ring-inset ring-white/20"
+            aria-label="داشبورد"
           >
-            <Icon name="widgets" className="h-4 w-4 text-white" />
+            <Icon name="widgets" className="h-[18px] w-[18px] text-white" />
           </Link>
 
-          <div className="nav-expanded-only min-w-0 flex-1">
-            <p className="truncate text-[13px] font-black text-gray-900 dark:text-white">پنل مدیریت</p>
-            <p className="truncate text-[10px] font-bold text-gray-400 dark:text-gray-500">
-              {storeName || "Admin Panel"}
-            </p>
+          <div className="nav-label min-w-0 flex-1">
+            <p className="truncate text-[14px] font-black text-gray-900 dark:text-white">پنل مدیریت</p>
+            <p className="truncate text-[11px] font-bold text-gray-400 dark:text-gray-500">{storeName || "مدیریت فروشگاه"}</p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
             aria-label="بستن منو"
-            className="nav-expanded-only flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900 lg:hidden dark:hover:bg-white/5 dark:hover:text-white"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900 lg:hidden dark:hover:bg-white/5 dark:hover:text-white"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="h-5 w-5" aria-hidden />
           </button>
         </div>
 
-        {/* جستجو */}
-        <div className="nav-expanded-only flex-shrink-0 px-3 pt-3">
-          <div className="relative">
-            <span className="pointer-events-none absolute inset-y-0 right-0 flex w-9 items-center justify-center text-gray-400">
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
-              </svg>
+        {/* جستجو — در حالت جمع همان جعبه فقط آیکنش پیداست و با کلیک باز می‌شود */}
+        <div className="flex-shrink-0 px-3 pb-2">
+          <div className="relative h-10">
+            <span className="pointer-events-none absolute inset-y-0 right-0 flex w-12 items-center justify-center text-gray-400">
+              <Search className="h-4 w-4" aria-hidden />
             </span>
             <input
               ref={searchRef}
               value={query}
               onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => e.key === "Escape" && setQuery("")}
               placeholder="جستجو در منو…"
               aria-label="جستجو در منو"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pr-9 pl-8 text-[12px] font-bold text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-white/[0.07] dark:bg-white/[0.04] dark:text-white dark:placeholder:text-gray-600 dark:focus:bg-white/[0.07]"
+              className="nav-search h-full w-full rounded-xl border border-gray-200 bg-gray-50 pr-11 pl-8 text-[13px] font-bold text-gray-900 placeholder:font-medium placeholder:text-gray-400 transition-[border-color,background-color,box-shadow] focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-white/[0.07] dark:bg-white/[0.04] dark:text-white dark:placeholder:text-gray-500 dark:focus:bg-white/[0.07]"
             />
             {searching && (
               <button
@@ -533,48 +558,37 @@ export default function AdminSidebar({
                   searchRef.current?.focus();
                 }}
                 aria-label="پاک کردن جستجو"
-                className="absolute inset-y-0 left-0 flex w-8 items-center justify-center text-gray-400 transition-colors hover:text-gray-700 dark:hover:text-gray-200"
+                className="nav-label absolute inset-y-0 left-0 flex w-8 items-center justify-center text-gray-400 transition-colors hover:text-gray-700 dark:hover:text-gray-200"
               >
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="h-3.5 w-3.5" aria-hidden />
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                toggleCollapsed();
+                setTimeout(() => searchRef.current?.focus(), 220);
+              }}
+              aria-label="جستجو در منو"
+              title="جستجو در منو"
+              className="nav-collapsed-only absolute inset-0 rounded-xl"
+            />
           </div>
         </div>
 
-        {/* دکمه‌ی جستجو در حالت جمع — باز می‌کند و فوکوس می‌دهد */}
-        <div className="nav-collapsed-only flex-shrink-0 px-3 pt-3">
-          <button
-            type="button"
-            onClick={() => {
-              toggleCollapsed();
-              setTimeout(() => searchRef.current?.focus(), 220);
-            }}
-            aria-label="جستجو در منو"
-            title="جستجو در منو"
-            className="flex h-9 w-full items-center justify-center rounded-xl border border-gray-200 bg-gray-50 text-gray-400 transition-colors hover:text-blue-500 dark:border-white/[0.07] dark:bg-white/[0.04] dark:hover:text-blue-400"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
-            </svg>
-          </button>
-        </div>
-
         {/* درخت منو */}
-        <nav className="admin-nav-scroll min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4">
+        <nav className="admin-nav-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4 pt-1">
           {groups.length === 0 && (
-            <p className="px-2 py-6 text-center text-[11px] font-bold text-gray-400">
-              چیزی پیدا نشد
-            </p>
+            <p className="nav-label px-2 py-8 text-center text-xs font-bold text-gray-400">چیزی پیدا نشد</p>
           )}
 
-          {groups.map(group => (
-            <div key={group.label}>
-              <p className="nav-expanded-only mb-1.5 px-2.5 text-[9.5px] font-black uppercase tracking-[0.14em] text-gray-400 dark:text-gray-600">
-                {group.label}
-              </p>
-              <div className="nav-collapsed-only mx-auto mb-2 h-px w-7 bg-gray-200 dark:bg-white/10" />
+          {groups.map((group, gi) => (
+            <div key={group.label} className={gi > 0 ? "mt-3" : ""}>
+              {/* عنوان گروه ارتفاع ثابت دارد؛ در حالت جمع جایش یک خط کوتاه می‌نشیند */}
+              <div className="relative flex h-7 items-center px-[9px]">
+                <p className="nav-label text-[10.5px] font-black tracking-wide text-gray-400 dark:text-gray-500">{group.label}</p>
+                <span className="nav-collapsed-only absolute right-[19px] top-1/2 h-px w-5 bg-gray-200 dark:bg-white/10" />
+              </div>
               <ul className="space-y-0.5">
                 {group.items.map(item => (
                   <NavRow
@@ -594,31 +608,47 @@ export default function AdminSidebar({
         </nav>
 
         {/* پاصفحه */}
-        <div className="flex-shrink-0 space-y-1 border-t border-gray-200 p-3 dark:border-white/[0.06]">
-          <Link
-            href="/"
-            target="_blank"
-            className="nav-row group flex items-center gap-3 rounded-xl px-2.5 py-2 text-[12px] font-bold text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.04] dark:hover:text-gray-100"
-            title="مشاهده سایت"
-          >
-            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] bg-gray-100 text-gray-500 dark:bg-white/[0.06] dark:text-gray-400">
-              <Icon name="external" className="h-4 w-4" />
-            </span>
-            <span className="nav-expanded-only truncate">مشاهده سایت</span>
-          </Link>
-
+        <div className="flex-shrink-0 border-t border-[var(--adm-border)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
-            onClick={handleLogout}
-            disabled={loggingOut}
-            title="خروج از حساب"
-            className="nav-row group flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-[12px] font-bold text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-500 disabled:opacity-60 dark:text-gray-400 dark:hover:text-red-400"
+            onClick={toggleCollapsed}
+            title={collapsed ? "باز کردن منو (Ctrl+B)" : "جمع کردن منو (Ctrl+B)"}
+            aria-label={collapsed ? "باز کردن منو" : "جمع کردن منو"}
+            className={`${ROW} mb-1 hidden text-gray-500 hover:bg-gray-100/80 hover:text-gray-900 lg:flex dark:text-gray-400 dark:hover:bg-white/[0.04] dark:hover:text-gray-100`}
           >
-            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] bg-gray-100 text-gray-500 transition-colors group-hover:bg-red-500/15 group-hover:text-red-500 dark:bg-white/[0.06] dark:text-gray-400 dark:group-hover:text-red-400">
-              <Icon name="logout" className="h-4 w-4" />
+            <span className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center">
+              {collapsed ? <PanelRightOpen className="h-[18px] w-[18px]" aria-hidden /> : <PanelRightClose className="h-[18px] w-[18px]" aria-hidden />}
             </span>
-            <span className="nav-expanded-only truncate">{loggingOut ? "در حال خروج…" : "خروج از حساب"}</span>
+            <span className="nav-label flex-1 truncate text-right text-[12.5px]">جمع کردن منو</span>
+            <kbd className="nav-label rounded-md border border-gray-200 px-1.5 py-0.5 font-sans text-[10px] font-bold text-gray-400 dark:border-white/10" dir="ltr">
+              Ctrl B
+            </kbd>
           </button>
+
+          <div className="nav-user flex items-center gap-2.5 rounded-2xl bg-gray-50 p-[7px] dark:bg-white/[0.03]">
+            <span
+              className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-600 to-slate-800 text-[13px] font-black text-white dark:from-slate-500 dark:to-slate-700"
+              title={me?.name ?? undefined}
+            >
+              {initialOf(me?.name)}
+            </span>
+            <div className="nav-label min-w-0 flex-1">
+              <p className="truncate text-[12.5px] font-black text-gray-900 dark:text-gray-100">{me?.name || "مدیر"}</p>
+              <p className="truncate text-[11px] font-bold text-gray-400 dark:text-gray-500">
+                {me?.roleTitle || (me?.isUnrestricted ? "دسترسی کامل" : " ")}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              title="خروج از حساب"
+              aria-label="خروج از حساب"
+              className="nav-logout flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
+            >
+              <LogOut className="h-[17px] w-[17px]" aria-hidden />
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -634,34 +664,36 @@ export default function AdminSidebar({
 
       <style>{`
         .admin-nav {
-          width: 17rem;
-          transition: width .22s cubic-bezier(.4,0,.2,1), transform .3s cubic-bezier(.4,0,.2,1);
+          width: min(18rem, 86vw);
+          transition: width .24s cubic-bezier(.4,0,.2,1), transform .3s cubic-bezier(.32,.72,0,1);
         }
+        @media (min-width: 1024px) { .admin-nav { width: 17rem; } }
+        .nav-label { transition: opacity .16s ease; white-space: nowrap; }
         .nav-collapsed-only { display: none; }
 
-        .admin-nav-scroll { scrollbar-width: thin; scrollbar-color: rgba(148,163,184,.35) transparent; }
-        .admin-nav-scroll::-webkit-scrollbar { width: 6px; }
-        .admin-nav-scroll::-webkit-scrollbar-track { background: transparent; }
-        .admin-nav-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,.3); border-radius: 999px; }
-        .admin-nav-scroll:hover::-webkit-scrollbar-thumb { background: rgba(148,163,184,.5); }
-
-        .admin-nav-flyout { animation: adminNavFlyIn .13s ease-out; }
+        .admin-nav-flyout { animation: adminNavFlyIn .14s ease-out; }
         @keyframes adminNavFlyIn {
           from { opacity: 0; transform: translateX(6px); }
           to   { opacity: 1; transform: translateX(0); }
         }
 
-        /* حالت جمع فقط روی دسکتاپ معنا دارد — کشوی موبایل همیشه کامل است */
+        /* حالت جمع فقط روی دسکتاپ معنا دارد — کشوی موبایل همیشه کامل است.
+           عرض کم می‌شود، متن‌ها محو می‌شوند و زیرمنوها نرم بسته می‌شوند؛
+           هیچ padding‌ای عوض نمی‌شود تا آیکن‌ها سر جایشان بمانند. */
         @media (min-width: 1024px) {
-          html.${COLLAPSED_CLASS} .admin-nav { width: 4.75rem; }
-          html.${COLLAPSED_CLASS} .admin-nav .nav-expanded-only { display: none !important; }
+          html.${COLLAPSED_CLASS} .admin-nav { width: 4.5rem; }
+          html.${COLLAPSED_CLASS} .admin-nav .nav-label { opacity: 0; pointer-events: none; }
           html.${COLLAPSED_CLASS} .admin-nav .nav-collapsed-only { display: block; }
-          html.${COLLAPSED_CLASS} .admin-nav .nav-head { justify-content: center; padding-left: 0; padding-right: 0; }
-          html.${COLLAPSED_CLASS} .admin-nav .nav-row { justify-content: center; padding-left: 0; padding-right: 0; }
+          html.${COLLAPSED_CLASS} .admin-nav .nav-sub { grid-template-rows: 0fr; opacity: 0; }
+          html.${COLLAPSED_CLASS} .admin-nav .nav-search { color: transparent; }
+          html.${COLLAPSED_CLASS} .admin-nav .nav-search::placeholder { color: transparent; }
+          /* کارت کاربر: دکمه‌ی خروج زیر آواتار می‌رود */
+          html.${COLLAPSED_CLASS} .admin-nav .nav-user { flex-direction: column; background: transparent; }
+          html.${COLLAPSED_CLASS} .admin-nav .nav-user .nav-label { display: none; }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .admin-nav, .admin-nav-flyout { transition: none; animation: none; }
+          .admin-nav, .admin-nav-flyout, .nav-label, .nav-sub { transition: none; animation: none; }
         }
       `}</style>
     </>

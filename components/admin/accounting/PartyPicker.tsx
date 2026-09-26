@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, BalanceLabel, inputCls } from "./ui";
 import { faNum } from "@/lib/accounting/money";
+import { Plus } from "lucide-react";
 
 export interface PartyOption {
   id: string;
@@ -146,9 +147,10 @@ export default function PartyPicker({ value, onChange, placeholder = "نام، �
             <button
               type="button"
               onClick={() => setCreating({ name: /^\d/.test(q) ? "" : q, mobile: /^[0۰]9/.test(q) ? q : "" })}
-              className="w-full px-3 py-2.5 text-right text-xs font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+              className="flex w-full items-center gap-1.5 px-3 py-2.5 text-right text-xs font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10"
             >
-              ➕ شخص تازه{q.trim() && !/^\d/.test(q) ? ` «${q.trim()}»` : ""}
+              <Plus className="h-4 w-4" aria-hidden />
+              شخص تازه{q.trim() && !/^\d/.test(q) ? ` «${q.trim()}»` : ""}
             </button>
           )}
           {creating && (

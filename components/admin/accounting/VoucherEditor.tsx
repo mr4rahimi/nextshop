@@ -18,6 +18,7 @@ import AmountInput from "./AmountInput";
 import PartyPicker, { type PartyOption } from "./PartyPicker";
 import type { TreasuryRecord } from "./TreasuryForm";
 import { api, btn, Card, ErrorText, Field, inputCls, PageHeader } from "./ui";
+import { Plus } from "lucide-react";
 
 interface Row {
   key: number;
@@ -149,7 +150,8 @@ export default function VoucherEditor() {
           </Card>
         ))}
         <button onClick={() => setRows((x) => [...x, blank()])} className={btn.soft}>
-          ➕ ردیف
+          <Plus className="h-4 w-4" aria-hidden />
+          ردیف
         </button>
       </div>
 

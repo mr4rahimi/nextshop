@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from "react";
 import { faNum } from "@/lib/accounting/money";
 import PartyForm, { type PartyRecord } from "./PartyForm";
 import { api, Badge, BalanceLabel, btn, Card, Chips, Empty, ErrorText, inputCls, Money, PageHeader, Stat } from "./ui";
+import { Plus } from "lucide-react";
 
 type Row = PartyRecord & { balance: string };
 interface Data {
@@ -60,7 +61,8 @@ export default function PartiesClient() {
         actions={
           data?.can.manage && (
             <button onClick={() => setFormOpen(true)} className={btn.primary}>
-              ➕ شخص تازه
+              <Plus className="h-4 w-4" aria-hidden />
+              شخص تازه
             </button>
           )
         }
@@ -128,7 +130,8 @@ export default function PartiesClient() {
             action={
               data.can.manage && (
                 <button onClick={() => setFormOpen(true)} className={btn.primary}>
-                  ➕ شخص تازه
+                  <Plus className="h-4 w-4" aria-hidden />
+                  شخص تازه
                 </button>
               )
             }
