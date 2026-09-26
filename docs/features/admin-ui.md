@@ -14,7 +14,7 @@
 | کاربر جاری (نام، نقش، مجوز) | [`components/admin/useAdminMe.ts`](../../components/admin/useAdminMe.ts) |
 | قاب کارتابل | [`components/admin/worklist/WorklistShell.tsx`](../../components/admin/worklist/WorklistShell.tsx) + `app/admin/worklist/layout.tsx` |
 | قاب حسابداری | [`components/admin/accounting/AccountingShell.tsx`](../../components/admin/accounting/AccountingShell.tsx) |
-| آیکن‌های رنگی کاشی‌ها | `public/admin-icons/*.svg` |
+| آیکن‌های رنگی کاشی‌ها | `public/panel-icons/*.svg` |
 
 ---
 
@@ -55,7 +55,7 @@
   perm: ["ACC_VIEW", "ACC_SALES"], img: "acc-sales" }
 ```
 
-- `img` نام فایل `public/admin-icons/<img>.svg` است. اگر باشد، کاشی آیکن رنگی را
+- `img` نام فایل `public/panel-icons/<img>.svg` است. اگر باشد، کاشی آیکن رنگی را
   روی زمینه‌ی روشن نشان می‌دهد؛ نبودنش یعنی آیکن lucide `icon` روی مربع رنگی
   `tone`. پس بخش تازه بدون فایل آیکن هم درست دیده می‌شود.
 - `perm` فقط برای پنهان‌کردن کاشی است (یکی کافی است)؛ مرز واقعی `proxy.ts` و
@@ -64,6 +64,12 @@
   فقط اینجا اضافه شود. زیرمنوی حسابداری سایدبار عمداً کوتاه‌تر است و در
   `nav.tsx` جداست.
 - «ثبت سریع» حسابداری (`QUICK` در `AccountingShell.tsx`) هم همین شکل را دارد.
+
+> ⚠️ **پوشه عمداً `panel-icons` است نه `admin-icons`.** هر مسیری که با `/admin`
+> شروع شود — حتی فایل ثابت `public/admin-icons/...` — از دروازه‌ی `proxy.ts`
+> می‌گذرد؛ برای کارمند نقش‌دار در هیچ بخشی نیست و به ورود ریدایرکت می‌شود. در
+> استقرار اول ۲.۶۱.۰ روی 9dm همین پیش آمد (با ادمین بی‌نقش دیده نمی‌شد).
+> فایل ثابت تازه‌ی پنل را زیر `/admin…` نگذارید.
 
 **آیکن‌های رنگی:** ۴۷ فایل SVG با `viewBox` ۵۱۲×۵۱۲، سبک خطی دوتایی آبی،
 نام‌گذاری `acc-*` (بخش‌های حسابداری)، `quick-*` (ثبت سریع) و `wl-*` (کارتابل).

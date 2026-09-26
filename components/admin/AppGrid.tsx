@@ -27,7 +27,7 @@ export function AppIcon({
 }: {
   icon: LucideIcon;
   tone: AppTone;
-  /** آیکن رنگی `public/admin-icons/<img>.svg` — اگر باشد جای آیکن خطی را می‌گیرد */
+  /** آیکن رنگی `public/panel-icons/<img>.svg` — اگر باشد جای آیکن خطی را می‌گیرد */
   img?: string;
   size?: "sm" | "md";
 }) {
@@ -43,7 +43,7 @@ export function AppIcon({
         className={`flex flex-shrink-0 items-center justify-center bg-gradient-to-br from-white to-blue-50/80 shadow-[0_4px_14px_-6px_rgba(37,99,235,.35)] ring-1 ring-inset ring-blue-100 dark:from-white/[0.16] dark:to-white/[0.07] dark:shadow-none dark:ring-white/10 ${box}`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- SVG ثابت و کوچک؛ بهینه‌سازی next/image لازم ندارد */}
-        <img src={`/admin-icons/${img}.svg`} alt="" aria-hidden className="h-full w-full object-contain" draggable={false} />
+        <img src={`/panel-icons/${img}.svg`} alt="" aria-hidden className="h-full w-full object-contain" draggable={false} />
       </span>
     );
   }

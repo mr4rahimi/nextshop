@@ -68,7 +68,7 @@ export interface AppItem {
   /** فقط وقتی مسیر دقیقاً برابر باشد فعال است */
   exact?: boolean;
   /**
-   * نام فایل آیکن رنگی در `public/admin-icons` (بدون .svg). اگر باشد جای آیکن
+   * نام فایل آیکن رنگی در `public/panel-icons` (بدون .svg). اگر باشد جای آیکن
    * lucide را می‌گیرد؛ `icon` و `tone` برای جاهای بی‌تصویر می‌مانند.
    */
   img?: string;
