@@ -13,17 +13,17 @@ import type { HelpKey } from "@/components/admin/worklist/help-content";
 import { formatAmount } from "@/lib/accounting/money";
 
 export const inputCls =
-  "w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white outline-none focus:border-blue-400 focus:bg-white dark:focus:bg-white/10 transition placeholder:text-gray-400";
+  "acc-input w-full px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm text-gray-900 dark:text-white outline-none focus:border-blue-400 focus:bg-white dark:focus:bg-white/10 transition placeholder:text-gray-400";
 
 export const btn = {
   primary:
-    "inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition disabled:opacity-50",
-  dark: "inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold transition disabled:opacity-50",
-  soft: "inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 text-sm font-bold transition disabled:opacity-50",
+    "acc-btn-primary inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition disabled:opacity-50",
+  dark: "acc-btn-dark inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold transition disabled:opacity-50",
+  soft: "acc-btn-soft inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 text-sm font-bold transition disabled:opacity-50",
   danger:
-    "inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 hover:bg-red-100 text-red-600 text-sm font-bold transition disabled:opacity-50",
+    "acc-btn-danger inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-50 dark:bg-red-500/10 hover:bg-red-100 text-red-600 text-sm font-bold transition disabled:opacity-50",
   small:
-    "inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 text-xs font-bold transition disabled:opacity-50",
+    "acc-btn-soft inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 text-xs font-bold transition disabled:opacity-50",
 };
 
 export function PageHeader({
@@ -74,7 +74,7 @@ export function SectionTitle({ title, help, actions }: { title: ReactNode; help?
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] shadow-[var(--adm-shadow)] ${className}`}>
+    <div className={`acc-card rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] shadow-[var(--adm-shadow)] ${className}`}>
       {children}
     </div>
   );
@@ -104,7 +104,7 @@ export function Stat({ label, value, sub, tone = "gray", href }: { label: string
       {sub && <p className="text-[11px] text-gray-400 mt-1">{sub}</p>}
     </>
   );
-  const cls = "block rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 shadow-[var(--adm-shadow)]";
+  const cls = "acc-card block rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-4 shadow-[var(--adm-shadow)]";
   return href ? (
     <a href={href} className={`${cls} transition duration-200 hover:-translate-y-0.5 hover:border-[var(--adm-border-strong)] hover:shadow-[var(--adm-shadow-lg)]`}>
       {body}
@@ -217,7 +217,7 @@ export function Sheet({
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center" role="dialog" aria-modal="true">
       <div className="adm-fade-in absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={onClose} />
       <div
-        className={`adm-sheet-in relative w-full ${wide ? "md:max-w-3xl" : "md:max-w-lg"} max-h-[92vh] flex flex-col bg-white dark:bg-[#111620] border border-transparent dark:border-white/[0.07] rounded-t-[28px] md:rounded-3xl shadow-2xl`}
+        className={`acc-sheet adm-sheet-in relative w-full ${wide ? "md:max-w-3xl" : "md:max-w-lg"} max-h-[92vh] flex flex-col bg-white dark:bg-[#111620] border border-transparent dark:border-white/[0.07] rounded-t-[28px] md:rounded-3xl shadow-2xl`}
       >
         <div className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-gray-300 md:hidden dark:bg-white/15" aria-hidden />
         <div className="flex items-center justify-between gap-2 px-5 pt-4 pb-3 border-b border-gray-100 dark:border-white/5">
@@ -261,14 +261,14 @@ export function Segmented<T extends string>({
   options: { value: T; label: string }[];
 }) {
   return (
-    <div className="flex p-1 rounded-xl bg-gray-100 dark:bg-white/5 gap-1">
+    <div className="acc-seg flex p-1 rounded-xl bg-gray-100 dark:bg-white/5 gap-1">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
           className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold transition ${
-            value === o.value ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm" : "text-gray-500"
+            value === o.value ? "acc-seg-on bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm" : "text-gray-500"
           }`}
         >
           {o.label}
@@ -295,7 +295,7 @@ export function Chips<T extends string>({
           type="button"
           onClick={() => onChange(o.value)}
           className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-            value === o.value ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900" : "bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"
+            value === o.value ? "acc-chip-on bg-gray-900 dark:bg-white text-white dark:text-gray-900" : "acc-chip bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400"
           }`}
         >
           {o.label}

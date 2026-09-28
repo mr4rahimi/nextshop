@@ -71,9 +71,11 @@ export default function ReportsHub() {
                 <Link
                   key={i.href}
                   href={i.href}
-                  className="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-4 hover:border-blue-400 transition flex gap-3"
+                  className="acc-card group flex gap-3 rounded-2xl border border-gray-200 bg-white p-4 transition duration-200 hover:-translate-y-0.5 hover:border-blue-400 dark:border-white/10 dark:bg-white/[0.03]"
                 >
-                  <span className="text-2xl">{i.icon}</span>
+                  <span className="acc-badge3d flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-white to-blue-50 text-2xl transition-transform duration-200 group-hover:scale-105 dark:from-white/10 dark:to-white/[0.03]">
+                    {i.icon}
+                  </span>
                   <span className="min-w-0">
                     <span className="block text-sm font-black text-gray-900 dark:text-white">{i.title}</span>
                     <span className="block text-[11px] text-gray-500 leading-5 mt-0.5">{i.desc}</span>

@@ -1,8 +1,11 @@
 "use client";
 
 /**
- * تنظیمات حسابداری — عمومی (مالیات، قفل دفاتر، ثبت خودکار)، اطلاعات کسب‌وکار، سال مالی.
+ * تنظیمات حسابداری — حسابداری کسب‌وکار (حالت، اتصال حسابان، رویدادهای مالی)،
+ * عمومی (مالیات، قفل دفاتر، ثبت خودکار)، اطلاعات کسب‌وکار، سال مالی.
  * `?tab=seller` مستقیم زبانه‌ی کسب‌وکار را باز می‌کند (از «شروع کار»).
+ * زبانه‌ی «حسابداری کسب‌وکار» (`?tab=mode`) به تنظیمات عمومی وابسته نیست و در هر
+ * حالتی باز می‌شود.
  */
 
 import { useSearchParams } from "next/navigation";
@@ -14,6 +17,7 @@ import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import { api, Badge, btn, Card, Chips, ErrorText, Field, inputCls, PageHeader, SectionTitle } from "./ui";
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import AccModePanel from "./AccModePanel";
 
 interface Settings {
   vatRateBp: number;
@@ -43,17 +47,23 @@ interface Year {
   _count: { vouchers: number };
 }
 
-type Tab = "general" | "seller" | "years";
+type Tab = "mode" | "general" | "seller" | "years";
 
 export default function AccSettingsClient() {
   const sp = useSearchParams();
-  const [tab, setTab] = useState<Tab>((sp.get("tab") as Tab) || "general");
+  const [tab, setTab] = useState<Tab>((sp.get("tab") as Tab) || "mode");
   const [s, setS] = useState<Settings | null>(null);
   const [years, setYears] = useState<Year[]>([]);
   const [can, setCan] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // کاشی «تنظیمات» و «بستن سال مالی» هر دو به همین صفحه می‌آیند؛ زبانه باید با آدرس عوض شود
+  const tabParam = sp.get("tab") as Tab | null;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- هم‌گام‌سازی زبانه با آدرس
+    setTab(tabParam || "mode");
+  }, [tabParam]);
   const [treasuries, setTreasuries] = useState<{ id: string; name: string; kind: string }[]>([]);
 
   const load = useCallback(() => {
@@ -99,12 +109,8 @@ export default function AccSettingsClient() {
     }
   }
 
-  if (!s) return error ? <ErrorText>{error}</ErrorText> : <p className="text-xs text-gray-400">در حال بارگذاری…</p>;
-  const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setS({ ...s, [k]: v });
-  const ro = !can;
-
-  return (
-    <div className="space-y-4">
+  const tabs = (
+    <>
       <PageHeader title="تنظیمات حسابداری" help="accountingSettings" />
       <Chips<Tab>
         value={tab}
@@ -113,11 +119,36 @@ export default function AccSettingsClient() {
           setSaved(null);
         }}
         options={[
+          { value: "mode", label: "حسابداری کسب‌وکار" },
           { value: "general", label: "عمومی و قفل دفاتر" },
           { value: "seller", label: "اطلاعات کسب‌وکار" },
           { value: "years", label: "سال مالی" },
         ]}
       />
+    </>
+  );
+
+  if (tab === "mode")
+    return (
+      <div className="space-y-4">
+        {tabs}
+        <AccModePanel />
+      </div>
+    );
+
+  if (!s)
+    return (
+      <div className="space-y-4">
+        {tabs}
+        {error ? <ErrorText>{error}</ErrorText> : <p className="text-xs text-gray-400">در حال بارگذاری…</p>}
+      </div>
+    );
+  const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setS({ ...s, [k]: v });
+  const ro = !can;
+
+  return (
+    <div className="space-y-4">
+      {tabs}
       <ErrorText>{error}</ErrorText>
       {saved && <p className="text-xs font-bold text-emerald-600">✓ {saved}</p>}
 

@@ -200,7 +200,7 @@ export default function AccEventsClient({ initialStatus }: { initialStatus?: str
         </div>
       )}
 
-      <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 divide-y divide-gray-100 dark:divide-white/5">
+      <div className="acc-card rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 divide-y divide-gray-100 dark:divide-white/5">
         {data?.items.map((e) => {
           const st = STATUS[e.status];
           const canPick = data.can.manage && retryable(e);

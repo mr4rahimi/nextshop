@@ -24,7 +24,7 @@ export default function InventoryTabs() {
             key={t.href}
             href={t.href}
             className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
-              active ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300"
+              active ? "acc-chip-on bg-blue-600 text-white" : "acc-chip bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300"
             }`}
           >
             {t.label}

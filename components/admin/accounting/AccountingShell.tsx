@@ -13,6 +13,7 @@
  * هر بخش تازه‌ی حسابداری یک ردیف در `ACCOUNTING_APPS` (components/admin/apps.ts) می‌گیرد.
  */
 
+import "@/app/styles/accounting.css";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
@@ -87,14 +88,14 @@ export default function AccountingShell({ children }: { children: ReactNode }) {
   // چاپ فاکتور بی‌قاب است (قاب پنل هم در app/admin/layout.tsx کنار می‌رود)
   if (pathname.endsWith("/print")) return <>{children}</>;
   // صفحه‌ی راه‌اندازی قاب نمی‌خواهد — تمام‌صفحه است
-  if (pathname.startsWith("/admin/accounting/setup")) return <div className="p-4 lg:p-6 max-w-3xl mx-auto text-gray-900 dark:text-gray-100">{children}</div>;
+  if (pathname.startsWith("/admin/accounting/setup")) return <div className="acc-theme p-4 lg:p-6 max-w-3xl mx-auto text-gray-900 dark:text-gray-100">{children}</div>;
 
   const home = pathname === "/admin/accounting";
   const current = currentApp(pathname);
 
   return (
     <ShellContext.Provider value={api}>
-      <div className="mx-auto max-w-6xl p-4 pb-28 text-gray-900 md:pb-8 lg:p-6 dark:text-gray-100">
+      <div className="acc-theme mx-auto max-w-6xl p-4 pb-28 text-gray-900 md:pb-8 lg:p-6 dark:text-gray-100">
         {!home && (
           <ModuleBar
             module={MODULE}
@@ -104,7 +105,7 @@ export default function AccountingShell({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={openQuick}
-                className="hidden h-[50px] flex-shrink-0 items-center gap-2 rounded-2xl bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 active:scale-[0.98] md:flex"
+                className="acc-btn-primary hidden h-[50px] flex-shrink-0 items-center gap-2 rounded-2xl bg-blue-600 px-4 text-sm font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 active:scale-[0.98] md:flex"
               >
                 <Plus className="h-4 w-4" aria-hidden />
                 ثبت سریع
@@ -129,7 +130,7 @@ export default function AccountingShell({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={openQuick}
-                className="-mt-7 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-xl shadow-blue-600/35 ring-4 ring-[var(--adm-bg)] transition active:scale-95"
+                className="acc-btn-primary -mt-7 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-xl shadow-blue-600/35 ring-4 ring-[var(--adm-bg)] transition active:scale-95"
                 aria-label="ثبت سریع"
               >
                 <Plus className="h-6 w-6" strokeWidth={2.5} aria-hidden />

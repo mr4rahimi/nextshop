@@ -140,7 +140,7 @@ export function Change({ cur, prev, goodWhenUp = true }: { cur: string | bigint;
 /** جدول گزارش — دسکتاپ جدول کامل؛ موبایل اسکرول افقی */
 export function Table({ head, children, foot }: { head: ReactNode; children: ReactNode; foot?: ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.02]">
+    <div className="acc-table overflow-x-auto rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.02]">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 dark:bg-white/5 text-[11px] text-gray-500">{head}</thead>
         <tbody className="divide-y divide-gray-100 dark:divide-white/5">{children}</tbody>
@@ -171,6 +171,6 @@ export function useIsDark(): boolean {
 
 /** پالت سری‌ها — اعتبارسنجی‌شده برای هر دو حالت (dataviz: `validate_palette.js --pairs all`) */
 export const SERIES = {
-  light: { sales: "#2a78d6", gross: "#1baf7a", expenses: "#eb6834" },
-  dark: { sales: "#3987e5", gross: "#199e70", expenses: "#d95926" },
+  light: { sales: "#2a78d6", gross: "#1baf7a", expenses: "#eb6834", net: "#4a3aa7" },
+  dark: { sales: "#3987e5", gross: "#199e70", expenses: "#d95926", net: "#9085e9" },
 };
