@@ -30,9 +30,11 @@ export default async function SiteTracker() {
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: INLINE }} />
+      {/* نسخه از شناسه‌ی سایت: پاسخ کش‌شده‌ی قدیمی CDN (مثلاً ۴۰۴ِ پیش از روشن
+          شدن) هیچ‌وقت آدرس فعلی را نمی‌گیرد، حتی بعد از عوض شدن تنظیمات */}
       <script
         defer
-        src="/tq/s.js"
+        src={`/tq/s.js?v=${s.umamiWebsiteId.slice(0, 8)}`}
         data-website-id={s.umamiWebsiteId}
         data-before-send="__nxBeforeSend"
       />

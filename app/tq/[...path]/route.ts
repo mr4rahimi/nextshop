@@ -9,6 +9,9 @@
  *   شهر، کشور و بازدیدکننده‌ی یکتا غلط.
  * - route handler است نه `rewrites`: `rewrites` هنگام بیلد ثابت می‌شود و
  *   خاموش‌کردن ردیاب از پنل باید بدون بیلد اثر کند.
+ * - ⚠️ **هر پاسخی جز خود اسکریپت `no-store` است.** CDN جلوی سایت (WCDN در
+ *   9dm) پاسخ بی‌هدر را کش می‌کند: ۴۰۴ِ «ردیاب خاموش است» ماند و بعد از روشن
+ *   شدن هم به بازدیدکننده‌ها رسید (۲.۶۴.۱).
  */
 
 import { getAnalyticsSettings, umamiBaseUrl } from "@/lib/analytics/umami";
@@ -19,8 +22,10 @@ export const dynamic = "force-dynamic";
 const SCRIPT_TTL_MS = 60 * 60 * 1000;
 let scriptCache: { body: string; expiresAt: number } | null = null;
 
+const NO_STORE = { "cache-control": "no-store" };
+
 function notFound() {
-  return new Response("Not found", { status: 404 });
+  return new Response("Not found", { status: 404, headers: NO_STORE });
 }
 
 function clientIp(req: Request) {
@@ -49,7 +54,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ path: s
       scriptCache = { body: await res.text(), expiresAt: Date.now() + SCRIPT_TTL_MS };
     } catch {
       // نسخه‌ی کهنه بهتر از هیچ؛ اگر هیچ نداریم، صفحه بی‌ردیاب می‌ماند و نمی‌شکند
-      if (!scriptCache) return new Response("", { status: 503 });
+      if (!scriptCache) return new Response("", { status: 503, headers: NO_STORE });
     }
   }
 
@@ -66,11 +71,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ path: s
   if (path.join("/") !== "api/send") return notFound();
 
   const settings = await getAnalyticsSettings();
-  if (!settings.trackingEnabled) return new Response(null, { status: 204 });
+  if (!settings.trackingEnabled) return new Response(null, { status: 204, headers: NO_STORE });
 
   const body = await req.text();
   // رویداد Umami چند صد بایت است؛ سقف جلوی سوءاستفاده از مسیر را می‌گیرد
-  if (body.length > 16_000) return new Response("Too large", { status: 413 });
+  if (body.length > 16_000) return new Response("Too large", { status: 413, headers: NO_STORE });
 
   const headers: Record<string, string> = {
     "content-type": "application/json",
@@ -98,6 +103,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ path: s
     });
   } catch {
     // Umami خاموش است — مرورگر نباید خطای قرمز ببیند
-    return new Response(null, { status: 204 });
+    return new Response(null, { status: 204, headers: NO_STORE });
   }
 }
