@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import type { FlowNode } from "@/lib/chat-flow";
+import { track } from "@/lib/analytics/track";
+import { EVENTS } from "@/lib/analytics/events";
 
 // ── Markdown inline parser ─────────────────────────────────────────────────
 
@@ -536,7 +538,11 @@ function AiChatWidget() {
 
       {}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          // آمار بازدید — فقط باز شدن شمرده می‌شود نه بستن (بخش ۱۳.۴)
+          if (!open) track(EVENTS.chatOpen);
+          setOpen((v) => !v);
+        }}
         aria-label="دستیار خرید"
         className="ai-chat-fab"
         style={{

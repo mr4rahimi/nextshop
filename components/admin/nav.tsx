@@ -317,7 +317,7 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   connections: "اتصالات", mapping: "نگاشت محصولات",
   "product-suggestions": "پیشنهادات محصول", "price-rules": "قوانین قیمت",
   queue: "صف عملیات", logs: "لاگ‌ها", worklist: "کارتابل",
-  content: "کارهای محتوا", links: "لینک‌سازی",
+  content: "کارهای محتوا", links: "لینک‌سازی", analytics: "آمار بازدید",
   calls: "تماس‌ها", tasks: "همه‌ی کارها", attendance: "حضور",
   settings: "تنظیمات", roles: "نقش‌ها و دسترسی‌ها", club: "باشگاه مشتریان",
   members: "اعضا", tiers: "سطوح عضویت", coupons: "کدهای تخفیف",

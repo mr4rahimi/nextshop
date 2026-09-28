@@ -8,8 +8,19 @@ import { validateCoupon, consumeCoupon } from "@/lib/club/coupons";
 import { setClubConsent } from "@/lib/club/consent";
 import { ensureClubProfile } from "@/lib/club/profile";
 import { emitPaymentsReceived } from "@/lib/accounting/events";
+import { ATTRIBUTION_COOKIE, decodeTouch, orderFieldsFromTouch } from "@/lib/analytics/attribution";
 
 export const runtime = "nodejs";
+
+function readCookie(req: Request, name: string): string | null {
+  const raw = req.headers.get("cookie");
+  if (!raw) return null;
+  for (const part of raw.split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0 && part.slice(0, i).trim() === name) return part.slice(i + 1).trim();
+  }
+  return null;
+}
 
 function generateOrderNumber(): string {
   const prefix = "MN";
@@ -157,6 +168,8 @@ export async function POST(req: Request) {
         discountTotal: walletDiscount + pointsDiscount + couponDiscount,
         couponCode: appliedCoupon?.code ?? null,
         grandTotal: finalGrandTotal,
+        // منبع ورود — docs/plans/seo-marketing.md بخش ۱۳.۵ (کوکی خراب = بدون منبع، نه خطا)
+        ...orderFieldsFromTouch(decodeTouch(readCookie(req, ATTRIBUTION_COOKIE))),
         items: { create: orderItems },
         payments: {
           create: [
@@ -252,5 +265,8 @@ export async function POST(req: Request) {
     await emitPaymentsReceived(order.id);
   }
 
-  return NextResponse.json(serialize({ orderId: order.id, orderNumber: order.orderNumber }));
+  // grandTotal برای رویداد `place_order` آمار بازدید (بخش ۱۳.۴)
+  return NextResponse.json(
+    serialize({ orderId: order.id, orderNumber: order.orderNumber, grandTotal: order.grandTotal }),
+  );
 }

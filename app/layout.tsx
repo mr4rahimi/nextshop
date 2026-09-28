@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { SITE_URL } from "@/lib/seo";
 import type { Metadata, Viewport } from "next";
 import AiChat from "@/components/AiChat";
+import SiteTracker from "@/components/analytics/SiteTracker";
 
 function buildCssVars(theme: Record<string, string>): string {
   if (!theme || Object.keys(theme).length === 0) return "";
@@ -84,6 +85,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
         <script src="/assets/js/plugin/swiper/swiper-bundle.min.js" defer></script>
+        {/* آمار بازدید — docs/plans/seo-marketing.md بخش ۱۳.۳ */}
+        <SiteTracker />
       </head>
       <body className={`${myFont.className} bg-white dark:bg-[#050505] text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300`}>
         <ThemeProvider>

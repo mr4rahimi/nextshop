@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import { track } from "@/lib/analytics/track";
+import { EVENTS } from "@/lib/analytics/events";
 
 export interface CartProduct {
   id: string;
@@ -111,6 +113,7 @@ export function CartProvider({ children, isLoggedIn }: { children: ReactNode; is
   }, [isLoggedIn]);
 
   const addItem = useCallback((product: CartProduct, qty = 1) => {
+    track(EVENTS.addToCart);
     setItems(prev => {
       const exists = prev.find(i => i.productId === product.id);
       const next = exists

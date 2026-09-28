@@ -9,7 +9,7 @@
  */
 
 import {
-  ArrowLeftRight, Banknote, CalendarClock, ChartColumn, ChartPie, ClipboardList,
+  Activity, ArrowLeftRight, Banknote, CalendarClock, ChartColumn, ChartPie, ClipboardList,
   ClockCheck, Coins, FolderTree, House, Landmark, Link2, ListTodo, NotebookPen,
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
@@ -88,6 +88,7 @@ export const WORKLIST_APPS: AppItem[] = [
   { href: "/admin/worklist/seo", label: "کارهای سئو", icon: SearchCheck, tone: "teal", img: "wl-seo" },
   { href: "/admin/worklist/content", label: "کارهای محتوا", icon: PenLine, tone: "fuchsia", img: "wl-content" },
   { href: "/admin/worklist/links", label: "لینک‌سازی", icon: Link2, tone: "indigo", img: "wl-links" },
+  { href: "/admin/worklist/analytics", label: "آمار بازدید", icon: Activity, tone: "cyan", img: "wl-analytics" },
   { href: "/admin/worklist/attendance", label: "حضور", icon: ClockCheck, tone: "cyan", img: "wl-attendance" },
   { href: "/admin/worklist/deals", label: "سود معاملات", icon: TrendingUp, tone: "lime", img: "wl-deals" },
   { href: "/admin/worklist/payouts", label: "پورسانت", icon: Coins, tone: "amber", img: "wl-payouts" },

@@ -4,6 +4,13 @@ import { matchPath, shouldSkip, normalizePath } from "@/lib/redirects";
 import { getRules, internalBase, INTERNAL_HEADER, internalToken } from "@/lib/redirectCache";
 import { canOpenPath } from "@/lib/admin-sections";
 import { getGateAccess } from "@/lib/admin-gate";
+import {
+  ATTRIBUTION_COOKIE,
+  ATTRIBUTION_MAX_AGE,
+  encodeTouch,
+  isDocumentNavigation,
+  touchFor,
+} from "@/lib/analytics/attribution";
 
 const SECRET = process.env.JWT_SECRET ?? "";
 
@@ -163,7 +170,42 @@ export async function proxy(request: NextRequest) {
 
   // ── ریدایرکت‌های مدیریت‌شده از پنل ادمین ──────────────────────────
   // بعد از همه‌ی بررسی‌های احراز هویت می‌آید تا هرگز جلوی صفحه‌ی ورود را نگیرد.
-  return handleRedirects(request);
+  const response = await handleRedirects(request);
+  stampAttribution(request, response);
+  return response;
+}
+
+/**
+ * منبع ورود خریدار — کوکی `nx_src` (docs/plans/seo-marketing.md بخش ۱۳.۵).
+ *
+ * فقط روی ناوبری سند؛ RSC و prefetch ارجاع‌دهنده‌شان همیشه خودِ سایت است.
+ * روی پاسخ ریدایرکت هم می‌نشیند — آدرس مقصد همان پارامترها را دارد و مرورگر
+ * همان ارجاع‌دهنده را می‌فرستد، پس نوشتن در قدم اول چیزی را خراب نمی‌کند.
+ * هر خطایی بلعیده می‌شود: آمار هرگز نباید صفحه را بشکند.
+ */
+function stampAttribution(request: NextRequest, response: NextResponse) {
+  try {
+    const { pathname } = request.nextUrl;
+    if (!isDocumentNavigation(request.method, request.headers, pathname)) return;
+    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.hostname;
+    const touch = touchFor(
+      request.nextUrl,
+      request.headers.get("referer"),
+      host.split(":")[0],
+      request.cookies.has(ATTRIBUTION_COOKIE),
+    );
+    if (!touch) return;
+    response.cookies.set(ATTRIBUTION_COOKIE, encodeTouch(touch), {
+      maxAge: ATTRIBUTION_MAX_AGE,
+      httpOnly: true,
+      sameSite: "lax",
+      // پشت nginx پروتکل درخواست http است؛ واقعیت در x-forwarded-proto
+      secure: (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https",
+      path: "/",
+    });
+  } catch {
+    /* هیچ */
+  }
 }
 
 /**
@@ -234,6 +276,6 @@ export const config = {
    * فراخوانی است، آن یکی برای درستی.
    */
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|uploads/|upload/|assets/|api/internal/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|uploads/|upload/|assets/|api/internal/|tq/).*)",
   ],
 };

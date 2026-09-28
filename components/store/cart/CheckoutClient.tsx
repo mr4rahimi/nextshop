@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/store/cart/CartContext";
 import { PROVINCES } from "@/lib/iran-cities";
+import { track } from "@/lib/analytics/track";
+import { EVENTS } from "@/lib/analytics/events";
 
 interface Address {
   id: string;
@@ -132,6 +134,11 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
   const [error, setError] = useState("");
 
   const addrCities = PROVINCES.find(p => p.name === newAddr.province)?.cities ?? [];
+
+  // یک بار در هر بار باز شدن صفحه‌ی تسویه (بخش ۱۳.۴)
+  useEffect(() => {
+    track(EVENTS.beginCheckout);
+  }, []);
 
   useEffect(() => {
     if (!selectedAddress) return;
@@ -262,6 +269,9 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error ?? "خطا در ثبت سفارش"); setSubmitting(false); return; }
+
+    // «ثبت شد» نه «پرداخت شد» — پرداخت را دیتابیس دقیق می‌داند (بخش ۱۳.۴)
+    track(EVENTS.placeOrder, { revenue: Number(data.grandTotal) || 0, currency: "IRT" });
 
   
     router.push(`/checkout/confirm/${data.orderId}`);

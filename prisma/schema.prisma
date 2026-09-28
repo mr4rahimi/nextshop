@@ -304,6 +304,18 @@ model Order {
   /// فروش ریفری — مشتری را کسی معرفی کرده. پورسانتش با قاعده‌های `referral`
   /// طرح حساب می‌شود. مستندات: docs/features/staff-worklist.md بخش ۲۲.۱۰
   isReferral       Boolean                  @default(false)
+  /// منبع ورود خریدار — فقط سفارش آنلاین، از کوکی `nx_src` در `/api/checkout`.
+  /// **خالی یعنی «نامعلوم» نه «مستقیم»** (سفارش پیش از ۲.۶۴.۰ یا کوکی پاک‌شده).
+  /// مستندات: docs/plans/seo-marketing.md بخش ۱۳.۵
+  trafficChannel   String?
+  /// صفحه‌ی ورود، بدون پارامتر
+  landingPath      String?
+  referrerHost     String?
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  /// زمان آخرین لمس غیرمستقیم که این منبع را ساخت
+  touchedAt        DateTime?
   address          Address?                 @relation(fields: [addressId], references: [id])
   user             User                     @relation(fields: [userId], references: [id])
   createdByStaff   User?                    @relation("OrderCreatedByStaff", fields: [createdByStaffId], references: [id])
@@ -317,6 +329,7 @@ model Order {
   @@index([createdAt])
   @@index([createdByStaffId, createdAt])
   @@index([paymentTerm, status])
+  @@index([trafficChannel, createdAt])
 }
 
 enum OrderPaymentTerm {
@@ -4573,4 +4586,23 @@ model AccInstallment {
 
   @@unique([planId, seq])
   @@index([dueDate])
+}
+
+/// تنظیمات آنالیز سئو — تک‌ردیفی (`id = "singleton"`).
+///
+/// **عمداً جدا از `StoreSettings`:** آن جدول در مسیرهای عمومی فروشگاه خوانده
+/// می‌شود و کد اشتراک نباید روزی با یک `select` گشاد بیرون برود.
+/// آدرس Umami در `.env` است (`UMAMI_BASE_URL`) چون واقعیتِ سرور است نه فروشگاه.
+///
+/// مستندات: docs/plans/seo-marketing.md بخش ۱۳.۲
+model SeoAnalyticsSettings {
+  id              String   @id @default("singleton")
+  /// ردیاب روی صفحات فروشگاه بار شود یا نه
+  trackingEnabled Boolean  @default(false)
+  /// شناسه‌ی سایت در Umami (uuid) — عمومی است، در صفحه‌ی فروشگاه دیده می‌شود
+  umamiWebsiteId  String?
+  /// کد اشتراک فقط‌خواندنی Umami — فقط سمت سرور خوانده می‌شود
+  umamiShareSlug  String?
+  updatedAt       DateTime @updatedAt
+  updatedByName   String?
 }
