@@ -25,7 +25,7 @@ import { api, BalanceLabel, btn, Card, ErrorText, Field, inputCls, Money, PageHe
 import { Plus } from "lucide-react";
 
 type Kind = "RECEIPT" | "PAYMENT" | "TRANSFER";
-type Method = "CASH" | "CARD_TRANSFER" | "BANK_TRANSFER" | "POS" | "GATEWAY" | "CHEQUE" | "ENDORSE";
+type Method = "CASH" | "CARD_TRANSFER" | "BANK_TRANSFER" | "POS" | "GATEWAY" | "GIFT_CARD" | "CHEQUE" | "ENDORSE" | "OFFSET";
 type TKind = "CASH" | "BANK" | "POS" | "GATEWAY";
 
 interface Treasury {
@@ -83,22 +83,25 @@ interface Item {
   endorseChequeId: string;
 }
 
-export const KIND_LABELS: Record<Kind | "EXPENSE", string> = { RECEIPT: "دریافت", PAYMENT: "پرداخت", TRANSFER: "انتقال وجه", EXPENSE: "هزینه" };
+export const KIND_LABELS: Record<Kind | "EXPENSE" | "INCOME", string> = { RECEIPT: "دریافت", PAYMENT: "پرداخت", TRANSFER: "انتقال وجه", EXPENSE: "هزینه", INCOME: "درآمد" };
 const METHOD_LABEL: Record<Method, string> = {
   CASH: "نقد",
   CARD_TRANSFER: "کارت‌به‌کارت",
   BANK_TRANSFER: "واریز بانکی",
   POS: "کارتخوان",
   GATEWAY: "درگاه",
+  GIFT_CARD: "بن / کارت هدیه",
   CHEQUE: "چک",
   ENDORSE: "خرج چک دریافتی",
+  OFFSET: "تهاتر",
 };
-const METHOD_TREASURY: Record<Exclude<Method, "CHEQUE" | "ENDORSE">, TKind[]> = {
+const METHOD_TREASURY: Record<Exclude<Method, "CHEQUE" | "ENDORSE" | "OFFSET">, TKind[]> = {
   CASH: ["CASH"],
   CARD_TRANSFER: ["BANK"],
   BANK_TRANSFER: ["BANK"],
   POS: ["POS", "BANK"],
   GATEWAY: ["GATEWAY", "BANK"],
+  GIFT_CARD: ["CASH", "BANK"],
 };
 
 let seq = 0;
@@ -166,8 +169,10 @@ export default function MoneyForm() {
   useEffect(() => {
     if (!data || !focusInvoice) return;
     const inv = data.open.find((o) => o.id === focusInvoice);
-    if (inv) setItems((x) => (x.length === 1 && !x[0].amount ? [{ ...x[0], amount: inv.open }] : x));
-  }, [data, focusInvoice]);
+    // `amount` از لینک «ثبت دریافت قسط» — مبلغ همان قسط، نه کل مانده
+    const want = sp.get("amount");
+    if (inv) setItems((x) => (x.length === 1 && !x[0].amount ? [{ ...x[0], amount: want && /^\d+$/.test(want) && BigInt(want) <= BigInt(inv.open) ? want : inv.open }] : x));
+  }, [data, focusInvoice, sp]);
 
   const patch = (key: number, p: Partial<Item>) => setItems((x) => x.map((i) => (i.key === key ? { ...i, ...p } : i)));
   const treasuries = useMemo(() => data?.treasuries ?? [], [data]);
@@ -177,7 +182,7 @@ export default function MoneyForm() {
     if (!data) return;
     setItems((x) =>
       x.map((i) => {
-        if (i.treasuryId || i.method === "ENDORSE" || (i.method === "CHEQUE" && kind === "RECEIPT")) return i;
+        if (i.treasuryId || i.method === "ENDORSE" || i.method === "OFFSET" || (i.method === "CHEQUE" && kind === "RECEIPT")) return i;
         const t = data.treasuries.find((t) => (i.method === "CHEQUE" ? t.kind === "BANK" : METHOD_TREASURY[i.method as keyof typeof METHOD_TREASURY].includes(t.kind)));
         const next = t && i.method === "CHEQUE" ? data.nextSerial[t.id] : null;
         return t ? { ...i, treasuryId: t.id, ...(next ? { serialNo: next.serial, chequeBookId: next.bookId } : {}) } : i;
@@ -205,12 +210,12 @@ export default function MoneyForm() {
   const excess = total - allocSum;
 
   function methodOptions(): Method[] {
-    const base: Method[] = ["CASH", "CARD_TRANSFER", "BANK_TRANSFER", "POS", "GATEWAY", "CHEQUE"];
-    return kind === "PAYMENT" ? [...base.filter((m) => m !== "POS" && m !== "GATEWAY"), "ENDORSE"] : base;
+    const base: Method[] = ["CASH", "CARD_TRANSFER", "BANK_TRANSFER", "POS", "GATEWAY", "GIFT_CARD", "CHEQUE"];
+    return kind === "PAYMENT" ? [...base.filter((m) => m !== "POS" && m !== "GATEWAY" && m !== "GIFT_CARD"), "ENDORSE", "OFFSET"] : [...base, "OFFSET"];
   }
   function treasuriesFor(m: Method) {
     if (m === "CHEQUE") return treasuries.filter((t) => t.kind === "BANK");
-    if (m === "ENDORSE") return [];
+    if (m === "ENDORSE" || m === "OFFSET") return [];
     return treasuries.filter((t) => METHOD_TREASURY[m].includes(t.kind));
   }
   function setMethod(it: Item, m: Method) {
@@ -234,9 +239,9 @@ export default function MoneyForm() {
               partyId: party?.id,
               items: items.map((i) => ({
                 method: i.method === "ENDORSE" ? "CHEQUE" : i.method,
-                treasuryId: i.method === "CHEQUE" && kind === "RECEIPT" ? null : i.treasuryId || null,
+                treasuryId: (i.method === "CHEQUE" && kind === "RECEIPT") || i.method === "OFFSET" ? null : i.treasuryId || null,
                 amount: i.amount || "0",
-                fee: feeAllowed && i.method !== "CHEQUE" ? i.fee || "0" : "0",
+                fee: feeAllowed && i.method !== "CHEQUE" && i.method !== "OFFSET" ? i.fee || "0" : "0",
                 trackingCode: i.trackingCode || null,
                 endorseChequeId: i.method === "ENDORSE" ? i.endorseChequeId : null,
                 cheque:
@@ -270,6 +275,7 @@ export default function MoneyForm() {
       .map((i) => {
         const t = treasuries.find((x) => x.id === i.treasuryId)?.name;
         const fee = feeAllowed && i.fee && i.fee !== "0" ? ` (کارمزد ${formatAmount(i.fee)})` : "";
+        if (i.method === "OFFSET") return kind === "RECEIPT" ? "تهاتر با بدهی ما به او" : "تهاتر با طلب ما از او";
         return `${METHOD_LABEL[i.method]}${t && i.method !== "CHEQUE" ? ` ${kind === "RECEIPT" ? "به" : "از"} ${t}` : ""}${fee}`;
       })
       .join(" + ");
@@ -426,7 +432,15 @@ export default function MoneyForm() {
                     <Field label="مبلغ">
                       <AmountInput value={it.amount} onChange={(v) => patch(it.key, { amount: v })} />
                     </Field>
-                    {(it.method !== "CHEQUE" || kind === "PAYMENT") && (
+                    {it.method === "OFFSET" && (
+                      <p className="text-[11px] text-gray-500 leading-6 self-end">
+                        {kind === "RECEIPT"
+                          ? "پولی جابه‌جا نمی‌شود: به همین مبلغ از بدهی ما به این شخص کم می‌شود و از طلبمان هم."
+                          : "پولی جابه‌جا نمی‌شود: به همین مبلغ از طلب ما از این شخص کم می‌شود و از بدهی‌مان هم."}
+                        {data?.partyBalance != null && ` مانده‌ی فعلی: ${formatAmount(BigInt(data.partyBalance) < 0n ? -BigInt(data.partyBalance) : BigInt(data.partyBalance))} ${BigInt(data.partyBalance) >= 0n ? "طلب ما" : "بدهی ما"}.`}
+                      </p>
+                    )}
+                    {it.method !== "OFFSET" && (it.method !== "CHEQUE" || kind === "PAYMENT") && (
                       <Field label={it.method === "CHEQUE" ? "از حساب بانکی" : kind === "RECEIPT" ? "به" : "از"}>
                         <select
                           value={it.treasuryId}
@@ -449,7 +463,7 @@ export default function MoneyForm() {
                   </div>
                 )}
 
-                {feeAllowed && it.method !== "CHEQUE" && (
+                {feeAllowed && it.method !== "CHEQUE" && it.method !== "OFFSET" && (
                   <Field
                     label="کارمزد کسرشده‌ی بازارگاه (اختیاری)"
                     hint={

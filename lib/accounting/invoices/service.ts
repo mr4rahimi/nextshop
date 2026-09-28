@@ -21,7 +21,7 @@ import { postVoucher, rebuildVoucher, voidVoucher, type Actor, type LineInput } 
 import { nextNumber } from "../ledger/sequence";
 import { applyMoves, registerCostRebuilder, removeMoves, type MoveInput } from "../inventory/stock";
 import { ensureDefaultWarehouse } from "../inventory/docs";
-import { faNum } from "../money";
+import { faNum, formatAmount } from "../money";
 import { calcInvoice, CalcError, divRound, INVOICE_TYPE_LABELS, allocate } from "./calc";
 
 type Tx = Prisma.TransactionClient;
@@ -104,6 +104,8 @@ export interface SaveOpts {
   issue?: boolean;
   /** `false` = موجودی سایت دست نمی‌خورد — فقط کانال‌هایی که خودشان کسر کرده‌اند (تله‌ی ۱۵) */
   shopStock?: boolean;
+  /** فروش دستی بیش از سقف اعتبار شخص — کاربر هشدار را دیده و تأیید کرده (فاز ۱۰) */
+  allowOverCredit?: boolean;
 }
 
 /** تعداد برگشت‌شده‌ی هر ردیف مرجع در برگشتی‌های معتبر */
@@ -156,6 +158,7 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
     if (current.status === "ISSUED") {
       await assertNoLiveReturns(tx, current, "ویرایش");
       if (current.paidTotal > 0n) throw new AccError("برای این فاکتور دریافت یا پرداخت ثبت شده؛ اول آن را جدا کنید", 409);
+      if (await tx.accInstallmentPlan.count({ where: { invoiceId: current.id } })) throw new AccError("این فاکتور برنامه‌ی اقساط دارد؛ اول برنامه را باطل کنید", 409);
       await assertPostable(tx, current.date);
     }
   }
@@ -261,6 +264,21 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
   } catch (e) {
     if (e instanceof CalcError) throw new AccError(e.message);
     throw e;
+  }
+
+  // ── سقف اعتبار (فاز ۱۰) — فقط فروش دستی؛ فاکتور خودکار سایت/بازارگاه هرگز نمی‌ایستد ──
+  if (type === "SALES" && issue && manual && party.creditLimit !== null && !opts.allowOverCredit) {
+    const bal = await tx.accVoucherLine.aggregate({
+      where: { isVoid: false, partyId, account: { class: { in: ["ASSET", "LIABILITY"] } }, ...(current?.voucherId ? { voucherId: { not: current.voucherId } } : {}) },
+      _sum: { debit: true, credit: true },
+    });
+    const after = (bal._sum.debit ?? 0n) - (bal._sum.credit ?? 0n) + calc.total;
+    if (after > party.creditLimit) {
+      throw new AccError(
+        `OVER_CREDIT: با این فاکتور طلب از «${party.name}» به ${formatAmount(after)} تومان می‌رسد؛ سقف اعتبارش ${formatAmount(party.creditLimit)} است`,
+        409,
+      );
+    }
   }
 
   // ── انبار ──
@@ -512,6 +530,7 @@ export async function voidInvoice(tx: Tx, id: string, reason: string, actor: Act
   }
   await assertNoLiveReturns(tx, inv, "باطل");
   if (inv.paidTotal > 0n) throw new AccError("برای این فاکتور دریافت یا پرداخت ثبت شده؛ اول آن را جدا کنید", 409);
+  if (await tx.accInstallmentPlan.count({ where: { invoiceId: inv.id } })) throw new AccError("این فاکتور برنامه‌ی اقساط دارد؛ اول برنامه را باطل کنید", 409);
 
   if (MOVE_TYPE[inv.type]) {
     await assertPostable(tx, inv.date);

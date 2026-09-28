@@ -2,11 +2,11 @@
  * زمان‌بند حسابداری — هر ده دقیقه، فقط در حالت داخلی.
  *
  * جدا از worker یکپارچه‌سازی و زمان‌بند کارتابل است: هر دو گیت خودشان را
- * دارند و خاموش بودنشان نباید یادآوری چک را خاموش کند.
+ * دارند و خاموش بودنشان نباید یادآوری چک را خاموش کند. یادآوری قسط (فاز ۱۰) هم اینجاست.
  */
 
 import { getAccMode } from "./settings";
-import { runChequeReminders } from "./cash/reminders";
+import { runChequeReminders, runInstallmentReminders } from "./cash/reminders";
 
 let started = false;
 const TICK_MS = 10 * 60_000;
@@ -17,6 +17,8 @@ async function tick() {
     if ((await getAccMode()) !== "INTERNAL") return;
     const r = await runChequeReminders();
     if (r.notified + r.tasks > 0) console.log(`[acc-cheque] یادآوری سررسید: ${r.notified} اعلان، ${r.tasks} کار پیگیری`);
+    const i = await runInstallmentReminders();
+    if (i.notified > 0) console.log(`[acc-installment] یادآوری سررسید قسط: ${i.notified} اعلان`);
   } catch (e) {
     console.error("[acc-scheduler] چرخه ناموفق:", e);
   }

@@ -11,6 +11,7 @@ import { dayValue, daysBetween, jalaliMonthBounds, previousRange, todayKey } fro
 import { invoiceOpenAmounts } from "../cash/allocation";
 import { accountIndex, type Db } from "./common";
 import { profitLoss } from "./statements";
+import { planRows } from "../installments";
 
 export async function monthDashboard(db: Db) {
   const today = todayKey();
@@ -53,6 +54,8 @@ export async function monthDashboard(db: Db) {
     db.$queryRaw<{ n: bigint }[]>`SELECT COUNT(*)::bigint AS n FROM "Product" WHERE "trackStock" = true AND "isActive" = true AND "stock" <= "lowStockThreshold"`,
   ]);
   const open = await invoiceOpenAmounts(db, dueInvoices.map((i) => i.id));
+  // اقساط فروش سررسیدگذشته (فاز ۱۰)
+  const inst = (await planRows(db, { invoice: { type: "SALES", status: "ISSUED" }, items: { some: { dueDate: { lt: today } } } })).filter((r) => r.state === "OVERDUE");
   let overdue = 0n;
   let overdueCount = 0;
   for (const o of open.values()) {
@@ -67,6 +70,14 @@ export async function monthDashboard(db: Db) {
     totals: pl.totals,
     prevTotals: pl.prevTotals,
     series: { days, sales, cogs, expenses },
-    alerts: { events, overdue, overdueCount, negative, lowStock: Number(lowStock[0]?.n ?? 0n) },
+    alerts: {
+      events,
+      overdue,
+      overdueCount,
+      negative,
+      lowStock: Number(lowStock[0]?.n ?? 0n),
+      installments: inst.length,
+      installmentsDue: inst.reduce((s, r) => s + r.left, 0n),
+    },
   };
 }

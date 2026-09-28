@@ -10,13 +10,15 @@ import { balanceSheet, profitLoss } from "@/lib/accounting/reports/statements";
 import { aging } from "@/lib/accounting/reports/aging";
 import { profitBy, type ProfitDim } from "@/lib/accounting/reports/profit";
 import { expenseReport, inventoryValue, treasuryFlow, vatReport } from "@/lib/accounting/reports/ops";
+import { monthlyTrend } from "@/lib/accounting/reports/trend";
+import { partyBalances, type PartyRole } from "@/lib/accounting/reports/parties";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** گزارش‌هایی که بها یا سود نشان می‌دهند — `ACC_COST_VIEW` هم لازم است */
-const COST_REPORTS = ["pl", "balance", "trial", "profit", "inventory"];
-const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury"];
+const COST_REPORTS = ["pl", "balance", "trial", "profit", "inventory", "trend"];
+const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties"];
 
 /**
  * GET /reports/<kind>?from&to&… — docs/plans/accounting.md بخش ۱۱.
@@ -29,6 +31,8 @@ const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury"];
  *   expenses  ?compare=1
  *   treasury  گردش صندوق و بانک
  *   inventory ?by=category|product|warehouse&warehouseId
+ *   trend     ?months=12                 روند ماهانه‌ی فروش، سود، هزینه و نقد (فاز ۱۰)
+ *   parties   ?role&show=all|debtor|creditor|active&q   کل حساب اشخاص (فاز ۱۰)
  */
 export async function GET(req: Request, { params }: { params: Promise<{ kind: string }> }) {
   const { kind } = await params;
@@ -74,6 +78,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
       case "treasury":
         data = await treasuryFlow(prisma, range);
         break;
+      case "trend":
+        data = await monthlyTrend(prisma, Math.min(Math.max(Number(q("months")) || 12, 3), 24));
+        break;
+      case "parties": {
+        const role = (["customer", "supplier", "employee", "marketplace"].includes(q("role") ?? "") ? q("role") : "all") as PartyRole;
+        const show = (["debtor", "creditor", "active"].includes(q("show") ?? "") ? q("show") : "all") as "all" | "debtor" | "creditor" | "active";
+        data = await partyBalances(prisma, range, { role, show, q: q("q") });
+        break;
+      }
       case "inventory": {
         const by = q("by") === "product" ? "product" : q("by") === "warehouse" ? "warehouse" : "category";
         data = await inventoryValue(prisma, { warehouseId: q("warehouseId") || null, by });

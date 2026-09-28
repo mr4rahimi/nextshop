@@ -70,7 +70,7 @@ export async function PUT(req: Request, { params }: Params) {
     if (!can(guard.access, permOf(cur.type))) throw new AccError("به ویرایش این فاکتور دسترسی ندارید", 404);
     const b = await readJson<InvoiceBody>(req);
     const input = inputFromBody({ ...b, type: cur.type });
-    const inv = await prisma.$transaction((tx) => saveInvoice(tx, id, input, { issue: !!b.issue }, actorOf(guard.access)), { timeout: 60_000 });
+    const inv = await prisma.$transaction((tx) => saveInvoice(tx, id, input, { issue: !!b.issue, allowOverCredit: !!(b as { overrideCredit?: boolean }).overrideCredit }, actorOf(guard.access)), { timeout: 60_000 });
     await logActivity({
       action: "UPDATE",
       entity: "OTHER",

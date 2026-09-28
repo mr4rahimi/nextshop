@@ -18,6 +18,9 @@ import { postVoucher, rebuildVoucher, voidVoucher, type Actor, type LineInput } 
 import { createTreasury, TREASURY_ACCOUNT_KEY } from "./treasury";
 import { ensureDefaultWarehouse } from "./inventory/docs";
 import { walletOpeningLines } from "./cash/wallet";
+import { hasCarriedOpening } from "./ledger/closing";
+
+export const CARRIED_MSG = "مانده‌های این سال از بستن سال قبل خودکار آمده‌اند؛ اول دوره‌ی دستی فقط برای سال اول است";
 
 type Tx = Prisma.TransactionClient;
 
@@ -79,6 +82,7 @@ export async function saveOpening(yearId: string, input: OpeningBalances, actor:
   return prisma.$transaction(async (tx) => {
     const year = await tx.accFiscalYear.findUnique({ where: { id: yearId } });
     if (!year) throw new AccError("سال مالی پیدا نشد", 404);
+    if (await hasCarriedOpening(tx, yearId)) throw new AccError(CARRIED_MSG, 409);
 
     const lines: LineInput[] = [];
     const seenT = new Set<string>();

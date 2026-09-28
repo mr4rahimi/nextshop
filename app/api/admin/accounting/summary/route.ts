@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
-import { balancesBy } from "@/lib/accounting/ledger/balances";
+import { balancesBy, PARTY_BALANCE } from "@/lib/accounting/ledger/balances";
 import { currentYear } from "@/lib/accounting/ledger/fiscal-year";
 import { openingKey } from "@/lib/accounting/setup";
 import { todayKey } from "@/lib/accounting/dates";
@@ -25,7 +25,7 @@ export async function GET() {
     currentYear(),
     prisma.accTreasury.findMany({ where: { isActive: true }, orderBy: [{ kind: "asc" }, { code: "asc" }] }),
     balancesBy(prisma, "treasuryId"),
-    balancesBy(prisma, "partyId"),
+    balancesBy(prisma, "partyId", PARTY_BALANCE),
     prisma.accVoucher.count({ where: { status: "POSTED" } }),
   ]);
 

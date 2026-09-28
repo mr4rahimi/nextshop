@@ -8,6 +8,8 @@
  * - «پرداخت»: همین حالا (نقد، کارت‌به‌کارت، واریز، چک — چند روش با هم) یا
  *   نسیه. هر مقدار پرداخت‌نشده بدهی به «به چه کسی» می‌شود.
  * - مبلغ پرداخت تا وقتی کاربر دست نزده، همان جمع هزینه است.
+ * - `income`: همین فرم برای «درآمد متفرقه» (فاز ۱۰) — سرفصل‌های درآمد، «دریافت»
+ *   به‌جای «پرداخت»، و بخش دریافت‌نشده طلب از شخص.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -19,7 +21,7 @@ import PartyPicker, { type PartyOption } from "../PartyPicker";
 import { api, btn, Card, ErrorText, Field, inputCls, Money, PageHeader, Segmented, SectionTitle } from "../ui";
 import { Plus } from "lucide-react";
 
-type Method = "CASH" | "CARD_TRANSFER" | "BANK_TRANSFER" | "CHEQUE";
+type Method = "CASH" | "CARD_TRANSFER" | "BANK_TRANSFER" | "POS" | "GIFT_CARD" | "CHEQUE";
 interface Account {
   id: string;
   code: string;
@@ -31,7 +33,7 @@ interface Account {
 interface Treasury {
   id: string;
   name: string;
-  kind: "CASH" | "BANK";
+  kind: "CASH" | "BANK" | "POS";
   balance: string;
 }
 interface FormData {
@@ -55,19 +57,31 @@ interface Pay {
   trackingCode: string;
   serialNo: string;
   sayadId: string;
+  bankName: string;
   dueDate: string;
   chequeBookId: string;
 }
 
-const METHOD_LABEL: Record<Method, string> = { CASH: "نقد", CARD_TRANSFER: "کارت‌به‌کارت", BANK_TRANSFER: "واریز بانکی", CHEQUE: "چک" };
-const METHOD_KIND: Record<Method, Treasury["kind"]> = { CASH: "CASH", CARD_TRANSFER: "BANK", BANK_TRANSFER: "BANK", CHEQUE: "BANK" };
+const METHOD_LABEL: Record<Method, string> = { CASH: "نقد", CARD_TRANSFER: "کارت‌به‌کارت", BANK_TRANSFER: "واریز بانکی", POS: "کارتخوان", GIFT_CARD: "بن / کارت هدیه", CHEQUE: "چک" };
+const METHOD_KINDS: Record<Method, Treasury["kind"][]> = { CASH: ["CASH"], CARD_TRANSFER: ["BANK"], BANK_TRANSFER: ["BANK"], POS: ["POS", "BANK"], GIFT_CARD: ["CASH", "BANK"], CHEQUE: ["BANK"] };
+const EXPENSE_METHODS: Method[] = ["CASH", "CARD_TRANSFER", "BANK_TRANSFER", "CHEQUE"];
+const INCOME_METHODS: Method[] = ["CASH", "CARD_TRANSFER", "BANK_TRANSFER", "POS", "GIFT_CARD", "CHEQUE"];
+
+const TEXT = {
+  expense: { noun: "هزینه", pay: "پرداخت", paid: "پرداخت شد", later: "نسیه — بعداً پرداخت می‌کنم", who: "به چه کسی", from: "از", list: "/admin/accounting/expenses", listLabel: "هزینه‌ها", help: "accountingExpenseForm" as const },
+  income: { noun: "درآمد", pay: "دریافت", paid: "دریافت شد", later: "نسیه — بعداً دریافت می‌کنم", who: "از چه کسی", from: "به", list: "/admin/accounting/expenses?kind=INCOME", listLabel: "درآمدها", help: "accountingIncome" as const },
+};
 
 let seq = 0;
 const blankLine = (accountId = ""): Line => ({ key: ++seq, accountId, amount: "", description: "" });
-const blankPay = (method: Method = "CASH"): Pay => ({ key: ++seq, method, treasuryId: "", amount: "", trackingCode: "", serialNo: "", sayadId: "", dueDate: "", chequeBookId: "" });
+const blankPay = (method: Method = "CASH"): Pay => ({ key: ++seq, method, treasuryId: "", amount: "", trackingCode: "", serialNo: "", sayadId: "", bankName: "", dueDate: "", chequeBookId: "" });
 
-export default function ExpenseForm() {
+export default function ExpenseForm({ income = false }: { income?: boolean }) {
   const router = useRouter();
+  const T = income ? TEXT.income : TEXT.expense;
+  const methods = income ? INCOME_METHODS : EXPENSE_METHODS;
+  // دریافت با چک: چک مشتری — صندوقی ندارد
+  const noTreasury = (m: Method) => income && m === "CHEQUE";
   const [data, setData] = useState<FormData | null>(null);
   const [date, setDate] = useState("");
   const [party, setParty] = useState<PartyOption | null>(null);
@@ -81,13 +95,13 @@ export default function ExpenseForm() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api<FormData>("/api/admin/accounting/expenses/form")
+    api<FormData>(`/api/admin/accounting/expenses/form${income ? "?kind=INCOME" : ""}`)
       .then((d) => {
         setData(d);
         setDate((x) => x || d.today);
       })
       .catch((e) => setError(e.message));
-  }, []);
+  }, [income]);
 
   const accounts = useMemo(() => data?.accounts ?? [], [data]);
   const treasuries = useMemo(() => data?.treasuries ?? [], [data]);
@@ -110,12 +124,13 @@ export default function ExpenseForm() {
     if (!data) return;
     setPays((x) =>
       x.map((p) => {
-        if (p.treasuryId) return p;
-        const t = data.treasuries.find((t) => t.kind === METHOD_KIND[p.method]);
+        if (p.treasuryId || noTreasury(p.method)) return p;
+        const t = data.treasuries.find((t) => METHOD_KINDS[p.method].includes(t.kind));
         const next = t && p.method === "CHEQUE" ? data.nextSerial[t.id] : null;
         return t ? { ...p, treasuryId: t.id, ...(next ? { serialNo: next.serial, chequeBookId: next.bookId } : {}) } : p;
       }),
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, pays.length]);
 
   // پرداخت پیش‌فرض = کل هزینه، تا وقتی کاربر خودش مبلغ را عوض نکرده
@@ -134,9 +149,9 @@ export default function ExpenseForm() {
     });
   }
   function setMethod(p: Pay, method: Method) {
-    const opts = treasuries.filter((t) => t.kind === METHOD_KIND[method]);
+    const opts = noTreasury(method) ? [] : treasuries.filter((t) => METHOD_KINDS[method].includes(t.kind));
     const tId = opts.some((t) => t.id === p.treasuryId) ? p.treasuryId : opts[0]?.id ?? "";
-    const next = method === "CHEQUE" ? data?.nextSerial[tId] : null;
+    const next = method === "CHEQUE" && !income ? data?.nextSerial[tId] : null;
     patchPay(p.key, { method, treasuryId: tId, ...(next ? { serialNo: next.serial, chequeBookId: next.bookId } : {}) });
   }
 
@@ -144,8 +159,8 @@ export default function ExpenseForm() {
   const sentence =
     total > 0n && names
       ? `${formatAmount(total)} تومان ${names}` +
-        (paid > 0n ? ` — ${pays.filter((p) => p.amount).map((p) => `${METHOD_LABEL[p.method]}${p.method !== "CHEQUE" ? ` از ${treasuries.find((t) => t.id === p.treasuryId)?.name ?? ""}` : ""}`).join(" + ")}` : "") +
-        (payable > 0n ? ` — ${formatAmount(payable)} نسیه${party ? ` به ${party.name}` : ""}` : "")
+        (paid > 0n ? ` — ${pays.filter((p) => p.amount).map((p) => `${METHOD_LABEL[p.method]}${p.method !== "CHEQUE" ? ` ${T.from} ${treasuries.find((t) => t.id === p.treasuryId)?.name ?? ""}` : ""}`).join(" + ")}` : "") +
+        (payable > 0n ? ` — ${formatAmount(payable)} نسیه${party ? ` ${income ? "از" : "به"} ${party.name}` : ""}` : "")
       : "";
   const canSave = !busy && total > 0n && lines.every((l) => l.accountId && l.amount) && payable >= 0n && (!needsParty || !!party);
 
@@ -157,6 +172,7 @@ export default function ExpenseForm() {
       const r = await api<{ id: string }>("/api/admin/accounting/expenses", {
         method: "POST",
         json: {
+          kind: income ? "INCOME" : "EXPENSE",
           date,
           partyId: party?.id ?? null,
           description,
@@ -167,10 +183,10 @@ export default function ExpenseForm() {
                 .filter((p) => p.amount && p.amount !== "0")
                 .map((p) => ({
                   method: p.method,
-                  treasuryId: p.treasuryId || null,
+                  treasuryId: noTreasury(p.method) ? null : p.treasuryId || null,
                   amount: p.amount,
                   trackingCode: p.trackingCode || null,
-                  cheque: p.method === "CHEQUE" ? { serialNo: p.serialNo, sayadId: p.sayadId, dueDate: p.dueDate, chequeBookId: p.chequeBookId || null } : null,
+                  cheque: p.method === "CHEQUE" ? { serialNo: p.serialNo, sayadId: p.sayadId, bankName: p.bankName || null, dueDate: p.dueDate, chequeBookId: p.chequeBookId || null } : null,
                 }))
             : [],
         },
@@ -195,10 +211,10 @@ export default function ExpenseForm() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="ثبت هزینه" help="accountingExpenseForm" back={{ href: "/admin/accounting/expenses", label: "هزینه‌ها" }} />
+      <PageHeader title={`ثبت ${T.noun}`} help={T.help} back={{ href: T.list, label: T.listLabel }} />
 
       <Card className="p-4 space-y-3">
-        <SectionTitle title="بابت چه" help="accountingExpenseForm" />
+        <SectionTitle title="بابت چه" help={T.help} />
         {quickChips.length > 0 && (
           <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
             {quickChips.map((a) => (
@@ -232,13 +248,13 @@ export default function ExpenseForm() {
                     </optgroup>
                   ))}
                 </select>
-                {a?.needsParty && <span className="block text-[11px] text-amber-600 mt-1">به نام یک شخص ثبت می‌شود — «به چه کسی» را انتخاب کنید.</span>}
+                {a?.needsParty && <span className="block text-[11px] text-amber-600 mt-1">به نام یک شخص ثبت می‌شود — «{T.who}» را انتخاب کنید.</span>}
               </Field>
               <Field label="مبلغ">
                 <AmountInput value={l.amount} onChange={(v) => patchLine(l.key, { amount: v })} />
               </Field>
               <div className="sm:col-span-2 flex gap-2 items-center">
-                <input value={l.description} onChange={(e) => patchLine(l.key, { description: e.target.value })} placeholder="شرح (اختیاری) — مثلاً «قبض برق شهریور»" className={inputCls} />
+                <input value={l.description} onChange={(e) => patchLine(l.key, { description: e.target.value })} placeholder={income ? "شرح (اختیاری) — مثلاً «اجاره‌ی غرفه به همسایه»" : "شرح (اختیاری) — مثلاً «قبض برق شهریور»"} className={inputCls} />
                 {lines.length > 1 && (
                   <button type="button" onClick={() => setLines((x) => x.filter((y) => y.key !== l.key))} className="shrink-0 text-gray-400 hover:text-red-600 px-2" aria-label="حذف">
                     ✕
@@ -261,11 +277,22 @@ export default function ExpenseForm() {
             </div>
           )}
         </div>
-        {!accounts.length && data && <p className="text-xs text-amber-600">سرفصل هزینه‌ای فعال نیست؛ در «سرفصل حساب‌ها» زیر «هزینه‌ها» یکی بسازید.</p>}
+        {!accounts.length && data && <p className="text-xs text-amber-600">سرفصل {income ? "درآمدی" : "هزینه‌ای"} فعال نیست؛ در «سرفصل حساب‌ها» زیر «{income ? "سایر درآمدها" : "هزینه‌ها"}» یکی بسازید.</p>}
       </Card>
 
       <Card className="p-4 grid gap-4 md:grid-cols-[1fr_220px]">
-        <Field label={needsParty ? "به چه کسی" : "به چه کسی (اختیاری)"} hint={payable > 0n ? "بخش پرداخت‌نشده بدهی شما به این شخص می‌شود" : "صاحب‌خانه، شرکت خدماتی، کارمند …"}>
+        <Field
+          label={needsParty ? T.who : `${T.who} (اختیاری)`}
+          hint={
+            payable > 0n
+              ? income
+                ? "بخش دریافت‌نشده طلب شما از این شخص می‌شود"
+                : "بخش پرداخت‌نشده بدهی شما به این شخص می‌شود"
+              : income
+                ? "مستأجر، شرکت همکار، مشتری …"
+                : "صاحب‌خانه، شرکت خدماتی، کارمند …"
+          }
+        >
           <PartyPicker value={party} onChange={setParty} canCreate />
         </Field>
         <Field label="تاریخ">
@@ -275,7 +302,7 @@ export default function ExpenseForm() {
 
       <Card className="p-4 space-y-3">
         <SectionTitle
-          title="پرداخت"
+          title={T.pay}
           actions={
             paidNow && (
               <button type="button" onClick={() => { setPayTouched(true); setPays((x) => [...x, blankPay("BANK_TRANSFER")]); }} className={btn.small}>
@@ -289,17 +316,17 @@ export default function ExpenseForm() {
           value={paidNow ? "now" : "later"}
           onChange={(v) => setPaidNow(v === "now")}
           options={[
-            { value: "now", label: "پرداخت شد" },
-            { value: "later", label: "نسیه — بعداً پرداخت می‌کنم" },
+            { value: "now", label: T.paid },
+            { value: "later", label: T.later },
           ]}
         />
         {paidNow &&
           pays.map((p) => {
-            const opts = treasuries.filter((t) => t.kind === METHOD_KIND[p.method]);
+            const opts = treasuries.filter((t) => METHOD_KINDS[p.method].includes(t.kind));
             return (
               <div key={p.key} className="rounded-xl bg-gray-50 dark:bg-white/5 p-3 space-y-3">
                 <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-                  {(Object.keys(METHOD_LABEL) as Method[]).map((m) => (
+                  {methods.map((m) => (
                     <button
                       key={m}
                       type="button"
@@ -319,7 +346,8 @@ export default function ExpenseForm() {
                   <Field label="مبلغ">
                     <AmountInput value={p.amount} onChange={(v) => { setPayTouched(true); patchPay(p.key, { amount: v }); }} />
                   </Field>
-                  <Field label={p.method === "CHEQUE" ? "از حساب بانکی" : "از"}>
+                  {!noTreasury(p.method) && (
+                  <Field label={p.method === "CHEQUE" ? "از حساب بانکی" : T.from}>
                     <select
                       value={p.treasuryId}
                       onChange={(e) => {
@@ -337,14 +365,20 @@ export default function ExpenseForm() {
                     </select>
                     {!opts.length && <span className="block text-[11px] text-amber-600 mt-1">اول در «صندوق و بانک» یکی از این نوع بسازید.</span>}
                   </Field>
+                  )}
                 </div>
-                {(p.method === "CARD_TRANSFER" || p.method === "BANK_TRANSFER") && (
+                {(p.method === "CARD_TRANSFER" || p.method === "BANK_TRANSFER" || p.method === "POS") && (
                   <Field label="کد پیگیری (اختیاری)">
                     <input value={p.trackingCode} onChange={(e) => patchPay(p.key, { trackingCode: e.target.value })} className={inputCls} dir="ltr" />
                   </Field>
                 )}
                 {p.method === "CHEQUE" && (
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className={`grid gap-3 ${income ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+                    {income && (
+                      <Field label="بانک">
+                        <input value={p.bankName} onChange={(e) => patchPay(p.key, { bankName: e.target.value })} className={inputCls} placeholder="ملت، ملی …" />
+                      </Field>
+                    )}
                     <Field label="شماره‌ی چک" hint={p.chequeBookId ? "شماره‌ی بعدی دسته‌چک" : undefined}>
                       <input value={p.serialNo} onChange={(e) => patchPay(p.key, { serialNo: e.target.value })} className={inputCls} inputMode="numeric" dir="ltr" />
                     </Field>
@@ -362,10 +396,12 @@ export default function ExpenseForm() {
         {total > 0n && (
           <p className={`text-xs ${payable < 0n ? "text-red-600 font-bold" : "text-gray-500"}`}>
             {payable < 0n
-              ? `${formatAmount(-payable)} بیشتر از مبلغ هزینه پرداخت شده`
+              ? `${formatAmount(-payable)} بیشتر از مبلغ ${T.noun} ${T.pay} شده`
               : payable > 0n
-                ? `${formatAmount(payable)} تومان نسیه — بدهی شما ${party ? `به ${party.name}` : "به شخصی که انتخاب می‌کنید"}`
-                : "کل هزینه پرداخت شد"}
+                ? income
+                  ? `${formatAmount(payable)} تومان نسیه — طلب شما ${party ? `از ${party.name}` : "از شخصی که انتخاب می‌کنید"}`
+                  : `${formatAmount(payable)} تومان نسیه — بدهی شما ${party ? `به ${party.name}` : "به شخصی که انتخاب می‌کنید"}`
+                : `کل ${T.noun} ${T.paid}`}
           </p>
         )}
       </Card>
@@ -381,11 +417,11 @@ export default function ExpenseForm() {
       <div className="sticky bottom-16 md:bottom-0 z-30 -mx-4 lg:-mx-6 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-white/10">
         <div className="px-4 lg:px-6 py-2.5 flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] text-gray-500 truncate">{sentence || "جمع هزینه"}</p>
+            <p className="text-[11px] text-gray-500 truncate">{sentence || `جمع ${T.noun}`}</p>
             <Money value={total} className="text-base" />
           </div>
           <button onClick={save} disabled={!canSave} className={btn.primary} title="Ctrl+Enter">
-            {busy ? "در حال ثبت…" : "ثبت هزینه"}
+            {busy ? "در حال ثبت…" : `ثبت ${T.noun}`}
           </button>
         </div>
       </div>

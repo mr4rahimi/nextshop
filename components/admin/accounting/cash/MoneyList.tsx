@@ -36,6 +36,8 @@ export const METHOD_FA: Record<string, string> = {
   GATEWAY: "درگاه",
   CHEQUE: "چک",
   WALLET: "کیف پول",
+  GIFT_CARD: "بن / کارت هدیه",
+  OFFSET: "تهاتر",
 };
 
 export default function MoneyList() {

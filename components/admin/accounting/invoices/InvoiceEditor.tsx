@@ -10,6 +10,8 @@
  *   است که ذخیره می‌شود.
  * - برگشتی از فاکتور مرجع ساخته می‌شود: فقط تعداد قابل تغییر است؛ مبلغ همان مبلغ فاکتور اصلی.
  * - میانبر: Ctrl+Enter صدور.
+ * - `batch` (فاز ۱۰): «یک فاکتور برای چند مشتری» — به‌جای یک طرف حساب، فهرست
+ *   اشخاص با «ضریب» تعداد؛ برای هرکدام یک فاکتور جدا صادر می‌شود (همه یا هیچ).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -102,7 +104,7 @@ const bpToPct = (bp: number) => (bp ? String(bp / 100) : "");
 
 const RETURN_OF: Partial<Record<InvoiceTypeKey, InvoiceTypeKey>> = { SALES: "SALES_RETURN", PURCHASE: "PURCHASE_RETURN" };
 
-export default function InvoiceEditor({ type: typeProp, id, refId }: { type?: InvoiceTypeKey; id?: string; refId?: string }) {
+export default function InvoiceEditor({ type: typeProp, id, refId, batch = false }: { type?: InvoiceTypeKey; id?: string; refId?: string; batch?: boolean }) {
   const router = useRouter();
   const [cfg, setCfg] = useState<FormCfg | null>(null);
   const [type, setType] = useState<InvoiceTypeKey>(typeProp ?? "SALES");
@@ -110,6 +112,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId }: { type?: In
   const [number, setNumber] = useState<number | null>(null);
   const [channel, setChannel] = useState("MANUAL");
   const [party, setParty] = useState<PartyOption | null>(null);
+  const [batchParties, setBatchParties] = useState<{ party: PartyOption; factor: string }[]>([]);
   const [date, setDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [validUntil, setValidUntil] = useState("");
@@ -124,6 +127,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId }: { type?: In
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const saveRef = useRef<(issue: boolean, overrideCredit?: boolean) => Promise<void>>(async () => {});
 
   const isReturn = type === "SALES_RETURN" || type === "PURCHASE_RETURN";
   const salesSide = type === "SALES" || type === "SALES_RETURN" || type === "PROFORMA";
@@ -278,11 +282,12 @@ export default function InvoiceEditor({ type: typeProp, id, refId }: { type?: In
   }, [active, invDiscount, additions, inclVat, hasRef, cfg, channel]);
 
   const save = useCallback(
-    async (issue: boolean) => {
+    async (issue: boolean, overrideCredit = false) => {
       setBusy(true);
       setError(null);
       try {
         const body = {
+          overrideCredit,
           type,
           date,
           dueDate: dueDate || null,
@@ -307,21 +312,38 @@ export default function InvoiceEditor({ type: typeProp, id, refId }: { type?: In
             refLineId: l.refLineId ?? null,
           })),
         };
+        if (batch) {
+          const r = await api<{ batchId: string }>("/api/admin/accounting/invoices/batch", {
+            method: "POST",
+            json: { ...body, partyId: undefined, parties: batchParties.map((b) => ({ partyId: b.party.id, factor: Number(digits(b.factor)) || 1 })) },
+          });
+          router.push(`${salesSide ? "/admin/accounting/sales" : "/admin/accounting/purchases"}?batch=${r.batchId}`);
+          return;
+        }
         const r = id
           ? await api<{ id: string }>(`/api/admin/accounting/invoices/${id}`, { method: "PUT", json: body })
           : await api<{ id: string }>("/api/admin/accounting/invoices", { method: "POST", json: body });
         router.push(`/admin/accounting/invoices/${r.id}`);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "ذخیره نشد");
+        const msg = e instanceof Error ? e.message : "ذخیره نشد";
         setBusy(false);
+        // سقف اعتبار — هشدار است نه منع؛ با تأیید کاربر دوباره می‌فرستیم
+        if (msg.startsWith("OVER_CREDIT: ")) {
+          const text = msg.slice("OVER_CREDIT: ".length);
+          if (window.confirm(`${text}.\n\nبا این حال صادر شود؟`)) return saveRef.current(issue, true);
+          setError(text);
+          return;
+        }
+        setError(msg);
       }
     },
-    [type, date, dueDate, validUntil, party, warehouseId, inclVat, invDiscount, additions, additionsTitle, note, refInvoice, active, id, router, hasRef],
+    [type, date, dueDate, validUntil, party, warehouseId, inclVat, invDiscount, additions, additionsTitle, note, refInvoice, active, id, router, hasRef, batch, batchParties, salesSide],
   );
 
-  const canSubmit = !!party && active.length > 0 && !!calc.r && !busy;
+  const canSubmit = (batch ? batchParties.length > 0 : !!party) && active.length > 0 && !!calc.r && !busy;
   const issueRef = useRef(save);
   issueRef.current = save;
+  saveRef.current = save;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && canSubmit) {
@@ -338,7 +360,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId }: { type?: In
   }
 
   const label = INVOICE_TYPE_LABELS[type];
-  const title = id ? `ویرایش ${label}${number ? ` ${faNum(number)}` : ""}` : `${label} تازه`;
+  const title = batch ? `صدور گروهی ${label}` : id ? `ویرایش ${label}${number ? ` ${faNum(number)}` : ""}` : `${label} تازه`;
   const showWarehouse = type !== "PROFORMA" && cfg.warehouses.length > 1 && lines.some((l) => l.productId);
   const showVat = cfg.vatEnabled || lines.some((l) => pctToBp(l.vatPct) > 0);
   const accounts = salesSide ? cfg.revenueAccounts : cfg.expenseAccounts;
@@ -348,12 +370,14 @@ export default function InvoiceEditor({ type: typeProp, id, refId }: { type?: In
     <div className="space-y-4">
       <PageHeader
         title={title}
-        help="accountingInvoiceForm"
+        help={batch ? "accountingBatch" : "accountingInvoiceForm"}
         back={{ href: salesSide ? `/admin/accounting/sales?type=${type}` : `/admin/accounting/purchases?type=${type}`, label: salesSide ? "فروش" : "خرید" }}
         desc={
           refInvoice
             ? `از ${INVOICE_TYPE_LABELS[refInvoice.type]} ${faNum(refInvoice.number ?? 0)} — تعداد برگشتی هر کالا را بنویسید؛ مبلغ همان مبلغ فاکتور اصلی است.`
-            : undefined
+            : batch
+              ? "اقلام را یک بار وارد کنید و طرف‌حساب‌ها را انتخاب کنید؛ برای هر کدام یک فاکتور جدا با شماره‌ی خودش صادر می‌شود."
+              : undefined
         }
       />
 
@@ -368,9 +392,43 @@ export default function InvoiceEditor({ type: typeProp, id, refId }: { type?: In
       )}
 
       <Card className="p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Field label={salesSide ? "خریدار" : "فروشنده"} className="md:col-span-2">
+        <Field label={salesSide ? (batch ? "خریداران" : "خریدار") : batch ? "فروشندگان" : "فروشنده"} className="md:col-span-2">
           {hasRef ? (
             <p className={`${inputCls} font-bold`}>{party?.name}</p>
+          ) : batch ? (
+            <div className="space-y-2">
+              <PartyPicker
+                value={null}
+                onChange={(p) => p && setBatchParties((x) => (x.some((y) => y.party.id === p.id) ? x : [...x, { party: p, factor: "1" }]))}
+                canCreate
+                role={salesSide ? "customer" : "supplier"}
+              />
+              {batchParties.length > 0 && (
+                <div className="rounded-xl border border-gray-100 dark:border-white/10 divide-y divide-gray-100 dark:divide-white/5 max-h-72 overflow-y-auto">
+                  {batchParties.map((b, i) => (
+                    <div key={b.party.id} className="flex items-center gap-2 px-3 py-2">
+                      <span className="text-[11px] text-gray-400 w-5">{faNum(i + 1)}</span>
+                      <span className="flex-1 min-w-0 text-sm font-bold truncate">{b.party.name}</span>
+                      <label className="flex items-center gap-1 text-[11px] text-gray-500" title="تعداد هر ردیف × ضریب">
+                        ضریب
+                        <input
+                          value={b.factor}
+                          onChange={(e) => setBatchParties((x) => x.map((y) => (y.party.id === b.party.id ? { ...y, factor: digits(e.target.value) } : y)))}
+                          className={`${inputCls} !w-14 !py-1 text-center`}
+                          inputMode="numeric"
+                        />
+                      </label>
+                      <button type="button" onClick={() => setBatchParties((x) => x.filter((y) => y.party.id !== b.party.id))} className="text-gray-400 hover:text-red-600 px-1" aria-label="حذف">
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-[11px] text-gray-400">
+                {batchParties.length ? `${faNum(batchParties.length)} فاکتور صادر می‌شود` : "طرف‌حساب‌ها را یکی‌یکی اضافه کنید"}
+              </p>
+            </div>
           ) : (
             <PartyPicker value={party} onChange={setParty} canCreate role={salesSide ? "customer" : "supplier"} />
           )}
@@ -426,7 +484,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId }: { type?: In
             onPick={addProduct}
             warehouseId={warehouseId || undefined}
             priceFor={salesSide ? "sales" : "purchase"}
-            partyId={party?.id}
+            partyId={batch ? undefined : party?.id}
             autoFocus={!id}
             placeholder="افزودن کالا: نام، کد کالا یا اسکن بارکد"
           />
@@ -595,13 +653,21 @@ export default function InvoiceEditor({ type: typeProp, id, refId }: { type?: In
             <p className="text-[10px] text-gray-400">جمع کل</p>
             <Money value={r?.total ?? null} className="text-base" />
           </div>
-          {status !== "ISSUED" && (
+          {status !== "ISSUED" && !batch && (
             <button onClick={() => save(false)} disabled={!canSubmit} className={btn.soft}>
               پیش‌نویس
             </button>
           )}
           <button onClick={() => save(true)} disabled={!canSubmit} className={btn.primary} title="Ctrl+Enter">
-            {busy ? "در حال ثبت…" : status === "ISSUED" ? "ذخیره‌ی تغییرات" : type === "PROFORMA" ? "صدور پیش‌فاکتور" : `صدور ${label}`}
+            {busy
+              ? "در حال ثبت…"
+              : batch
+                ? `صدور ${faNum(batchParties.length || 0)} ${label}`
+                : status === "ISSUED"
+                  ? "ذخیره‌ی تغییرات"
+                  : type === "PROFORMA"
+                    ? "صدور پیش‌فاکتور"
+                    : `صدور ${label}`}
           </button>
         </div>
       </div>

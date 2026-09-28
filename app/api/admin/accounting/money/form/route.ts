@@ -4,7 +4,7 @@ import { serialize } from "@/lib/serialize";
 import { requirePermission } from "@/lib/permissions";
 import { openInvoicesOf } from "@/lib/accounting/cash/allocation";
 import { nextChequeSerial } from "@/lib/accounting/cash/cheques";
-import { balanceOf, balancesBy } from "@/lib/accounting/ledger/balances";
+import { balanceOf, balancesBy, PARTY_BALANCE } from "@/lib/accounting/ledger/balances";
 import { dayValue, todayKey } from "@/lib/accounting/dates";
 
 export const runtime = "nodejs";
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
         kind === "PAYMENT"
           ? prisma.accCheque.findMany({ where: { direction: "RECEIVED", status: "IN_HAND", partyId: { not: partyId } }, orderBy: { dueDate: "asc" }, include: { party: { select: { name: true } } }, take: 100 })
           : Promise.resolve([]),
-        balanceOf(prisma, { partyId }),
+        balanceOf(prisma, { partyId, ...PARTY_BALANCE }),
       ])
     : [[], kind === "PAYMENT" ? await prisma.accCheque.findMany({ where: { direction: "RECEIVED", status: "IN_HAND" }, orderBy: { dueDate: "asc" }, include: { party: { select: { name: true } } }, take: 100 }) : [], null];
 

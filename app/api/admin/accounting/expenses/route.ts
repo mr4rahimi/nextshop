@@ -13,18 +13,25 @@ import { faNum, formatAmount, toLatinDigits } from "@/lib/accounting/money";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const METHODS: AccMoneyMethod[] = ["CASH", "CARD_TRANSFER", "BANK_TRANSFER", "CHEQUE"];
+const METHODS: Record<"EXPENSE" | "INCOME", AccMoneyMethod[]> = {
+  EXPENSE: ["CASH", "CARD_TRANSFER", "BANK_TRANSFER", "CHEQUE"],
+  INCOME: ["CASH", "CARD_TRANSFER", "BANK_TRANSFER", "POS", "GIFT_CARD", "CHEQUE"],
+};
+/** هزینه با مجوز هزینه؛ درآمد متفرقه پول دریافتی است ← مجوز دریافت و پرداخت (فاز ۱۰) */
+const PERM = { EXPENSE: "ACC_EXPENSE", INCOME: "ACC_TREASURY" } as const;
+const kindOf = (v: unknown) => (v === "INCOME" ? "INCOME" : "EXPENSE") as "EXPENSE" | "INCOME";
 
 /**
- * GET ?q&accountId&from&to&status&unpaid=1 — فهرست هزینه‌ها + جمع هر سرفصل در همان
- * بازه (فقط معتبرها). `unpaid=1`: هزینه‌هایی که بخشی‌شان نسیه مانده.
+ * GET ?kind=EXPENSE|INCOME&q&accountId&from&to&status&unpaid=1 — فهرست هزینه‌ها (یا
+ * درآمدهای متفرقه) + جمع هر سرفصل در همان بازه (فقط معتبرها). `unpaid=1`: نسیه‌دارها.
  */
 export async function GET(req: Request) {
-  const guard = await requirePermission(["ACC_VIEW", "ACC_EXPENSE"]);
-  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   const url = new URL(req.url);
+  const kind = kindOf(url.searchParams.get("kind"));
+  const guard = await requirePermission(["ACC_VIEW", PERM[kind]]);
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   const { from, to } = rangeFrom(url);
-  const where: Prisma.AccMoneyDocWhereInput = { kind: "EXPENSE" };
+  const where: Prisma.AccMoneyDocWhereInput = { kind };
   if (from || to) where.date = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
   const status = url.searchParams.get("status");
   if (status === "VOID" || status === "POSTED") where.status = status;
@@ -75,12 +82,13 @@ export async function GET(req: Request) {
       accounts,
       breakdown,
       summary: { count: agg._count, total: agg._sum.total ?? 0n, payable: agg._sum.payable ?? 0n },
-      can: { write: can(guard.access, "ACC_EXPENSE") },
+      can: { write: can(guard.access, PERM[kind]) },
     }),
   );
 }
 
 interface Body {
+  kind?: string;
   date?: string;
   partyId?: string | null;
   description?: string;
@@ -91,19 +99,22 @@ interface Body {
     treasuryId?: string | null;
     amount?: unknown;
     trackingCode?: string | null;
-    cheque?: { serialNo?: string; sayadId?: string; dueDate?: string; issueDate?: string; chequeBookId?: string; note?: string } | null;
+    cheque?: { serialNo?: string; sayadId?: string; bankName?: string; dueDate?: string; issueDate?: string; chequeBookId?: string; note?: string } | null;
   }[];
 }
 
-/** POST — هزینه‌ی تازه: ردیف‌های «بابت چه» + روش‌های پرداخت؛ کسریِ پرداخت = نسیه */
+/** POST — هزینه یا درآمد تازه: ردیف‌های «بابت چه» + روش‌ها؛ کسری = نسیه */
 export async function POST(req: Request) {
-  const guard = await requirePermission("ACC_EXPENSE");
+  const guard = await requirePermission(["ACC_EXPENSE", "ACC_TREASURY"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   try {
     const b = await readJson<Body>(req);
+    const kind = kindOf(b.kind);
+    if (!can(guard.access, PERM[kind])) throw new AccError(`به ثبت ${kind === "INCOME" ? "درآمد" : "هزینه"} دسترسی ندارید`, 403);
+    const noun = kind === "INCOME" ? "درآمد" : "هزینه";
     const items: MoneyItemInput[] = (b.items ?? []).map((it, i) => {
       const method = it.method as AccMoneyMethod;
-      if (!METHODS.includes(method)) throw new AccError(`پرداخت ${faNum(i + 1)}: روش را انتخاب کنید`);
+      if (!METHODS[kind].includes(method)) throw new AccError(`${kind === "INCOME" ? "دریافت" : "پرداخت"} ${faNum(i + 1)}: روش را انتخاب کنید`);
       const c = it.cheque;
       return {
         method,
@@ -115,6 +126,7 @@ export async function POST(req: Request) {
             ? {
                 serialNo: String(c?.serialNo ?? ""),
                 sayadId: c?.sayadId || null,
+                bankName: c?.bankName || null,
                 dueDate: requireDay(c?.dueDate, "سررسید چک"),
                 issueDate: parseDay(c?.issueDate),
                 chequeBookId: c?.chequeBookId || null,
@@ -128,7 +140,7 @@ export async function POST(req: Request) {
       (tx) =>
         createMoneyDoc(
           tx,
-          { kind: "EXPENSE", date: requireDay(b.date), partyId: b.partyId || null, description: b.description, lines, vatAmount: toAmount(b.vatAmount, "مالیات"), items },
+          { kind, date: requireDay(b.date), partyId: b.partyId || null, description: b.description, lines, vatAmount: toAmount(b.vatAmount, "مالیات"), items },
           actorOf(guard.access),
         ),
       { timeout: 60_000 },
@@ -137,8 +149,8 @@ export async function POST(req: Request) {
       action: "CREATE",
       entity: "OTHER",
       entityId: doc.id,
-      entityTitle: `هزینه ${doc.number}`,
-      summary: `هزینه ${faNum(doc.number)} — ${formatAmount(doc.total)} تومان${doc.payable > 0n ? ` (${formatAmount(doc.payable)} نسیه)` : ""}`,
+      entityTitle: `${noun} ${doc.number}`,
+      summary: `${noun} ${faNum(doc.number)} — ${formatAmount(doc.total)} تومان${doc.payable > 0n ? ` (${formatAmount(doc.payable)} نسیه)` : ""}`,
     });
     return NextResponse.json(serialize({ ok: true, id: doc.id, number: doc.number }));
   } catch (e) {

@@ -8,7 +8,7 @@
  */
 
 import { invoiceOpenAmounts } from "../cash/allocation";
-import { balancesBy } from "../ledger/balances";
+import { balancesBy, PARTY_BALANCE } from "../ledger/balances";
 import { todayKey } from "../dates";
 import type { Db } from "./common";
 
@@ -43,7 +43,7 @@ export async function aging(db: Db, side: "sales" | "purchase") {
     select: { id: true, partyId: true, date: true, dueDate: true },
   });
   const open = await invoiceOpenAmounts(db, invs.map((i) => i.id));
-  const bal = await balancesBy(db, "partyId");
+  const bal = await balancesBy(db, "partyId", PARTY_BALANCE);
 
   const rows = new Map<string, AgingRow>();
   for (const inv of invs) {

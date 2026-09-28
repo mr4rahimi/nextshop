@@ -37,6 +37,7 @@ export async function GET(req: Request) {
       status: status && STATUSES.includes(status) ? (status as AccInvoiceStatus | "OPEN_PROFORMA") : null,
       q: url.searchParams.get("q"),
       partyId: url.searchParams.get("partyId"),
+      batchId: url.searchParams.get("batch"),
       from,
       to,
       take: Math.min(Number(url.searchParams.get("take")) || 100, 300),
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
     const b = await readJson<InvoiceBody>(req);
     const input = inputFromBody(b);
     if (!can(guard.access, permOf(input.type))) throw new AccError("به ثبت این نوع فاکتور دسترسی ندارید", 404);
-    const inv = await prisma.$transaction((tx) => saveInvoice(tx, null, input, { issue: !!b.issue }, actorOf(guard.access)), { timeout: 60_000 });
+    const inv = await prisma.$transaction((tx) => saveInvoice(tx, null, input, { issue: !!b.issue, allowOverCredit: !!(b as { overrideCredit?: boolean }).overrideCredit }, actorOf(guard.access)), { timeout: 60_000 });
     const label = INVOICE_TYPE_LABELS[inv.type];
     await logActivity({
       action: "CREATE",

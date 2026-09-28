@@ -56,4 +56,12 @@ export async function currentYear(db: Db = prisma): Promise<AccFiscalYear | null
   return yearForDate(db, todayKey());
 }
 
+/**
+ * سال اول دفتر — اول دوره‌ی دستی (مانده‌ها و موجودی کالا) فقط مال همین سال است؛
+ * سال‌های بعد مانده را از بستن سال قبل می‌گیرند (`ledger/closing.ts`).
+ */
+export async function firstYear(db: Db = prisma): Promise<AccFiscalYear | null> {
+  return db.accFiscalYear.findFirst({ orderBy: { startDate: "asc" } });
+}
+
 export { jalaliYearOf };

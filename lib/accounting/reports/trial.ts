@@ -4,8 +4,15 @@
  * ستون‌ها: مانده‌ی ابتدای بازه (بدهکار/بستانکار)، گردش بازه، مانده‌ی پایان.
  * نمای دو ستونی فقط مانده‌ی پایان، چهار ستونی گردش + مانده‌ی پایان. محاسبه یکی
  * است؛ رابط ستون‌ها را انتخاب می‌کند. جمع بدهکار هر جفت ستون = جمع بستانکارش.
+ *
+ * بستن سال (`ledger/closing.ts`): اختتامیه و افتتاحیه‌ی خودکار («انتقال مانده»)
+ * همیشه کنار می‌روند — مانده‌ی ابتدای سال بعد از خود دفتر می‌آید. سند بستن
+ * درآمد و هزینه‌ای که روز آخر بازه یا بعدش است هم کنار می‌رود تا تراز آزمایشی
+ * سال بسته‌شده همان عدد پیش از بستن را بدهد.
  */
 
+import type { Prisma } from "@prisma/client";
+import { NOT_CARRY } from "../ledger/balances";
 import { accountIndex, type Db, type DateRange } from "./common";
 
 export type TrialLevel = "GROUP" | "LEDGER" | "SUBLEDGER" | "DETAIL";
@@ -33,13 +40,15 @@ export async function trialBalance(db: Db, range: DateRange, level: TrialLevel) 
   const detail = level === "DETAIL";
   const by = detail ? (["accountId", "partyId", "treasuryId"] as const) : (["accountId"] as const);
 
+  const skip: Prisma.AccVoucherLineWhereInput[] = [NOT_CARRY];
+  if (range.to) skip.push({ OR: [{ voucher: { source: { not: "CLOSING" } } }, { date: { lt: range.to } }] });
   const [before, during] = await Promise.all([
     range.from
-      ? db.accVoucherLine.groupBy({ by: [...by], where: { isVoid: false, date: { lt: range.from } }, _sum: { debit: true, credit: true } })
+      ? db.accVoucherLine.groupBy({ by: [...by], where: { isVoid: false, AND: skip, date: { lt: range.from } }, _sum: { debit: true, credit: true } })
       : Promise.resolve([]),
     db.accVoucherLine.groupBy({
       by: [...by],
-      where: { isVoid: false, ...(range.from || range.to ? { date: { ...(range.from ? { gte: range.from } : {}), ...(range.to ? { lte: range.to } : {}) } } : {}) },
+      where: { isVoid: false, AND: skip, ...(range.from || range.to ? { date: { ...(range.from ? { gte: range.from } : {}), ...(range.to ? { lte: range.to } : {}) } } : {}) },
       _sum: { debit: true, credit: true },
     }),
   ]);

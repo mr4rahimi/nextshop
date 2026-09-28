@@ -12,6 +12,7 @@ import { formatJalali } from "@/lib/club/jalali";
 import { amountToWords, faNum, formatAmount } from "@/lib/accounting/money";
 import { CHANNEL_LABELS, INVOICE_TYPE_LABELS, type InvoiceTypeKey } from "@/lib/accounting/invoices/calc";
 import { api, Badge, btn, Card, ErrorText, Money, PageHeader, SectionTitle } from "../ui";
+import InstallmentsPanel from "../installments/InstallmentsPanel";
 import { invoiceTitle, isExpired, StatusBadge } from "./InvoicesList";
 
 interface Line {
@@ -86,7 +87,7 @@ export interface InvoiceData {
   voucher: { id: string; number: number; status: string } | null;
   order: { id: string; orderNumber: string; status: string } | null;
   profit: { cost: string; gross: string } | null;
-  settlement: { allocations: { id: string; kind: "RECEIPT" | "PAYMENT"; number: number; date: string; amount: string }[]; returned: string; open: string };
+  settlement: { allocations: { id: string; kind: "RECEIPT" | "PAYMENT"; number: number; date: string; amount: string }[]; returned: string; fee: string; open: string };
   can: { write: boolean; voucher: boolean; pay: boolean };
 }
 
@@ -377,10 +378,17 @@ export default function InvoiceDetail({ id }: { id: string }) {
               <p className="text-[11px] text-gray-500">{sales ? "دریافت‌شده" : "پرداخت‌شده"}</p>
               <Money value={inv.paidTotal} tone="green" />
             </div>
-            <div>
-              <p className="text-[11px] text-gray-500">برگشتی</p>
-              <Money value={d.settlement.returned} />
-            </div>
+            {BigInt(d.settlement.fee) > 0n ? (
+              <div>
+                <p className="text-[11px] text-gray-500">کارمزد اقساط</p>
+                <Money value={d.settlement.fee} />
+              </div>
+            ) : (
+              <div>
+                <p className="text-[11px] text-gray-500">برگشتی</p>
+                <Money value={d.settlement.returned} />
+              </div>
+            )}
             <div>
               <p className="text-[11px] text-gray-500">مانده</p>
               <Money value={d.settlement.open} tone={BigInt(d.settlement.open) > 0n ? "red" : "gray"} />
@@ -400,6 +408,8 @@ export default function InvoiceDetail({ id }: { id: string }) {
           )}
         </Card>
       )}
+
+      {inv.status === "ISSUED" && (inv.type === "SALES" || inv.type === "PURCHASE") && <InstallmentsPanel invoiceId={inv.id} onChange={load} />}
 
       {d.profit && (
         <Card className="p-4">

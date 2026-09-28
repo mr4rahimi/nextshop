@@ -3651,6 +3651,7 @@ enum StaffNotificationType {
   CONTENT_TASK
   LINK_NODE
   ACC_CHEQUE // سررسید چک — حسابداری فاز ۵
+  ACC_INSTALLMENT // سررسید قسط — حسابداری فاز ۱۰
 }
 
 /// اعلان درون‌پنلی کارمند.
@@ -3844,10 +3845,11 @@ model AccParty {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  lines     AccVoucherLine[]
-  invoices  AccInvoice[]
-  moneyDocs AccMoneyDoc[]
-  cheques   AccCheque[]
+  lines            AccVoucherLine[]
+  invoices         AccInvoice[]
+  moneyDocs        AccMoneyDoc[]
+  cheques          AccCheque[]
+  installmentPlans AccInstallmentPlan[]
 
   @@index([mobile])
   @@index([name])
@@ -3903,6 +3905,8 @@ enum AccSource {
   CLOSING
   IMPORT
   WALLET // شارژ یا کسر دستی کیف پول مشتری (فاز ۶)
+  INCOME // درآمد متفرقه (فاز ۱۰)
+  INSTALLMENT // کارمزد فروش/خرید اقساطی (فاز ۱۰)
 }
 
 /// سند حسابداری. ⚠️ فقط از `lib/accounting/ledger/post.ts` نوشته می‌شود —
@@ -4249,6 +4253,8 @@ model AccInvoice {
   note              String?
   voucherId         String?           @unique
   voidReason        String?
+  /// «یک فاکتور برای چند مشتری» — فاکتورهای یک صدور گروهی (فاز ۱۰)
+  batchId           String?
   /// مودیان — فاز ۹
   taxId             String?
   taxStatus         String?
@@ -4258,11 +4264,13 @@ model AccInvoice {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  party       AccParty         @relation(fields: [partyId], references: [id])
-  lines       AccInvoiceLine[]
-  allocations AccAllocation[]
+  party           AccParty            @relation(fields: [partyId], references: [id])
+  lines           AccInvoiceLine[]
+  allocations     AccAllocation[]
+  installmentPlan AccInstallmentPlan?
 
   @@unique([yearId, type, number])
+  @@index([batchId])
   @@index([partyId, date])
   @@index([type, status, date])
   @@index([orderId])
@@ -4308,6 +4316,7 @@ enum AccMoneyKind {
   PAYMENT
   TRANSFER
   EXPENSE // هزینه — فاز ۶
+  INCOME // درآمد متفرقه — فاز ۱۰
 }
 
 enum AccMoneyMethod {
@@ -4318,6 +4327,8 @@ enum AccMoneyMethod {
   GATEWAY // درگاه اینترنتی
   CHEQUE // چک — دریافت: چک تازه؛ پرداخت: چک تازه‌ی ما یا خرج چک دریافتی
   WALLET // کیف پول مشتری — فقط دریافت خودکار سفارش سایت (فاز ۶)
+  GIFT_CARD // بن و کارت هدیه — روی صندوق یا بانک (فاز ۱۰)
+  OFFSET // تهاتر — طلب و بدهی همان شخص هم را صاف می‌کنند، بی‌خزانه (فاز ۱۰)
 }
 
 /// دریافت از شخص، پرداخت به شخص، یا انتقال بین صندوق و بانک.
@@ -4500,4 +4511,66 @@ model AccChequeBook {
   createdAt  DateTime @default(now())
 
   @@index([treasuryId])
+}
+
+// ── حسابداری فاز ۱۰: فروش و خرید اقساطی — docs/plans/accounting.md بخش ۹.۳ ──
+
+enum AccFeeMode {
+  NONE // بی‌کارمزد
+  MONTHLY // درصد ماهانه × تعداد ماه × مبلغ قسطی
+  TOTAL // درصد کل دوره × مبلغ قسطی
+  FIXED // مبلغ ثابت
+}
+
+/// برنامه‌ی اقساط یک فاکتور فروش یا خرید صادرشده. ⚠️ فقط از `lib/accounting/installments.ts`.
+/// ابطال = سند کارمزد باطل و ردیف حذف (سابقه در سند باطل و لاگ فعالیت) — هر فاکتور
+/// حداکثر یک برنامه‌ی زنده دارد.
+///
+/// «مانده‌ی باز» فاکتور = جمع + کارمزد این برنامه − برگشتی − تخصیص‌ها
+/// (`invoiceOpenAmounts`). قسط‌ها پرداختی ذخیره نمی‌کنند؛ پوشش هر قسط از جمع
+/// تخصیص‌های فاکتور به ترتیب (اول پیش‌پرداخت، بعد قسط ۱، ۲، …) حساب می‌شود.
+model AccInstallmentPlan {
+  id             String     @id @default(cuid())
+  invoiceId      String     @unique
+  partyId        String
+  /// بخش نقد اول کار — با دریافت/پرداخت عادی ثبت می‌شود، اینجا فقط برای ترتیب پوشش
+  downPayment    BigInt     @default(0)
+  /// مبلغ قسطی‌شده، بی‌کارمزد
+  principal      BigInt
+  feeMode        AccFeeMode @default(NONE)
+  /// صدم درصد — ۳٪ = 300
+  feeRateBp      Int        @default(0)
+  feeAmount      BigInt     @default(0)
+  count          Int
+  intervalMonths Int        @default(1)
+  /// سند کارمزد: فروش ← طلب از شخص / درآمد فروش اقساطی؛ خرید ← کارمزد خرید اقساطی / بدهی
+  voucherId      String?    @unique
+  note           String?
+  createdById    String?
+  createdByName  String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  invoice AccInvoice       @relation(fields: [invoiceId], references: [id])
+  party   AccParty         @relation(fields: [partyId], references: [id])
+  items   AccInstallment[]
+
+  @@index([partyId])
+}
+
+model AccInstallment {
+  id             String    @id @default(cuid())
+  planId         String
+  seq            Int
+  dueDate        DateTime  @db.Date
+  amount         BigInt
+  /// چکی که برای این قسط گرفته/داده شد — فقط نمایش و پیگیری
+  chequeId       String?   @unique
+  /// مرز «دو بار نفرست» یادآوری — مثل `AccCheque.reminderSentAt`
+  reminderSentAt DateTime?
+
+  plan AccInstallmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, seq])
+  @@index([dueDate])
 }

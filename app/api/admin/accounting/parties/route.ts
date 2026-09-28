@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
 import { createParty, partyWhere, type PartyInput, type PartyRole } from "@/lib/accounting/parties";
-import { balancesBy } from "@/lib/accounting/ledger/balances";
+import { balancesBy, PARTY_BALANCE } from "@/lib/accounting/ledger/balances";
 import { accErrorResponse } from "@/lib/accounting/errors";
 import { readJson } from "@/lib/accounting/api";
 
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
   const [parties, total, bal] = await Promise.all([
     prisma.accParty.findMany({ where, orderBy: [{ name: "asc" }], take: balanceFilter ? 2000 : take }),
     prisma.accParty.count({ where }),
-    balancesBy(prisma, "partyId"),
+    balancesBy(prisma, "partyId", PARTY_BALANCE),
   ]);
 
   let rows = parties.map((p) => ({ ...p, balance: bal.get(p.id)?.balance ?? 0n }));

@@ -22,12 +22,15 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { href: "/admin/accounting/reports/pl", icon: "📈", title: "سود و زیان", desc: "فروش، بهای تمام‌شده، هزینه‌ها و سود خالص؛ مقایسه با دوره‌ی قبل", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
       { href: "/admin/accounting/reports/balance", icon: "⚖️", title: "ترازنامه", desc: "دارایی‌ها، بدهی‌ها و سرمایه در یک تاریخ", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
       { href: "/admin/accounting/reports/trial", icon: "🧮", title: "تراز آزمایشی", desc: "دو، چهار و شش ستونی؛ گروه، کل، معین یا تفصیلی", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
+      { href: "/admin/accounting/reports/trend", icon: "📊", title: "روند ماهانه", desc: "نمودار فروش، سود، هزینه و جریان نقد ماه به ماه", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
     ],
   },
   {
     title: "فروش و سود",
     items: [
       { href: "/admin/accounting/reports/profit", icon: "🏷️", title: "سود هر کالا، دسته و کانال", desc: "فروش، بهای تمام‌شده و درصد سود؛ سایت، تلفنی و بازارگاه‌ها", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
+      { href: "/admin/accounting/reports/parties", icon: "👥", title: "حساب اشخاص (کل حساب)", desc: "مانده‌ی ابتدا، گردش و مانده‌ی پایان همه‌ی اشخاص؛ بدهکاران و بستانکاران", perm: ["ACC_REPORTS"] },
+      { href: "/admin/accounting/installments", icon: "🗓️", title: "اقساط", desc: "قسط‌های سررسیدگذشته، این هفته و این ماه — فروش و خرید", perm: ["ACC_VIEW"] },
       { href: "/admin/accounting/reports/aging", icon: "⏳", title: "سنی بدهی", desc: "طلب از مشتریان به تفکیک عمر: ۳۰، ۶۰، ۹۰ و بیشتر از ۹۰ روز", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/reports/vat", icon: "🧾", title: "ارزش افزوده (فصلی)", desc: "مالیات فروش منهای مالیات خرید، با فهرست فاکتورهای مشمول", perm: ["ACC_REPORTS"] },
     ],
@@ -43,7 +46,8 @@ const GROUPS: { title: string; items: Item[] }[] = [
   {
     title: "گردش‌ها (در بخش خودشان)",
     items: [
-      { href: "/admin/accounting/parties", icon: "👥", title: "صورت‌حساب اشخاص", desc: "گردش و مانده‌ی هر شخص — از صفحه‌ی همان شخص", perm: ["ACC_VIEW"] },
+      { href: "/admin/accounting/parties", icon: "👤", title: "صورت‌حساب ریز هر شخص", desc: "گردش و مانده‌ی هر شخص، ریز یا کل — از صفحه‌ی همان شخص", perm: ["ACC_VIEW"] },
+      { href: "/admin/accounting/calendar", icon: "📅", title: "تقویم سررسیدها", desc: "چک‌ها، اقساط و فاکتورهای مدت‌دار روی تقویم", perm: ["ACC_VIEW"] },
       { href: "/admin/accounting/accounts", icon: "📒", title: "دفتر کل و معین", desc: "گردش هر حساب با مانده‌ی جاری — از سرفصل حساب‌ها", perm: ["ACC_VIEW"] },
       { href: "/admin/accounting/cheques", icon: "🧾", title: "گزارش چک‌ها", desc: "بر اساس وضعیت و سررسید", perm: ["ACC_VIEW"] },
       { href: "/admin/accounting/inventory", icon: "📦", title: "کاردکس کالا", desc: "ورود، خروج و مانده با بها — از کالا و انبار", perm: ["ACC_VIEW"] },

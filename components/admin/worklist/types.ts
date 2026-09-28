@@ -139,7 +139,7 @@ export interface InboxCounts {
 /** یک اعلان درون‌پنلی — سئو، محتوا یا لینک‌سازی */
 export interface MarketingNotification {
   id: string;
-  type: "SEO_TASK" | "CONTENT_TASK" | "LINK_NODE";
+  type: "SEO_TASK" | "CONTENT_TASK" | "LINK_NODE" | "ACC_CHEQUE" | "ACC_INSTALLMENT";
   entityId: string;
   title: string;
   body: string | null;

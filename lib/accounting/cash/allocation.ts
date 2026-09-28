@@ -1,7 +1,9 @@
 /**
  * تخصیص دریافت/پرداخت به فاکتور — docs/plans/accounting.md بخش ۹.۱.
  *
- * «مانده‌ی باز» فاکتور = جمع − برگشتی‌های معتبرش − تخصیص‌های دریافت/پرداخت معتبر.
+ * «مانده‌ی باز» فاکتور = جمع + کارمزد برنامه‌ی اقساطش − برگشتی‌های معتبرش −
+ * تخصیص‌های دریافت/پرداخت معتبر (کارمزد اقساط سند جدا دارد ولی مشتری آن را
+ * هم به همین فاکتور می‌پردازد — فاز ۱۰).
  * دریافت به فاکتور فروش، پرداخت به فاکتور خرید. مازاد تخصیص‌نیافته روی خود
  * شخص می‌ماند (پیش‌دریافت / پیش‌پرداخت) — مانده‌ی شخص از سندهاست، نه از اینجا.
  *
@@ -19,6 +21,8 @@ export interface OpenInvoice {
   date: Date;
   dueDate: Date | null;
   total: bigint;
+  /** کارمزد برنامه‌ی اقساط — جزو مبلغی که باید پرداخت شود */
+  fee: bigint;
   returned: bigint;
   paid: bigint;
   open: bigint;
@@ -33,7 +37,7 @@ export async function invoiceOpenAmounts(tx: Tx, invoiceIds: string[], excludeMo
     where: { id: { in: invoiceIds } },
     select: { id: true, type: true, number: true, date: true, dueDate: true, total: true, status: true },
   });
-  const [returns, allocs] = await Promise.all([
+  const [returns, allocs, plans] = await Promise.all([
     tx.accInvoice.groupBy({
       by: ["refInvoiceId"],
       where: { refInvoiceId: { in: invoiceIds }, status: "ISSUED" },
@@ -44,15 +48,18 @@ export async function invoiceOpenAmounts(tx: Tx, invoiceIds: string[], excludeMo
       where: { invoiceId: { in: invoiceIds }, moneyDoc: { status: "POSTED", ...(excludeMoneyDocId ? { id: { not: excludeMoneyDocId } } : {}) } },
       _sum: { amount: true },
     }),
+    tx.accInstallmentPlan.findMany({ where: { invoiceId: { in: invoiceIds } }, select: { invoiceId: true, feeAmount: true } }),
   ]);
   const ret = new Map(returns.map((r) => [r.refInvoiceId!, r._sum.total ?? 0n]));
+  const fees = new Map(plans.map((p) => [p.invoiceId, p.feeAmount]));
   const paid = new Map(allocs.map((a) => [a.invoiceId, a._sum.amount ?? 0n]));
   const out = new Map<string, OpenInvoice>();
   for (const i of invs) {
     const returned = RETURN_TYPE[i.type] ? ret.get(i.id) ?? 0n : 0n;
     const p = paid.get(i.id) ?? 0n;
-    const open = i.status === "ISSUED" ? i.total - returned - p : 0n;
-    out.set(i.id, { id: i.id, type: i.type, number: i.number, date: i.date, dueDate: i.dueDate, total: i.total, returned, paid: p, open: open > 0n ? open : 0n });
+    const fee = fees.get(i.id) ?? 0n;
+    const open = i.status === "ISSUED" ? i.total + fee - returned - p : 0n;
+    out.set(i.id, { id: i.id, type: i.type, number: i.number, date: i.date, dueDate: i.dueDate, total: i.total, fee, returned, paid: p, open: open > 0n ? open : 0n });
   }
   return out;
 }

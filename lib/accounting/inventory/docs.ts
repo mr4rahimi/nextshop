@@ -11,6 +11,7 @@ import { AccError } from "../errors";
 import { assertPostable } from "../ledger/fiscal-year";
 import { GLOBAL_SEQ, nextNumber } from "../ledger/sequence";
 import { postVoucher, rebuildVoucher, voidVoucher, type Actor, type LineInput } from "../ledger/post";
+import { hasCarriedOpening } from "../ledger/closing";
 import { applyMoves, assertAvailable, qtyAt, registerCostRebuilder, removeMoves } from "./stock";
 
 type Tx = Prisma.TransactionClient;
@@ -257,6 +258,8 @@ export interface OpeningInvLine {
 export async function saveOpeningInventory(tx: Tx, yearId: string, lines: OpeningInvLine[], actor: Actor) {
   const year = await tx.accFiscalYear.findUnique({ where: { id: yearId } });
   if (!year) throw new AccError("سال مالی پیدا نشد", 404);
+  // کاردکس پیوسته است؛ موجودی سال بعد از بستن همان مانده‌ی کاردکس است
+  if (await hasCarriedOpening(tx, yearId)) throw new AccError("موجودی کالای این سال از سال قبل ادامه دارد؛ موجودی اول دوره فقط برای سال اول است", 409);
   const seen = new Set<string>();
   for (const l of lines) {
     const k = `${l.productId}|${l.warehouseId}`;

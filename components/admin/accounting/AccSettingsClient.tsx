@@ -13,6 +13,7 @@ import { faNum } from "@/lib/accounting/money";
 import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import { api, Badge, btn, Card, Chips, ErrorText, Field, inputCls, PageHeader, SectionTitle } from "./ui";
 import { Plus } from "lucide-react";
+import Link from "next/link";
 
 interface Settings {
   vatRateBp: number;
@@ -283,6 +284,9 @@ export default function AccSettingsClient() {
                   {formatJalali(new Date(y.startDate))} تا {formatJalali(new Date(y.endDate))} · {faNum(y._count.vouchers)} سند
                 </span>
                 {y.status === "CLOSED" ? <Badge tone="gray">بسته</Badge> : <Badge tone="green">باز</Badge>}
+                <Link href={`/admin/accounting/settings/years/${y.id}`} className={btn.small}>
+                  {y.status === "CLOSED" ? "سندهای بستن" : "بستن سال"}
+                </Link>
                 {s.currentYearId === y.id ? (
                   <Badge tone="blue">سال جاری</Badge>
                 ) : (

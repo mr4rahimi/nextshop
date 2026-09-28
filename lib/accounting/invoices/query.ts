@@ -110,6 +110,8 @@ export interface ListFilter {
   from?: Date | null;
   to?: Date | null;
   take?: number;
+  /** فاکتورهای یک صدور گروهی (فاز ۱۰) */
+  batchId?: string | null;
 }
 
 export async function listInvoices(f: ListFilter) {
@@ -117,6 +119,7 @@ export async function listInvoices(f: ListFilter) {
   if (f.status === "OPEN_PROFORMA") Object.assign(where, { status: "ISSUED", proformaState: "OPEN" });
   else if (f.status) where.status = f.status;
   if (f.partyId) where.partyId = f.partyId;
+  if (f.batchId) where.batchId = f.batchId;
   if (f.from || f.to) where.date = { ...(f.from ? { gte: f.from } : {}), ...(f.to ? { lte: f.to } : {}) };
   const term = f.q?.trim();
   if (term) {
@@ -145,6 +148,7 @@ export async function listInvoices(f: ListFilter) {
         total: true,
         paidTotal: true,
         refInvoiceId: true,
+        batchId: true,
         _count: { select: { lines: true } },
       },
     }),
@@ -213,6 +217,7 @@ export async function invoiceDetail(id: string, access: StaffAccess) {
     settlement: {
       allocations: allocations.map((a) => ({ amount: a.amount, ...a.moneyDoc })),
       returned: openMap.get(inv.id)?.returned ?? 0n,
+      fee: openMap.get(inv.id)?.fee ?? 0n,
       open: openMap.get(inv.id)?.open ?? 0n,
     },
   };

@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const KINDS: AccMoneyKind[] = ["RECEIPT", "PAYMENT", "TRANSFER"];
-const METHODS: AccMoneyMethod[] = ["CASH", "CARD_TRANSFER", "BANK_TRANSFER", "POS", "GATEWAY", "CHEQUE"];
+const METHODS: AccMoneyMethod[] = ["CASH", "CARD_TRANSFER", "BANK_TRANSFER", "POS", "GATEWAY", "GIFT_CARD", "CHEQUE", "OFFSET"];
 
 /** GET ?kind&q&partyId&from&to&status — فهرست دریافت/پرداخت/انتقال */
 export async function GET(req: Request) {

@@ -1,20 +1,33 @@
 "use client";
 
-/** پرونده و صورت‌حساب یک شخص */
+/**
+ * پرونده و صورت‌حساب یک شخص — «ریز حساب» (همه‌ی ردیف‌ها با مانده‌ی جاری) یا
+ * «کل حساب» (جمع گردش به تفکیک نوع عملیات و حساب، فاز ۱۰). چاپ هر دو در
+ * `/parties/[id]/print`.
+ */
 
 import { useCallback, useEffect, useState } from "react";
 import { faNum } from "@/lib/accounting/money";
 import PartyForm, { type PartyRecord } from "./PartyForm";
-import StatementView, { RangeBar, rangeFor, rangeQuery, type Range, type StatementData } from "./Statement";
-import { api, Badge, BalanceLabel, btn, Card, ErrorText, Money, PageHeader, SectionTitle } from "./ui";
+import StatementView, { RangeBar, rangeFor, rangeQuery, SOURCE_LABELS, type Range, type StatementData } from "./Statement";
+import { api, Badge, BalanceLabel, btn, Card, ErrorText, Money, PageHeader, Segmented, SectionTitle } from "./ui";
 import Link from "next/link";
 import { formatJalali } from "@/lib/club/jalali";
 import { invoiceTitle, StatusBadge, type InvoiceRow } from "./invoices/InvoicesList";
 
+export interface PartySummary {
+  opening: string;
+  debit: string;
+  credit: string;
+  closing: string;
+  bySource: { source: string; debit: string; credit: string; count: number }[];
+  byAccount: { accountId: string; code: string; name: string; debit: string; credit: string; count: number }[];
+}
 interface Data {
   party: PartyRecord;
   balance: string;
   statement: StatementData;
+  summary: PartySummary;
   links: { user: { id: string; phone: string } | null; supplier: { id: string; name: string } | null };
   can: { manage: boolean };
 }
@@ -25,6 +38,7 @@ export default function PartyDetailClient({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [edit, setEdit] = useState(false);
   const [invoices, setInvoices] = useState<InvoiceRow[] | null>(null);
+  const [mode, setMode] = useState<"detail" | "summary">("detail");
 
   // فاکتورهای این شخص — هر سمتی که کاربر اجازه‌ی دیدنش را دارد
   useEffect(() => {
@@ -104,11 +118,29 @@ export default function PartyDetailClient({ id }: { id: string }) {
       </Card>
 
       <section>
-        <SectionTitle title="صورت‌حساب" help="accountingParty" actions={<button onClick={() => window.print()} className={btn.small}>🖨️ چاپ</button>} />
-        <div className="mb-3">
+        <SectionTitle
+          title="صورت‌حساب"
+          help="accountingParty"
+          actions={
+            <Link href={`/admin/accounting/parties/${id}/print?mode=${mode}&${rangeQuery(range)}`} target="_blank" className={btn.small}>
+              🖨️ چاپ {mode === "detail" ? "ریز حساب" : "کل حساب"}
+            </Link>
+          }
+        />
+        <div className="mb-3 space-y-2">
+          <div className="max-w-xs">
+            <Segmented
+              value={mode}
+              onChange={setMode}
+              options={[
+                { value: "detail", label: "ریز حساب" },
+                { value: "summary", label: "کل حساب" },
+              ]}
+            />
+          </div>
           <RangeBar value={range} onChange={setRange} />
         </div>
-        <StatementView data={data.statement} kind="party" />
+        {mode === "detail" ? <StatementView data={data.statement} kind="party" /> : <SummaryView s={data.summary} />}
       </section>
 
       {invoices && invoices.length > 0 && (
@@ -149,6 +181,93 @@ function Info({ k, v }: { k: string; v: React.ReactNode }) {
     <div>
       <dt className="text-gray-400 inline">{k}: </dt>
       <dd className="inline font-bold text-gray-700 dark:text-gray-200">{v}</dd>
+    </div>
+  );
+}
+
+/** «کل حساب» — جمع گردش بازه به تفکیک نوع عملیات و حساب */
+export function SummaryView({ s }: { s: PartySummary }) {
+  const tag = (v: string) => {
+    const b = BigInt(v);
+    return b === 0n ? "تسویه" : b > 0n ? "بدهکار (طلب ما)" : "بستانکار (بدهی ما)";
+  };
+  const abs = (v: string) => (BigInt(v) < 0n ? String(-BigInt(v)) : v);
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {(
+          [
+            ["مانده‌ی ابتدای بازه", abs(s.opening), tag(s.opening)],
+            ["جمع بدهکار", s.debit, "افزایش طلب ما"],
+            ["جمع بستانکار", s.credit, "کاهش طلب ما"],
+            ["مانده‌ی پایان", abs(s.closing), tag(s.closing)],
+          ] as [string, string, string][]
+        ).map(([k, v, sub]) => (
+          <Card key={k} className="p-3">
+            <p className="text-[11px] text-gray-500">{k}</p>
+            <Money value={v} className="text-base" />
+            <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>
+          </Card>
+        ))}
+      </div>
+      <Card className="overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 dark:bg-white/5 text-[11px] text-gray-500">
+            <tr>
+              <th className="text-right font-bold px-4 py-2">نوع عملیات</th>
+              <th className="text-center font-bold px-2 py-2">تعداد</th>
+              <th className="text-left font-bold px-2 py-2">بدهکار</th>
+              <th className="text-left font-bold px-4 py-2">بستانکار</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+            {s.bySource.map((r) => (
+              <tr key={r.source}>
+                <td className="px-4 py-2 font-bold">{SOURCE_LABELS[r.source] ?? r.source}</td>
+                <td className="px-2 py-2 text-center text-xs text-gray-500">{faNum(r.count)}</td>
+                <td className="px-2 py-2 text-left tabular-nums">{BigInt(r.debit) ? <Money value={r.debit} /> : ""}</td>
+                <td className="px-4 py-2 text-left tabular-nums">{BigInt(r.credit) ? <Money value={r.credit} /> : ""}</td>
+              </tr>
+            ))}
+            {!s.bySource.length && (
+              <tr>
+                <td colSpan={4} className="px-4 py-6 text-center text-xs text-gray-400">
+                  در این بازه گردشی نیست
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </Card>
+      {s.byAccount.length > 1 && (
+        <Card className="overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 dark:bg-white/5 text-[11px] text-gray-500">
+              <tr>
+                <th className="text-right font-bold px-4 py-2">حساب</th>
+                <th className="text-left font-bold px-2 py-2">بدهکار</th>
+                <th className="text-left font-bold px-2 py-2">بستانکار</th>
+                <th className="text-left font-bold px-4 py-2">خالص</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+              {s.byAccount.map((a) => {
+                const net = BigInt(a.debit) - BigInt(a.credit);
+                return (
+                  <tr key={a.accountId}>
+                    <td className="px-4 py-2">{a.name}</td>
+                    <td className="px-2 py-2 text-left tabular-nums">{BigInt(a.debit) ? <Money value={a.debit} /> : ""}</td>
+                    <td className="px-2 py-2 text-left tabular-nums">{BigInt(a.credit) ? <Money value={a.credit} /> : ""}</td>
+                    <td className="px-4 py-2 text-left">
+                      <BalanceLabel balance={String(net)} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
+      )}
     </div>
   );
 }

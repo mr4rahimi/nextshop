@@ -14,9 +14,11 @@
  * ترازنامه در یک تاریخ: دارایی = بدهی + حقوق صاحبان سرمایه + سود بسته‌نشده.
  * سود بسته‌نشده = همه‌ی درآمد و هزینه‌ی تا آن تاریخ که هنوز به سود انباشته
  * منتقل نشده — پس این تساوی همیشه برقرار است مگر دفتر ناتراز باشد.
+ * بعد از بستن سال، سود آن سال در «سود انباشته» است و درآمد و هزینه‌اش صفر.
  */
 
 import type { AccAccount } from "@prisma/client";
+import { NOT_CARRY } from "../ledger/balances";
 import { accountIndex, dateWhere, natural, sumBig, sumsByAccount, type AccountIndex, type Db, type DateRange, type Sums } from "./common";
 
 export interface StatementLine {
@@ -103,7 +105,8 @@ export async function profitLoss(db: Db, range: DateRange, compare: DateRange | 
 
 export async function balanceSheet(db: Db, asOf: Date) {
   const idx = await accountIndex(db);
-  const sums = await sumsByAccount(db, { date: { lte: asOf } });
+  // اختتامیه/افتتاحیه‌ی خودکار کنار — مانده‌ی دائم از خود دفتر؛ سود سال‌های بسته در سود انباشته
+  const sums = await sumsByAccount(db, { date: { lte: asOf }, ...NOT_CARRY });
 
   const section = (cls: AccAccount["class"]) => {
     const byLedger = new Map<string, StatementLine[]>();

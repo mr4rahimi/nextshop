@@ -92,3 +92,41 @@ export async function runChequeReminders(): Promise<{ notified: number; tasks: n
   }
   return { notified, tasks };
 }
+
+/**
+ * یادآوری سررسید قسط (فاز ۱۰) — قسطی که سررسیدش فردا (یا گذشته) است، هنوز
+ * کامل پوشیده نشده و چک ندارد (چک یادآوری خودش را دارد) ← اعلان به دارندگان
+ * مجوز فروش (قسط فروش) یا خرید (قسط خرید). همان مرز «دو بار نفرست».
+ */
+export async function runInstallmentReminders(): Promise<{ notified: number }> {
+  const { planRows } = await import("../installments");
+  const tomorrow = new Date(todayKey().getTime() + DAY_MS);
+  const due = await prisma.accInstallment.findMany({
+    where: { reminderSentAt: null, chequeId: null, dueDate: { lte: tomorrow } },
+    select: { id: true, planId: true },
+    take: 200,
+  });
+  if (!due.length) return { notified: 0 };
+  const rows = new Map((await planRows(prisma, { id: { in: [...new Set(due.map((d) => d.planId))] } })).map((r) => [r.id, r]));
+  const [sellers, buyers] = await Promise.all([usersWithPermission("ACC_SALES"), usersWithPermission("ACC_PURCHASE")]);
+
+  let notified = 0;
+  for (const d of due) {
+    const r = rows.get(d.id);
+    const claimed = await prisma.accInstallment.updateMany({ where: { id: d.id, reminderSentAt: null }, data: { reminderSentAt: new Date() } });
+    if (!claimed.count || !r || r.left <= 0n) continue;
+    const sales = r.invoice.type === "SALES";
+    const when = r.dueDate < todayKey() ? `سررسید گذشته (${formatJalali(r.dueDate)})` : `سررسید ${formatJalali(r.dueDate)}`;
+    notified += await notify({
+      userIds: (sales ? sellers : buyers).map((u) => u.id),
+      type: "ACC_INSTALLMENT",
+      entityId: d.id,
+      title: sales
+        ? `قسط ${faNum(r.seq)} از ${faNum(r.count)} ${r.party.name} — ${formatAmount(r.left)} تومان`
+        : `پرداخت قسط ${faNum(r.seq)} از ${faNum(r.count)} به ${r.party.name} — ${formatAmount(r.left)} تومان`,
+      body: `${when}. فاکتور ${faNum(r.invoice.number ?? 0)}${r.party.mobile ? ` — ${faNum(r.party.mobile)}` : ""}`,
+      url: `/admin/accounting/invoices/${r.invoice.id}#installments`,
+    });
+  }
+  return { notified };
+}

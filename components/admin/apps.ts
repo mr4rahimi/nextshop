@@ -14,6 +14,7 @@ import {
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
+  CalendarDays, Lock,
 } from "lucide-react";
 
 /** رنگ کاشی — کلاس‌ها کامل نوشته شده‌اند تا Tailwind پیدایشان کند */
@@ -106,6 +107,9 @@ export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting/money", label: "دریافت و پرداخت", icon: ArrowLeftRight, tone: "sky", perm: ["ACC_VIEW", "ACC_TREASURY"], img: "acc-money" },
   { href: "/admin/accounting/cheques", label: "چک‌ها", icon: Banknote, tone: "teal", perm: ["ACC_VIEW", "ACC_CHEQUE"], img: "acc-cheques" },
   { href: "/admin/accounting/expenses", label: "هزینه‌ها", icon: Wallet, tone: "rose", perm: ["ACC_VIEW", "ACC_EXPENSE"], img: "acc-expenses" },
+  { href: "/admin/accounting/expenses?kind=INCOME", label: "درآمدها", icon: Coins, tone: "emerald", perm: ["ACC_VIEW", "ACC_TREASURY"], img: "acc-income" },
+  { href: "/admin/accounting/installments", label: "اقساط", icon: CalendarClock, tone: "blue", perm: ["ACC_VIEW", "ACC_SALES", "ACC_PURCHASE"], img: "acc-installments" },
+  { href: "/admin/accounting/calendar", label: "تقویم سررسیدها", icon: CalendarDays, tone: "teal", perm: ["ACC_VIEW", "ACC_CHEQUE", "ACC_SALES", "ACC_PURCHASE"], img: "acc-calendar" },
   { href: "/admin/accounting/reports", label: "گزارش‌ها", icon: ChartPie, tone: "violet", perm: ["ACC_REPORTS"], img: "acc-reports" },
   { href: "/admin/accounting/parties", label: "اشخاص", icon: Users, tone: "indigo", perm: ["ACC_VIEW", "ACC_PARTY_MANAGE"], img: "acc-parties" },
   { href: "/admin/accounting/treasury", label: "صندوق و بانک", icon: Landmark, tone: "cyan", perm: ["ACC_VIEW", "ACC_SETTINGS"], img: "acc-treasury" },
@@ -114,6 +118,7 @@ export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting/accounts", label: "سرفصل حساب‌ها", icon: FolderTree, tone: "lime", perm: ["ACC_VOUCHER", "ACC_SETTINGS"], tag: "حسابدار", img: "acc-accounts" },
   { href: "/admin/accounting/events", label: "رویدادهای مالی", icon: Zap, tone: "red", perm: ["ACC_VIEW", "ACC_SETTINGS"], img: "acc-events" },
   { href: "/admin/accounting/settings", label: "تنظیمات", icon: Settings, tone: "slate", perm: ["ACC_VIEW", "ACC_SETTINGS"], img: "acc-settings" },
+  { href: "/admin/accounting/settings?tab=years", label: "بستن سال مالی", icon: Lock, tone: "slate", perm: ["ACC_SETTINGS"], img: "acc-closing" },
 ];
 
 // ── تطبیق مسیر ────────────────────────────────────────────────────────────

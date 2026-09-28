@@ -73,6 +73,7 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["6202", "درآمد خدمات و تعمیرات", S, "REVENUE", "CREDIT", "NONE", "SERVICE_REVENUE"],
   ["6203", "سایر درآمدها", S, "REVENUE", "CREDIT", "NONE", "OTHER_INCOME"],
   ["6204", "اضافات و کسورات گرد کردن", S, "REVENUE", "BOTH", "NONE", "ROUNDING"],
+  ["6205", "درآمد فروش اقساطی", S, "REVENUE", "CREDIT", "NONE", "INSTALLMENT_INCOME"],
 
   ["7", "بهای تمام‌شده", G, "EXPENSE", "DEBIT", "NONE", null],
   ["71", "بهای تمام‌شده", L, "EXPENSE", "DEBIT", "NONE", null],
@@ -96,6 +97,7 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["8207", "هزینه‌های متفرقه", S, "EXPENSE", "DEBIT", "NONE", null],
   ["83", "هزینه‌های مالی", L, "EXPENSE", "DEBIT", "NONE", null],
   ["8301", "کارمزد بانکی", S, "EXPENSE", "DEBIT", "NONE", "BANK_FEE"],
+  ["8302", "کارمزد خرید اقساطی", S, "EXPENSE", "DEBIT", "NONE", "INSTALLMENT_EXPENSE"],
 ];
 
 /** کلیدهای سیستمی که کد به آن‌ها تکیه دارد — نبودشان یعنی سرفصل ناقص است */

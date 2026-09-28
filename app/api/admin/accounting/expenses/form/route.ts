@@ -11,23 +11,27 @@ export const dynamic = "force-dynamic";
 
 /** سرفصل‌هایی که هزینه نیستند (بهای تمام‌شده و کسری انبار مسیر خودشان را دارند) */
 const NOT_EXPENSE_KEYS = ["COGS", "INVENTORY_ADJUSTMENT"];
+/** درآمدهایی که فقط از فاکتور می‌آیند */
+const NOT_INCOME_KEYS = ["SALES", "SALES_RETURN", "SALES_DISCOUNT", "ROUNDING"];
 
 /**
  * GET — پیش‌فرض‌های فرم هزینه: سرفصل‌های هزینه (پرکاربردها اول)، صندوق و بانک
  * با موجودی، شماره‌ی بعدی دسته‌چک، و روشن بودن ارزش افزوده.
  */
-export async function GET() {
-  const guard = await requirePermission("ACC_EXPENSE");
+export async function GET(req: Request) {
+  const income = new URL(req.url).searchParams.get("kind") === "INCOME";
+  const guard = await requirePermission(income ? "ACC_TREASURY" : "ACC_EXPENSE");
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
+  const banned = income ? NOT_INCOME_KEYS : NOT_EXPENSE_KEYS;
 
   const [accounts, used, treasuries, bal, settings] = await Promise.all([
     prisma.accAccount.findMany({
-      where: { class: "EXPENSE", level: "SUBLEDGER", isActive: true, detailKind: { not: "TREASURY" }, OR: [{ systemKey: null }, { systemKey: { notIn: NOT_EXPENSE_KEYS } }] },
+      where: { class: income ? "REVENUE" : "EXPENSE", level: "SUBLEDGER", isActive: true, detailKind: { not: "TREASURY" }, OR: [{ systemKey: null }, { systemKey: { notIn: banned } }] },
       orderBy: { code: "asc" },
       select: { id: true, code: true, name: true, detailKind: true, parent: { select: { name: true } } },
     }),
     prisma.accMoneyLine.groupBy({ by: ["accountId"], where: { moneyDoc: { status: "POSTED" } }, _count: true }),
-    prisma.accTreasury.findMany({ where: { isActive: true, kind: { in: ["CASH", "BANK"] } }, orderBy: [{ kind: "asc" }, { code: "asc" }], select: { id: true, name: true, kind: true } }),
+    prisma.accTreasury.findMany({ where: { isActive: true, kind: { in: income ? ["CASH", "BANK", "POS"] : ["CASH", "BANK"] } }, orderBy: [{ kind: "asc" }, { code: "asc" }], select: { id: true, name: true, kind: true } }),
     balancesBy(prisma, "treasuryId"),
     prisma.accSettings.findUnique({ where: { id: "singleton" }, select: { vatEnabled: true } }),
   ]);

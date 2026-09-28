@@ -6,7 +6,8 @@ import { useState } from "react";
 export const fa = (n: number) => Math.round(n).toLocaleString("fa-IR");
 
 export function faShort(v: number) {
-  if (v >= 1e6) return fa(v / 1e6) + "م";
+  // زیر ده میلیون یک رقم اعشار — وگرنه ۱٫۰ و ۱٫۳ میلیون هر دو «۱م» می‌شدند
+  if (v >= 1e6) return (v < 1e7 ? (Math.round(v / 1e5) / 10).toLocaleString("fa-IR") : fa(v / 1e6)) + "م";
   if (v >= 1e3) return fa(v / 1e3) + "ه";
   return fa(v);
 }
@@ -32,9 +33,13 @@ export interface Series {
  * روشن مقیاس می‌گیرد تا یک سری بزرگ بقیه را صاف نکند.
  */
 export function MultiLineChart({
-  id, days, series, height = 260,
+  id, days, series, height = 260, label = dayLabel, linear = false,
 }: {
   id: string; days: string[]; series: Series[]; height?: number;
+  /** خط شکسته به‌جای منحنی — برای نقطه‌های کم (ماهانه) که منحنی از صفر پایین‌تر می‌زند */
+  linear?: boolean;
+  /** برچسب هر نقطه‌ی محور افقی — پیش‌فرض روز؛ گزارش ماهانه‌ی حسابداری نام ماه می‌دهد */
+  label?: (key: string) => string;
 }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [hovered, setHovered] = useState<number | null>(null);
@@ -50,13 +55,16 @@ export function MultiLineChart({
   const allValues = shown.flatMap((s) => s.data);
   const max = Math.max(...allValues, 1);
   const top = max * 1.15 || 1;
+  // مقدار منفی (مثلاً زیان ماه) — خط صفر بالا می‌آید، نه اینکه نقطه از نمودار بیرون بزند
+  const min = Math.min(...allValues, 0);
+  const bot = min < 0 ? min * 1.15 : 0;
 
   const X = (i: number) => PL + (n <= 1 ? plotW / 2 : (i * plotW) / (n - 1));
-  const Y = (v: number) => PT + plotH - (v / top) * plotH;
+  const Y = (v: number) => PT + plotH - ((v - bot) / (top - bot)) * plotH;
 
   const smooth = (pts: [number, number][]) => {
     if (pts.length === 0) return "";
-    if (pts.length < 3) return "M " + pts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" L ");
+    if (pts.length < 3 || linear) return "M " + pts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" L ");
     let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
     for (let i = 0; i < pts.length - 1; i++) {
       const p0 = pts[Math.max(0, i - 1)], p1 = pts[i];
@@ -69,7 +77,7 @@ export function MultiLineChart({
   };
 
   const gridLines = [0, 1, 2, 3, 4].map((g) => {
-    const val = (top * g) / 4;
+    const val = bot + ((top - bot) * g) / 4;
     return { val, yy: Y(val) };
   });
 
@@ -99,21 +107,22 @@ export function MultiLineChart({
               <line x1={PL} y1={yy} x2={W - PR} y2={yy} stroke="#94a3b8" strokeOpacity="0.13"
                 strokeWidth="1" strokeDasharray={g === 0 ? "0" : "3 5"} />
               <text x={PL - 6} y={yy + 3.5} textAnchor="end" fontSize="10" fill="#94a3b8">
-                {faShort(val)}
+                {val < 0 ? "−" + faShort(-val) : faShort(val)}
               </text>
             </g>
           ))}
 
           {xLabels.map((i) => (
             <text key={i} x={X(i)} y={H - 8} textAnchor="middle" fontSize="10" fill="#94a3b8">
-              {dayLabel(days[i])}
+              {label(days[i])}
             </text>
           ))}
 
           {shown.map((s) => {
             const pts = s.data.map((v, i) => [X(i), Y(v)] as [number, number]);
             const line = smooth(pts);
-            const area = `${line} L ${X(n - 1).toFixed(1)} ${(PT + plotH).toFixed(1)} L ${X(0).toFixed(1)} ${(PT + plotH).toFixed(1)} Z`;
+            const base = Y(0);
+            const area = `${line} L ${X(n - 1).toFixed(1)} ${base.toFixed(1)} L ${X(0).toFixed(1)} ${base.toFixed(1)} Z`;
             return (
               <g key={s.key}>
                 <path d={area} fill={`url(#rg-${id}-${s.key})`} />
@@ -162,7 +171,7 @@ export function MultiLineChart({
           );
         })}
         {hovered !== null && (
-          <span className="text-xs text-gray-400 mr-auto">{dayLabel(days[hovered])}</span>
+          <span className="text-xs text-gray-400 mr-auto">{label(days[hovered])}</span>
         )}
       </div>
     </div>

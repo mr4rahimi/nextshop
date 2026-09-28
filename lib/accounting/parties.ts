@@ -212,3 +212,14 @@ export function partyWhere(q: string | null | undefined, role: PartyRole | null,
 export async function partyBrief(db: Db, id: string) {
   return db.accParty.findUnique({ where: { id }, select: { id: true, code: true, name: true, mobile: true, isActive: true } });
 }
+
+/**
+ * «مشتری حضوری» — طرف حساب فروش سریع بی‌نام (فاز ۱۰). یک شخص ثابت با
+ * `platformCode = "walk-in"` تا با نام‌های مشابه قاطی نشود؛ بازارگاه نیست.
+ */
+export async function walkInParty(tx: Tx): Promise<AccParty> {
+  const hit = await tx.accParty.findUnique({ where: { platformCode: "walk-in" } });
+  if (hit) return hit;
+  return createParty(tx, { name: "مشتری حضوری", personType: "REAL", isCustomer: true, note: "فروش سریع بی‌نام — خودکار", platformCode: "walk-in" });
+}
+

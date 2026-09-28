@@ -6,7 +6,7 @@
  */
 
 import { accountIndex, dateWhere, natural, sumBig, sumsByAccount, type Db, type DateRange } from "./common";
-import { balanceOf } from "../ledger/balances";
+import { balanceOf, NOT_CARRY } from "../ledger/balances";
 
 // ── ارزش افزوده ──
 
@@ -65,9 +65,9 @@ export async function treasuryFlow(db: Db, range: DateRange) {
   const treasuries = await db.accTreasury.findMany({ orderBy: [{ kind: "asc" }, { code: "asc" }], select: { id: true, name: true, kind: true, isActive: true } });
   const [before, during] = await Promise.all([
     range.from
-      ? db.accVoucherLine.groupBy({ by: ["treasuryId"], where: { isVoid: false, treasuryId: { not: null }, date: { lt: range.from } }, _sum: { debit: true, credit: true } })
+      ? db.accVoucherLine.groupBy({ by: ["treasuryId"], where: { isVoid: false, treasuryId: { not: null }, date: { lt: range.from }, ...NOT_CARRY }, _sum: { debit: true, credit: true } })
       : Promise.resolve([]),
-    db.accVoucherLine.groupBy({ by: ["treasuryId"], where: { isVoid: false, treasuryId: { not: null }, ...dateWhere(range) }, _sum: { debit: true, credit: true } }),
+    db.accVoucherLine.groupBy({ by: ["treasuryId"], where: { isVoid: false, treasuryId: { not: null }, ...dateWhere(range), ...NOT_CARRY }, _sum: { debit: true, credit: true } }),
   ]);
   const open = new Map(before.map((b) => [b.treasuryId!, (b._sum.debit ?? 0n) - (b._sum.credit ?? 0n)]));
   const flow = new Map(during.map((b) => [b.treasuryId!, { in: b._sum.debit ?? 0n, out: b._sum.credit ?? 0n }]));

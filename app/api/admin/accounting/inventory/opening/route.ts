@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
-import { currentYear } from "@/lib/accounting/ledger/fiscal-year";
+import { firstYear } from "@/lib/accounting/ledger/fiscal-year";
 import { ensureDefaultWarehouse, OPENING_INV_SOURCE, saveOpeningInventory } from "@/lib/accounting/inventory/docs";
 import { AccError, accErrorResponse, toAmount } from "@/lib/accounting/errors";
 import { actorOf, readJson } from "@/lib/accounting/api";
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   const guard = await requirePermission(["ACC_INVENTORY", "ACC_COST_VIEW"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   try {
-    const year = await currentYear();
+    const year = await firstYear();
     if (!year) throw new AccError("سال مالی تعریف نشده است", 404);
     const wh = await prisma.$transaction((tx) => ensureDefaultWarehouse(tx));
     const moves = await prisma.accStockMove.findMany({ where: { sourceType: OPENING_INV_SOURCE, sourceId: year.id } });
@@ -65,7 +65,7 @@ export async function PUT(req: Request) {
   if (!cost.ok) return NextResponse.json({ error: "ثبت موجودی اول دوره دیدن بهای کالا را لازم دارد" }, { status: 403 });
   try {
     const b = await readJson<{ lines?: { productId: string; warehouseId: string; qty: unknown; unitCost: unknown }[] }>(req);
-    const year = await currentYear();
+    const year = await firstYear();
     if (!year) throw new AccError("سال مالی تعریف نشده است", 404);
     const lines = (b.lines ?? []).map((l, i) => {
       const qty = Number(l.qty);

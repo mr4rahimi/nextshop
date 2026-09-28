@@ -45,7 +45,7 @@ interface Summary {
     net: string | null;
     prev: { netSales: string; expenses: string; gross: string | null; net: string | null } | null;
     series: { days: string[]; sales: string[]; expenses: string[]; gross: string[] | null };
-    alerts: { events: number; overdue: string; overdueCount: number; negative: number; lowStock: number };
+    alerts: { events: number; overdue: string; overdueCount: number; negative: number; lowStock: number; installments?: number; installmentsDue?: string };
   } | null;
   can: { reports: boolean; cost: boolean };
 }
@@ -273,6 +273,7 @@ function MonthSection({ m, canReports }: { m: Month; canReports: boolean }) {
   const alerts = [
     a.events > 0 && { icon: Zap, text: `${faNum(a.events)} ثبت خودکار گیر کرده`, href: "/admin/accounting/events", tone: "text-red-600" },
     a.overdueCount > 0 && { icon: AlarmClock, text: `${faNum(a.overdueCount)} فاکتور سررسیدگذشته — ${formatAmount(a.overdue)} تومان`, href: "/admin/accounting/reports/aging", tone: "text-red-600" },
+    (a.installments ?? 0) > 0 && { icon: AlarmClock, text: `${faNum(a.installments ?? 0)} قسط سررسیدگذشته — ${formatAmount(a.installmentsDue ?? "0")} تومان`, href: "/admin/accounting/installments?view=overdue", tone: "text-red-600" },
     a.negative > 0 && { icon: TrendingDown, text: `${faNum(a.negative)} کالا با موجودی منفی`, href: "/admin/accounting/inventory?filter=negative", tone: "text-amber-600" },
     a.lowStock > 0 && { icon: Package, text: `${faNum(a.lowStock)} کالا زیر نقطه‌ی سفارش`, href: "/admin/accounting/inventory?filter=low", tone: "text-amber-600" },
   ].filter(Boolean) as { icon: LucideIcon; text: string; href: string; tone: string }[];

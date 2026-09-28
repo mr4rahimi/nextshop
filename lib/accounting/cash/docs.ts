@@ -8,6 +8,11 @@
  *   انتقال:  بدهکار مقصد + کارمزد بانکی  —  بستانکار مبدأ
  *   هزینه:   بدهکار حساب‌های هزینه (+ مالیات خرید)  —  بستانکار صندوق/بانک/چک،
  *            و بخش پرداخت‌نشده بدهی به شخص (نسیه) — فاز ۶
+ *   درآمد:   آینه‌ی هزینه — بستانکار حساب‌های درآمد (+ مالیات فروش)  —  بدهکار
+ *            صندوق/بانک/چک دریافتی، و بخش دریافت‌نشده طلب از شخص — فاز ۱۰
+ *
+ *   بن و کارت هدیه: روی صندوق یا بانک، مثل نقد. تهاتر: بی‌خزانه — دریافت/درآمد
+ *   بدهی ما به همان شخص را کم می‌کند، پرداخت/هزینه طلب ما از او را (فاز ۱۰).
  *
  *   کیف پول (فقط دریافت خودکار سفارش): بدهکار «کیف پول مشتریان» همان شخص.
  *   تسویه‌ی بازارگاه: دریافت از شخصِ بازارگاه با «کارمزد کسرشده» — بانک خالص
@@ -37,6 +42,7 @@ export const MONEY_KIND_LABELS: Record<AccMoneyKind, string> = {
   PAYMENT: "پرداخت",
   TRANSFER: "انتقال وجه",
   EXPENSE: "هزینه",
+  INCOME: "درآمد",
 };
 
 export const METHOD_LABELS: Record<AccMoneyMethod, string> = {
@@ -47,16 +53,22 @@ export const METHOD_LABELS: Record<AccMoneyMethod, string> = {
   GATEWAY: "درگاه اینترنتی",
   CHEQUE: "چک",
   WALLET: "کیف پول",
+  GIFT_CARD: "بن و کارت هدیه",
+  OFFSET: "تهاتر",
 };
 
 /** هر روش روی کدام نوع خزانه می‌نشیند */
-const METHOD_TREASURY: Record<Exclude<AccMoneyMethod, "CHEQUE" | "WALLET">, AccTreasuryKind[]> = {
+const METHOD_TREASURY: Record<Exclude<AccMoneyMethod, "CHEQUE" | "WALLET" | "OFFSET">, AccTreasuryKind[]> = {
   CASH: ["CASH"],
   CARD_TRANSFER: ["BANK"],
   BANK_TRANSFER: ["BANK"],
   POS: ["POS", "BANK"],
   GATEWAY: ["GATEWAY", "BANK"],
+  GIFT_CARD: ["CASH", "BANK"],
 };
+
+/** پولی که به ما می‌رسد — چک دریافتی، خزانه بدهکار */
+const INBOUND: AccMoneyKind[] = ["RECEIPT", "INCOME"];
 
 export interface MoneyItemInput {
   method: AccMoneyMethod;
@@ -82,19 +94,23 @@ export interface MoneyDocInput {
   allocations?: { invoiceId: string; amount: bigint }[] | "auto";
   paymentId?: string | null;
   sourceKey?: string | null;
-  /** فقط هزینه: بابت چه — هر ردیف یک حساب هزینه */
+  /** هزینه/درآمد: بابت چه — هر ردیف یک حساب هزینه یا درآمد */
   lines?: { accountId: string; amount: bigint; description?: string | null }[];
-  /** فقط هزینه: مالیات بر ارزش افزوده‌ی قابل کسر */
+  /** هزینه: مالیات بر ارزش افزوده‌ی قابل کسر؛ درآمد: مالیات فروش */
   vatAmount?: bigint;
 }
 
 /** حساب‌هایی که «هزینه» نیستند و فقط از مسیر خودشان سند می‌گیرند */
 const NOT_EXPENSE_KEYS = ["COGS", "INVENTORY_ADJUSTMENT"];
+/** درآمدهایی که فقط از فاکتور می‌آیند — فروش، برگشت، تخفیف */
+const NOT_INCOME_KEYS = ["SALES", "SALES_RETURN", "SALES_DISCOUNT", "ROUNDING"];
 
 export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor): Promise<AccMoneyDoc> {
   const year = await assertPostable(tx, input.date);
   const kind = input.kind;
-  if (!input.items.length && kind !== "EXPENSE") throw new AccError("دست‌کم یک روش و مبلغ لازم است");
+  const withLines = kind === "EXPENSE" || kind === "INCOME";
+  const inbound = INBOUND.includes(kind);
+  if (!input.items.length && !withLines) throw new AccError("دست‌کم یک روش و مبلغ لازم است");
 
   const party = input.partyId ? await tx.accParty.findUnique({ where: { id: input.partyId } }) : null;
   if (kind === "RECEIPT" || kind === "PAYMENT") {
@@ -102,20 +118,23 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
   }
   if (party && !party.isActive) throw new AccError(`«${party.name}» غیرفعال است`);
 
-  // ── ردیف‌های هزینه ──
+  // ── ردیف‌های هزینه / درآمد ──
   const expLines: { accountId: string; partyId: string | null; amount: bigint; description: string | null; name: string }[] = [];
-  const vat = kind === "EXPENSE" ? input.vatAmount ?? 0n : 0n;
-  if (kind === "EXPENSE") {
-    if (!input.lines?.length) throw new AccError("بابت چه هزینه‌ای؟ دست‌کم یک ردیف لازم است");
+  const vat = withLines ? input.vatAmount ?? 0n : 0n;
+  if (withLines) {
+    const noun = kind === "EXPENSE" ? "هزینه" : "درآمد";
+    if (!input.lines?.length) throw new AccError(`بابت چه ${kind === "EXPENSE" ? "هزینه‌ای" : "درآمدی"}؟ دست‌کم یک ردیف لازم است`);
     if (vat < 0n) throw new AccError("مالیات منفی نمی‌شود");
     const accs = new Map((await tx.accAccount.findMany({ where: { id: { in: input.lines.map((l) => l.accountId) } } })).map((a) => [a.id, a]));
     input.lines.forEach((l, i) => {
-      const at = `ردیف هزینه‌ی ${faNum(i + 1)}`;
+      const at = `ردیف ${kind === "EXPENSE" ? "هزینه‌ی" : "درآمد"} ${faNum(i + 1)}`;
       const a = accs.get(l.accountId);
-      if (!a) throw new AccError(`${at}: بابت چه؟ یک سرفصل هزینه انتخاب کنید`);
-      if (a.class !== "EXPENSE" || a.level !== "SUBLEDGER" || (a.systemKey && NOT_EXPENSE_KEYS.includes(a.systemKey))) throw new AccError(`${at}: «${a.name}» سرفصل هزینه نیست`);
+      if (!a) throw new AccError(`${at}: بابت چه؟ یک سرفصل ${noun} انتخاب کنید`);
+      const cls = kind === "EXPENSE" ? "EXPENSE" : "REVENUE";
+      const banned = kind === "EXPENSE" ? NOT_EXPENSE_KEYS : NOT_INCOME_KEYS;
+      if (a.class !== cls || a.level !== "SUBLEDGER" || (a.systemKey && banned.includes(a.systemKey))) throw new AccError(`${at}: «${a.name}» سرفصل ${noun} نیست`);
       if (!a.isActive) throw new AccError(`${at}: «${a.name}» غیرفعال است`);
-      if (a.detailKind === "TREASURY") throw new AccError(`${at}: «${a.name}» تفصیلی صندوق می‌خواهد و در هزینه نمی‌آید`);
+      if (a.detailKind === "TREASURY") throw new AccError(`${at}: «${a.name}» تفصیلی صندوق می‌خواهد و در ${noun} نمی‌آید`);
       if (a.detailKind === "PARTY" && !party) throw new AccError(`${at}: «${a.name}» به نام یک شخص ثبت می‌شود — «به چه کسی» را انتخاب کنید`);
       if (l.amount <= 0n) throw new AccError(`${at}: مبلغ باید بیشتر از صفر باشد`);
       expLines.push({ accountId: a.id, partyId: a.detailKind === "PARTY" ? party!.id : null, amount: l.amount, description: l.description?.trim() || null, name: a.name });
@@ -151,11 +170,15 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
       if (kind !== "RECEIPT") throw new AccError(`${at}: کیف پول فقط روش دریافت است`);
       return;
     }
+    if (it.method === "OFFSET") {
+      if (!party) throw new AccError(`${at}: تهاتر با یک شخص است — شخص را انتخاب کنید`);
+      return;
+    }
     if (it.method === "CHEQUE") {
-      if (kind === "RECEIPT" && !it.cheque) throw new AccError(`${at}: مشخصات چک را وارد کنید`);
-      if (kind !== "RECEIPT" && !party) throw new AccError(`${at}: چک به نام یک شخص است — «به چه کسی» را انتخاب کنید`);
-      if (kind !== "RECEIPT" && !it.cheque && !it.endorseChequeId) throw new AccError(`${at}: چک تازه صادر کنید یا یک چک دریافتی را خرج کنید`);
-      if (kind !== "RECEIPT" && it.cheque) {
+      if (!party) throw new AccError(`${at}: چک به نام یک شخص است — ${inbound ? "«از چه کسی»" : "«به چه کسی»"} را انتخاب کنید`);
+      if (inbound && !it.cheque) throw new AccError(`${at}: مشخصات چک را وارد کنید`);
+      if (!inbound && !it.cheque && !it.endorseChequeId) throw new AccError(`${at}: چک تازه صادر کنید یا یک چک دریافتی را خرج کنید`);
+      if (!inbound && it.cheque) {
         const bank = tr(it.treasuryId, at);
         if (bank.kind !== "BANK") throw new AccError(`${at}: چک از حساب بانکی صادر می‌شود`);
       }
@@ -168,11 +191,19 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
   if (kind === "TRANSFER" && input.items.length !== 1) throw new AccError("انتقال وجه یک ردیف دارد");
 
   const paid = input.items.reduce((s, i) => s + i.amount, 0n);
-  const total = kind === "EXPENSE" ? expLines.reduce((s, l) => s + l.amount, 0n) + vat : paid;
-  // هزینه: بخش پرداخت‌نشده بدهی به شخص می‌شود
-  const payable = kind === "EXPENSE" ? total - paid : 0n;
-  if (payable < 0n) throw new AccError(`جمع پرداخت (${formatAmount(paid)}) از مبلغ هزینه (${formatAmount(total)}) بیشتر است`);
-  if (payable > 0n && !party) throw new AccError(`${formatAmount(payable)} تومان پرداخت نشده — «به چه کسی» بدهکار می‌شوید؟`);
+  const total = withLines ? expLines.reduce((s, l) => s + l.amount, 0n) + vat : paid;
+  // هزینه: بخش پرداخت‌نشده بدهی به شخص؛ درآمد: بخش دریافت‌نشده طلب از شخص
+  const payable = withLines ? total - paid : 0n;
+  if (payable < 0n) {
+    throw new AccError(`جمع ${kind === "INCOME" ? "دریافت" : "پرداخت"} (${formatAmount(paid)}) از مبلغ ${kind === "INCOME" ? "درآمد" : "هزینه"} (${formatAmount(total)}) بیشتر است`);
+  }
+  if (payable > 0n && !party) {
+    throw new AccError(
+      kind === "INCOME"
+        ? `${formatAmount(payable)} تومان دریافت نشده — «از چه کسی» طلبکار می‌شوید؟`
+        : `${formatAmount(payable)} تومان پرداخت نشده — «به چه کسی» بدهکار می‌شوید؟`,
+    );
+  }
   const number = await nextNumber(tx, year.id, `money:${kind}`);
   const doc = await tx.accMoneyDoc.create({
     data: {
@@ -195,9 +226,16 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
   // ── چک‌ها و ردیف‌ها ──
   const lines: LineInput[] = [];
   const pName = party?.name ?? "";
-  if (kind === "EXPENSE") {
-    for (const l of expLines) lines.push({ accountId: l.accountId, partyId: l.partyId, debit: l.amount, description: l.description ?? l.name });
-    if (vat > 0n) lines.push({ accountKey: "VAT_PURCHASE", debit: vat, description: "مالیات بر ارزش افزوده‌ی هزینه" });
+  if (withLines) {
+    const side = kind === "EXPENSE" ? "debit" : "credit";
+    for (const l of expLines) lines.push({ accountId: l.accountId, partyId: l.partyId, [side]: l.amount, description: l.description ?? l.name });
+    if (vat > 0n) {
+      lines.push(
+        kind === "EXPENSE"
+          ? { accountKey: "VAT_PURCHASE", debit: vat, description: "مالیات بر ارزش افزوده‌ی هزینه" }
+          : { accountKey: "VAT_SALES", credit: vat, description: "مالیات بر ارزش افزوده‌ی درآمد" },
+      );
+    }
     await tx.accMoneyLine.createMany({
       data: expLines.map((l, i) => ({ moneyDocId: doc.id, seq: i + 1, accountId: l.accountId, amount: l.amount, description: l.description })),
     });
@@ -218,14 +256,21 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
     } else if (it.method === "CHEQUE") {
       const c = await createCheque(
         tx,
-        { ...it.cheque!, direction: kind === "RECEIPT" ? "RECEIVED" : "ISSUED", amount: it.amount, partyId: party!.id, treasuryId: it.treasuryId, moneyDocId: doc.id, date: input.date },
+        { ...it.cheque!, direction: inbound ? "RECEIVED" : "ISSUED", amount: it.amount, partyId: party!.id, treasuryId: it.treasuryId, moneyDocId: doc.id, date: input.date },
         actor,
       );
       chequeId = c.id;
       lines.push(
-        kind === "RECEIPT"
+        inbound
           ? { accountKey: "CHEQUE_RECEIVABLE", partyId: party!.id, debit: it.amount, description: `چک ${faNum(c.serialNo)} سررسید ${formatJalali(c.dueDate)}` }
           : { accountKey: "CHEQUE_PAYABLE", partyId: party!.id, credit: it.amount, description: `چک ${faNum(c.serialNo)}` },
+      );
+    } else if (it.method === "OFFSET") {
+      // دریافت با تهاتر: بدهی ما به او کم می‌شود؛ پرداخت با تهاتر: طلب ما از او کم می‌شود
+      lines.push(
+        inbound
+          ? { accountKey: "AP", partyId: party!.id, debit: it.amount, description: "تهاتر با بدهی ما" }
+          : { accountKey: "AR", partyId: party!.id, credit: it.amount, description: "تهاتر با طلب ما" },
       );
     } else if (it.method === "WALLET") {
       lines.push({ accountKey: "WALLET_LIABILITY", partyId: party!.id, debit: it.amount, description: "پرداخت از کیف پول" });
@@ -233,7 +278,7 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
       const t = tr(it.treasuryId, "");
       const fee = it.fee ?? 0n;
       const desc = [METHOD_LABELS[it.method], it.trackingCode && `پیگیری ${it.trackingCode}`].filter(Boolean).join(" — ");
-      lines.push({ accountKey: TREASURY_ACCOUNT_KEY[t.kind], treasuryId: t.id, [kind === "RECEIPT" ? "debit" : "credit"]: it.amount - fee, description: desc });
+      lines.push({ accountKey: TREASURY_ACCOUNT_KEY[t.kind], treasuryId: t.id, [inbound ? "debit" : "credit"]: it.amount - fee, description: desc });
       if (fee > 0n) lines.push({ accountKey: "MARKETPLACE_FEE", debit: fee, description: `کارمزد ${pName}` });
     }
     await tx.accMoneyItem.create({
@@ -241,7 +286,7 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
         moneyDocId: doc.id,
         seq: i + 1,
         method: kind === "TRANSFER" ? "BANK_TRANSFER" : it.method,
-        treasuryId: (it.method === "CHEQUE" && kind === "RECEIPT") || it.method === "WALLET" ? null : it.treasuryId ?? null,
+        treasuryId: (it.method === "CHEQUE" && inbound) || it.method === "WALLET" || it.method === "OFFSET" ? null : it.treasuryId ?? null,
         toTreasuryId: it.toTreasuryId ?? null,
         chequeId,
         amount: it.amount,
@@ -252,7 +297,13 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
   }
   if (kind === "RECEIPT") lines.push({ accountKey: "AR", partyId: party!.id, credit: total, description: "دریافت" });
   if (kind === "PAYMENT") lines.unshift({ accountKey: "AP", partyId: party!.id, debit: total, description: "پرداخت" });
-  if (payable > 0n) lines.push({ accountKey: "AP", partyId: party!.id, credit: payable, description: "هزینه‌ی پرداخت‌نشده" });
+  if (payable > 0n) {
+    lines.push(
+      kind === "INCOME"
+        ? { accountKey: "AR", partyId: party!.id, debit: payable, description: "درآمد دریافت‌نشده" }
+        : { accountKey: "AP", partyId: party!.id, credit: payable, description: "هزینه‌ی پرداخت‌نشده" },
+    );
+  }
 
   // ── تخصیص ──
   if ((kind === "RECEIPT" || kind === "PAYMENT") && input.allocations) {
@@ -281,8 +332,8 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
     date: input.date,
     description:
       `${label} ${faNum(number)}` +
-      (kind === "EXPENSE" ? ` — ${[...new Set(expLines.map((l) => l.name))].join("، ")}` : "") +
-      (pName ? (kind === "RECEIPT" ? ` از ${pName}` : ` به ${pName}`) : "") +
+      (withLines ? ` — ${[...new Set(expLines.map((l) => l.name))].join("، ")}` : "") +
+      (pName ? (inbound ? ` از ${pName}` : ` به ${pName}`) : "") +
       (input.description ? ` — ${input.description.trim()}` : ""),
     source: kind,
     sourceId: doc.id,

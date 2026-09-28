@@ -11,6 +11,9 @@
  * PDF: از پنجره‌ی چاپ مرورگر «ذخیره به PDF». صفحه بیرون از قاب پنل رندر می‌شود
  * (`app/admin/layout.tsx` مسیرهای `/print` را بی‌قاب نشان می‌دهد) و همیشه روشن است.
  *
+ * چاپ گروهی (فاز ۱۰): `ids` — هر فاکتور روی صفحه‌ی جدا (`break-after: page`)،
+ * با همان قالب. از فهرست فروش/خرید و پایان «صدور گروهی».
+ *
  * ⚠️ از تگ `<header>` استفاده نشود — CSS چاپی سراسری آن را پنهان می‌کند.
  */
 
@@ -54,15 +57,26 @@ const OFFICIAL_TITLE: Record<InvoiceTypeKey, string> = {
 
 const b = (v: string | bigint) => (typeof v === "bigint" ? v : BigInt(v));
 
-export default function InvoicePrint({ id }: { id: string }) {
+export default function InvoicePrint({ id, ids, back }: { id?: string; ids?: string[]; back?: { href: string; label: string } }) {
   const sp = useSearchParams();
   const [tpl, setTpl] = useState<Tpl>(((sp.get("tpl") as Tpl) || "shop") as Tpl);
-  const [d, setD] = useState<PrintData | null>(null);
+  const [list, setList] = useState<PrintData[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const key = (ids ?? (id ? [id] : [])).join(",");
 
   useEffect(() => {
-    api<PrintData>(`/api/admin/accounting/invoices/${id}?print=1`).then(setD).catch((e) => setError(e.message));
-  }, [id]);
+    const all = key ? key.split(",") : [];
+    if (!all.length) return;
+    // چند درخواست موازی، ولی نه بیش از ۶ هم‌زمان
+    (async () => {
+      const out: PrintData[] = [];
+      for (let i = 0; i < all.length; i += 6) {
+        out.push(...(await Promise.all(all.slice(i, i + 6).map((x) => api<PrintData>(`/api/admin/accounting/invoices/${x}?print=1`)))));
+      }
+      setList(out);
+    })().catch((e) => setError(e.message));
+  }, [key]);
+  const d = list?.[0] ?? null;
 
   // چاپ همیشه روشن — حالت تاریک پنل روی کاغذ معنا ندارد
   useEffect(() => {
@@ -75,20 +89,24 @@ export default function InvoicePrint({ id }: { id: string }) {
   }, []);
 
   useEffect(() => {
-    if (d) document.title = `${INVOICE_TYPE_LABELS[d.invoice.type]} ${d.invoice.number ?? ""} — ${d.invoice.partyName}`;
-  }, [d]);
+    if (!list?.length) return;
+    document.title = list.length > 1 ? `${faNum(list.length)} فاکتور` : `${INVOICE_TYPE_LABELS[list[0].invoice.type]} ${list[0].invoice.number ?? ""} — ${list[0].invoice.partyName}`;
+  }, [list]);
 
+  if (!key) return <p className="p-6 text-sm text-red-600">فاکتوری انتخاب نشده</p>;
   if (error) return <p className="p-6 text-sm text-red-600">{error}</p>;
-  if (!d) return <p className="p-6 text-sm text-gray-500">در حال آماده‌سازی…</p>;
+  if (!d || !list) return <p className="p-6 text-sm text-gray-500">در حال آماده‌سازی…</p>;
 
   const official = tpl === "official";
   const blocked = official && !d.print.officialReady;
+  const backLink = back ?? { href: `/admin/accounting/invoices/${d.invoice.id}`, label: "بازگشت به فاکتور" };
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white text-black [color-scheme:light]" dir="rtl">
       <style>{`
         @page { size: ${tpl === "receipt" ? "80mm auto" : "A4"}; margin: ${tpl === "receipt" ? "3mm" : "10mm"}; }
         @media print { body { background: #fff !important; } .print-sheet { box-shadow: none !important; margin: 0 !important; } }
+        .print-page { break-after: page; } .print-page:last-child { break-after: auto; }
       `}</style>
       <div className="no-print print:hidden sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-2.5 flex flex-wrap items-center gap-2">
         {(
@@ -109,8 +127,9 @@ export default function InvoicePrint({ id }: { id: string }) {
         <button onClick={() => window.print()} disabled={blocked} className="mr-auto px-4 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-bold disabled:opacity-40">
           🖨️ چاپ / PDF
         </button>
-        <Link href={`/admin/accounting/invoices/${id}`} className="text-xs font-bold text-blue-600">
-          بازگشت به فاکتور
+        {list.length > 1 && <span className="text-xs font-bold text-gray-500">{faNum(list.length)} فاکتور</span>}
+        <Link href={backLink.href} className="text-xs font-bold text-blue-600">
+          {backLink.label}
         </Link>
       </div>
 
@@ -124,12 +143,12 @@ export default function InvoicePrint({ id }: { id: string }) {
             رفتن به تنظیمات
           </Link>
         </div>
-      ) : tpl === "receipt" ? (
-        <Receipt d={d} />
-      ) : official ? (
-        <Official d={d} />
       ) : (
-        <Shop d={d} />
+        list.map((x) => (
+          <div key={x.invoice.id} className="print-page">
+            {tpl === "receipt" ? <Receipt d={x} /> : official ? <Official d={x} /> : <Shop d={x} />}
+          </div>
+        ))
       )}
     </div>
   );

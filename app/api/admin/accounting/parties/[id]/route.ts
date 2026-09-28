@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
 import { updateParty, type PartyInput } from "@/lib/accounting/parties";
-import { balanceOf, statement } from "@/lib/accounting/ledger/balances";
+import { balanceOf, statement, PARTY_BALANCE } from "@/lib/accounting/ledger/balances";
+import { partySummary } from "@/lib/accounting/reports/parties";
 import { accErrorResponse } from "@/lib/accounting/errors";
 import { rangeFrom, readJson } from "@/lib/accounting/api";
 
@@ -18,9 +19,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const party = await prisma.accParty.findUnique({ where: { id } });
   if (!party) return NextResponse.json({ error: "شخص پیدا نشد" }, { status: 404 });
 
-  const [st, total] = await Promise.all([
-    statement(prisma, { partyId: id }, rangeFrom(new URL(req.url))),
-    balanceOf(prisma, { partyId: id }),
+  const range = rangeFrom(new URL(req.url));
+  const [st, total, summary] = await Promise.all([
+    statement(prisma, { partyId: id, ...PARTY_BALANCE }, range),
+    balanceOf(prisma, { partyId: id, ...PARTY_BALANCE }),
+    // «کل حساب» — گردش بازه به تفکیک نوع عملیات و حساب (فاز ۱۰)
+    partySummary(prisma, id, range),
   ]);
   const links = {
     user: party.userId
@@ -31,7 +35,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       : null,
   };
   return NextResponse.json(
-    serialize({ party, balance: total.balance, statement: st, links, can: { manage: can(guard.access, "ACC_PARTY_MANAGE") } }),
+    serialize({ party, balance: total.balance, statement: st, summary, links, can: { manage: can(guard.access, "ACC_PARTY_MANAGE") } }),
   );
 }
 

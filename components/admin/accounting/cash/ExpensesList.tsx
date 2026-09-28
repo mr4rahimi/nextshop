@@ -3,10 +3,12 @@
 /**
  * فهرست هزینه‌ها — docs/plans/accounting.md بخش ۵ و ۱۱ («هزینه‌ها به تفکیک سرفصل»).
  * بالای فهرست جمع هر سرفصل در همان بازه؛ لمس یک سرفصل فهرست را فیلتر می‌کند.
+ * `?kind=INCOME`: همین فهرست برای درآمدهای متفرقه (فاز ۱۰).
  */
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { formatJalali } from "@/lib/club/jalali";
 import { faNum, formatAmount } from "@/lib/accounting/money";
 import { RangeBar, rangeFor, rangeQuery, type Range } from "../Statement";
@@ -37,6 +39,11 @@ interface Data {
 type View = "all" | "unpaid";
 
 export default function ExpensesList() {
+  const sp = useSearchParams();
+  const router = useRouter();
+  const income = sp.get("kind") === "INCOME";
+  const noun = income ? "درآمد" : "هزینه";
+  const newHref = income ? "/admin/accounting/income/new" : "/admin/accounting/expenses/new";
   const [view, setView] = useState<View>("all");
   const [accountId, setAccountId] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -49,30 +56,47 @@ export default function ExpensesList() {
     if (view === "unpaid") p.set("unpaid", "1");
     if (accountId) p.set("accountId", accountId);
     if (q.trim()) p.set("q", q.trim());
+    if (income) p.set("kind", "INCOME");
+    setData(null);
     api<Data>(`/api/admin/accounting/expenses?${p}`).then(setData).catch((e) => setError(e.message));
-  }, [view, accountId, q, range]);
+  }, [view, accountId, q, range, income]);
   useEffect(() => {
     const h = setTimeout(load, q ? 250 : 0);
     return () => clearTimeout(h);
   }, [load, q]);
 
   const max = data?.breakdown.reduce((m, b) => (BigInt(b.amount) > m ? BigInt(b.amount) : m), 0n) ?? 0n;
-  const title = (r: Row) => [...new Set(r.lines.map((l) => data?.accounts[l.accountId]?.name).filter(Boolean))].join(" + ") || "هزینه";
+  const title = (r: Row) => [...new Set(r.lines.map((l) => data?.accounts[l.accountId]?.name).filter(Boolean))].join(" + ") || noun;
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="هزینه‌ها"
-        help="accountingExpenses"
-        desc="اجاره، قبض، تبلیغات، کارمزد و هر خرج دیگری که کالا نیست. تسویه‌ی پورسانت کارکنان خودکار اینجا می‌آید."
+        title="هزینه‌ها و درآمدها"
+        help={income ? "accountingIncome" : "accountingExpenses"}
+        desc={
+          income
+            ? "درآمدهایی که از فروش کالا نیستند: اجاره، کمیسیون، خدمات، سود بانکی و … ."
+            : "اجاره، قبض، تبلیغات، کارمزد و هر خرج دیگری که کالا نیست. تسویه‌ی پورسانت کارکنان خودکار اینجا می‌آید."
+        }
         actions={
           data?.can.write && (
-            <Link href="/admin/accounting/expenses/new" className={btn.primary}>
+            <Link href={newHref} className={btn.primary}>
               <Plus className="h-4 w-4" aria-hidden />
-              ثبت هزینه
+              ثبت {noun}
             </Link>
           )
         }
+      />
+      <Chips<"EXPENSE" | "INCOME">
+        value={income ? "INCOME" : "EXPENSE"}
+        onChange={(k) => {
+          setAccountId(null);
+          router.replace(k === "INCOME" ? "/admin/accounting/expenses?kind=INCOME" : "/admin/accounting/expenses");
+        }}
+        options={[
+          { value: "EXPENSE", label: "هزینه‌ها" },
+          { value: "INCOME", label: "درآمدها" },
+        ]}
       />
       <Chips<View>
         value={view}
@@ -111,7 +135,7 @@ export default function ExpensesList() {
                   <Money value={b.amount} className="text-xs" />
                 </div>
                 <div className="h-1.5 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
-                  <div className="h-full rounded-full bg-red-500/70" style={{ width: `${Math.max(pct, 2)}%` }} />
+                  <div className={`h-full rounded-full ${income ? "bg-emerald-500/70" : "bg-red-500/70"}`} style={{ width: `${Math.max(pct, 2)}%` }} />
                 </div>
               </button>
             );
@@ -121,7 +145,7 @@ export default function ExpensesList() {
 
       {data && (
         <p className="text-xs text-gray-500">
-          {faNum(data.summary.count)} هزینه‌ی معتبر · جمع <Money value={data.summary.total} />
+          {faNum(data.summary.count)} {income ? "درآمد" : "هزینه‌ی"} معتبر · جمع <Money value={data.summary.total} />
           {BigInt(data.summary.payable) > 0n && (
             <>
               {" "}
@@ -134,18 +158,18 @@ export default function ExpensesList() {
       <Card className="overflow-hidden divide-y divide-gray-100 dark:divide-white/5">
         {data?.items.map((r) => (
           <Link key={r.id} href={`/admin/accounting/money/${r.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5">
-            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 bg-red-500/10">🧮</span>
+            <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 ${income ? "bg-emerald-500/10" : "bg-red-500/10"}`}>{income ? "💰" : "🧮"}</span>
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-bold truncate ${r.status === "VOID" ? "line-through text-gray-400" : ""}`}>{title(r)}</p>
               <p className="text-[11px] text-gray-400 truncate">
-                هزینه {faNum(r.number)} · {formatJalali(new Date(r.date))}
+                {noun} {faNum(r.number)} · {formatJalali(new Date(r.date))}
                 {r.party && ` · ${r.party.name}`}
                 {r.sourceKey?.startsWith("payout:") && " · خودکار از تسویه‌ی پورسانت"}
                 {r.description && ` · ${r.description}`}
               </p>
             </div>
             <div className="text-left shrink-0 space-y-1">
-              <Money value={r.total} tone="red" className="text-sm" />
+              <Money value={r.total} tone={income ? "green" : "red"} className="text-sm" />
               {r.status === "VOID" ? (
                 <div>
                   <Badge tone="red">باطل</Badge>
@@ -162,13 +186,17 @@ export default function ExpensesList() {
         ))}
         {data && !data.items.length && (
           <Empty
-            title={view === "unpaid" ? "هزینه‌ی نسیه‌داری در این بازه نیست" : "هزینه‌ای در این بازه ثبت نشده"}
-            desc="هر خرجی که کالا نیست — اجاره، قبض، تبلیغات، حمل — را اینجا ثبت کنید تا سود واقعی کسب‌وکار دیده شود."
+            title={view === "unpaid" ? `${income ? "درآمد" : "هزینه‌ی"} نسیه‌داری در این بازه نیست` : `${income ? "درآمدی" : "هزینه‌ای"} در این بازه ثبت نشده`}
+            desc={
+              income
+                ? "هر پولی که از فروش کالا نیست — اجاره، کمیسیون، خدمات — را اینجا ثبت کنید تا در سود و زیان بیاید."
+                : "هر خرجی که کالا نیست — اجاره، قبض، تبلیغات، حمل — را اینجا ثبت کنید تا سود واقعی کسب‌وکار دیده شود."
+            }
             action={
               data.can.write && (
-                <Link href="/admin/accounting/expenses/new" className={btn.primary}>
+                <Link href={newHref} className={btn.primary}>
                   <Plus className="h-4 w-4" aria-hidden />
-                  ثبت هزینه
+                  ثبت {noun}
                 </Link>
               )
             }
