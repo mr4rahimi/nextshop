@@ -39,6 +39,7 @@
 | [گالری دایره‌ای](widgets/circle-gallery.md) | `CIRCLE_GALLERY` |
 | [باکس‌های مستطیلی](widgets/rect-boxes.md) | `RECT_BOXES` |
 | [ویترین محصولات](widgets/product-showcase.md) | `PRODUCT_SHOWCASE` |
+| [اسلایدر محصول کرافت](widgets/craft-product-slider.md) | `CRAFT_PRODUCT_SLIDER` |
 | [بنر کاتالوگ](widgets/catalog-banner.md) | بنرهای کاتالوگ |
 | [فضای خالی](widgets/spacer.md) | `SPACER` |
 

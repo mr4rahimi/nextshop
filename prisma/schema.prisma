@@ -1192,6 +1192,7 @@ enum WidgetType {
   PRODUCT_SHOWCASE
   CIRCLE_GALLERY
   RECT_BOXES
+  CRAFT_PRODUCT_SLIDER
 }
 
 enum UserRole {

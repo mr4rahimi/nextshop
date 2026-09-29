@@ -4,12 +4,21 @@ import { serialize } from "@/lib/serialize";
 
 export const runtime = "nodejs";
 
+/** متن ساده‌ی کوتاه از توضیح محصول — تگ‌ها حذف و طول محدود می‌شود */
+function productExcerpt(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const text = raw.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+  return text ? text.slice(0, 600) : null;
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const brandId = url.searchParams.get("brandId");
   const count = Math.min(20, parseInt(url.searchParams.get("count") ?? "8"));
   const sort = url.searchParams.get("sort") ?? "newest";
   const productIdsParam = url.searchParams.get("productIds");
+  // ویجت «اسلایدر محصول کرافت» خلاصه‌ی توضیحات را هم لازم دارد؛ بقیه نه
+  const withDesc = url.searchParams.get("withDesc") === "1";
 
   const include = {
     category: { select: { title: true, slug: true } },
@@ -27,6 +36,7 @@ export async function GET(req: Request) {
     stock: p.stock,
     trackStock: p.trackStock,
     lowStockThreshold: p.lowStockThreshold,
+    ...(withDesc ? { excerpt: productExcerpt(p.shortDescription ?? p.summaryDescription) } : {}),
   });
 
   if (productIdsParam) {

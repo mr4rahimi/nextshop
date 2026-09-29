@@ -24,6 +24,9 @@ import {
   normalizeRectBoxesConfig, rectBoxBackground, rectBoxTextColor,
   type RectBoxesConfig, type RectBoxItem,
 } from "@/components/store/RectBoxesSection";
+import {
+  CRAFT_DEFAULT, normalizeCraftConfig, type CraftSliderConfig,
+} from "@/components/store/CraftProductSliderSection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Widget {
@@ -3171,6 +3174,180 @@ function ProductShowcaseEditor({
   );
 }
 
+// ─── CraftProductSliderEditor ─────────────────────────────────────────────────
+function CraftProductSliderEditor({
+  config, setConfig, categories, brands,
+}: {
+  config: CraftSliderConfig;
+  setConfig: (c: CraftSliderConfig) => void;
+  categories: Category[];
+  brands: Brand[];
+}) {
+  const patch = (p: Partial<CraftSliderConfig>) => setConfig({ ...config, ...p });
+  const inputCls = "w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 dark:text-white";
+  const card = "bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4";
+  const title = (t: string) => (
+    <h3 className="font-black text-sm text-gray-900 dark:text-white flex items-center gap-2">
+      <span className="w-1.5 h-5 bg-sky-600 rounded-full" />
+      {t}
+    </h3>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* منبع محصولات */}
+      <div className={card}>
+        {title("محصولات از کجا بیایند؟")}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {([
+            { id: "manual" as const,   label: "انتخاب دستی",   desc: "از بین همه‌ی محصولات فروشگاه جستجو و انتخاب کنید؛ ترتیب نمایش همان ترتیب انتخاب است" },
+            { id: "category" as const, label: "یک دسته‌بندی", desc: "جدیدترین، پرفروش‌ترین یا انتخاب دستی از محصولات یک دسته" },
+            { id: "brand" as const,    label: "یک برند",      desc: "جدیدترین، پرفروش‌ترین یا انتخاب دستی از محصولات یک برند" },
+          ]).map(opt => {
+            const active = config.source === opt.id;
+            return (
+              <button key={opt.id} type="button"
+                onClick={() => patch({ source: opt.id })}
+                className={`text-right p-4 rounded-2xl border-2 transition-all ${
+                  active
+                    ? "border-sky-500 bg-sky-50 dark:bg-sky-500/10"
+                    : "border-gray-100 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/20"
+                }`}>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="text-sm font-black text-gray-900 dark:text-white">{opt.label}</span>
+                  {active && <span className="text-[10px] font-black text-sky-600">فعال ✓</span>}
+                </div>
+                <p className="text-[11px] text-gray-500 leading-relaxed">{opt.desc}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {config.source === "manual" ? (
+        <div className="space-y-3">
+          <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-2xl px-4 py-3">
+            <p className="text-xs text-sky-700 dark:text-sky-300 font-bold">
+              محصولات را جستجو و انتخاب کنید — ترتیب نمایش در اسلایدر همین ترتیب انتخاب است
+              ({(config.productIds ?? []).length.toLocaleString("fa-IR")} محصول انتخاب شده)
+            </p>
+          </div>
+          <ProductPicker
+            selectedIds={config.productIds ?? []}
+            setSelectedIds={ids => patch({ productIds: ids })}
+            accent="teal"
+          />
+        </div>
+      ) : config.source === "brand" ? (
+        <ProductsByBrandEditor
+          brands={brands}
+          brandId={config.brandId ?? ""}
+          onSelect={(id, t, slug) => patch({ brandId: id, brandTitle: t, brandSlug: slug })}
+          count={config.count ?? 8}
+          setCount={n => patch({ count: n })}
+          sortMode={(config.sortMode as SortMode) ?? "newest"}
+          setSortMode={m => patch({ sortMode: m })}
+          productIds={config.productIds ?? []}
+          setProductIds={ids => patch({ productIds: ids })}
+        />
+      ) : (
+        <ProductsByCategoryEditor
+          categories={categories}
+          categoryId={config.categoryId ?? ""}
+          setCategoryId={(id, t, slug) => patch({ categoryId: id, categoryTitle: t, categorySlug: slug })}
+          count={config.count ?? 8}
+          setCount={n => patch({ count: n })}
+          sortMode={(config.sortMode as SortMode) ?? "newest"}
+          setSortMode={m => patch({ sortMode: m })}
+          productIds={config.productIds ?? []}
+          setProductIds={ids => patch({ productIds: ids })}
+        />
+      )}
+
+      {/* متن‌ها و رنگ‌ها */}
+      <div className={card}>
+        {title("متن و رنگ‌بندی")}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">متن کوچک بالای عنوان</label>
+            <input className={inputCls} value={config.eyebrow ?? ""} placeholder="مثلاً: معرفی ویژه"
+              onChange={e => patch({ eyebrow: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">عنوان بخش <span className="font-bold text-gray-400">(اختیاری)</span></label>
+            <input className={inputCls} value={config.heading ?? ""} placeholder="مثلاً: دست‌سازه‌های منتخب"
+              onChange={e => patch({ heading: e.target.value })} />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <ColorField label="پس‌زمینه — رنگ شروع" value={config.bgFrom ?? CRAFT_DEFAULT.bgFrom} onChange={v => patch({ bgFrom: v })} />
+          <ColorField label="پس‌زمینه — رنگ پایان" value={config.bgTo ?? CRAFT_DEFAULT.bgTo} onChange={v => patch({ bgTo: v })} />
+          <ColorField label="رنگ تاکیدی (دکمه خرید)" value={config.accentColor ?? CRAFT_DEFAULT.accentColor} onChange={v => patch({ accentColor: v })} />
+        </div>
+        <p className="text-[11px] text-gray-400">رنگ نوشته‌ها خودکار بر اساس روشنی پس‌زمینه انتخاب می‌شود.</p>
+
+        <div>
+          <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">نمایش تصویر در مربع</label>
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              { id: "cover" as const,   label: "پر کردن کادر",  desc: "تصویر کل مربع را می‌پوشاند (ممکن است لبه‌ها بریده شوند)" },
+              { id: "contain" as const, label: "تصویر کامل",    desc: "کل تصویر روی زمینه‌ی رنگی کارت — مناسب عکس‌های بدون پس‌زمینه" },
+            ]).map(opt => (
+              <button key={opt.id} type="button" onClick={() => patch({ imageFit: opt.id })}
+                className={`text-right p-3 rounded-2xl border-2 transition-all ${config.imageFit === opt.id ? "border-sky-500 bg-sky-50 dark:bg-sky-500/10" : "border-gray-100 dark:border-white/5 hover:border-gray-300"}`}>
+                <span className="block text-sm font-black text-gray-900 dark:text-white">{opt.label}</span>
+                <span className="block text-[11px] text-gray-500 mt-1 leading-relaxed">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* رفتار اسلایدر */}
+      <div className={card}>
+        {title("رفتار اسلایدر")}
+        {([
+          { key: "showArrows" as const,     label: "نمایش فلش‌ها و شمارنده", desc: "زیر دکمه‌های خرید؛ کشیدن با انگشت همیشه فعال است" },
+          { key: "showBrandBadge" as const, label: "نمایش نام برند",         desc: "بالای عنوان محصول در باکس مشخصات" },
+          { key: "autoplay" as const,       label: "اسلاید خودکار",          desc: "با نگه داشتن اشاره‌گر روی اسلایدر موقتاً متوقف می‌شود" },
+        ]).map(f => (
+          <label key={f.key} className="flex items-center justify-between gap-4 p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 cursor-pointer hover:border-gray-300 dark:hover:border-white/20 transition-all">
+            <span className="min-w-0">
+              <span className="block text-sm font-black text-gray-900 dark:text-white">{f.label}</span>
+              <span className="block text-[11px] text-gray-500 mt-1 leading-relaxed">{f.desc}</span>
+            </span>
+            <input type="checkbox" checked={!!config[f.key]}
+              onChange={e => patch({ [f.key]: e.target.checked } as Partial<CraftSliderConfig>)}
+              className="w-5 h-5 rounded flex-shrink-0" style={{ accentColor: "#0284c7" }} />
+          </label>
+        ))}
+        {config.autoplay && (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-black text-gray-700 dark:text-gray-300">فاصله‌ی بین اسلایدها</label>
+              <span className="text-xs font-black text-sky-600 tabular-nums">
+                {((config.autoplayDelay ?? 5000) / 1000).toLocaleString("fa-IR")} ثانیه
+              </span>
+            </div>
+            <input type="range" min={AUTOPLAY_MIN} max={AUTOPLAY_MAX} step={500}
+              value={config.autoplayDelay ?? 5000}
+              onChange={e => patch({ autoplayDelay: Number(e.target.value) })}
+              className="w-full" style={{ accentColor: "#0284c7" }} />
+          </div>
+        )}
+      </div>
+
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4">
+        <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+          تصویر هر محصول مربع نمایش داده می‌شود و باکس کنارش (عنوان، قیمت، دکمه خرید و بخشی از
+          «توضیح کوتاه» محصول) در دسکتاپ دقیقاً هم‌قد تصویر است. در موبایل اسلایدر بالا و باکس
+          مشخصات زیر آن قرار می‌گیرد.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── SpacerEditor ─────────────────────────────────────────────────────────────
 /** فاصله‌ی پیش‌فرضی که صفحه اصلی (space-y-12) بین هر دو ویجت می‌گذارد */
 const HOME_GAP = 48;
@@ -3431,8 +3608,10 @@ export default function WidgetEditPage() {
   // RECT_BOXES
   const [rbConfig, setRbConfig] = useState<RectBoxesConfig>({ ...RB_DEFAULT, items: [] });
   const [rbUploadingIdx, setRbUploadingIdx] = useState<number | null>(null);
+  // CRAFT_PRODUCT_SLIDER
+  const [craftConfig, setCraftConfig] = useState<CraftSliderConfig>(() => normalizeCraftConfig({ source: "manual" }));
 
-const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION", "ADVANCED_SEARCH", "UNIQUE_STAR_HERO", "DIMENSIONAL_CARDS", "COVERFLOW_GALLERY", "SPACER", "PRODUCT_SHOWCASE", "CIRCLE_GALLERY", "RECT_BOXES"];  useEffect(() => {
+const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OFFERS", "PRODUCTS_BY_CATEGORY", "PRODUCTS_BY_BRAND", "FULL_BANNER", "DOUBLE_BANNER", "IMAGE_CONTENT", "IMAGE_CONTENT_DOUBLE", "LAST_VISITED", "HERO_SLIDER", "STORY", "LATEST_ARTICLES", "CALL_TO_ACTION", "ADVANCED_SEARCH", "UNIQUE_STAR_HERO", "DIMENSIONAL_CARDS", "COVERFLOW_GALLERY", "SPACER", "PRODUCT_SHOWCASE", "CIRCLE_GALLERY", "RECT_BOXES", "CRAFT_PRODUCT_SLIDER"];  useEffect(() => {
     fetch("/api/admin/widgets")
       .then(r => r.json())
       .then((widgets: Widget[]) => {
@@ -3547,6 +3726,9 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
           setSpacerConfig(normalizeSpacerConfig(w.config));
         } else if (w.type === "PRODUCT_SHOWCASE") {
           setShowcaseConfig(normalizeShowcaseConfig(w.config));
+        } else if (w.type === "CRAFT_PRODUCT_SLIDER") {
+          // ویجت تازه (config خالی) با «انتخاب دستی» شروع می‌شود
+          setCraftConfig(normalizeCraftConfig(w.config?.source ? w.config : { ...w.config, source: "manual" }));
         } else if (w.type === "RECT_BOXES") {
           // آیتم‌های ناقص هم نگه داشته می‌شوند تا ادمین بتواند کاملشان کند
           const n = normalizeRectBoxesConfig(w.config);
@@ -3583,6 +3765,14 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
         ? { ...c, categoryId: undefined, categoryTitle: undefined, categorySlug: undefined }
         : { ...c, brandId: undefined, brandTitle: undefined, brandSlug: undefined };
       if (c.sortMode !== "manual") config.productIds = [];
+    } else if (widget.type === "CRAFT_PRODUCT_SLIDER") {
+      const c = normalizeCraftConfig(craftConfig);
+      // فیلدهای منبعِ غیرفعال ذخیره نمی‌شوند تا config تمیز بماند
+      config = { ...c };
+      if (c.source !== "category") Object.assign(config, { categoryId: undefined, categoryTitle: undefined, categorySlug: undefined });
+      if (c.source !== "brand") Object.assign(config, { brandId: undefined, brandTitle: undefined, brandSlug: undefined });
+      if (c.source === "manual") config.sortMode = "manual";
+      if (config.sortMode !== "manual") config.productIds = [];
     } else if (widget.type === "COVERFLOW_GALLERY") {
       config = { ...cfConfig };
     } else if (widget.type === "DIMENSIONAL_CARDS") {
@@ -3672,6 +3862,7 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
     SPACER:               "ارتفاع فاصله‌ی خالی را برای دسکتاپ و موبایل تنظیم کنید",
     RECT_BOXES:           "باکس‌های افقی با عنوان، توضیح و تصویری که پایینش از کادر بیرون می‌زند",
     CIRCLE_GALLERY:       "تصاویر گرد لینک‌دار — قطر دایره، پس‌زمینه، فلش‌ها و اسلاید خودکار قابل تنظیم",
+    CRAFT_PRODUCT_SLIDER: "اسلایدر تصاویر مربع محصولات با باکس عنوان، قیمت، دکمه خرید و توضیحات — محصولات دستی یا از یک دسته/برند",
     PRODUCT_SHOWCASE:     "اسلایدر محصولات با کارت جدید — یک دسته یا برند انتخاب کنید و رفتار اسلایدر را تنظیم نمایید",
   };
 
@@ -4073,6 +4264,15 @@ const SUPPORTED = ["CATEGORIES", "NEWEST_PRODUCTS", "AMAZING_DEALS", "SPECIAL_OF
           setConfig={setCgConfig}
           uploadingIdx={cgUploadingIdx}
           setUploadingIdx={setCgUploadingIdx}
+        />
+      )}
+
+      {widget.type === "CRAFT_PRODUCT_SLIDER" && (
+        <CraftProductSliderEditor
+          config={craftConfig}
+          setConfig={setCraftConfig}
+          categories={categories}
+          brands={brands}
         />
       )}
 
