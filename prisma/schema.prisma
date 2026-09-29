@@ -810,6 +810,7 @@ model StoreSettings {
   productGridMobile        String   @default("single")
   chatSettings             Json?
   announcementBar          Json? // نوار اعلان بالای سایت — lib/announcementBar.ts
+  aiSettings               Json? // تنظیمات هوش مصنوعی (کلید GapGPT، مدل، حالت‌های تصویر) — lib/ai/settings.ts
   updatedAt                DateTime @updatedAt
 
   clubEnabled          Boolean @default(false)

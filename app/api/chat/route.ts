@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveGapgptKey } from "@/lib/ai/settings";
 import OpenAI from "openai";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateConversation, saveMessage } from "@/lib/chat-history";
@@ -402,7 +403,8 @@ export async function POST(req: NextRequest) {
     messages = messages.slice(-historyLimit);
   }
 
-  const apiKey = business.gapgptApiKey?.trim() || process.env.GAPGPT_API_KEY || "";
+  // کلید مشترک هوش مصنوعی (تنظیمات هوش مصنوعی ← کلید قدیمی چت ← env) — lib/ai/settings.ts
+  const apiKey = await resolveGapgptKey();
   const model = DEFAULT_MODEL;
   const client = createChatClient(apiKey);
 

@@ -123,7 +123,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     key: "media",
     label: "رسانه و آپلود",
     permissions: ["PANEL_CATALOG", "PANEL_CONTENT", "SEO_TASK_WORK", "CONTENT_TASK_WORK", "LINK_WORK"],
-    prefixes: ["/admin/media", "/api/admin/media", "/api/admin/upload"],
+    // استودیو تصویر هوش مصنوعی هم نوعی آپلود است — docs/features/ai-product-image.md
+    prefixes: ["/admin/media", "/api/admin/media", "/api/admin/upload", "/api/admin/ai-image"],
   },
   {
     key: "users",
@@ -158,6 +159,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
       "/admin/site-settings", "/api/admin/site-settings", "/api/admin/store-settings",
       "/admin/chat-settings", "/api/admin/chat-settings",
       "/admin/chat-history", "/api/admin/chat-history",
+      "/admin/ai-settings", "/api/admin/ai-settings",
     ],
   },
 ];

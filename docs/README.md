@@ -23,6 +23,7 @@
 | [هدر شیشه‌ای](features/glass-header.md) | سیستم هدرها، `registry.ts`، تنظیمات ظاهری |
 | [نوار اعلان](features/announcement-bar.md) | نوار باریک بالای همه‌ی صفحات، بستن توسط کاربر، ظرف چسبان مشترک با هدر |
 | [برگه‌های ثابت](features/pages.md) | پنل `/admin/pages` — قالب‌ها، شروع سریع، مسیر `/{slug}`، استایل محتوا |
+| [ساخت تصویر محصول با هوش مصنوعی](features/ai-product-image.md) | استودیو تصویر در فرم محصول (gpt-image-2 از GapGPT)، کار پس‌زمینه با poll، پردازش canvas در مرورگر، `/admin/ai-settings` با کلید جدای هر سایت |
 | [نظرات محصول و مقاله](features/reviews.md) | پنل `/admin/comments` — ثبت نظر بدون ورود، برچسب خریدار، تأیید ادمین، پاسخ فروشگاه، گفتگو زیر مقاله، اسکیمای Review و Comment |
 | [سایدبار پنل مدیریت](features/admin-sidebar.md) | درخت منو در `nav.tsx`، حالت جمع‌شونده، پنل شناور، جستجوی منو |
 | [ورود به پنل مدیریت](features/admin-login.md) | `/admin/login` — جدا بودن از اسکلت پنل، لایه‌های محافظت در `proxy.ts`، ظاهر تک‌حالته |

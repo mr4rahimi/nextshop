@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import AiImageStudio from "@/components/admin/product/AiImageStudio";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Category { id: string; title: string }
@@ -355,6 +356,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
   const [saving, setSaving]         = useState(false);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [uploadError, setUploadError]   = useState<string | null>(null);
+  const [aiStudioOpen, setAiStudioOpen] = useState(false);
   const [error, setError]           = useState<string | null>(null);
   const [success, setSuccess]       = useState(false);
 
@@ -676,6 +678,25 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
 
         {}
         <Section title="تصاویر" icon="🖼️">
+          {/* استودیو تصویر هوش مصنوعی — docs/features/ai-product-image.md */}
+          <button type="button" onClick={() => setAiStudioOpen(true)}
+            className="w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-l from-violet-600 to-blue-600 text-white text-sm font-black shadow shadow-blue-500/20 hover:opacity-90 transition-all">
+            ✨ ساخت تصویر حرفه‌ای با هوش مصنوعی
+            <span className="text-[11px] font-normal opacity-80">— از عکس گوشی</span>
+          </button>
+          <AiImageStudio
+            open={aiStudioOpen}
+            onClose={() => setAiStudioOpen(false)}
+            productTitle={form.title}
+            existingImages={[form.mainImage, ...form.images].filter(Boolean)}
+            onUse={async (file, target) => {
+              const url = await tryUpload(file, target === "main" ? "mainImage" : `gallery-new-${Date.now()}`);
+              if (!url) return false;
+              if (target === "main") set("mainImage", url);
+              else setForm(prev => ({ ...prev, images: [...prev.images, url] }));
+              return true;
+            }}
+          />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <UploadField label="تصویر اصلی" fieldKey="mainImage" value={form.mainImage} />
             <Field label="لینک ویدیو">
