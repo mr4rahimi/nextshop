@@ -32,6 +32,18 @@ async function getSmsConfig() {
   };
 }
 
+/**
+ * آیا پیامک پترنی واقعاً می‌رود؟ `sendPatternSms` در نبودِ تنظیمات بی‌صدا
+ * برمی‌گردد؛ ارسال‌های خودکاری که «ارسال‌شده» ثبت می‌کنند (مثل درخواست نظر)
+ * باید پیش از علامت‌زدن این را بپرسند.
+ */
+export async function getSmsReadiness(): Promise<{ ready: boolean; reason: string | null }> {
+  const { apiKey, lineNumber, enabled } = await getSmsConfig();
+  if (!enabled) return { ready: false, reason: "پیامک فروشگاه خاموش است" };
+  if (!apiKey || !lineNumber) return { ready: false, reason: "کلید یا خط پیامک تنظیم نشده" };
+  return { ready: true, reason: null };
+}
+
 export async function sendPatternSms(
   phone: string,
   patternCode: string,

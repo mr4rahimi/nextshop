@@ -122,7 +122,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     // (docs/plans/seo-marketing.md بخش ۱۰.۶، درس ۳).
     key: "media",
     label: "رسانه و آپلود",
-    permissions: ["PANEL_CATALOG", "PANEL_CONTENT", "SEO_TASK_WORK", "CONTENT_TASK_WORK", "LINK_WORK"],
+    permissions: ["PANEL_CATALOG", "PANEL_CONTENT", "SEO_TASK_WORK", "CONTENT_TASK_WORK", "LINK_WORK", "TOOLS_MANAGE"],
+    // عکس‌های لندینگ‌ساز هم از همین آپلود می‌گذرند (TOOLS_MANAGE).
     // استودیو تصویر هوش مصنوعی هم نوعی آپلود است — docs/features/ai-product-image.md
     prefixes: ["/admin/media", "/api/admin/media", "/api/admin/upload", "/api/admin/ai-image"],
   },
@@ -137,6 +138,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     label: "باشگاه، پیامک و کمپین",
     permissions: ["PANEL_CLUB"],
     prefixes: ["/admin/club", "/api/admin/club", "/admin/sms", "/api/admin/sms"],
+  },
+  {
+    // ابزارها — docs/features/tools.md. هر route مجوز دقیق را خودش چک می‌کند
+    key: "tools",
+    label: "ابزارها",
+    permissions: ["TOOLS_VIEW", "TOOLS_MANAGE"],
+    prefixes: ["/admin/tools", "/api/admin/tools"],
   },
   {
     key: "integration",

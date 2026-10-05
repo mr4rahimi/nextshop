@@ -276,6 +276,8 @@ export const config = {
    * فراخوانی است، آن یکی برای درستی.
    */
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|uploads/|upload/|assets/|api/internal/|tq/).*)",
+    // `s/` و `r/` (لینک کوتاه و ثبت نظر — docs/features/tools.md) عمداً بیرون‌اند:
+    // QR چاپ‌شده نباید به ریدایرکت‌های مدیریت‌شده یا کوکی منبع ورود گره بخورد.
+    "/((?!_next/static|_next/image|favicon.ico|uploads/|upload/|assets/|api/internal/|tq/|s/|r/).*)",
   ],
 };

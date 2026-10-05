@@ -12,6 +12,7 @@
  */
 
 import { ACCOUNTING_HELP } from "@/components/admin/accounting/help";
+import { TOOLS_HELP } from "@/components/admin/tools/help";
 
 export interface HelpSection {
   heading: string;
@@ -886,6 +887,8 @@ export const HELP = {
   },
   // ── حسابداری — متن‌ها در components/admin/accounting/help.ts ──
   ...ACCOUNTING_HELP,
+  // ── ابزارها — متن‌ها در components/admin/tools/help.ts ──
+  ...TOOLS_HELP,
 } satisfies Record<string, HelpTopic>;
 
 export type HelpKey = keyof typeof HELP;

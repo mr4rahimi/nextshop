@@ -9,6 +9,7 @@ import { refundOrderPoints } from "@/lib/club/points";
 import { releaseCoupon } from "@/lib/club/coupons";
 import { syncDealSafe } from "@/lib/worklist/deals";
 import { emitAccEventSafe, emitPaymentsReceived } from "@/lib/accounting/events";
+import { enqueueReviewRequest } from "@/lib/tools/reviews";
 
 export const runtime = "nodejs";
 
@@ -124,6 +125,8 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
     void processOrderForClub(id);
     // سود و پورسانت کارتابل — idempotent، مسیر سفارش را نمی‌شکند
     syncDealSafe(id);
+    // درخواست ثبت نظر بعد از تحویل — خودش تنظیمات و تکرار را می‌سنجد (docs/features/tools.md بخش ۴)
+    void enqueueReviewRequest(id, data.status);
 
     // سفارش لغو یا مرجوع شد → امتیاز خرج‌شده برگردد.
     // بدون این، مشتری هم سفارشش لغو می‌شود هم امتیازش می‌سوزد.

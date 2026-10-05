@@ -13,5 +13,9 @@ export async function register() {
     // حسابداری — یادآوری سررسید چک. مستندات: docs/plans/accounting.md بخش ۹.۲
     const { startAccountingScheduler } = await import("@/lib/accounting/scheduler");
     startAccountingScheduler();
+
+    // ابزارها — پیامک درخواست ثبت نظر. مستندات: docs/features/tools.md بخش ۴
+    const { startToolsScheduler } = await import("@/lib/tools/scheduler");
+    startToolsScheduler();
   }
 }

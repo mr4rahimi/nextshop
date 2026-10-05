@@ -11,10 +11,10 @@ import {
   ArrowDownUp, Blocks, BookOpen, BriefcaseBusiness, Calculator, ChartColumn, ChevronDown, ClipboardList,
   Crown, ExternalLink, FolderOpen, Image, LayoutDashboard, LayoutGrid, ListOrdered, LogOut, Menu,
   MessageCircle, MessageSquare, MessageSquareText, MessagesSquare, Package, Palette, PanelBottom, Plug,
-  Rocket, ScrollText, SearchCheck, Settings, ShieldCheck, ShoppingCart, Tag, Truck, Users, Wallet,
+  Rocket, ScrollText, SearchCheck, Settings, ShieldCheck, ShoppingCart, Tag, Truck, Users, Wallet, Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { WORKLIST_APPS } from "./apps";
+import { TOOLS_APPS, WORKLIST_APPS } from "./apps";
 
 /** یک زیرمنو. `target` فقط برای لینک‌های بیرونی مثل شماره‌گیر است. */
 export interface NavChild {
@@ -98,6 +98,7 @@ export const ICONS = {
   accounting: Calculator,
   club: Crown,
   seo: SearchCheck,
+  tools: Wrench,
 } satisfies Record<string, LucideIcon>;
 
 export const MENU_GROUPS: NavGroup[] = [
@@ -267,6 +268,19 @@ export const MENU_GROUPS: NavGroup[] = [
     ],
   },
   {
+    // ابزارها — docs/features/tools.md. زیرمنو از همان فهرست کاشی‌ها
+    label: "ابزارها",
+    items: [
+      {
+        href: "/admin/tools", label: "ابزارها", icon: "tools",
+        children: [
+          { href: "/admin/tools", label: "همه‌ی ابزارها" },
+          ...TOOLS_APPS.map((a) => ({ href: a.href, label: a.label })),
+        ],
+      },
+    ],
+  },
+  {
     label: "سئو",
     items: [
       {
@@ -330,6 +344,9 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   "attribute-groups": "گروه ویژگی‌ها", "bulk-price": "ویرایش گروهی قیمت",
   "bulk-stock": "ویرایش گروهی موجودی", "bulk-edit": "ویرایش گروهی",
   login: "ورود",
+  // ابزارها — docs/features/tools.md
+  tools: "ابزارها", qr: "کیوآر کد", landings: "لندینگ‌ساز",
+  "tools/links": "لینک کوتاه", "tools/reviews": "درخواست ثبت نظر",
   // حسابداری — docs/plans/accounting.md
   accounting: "حسابداری", parties: "اشخاص", treasury: "صندوق و بانک",
   vouchers: "اسناد", accounts: "سرفصل حساب‌ها", opening: "اول دوره",

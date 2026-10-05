@@ -195,6 +195,9 @@ export const SKIP_PREFIXES = [
   "/assets",
   "/static",
   "/.well-known",
+  // لینک کوتاه و ثبت نظر — docs/features/tools.md
+  "/s",
+  "/r",
 ];
 
 export const SKIP_EXACT = ["/favicon.ico", "/robots.txt", "/sitemap.xml", "/manifest.json"];

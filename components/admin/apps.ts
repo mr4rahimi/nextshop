@@ -14,7 +14,7 @@ import {
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
-  CalendarDays, Lock,
+  CalendarDays, Lock, QrCode, LayoutTemplate, Star,
 } from "lucide-react";
 
 /** رنگ کاشی — کلاس‌ها کامل نوشته شده‌اند تا Tailwind پیدایشان کند */
@@ -120,6 +120,17 @@ export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting/events", label: "رویدادهای مالی", icon: Zap, tone: "red", perm: ["ACC_VIEW", "ACC_SETTINGS"], img: "acc-events" },
   { href: "/admin/accounting/settings", label: "تنظیمات", icon: Settings, tone: "slate", perm: ["ACC_VIEW", "ACC_SETTINGS"], img: "acc-settings" },
   { href: "/admin/accounting/settings?tab=years", label: "بستن سال مالی", icon: Lock, tone: "slate", perm: ["ACC_SETTINGS"], img: "acc-closing" },
+];
+
+// ── ابزارها — docs/features/tools.md ─────────────────────────────────────
+// ابزار تازه = یک ردیف اینجا + صفحه‌ی خودش زیر /admin/tools. صفحه‌ی خانه‌ی
+// ابزارها و زیرمنوی سایدبار هر دو از همین فهرست ساخته می‌شوند.
+
+export const TOOLS_APPS: AppItem[] = [
+  { href: "/admin/tools/qr", label: "کیوآر کد", icon: QrCode, tone: "violet", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
+  { href: "/admin/tools/links", label: "لینک کوتاه", icon: Link2, tone: "blue", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
+  { href: "/admin/tools/landings", label: "لندینگ‌ساز", icon: LayoutTemplate, tone: "emerald", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
+  { href: "/admin/tools/reviews", label: "درخواست ثبت نظر", icon: Star, tone: "amber", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
 ];
 
 // ── تطبیق مسیر ────────────────────────────────────────────────────────────

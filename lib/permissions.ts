@@ -255,6 +255,23 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    // ابزارها — لینک کوتاه، QR، لندینگ‌ساز، درخواست نظر. docs/features/tools.md
+    key: "tools",
+    label: "ابزارها",
+    items: [
+      {
+        key: "TOOLS_VIEW",
+        label: "دیدن ابزارها و آمارشان",
+        hint: "ساخت و دانلود QR ثابت بدون ذخیره، کپی لینک‌ها",
+      },
+      {
+        key: "TOOLS_MANAGE",
+        label: "ساخت و ویرایش لینک کوتاه، QR، لندینگ و تنظیمات درخواست نظر",
+        hint: "تغییر مقصد لینک یا QR پویا روی همه‌ی چاپ‌شده‌ها اثر می‌گذارد",
+      },
+    ],
+  },
+  {
     key: "score",
     label: "امتیاز و پاداش",
     items: [

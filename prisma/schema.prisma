@@ -323,6 +323,8 @@ model Order {
   items            OrderItem[]
   payments         Payment[]
   installments     OrderCreditInstallment[]
+  /// پیامک درخواست ثبت نظر بعد از تحویل — docs/features/tools.md بخش ۴
+  reviewRequest    ReviewRequest?
 
   @@index([userId])
   @@index([status])
@@ -4611,4 +4613,204 @@ model SeoAnalyticsSettings {
   umamiShareSlug  String?
   updatedAt       DateTime @updatedAt
   updatedByName   String?
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ابزارها — لینک کوتاه، کیوآر کد، لندینگ‌ساز، درخواست ثبت نظر
+// مستندات: docs/features/tools.md
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ShortLinkKind {
+  /// ساخته‌شده در بخش لینک کوتاه
+  MANUAL
+  /// پشت یک QR پویا — از فهرست لینک‌ها پنهان است و از بخش QR مدیریت می‌شود
+  QR
+}
+
+/// لینک کوتاه `/s/<code>`. **مقصد قابل تغییر است، کد نه** — ممکن است چاپ شده باشد.
+/// کد پس از حذف هم آزاد نمی‌شود (یکتایی روی کل جدول است، نه فقط ردیف‌های زنده).
+model ShortLink {
+  id            String        @id @default(cuid())
+  code          String        @unique
+  title         String
+  targetUrl     String
+  kind          ShortLinkKind @default(MANUAL)
+  /// هنگام ریدایرکت به مقصد http(s) اضافه می‌شوند، مگر مقصد خودش داشته باشد
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  isActive      Boolean       @default(true)
+  /// پایان همان روز به ساعت تهران
+  expiresAt     DateTime?
+  clickCount    Int           @default(0)
+  /// پیش‌نمایش تلگرام/واتساپ و خزنده‌ها — جدا از کلیک انسانی
+  botCount      Int           @default(0)
+  lastClickedAt DateTime?
+  createdById   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+
+  clicks ShortLinkClick[]
+  qrCode QrCode?
+
+  @@index([kind, deletedAt, createdAt])
+}
+
+/// هر کلیک انسانی. **IP ذخیره نمی‌شود** — لازم نیست و نگه‌داشتنش فقط ریسک است.
+model ShortLinkClick {
+  id           String   @id @default(cuid())
+  linkId       String
+  at           DateTime @default(now())
+  /// mobile | desktop | tablet
+  device       String
+  os           String
+  referrerHost String?
+
+  link ShortLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([linkId, at])
+}
+
+/// کیوآر کد ذخیره‌شده. فقط تنظیمات ذخیره می‌شود؛ تصویر هر بار در مرورگر ساخته می‌شود.
+/// نوع و ثابت/پویا بودن پس از ساخت عوض نمی‌شود — پویای چاپ‌شده نباید ثابت شود.
+model QrCode {
+  id          String    @id @default(cuid())
+  title       String
+  /// url | tel | sms | whatsapp | wifi | vcard | geo | text — lib/tools/qr-content.ts
+  contentType String
+  content     Json
+  isDynamic   Boolean   @default(false)
+  shortLinkId String?   @unique
+  /// رنگ‌ها، لوگو (data URL)، متن زیر — lib/tools/qr-content.ts
+  style       Json
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  shortLink ShortLink? @relation(fields: [shortLinkId], references: [id])
+
+  @@index([deletedAt, createdAt])
+}
+
+enum ToolLandingStatus {
+  DRAFT
+  PUBLISHED
+}
+
+/// لندینگ بلوکی ساده `/l/<slug>` (به سبک link-in-bio) — نه سایت‌ساز.
+/// **با `LandingPage` (صفحات فرود سئوی دسته‌ها) فرق دارد.**
+/// پیش‌نویس و نسخه‌ی منتشرشده جدا نگه داشته می‌شوند؛ ویرایش فقط پیش‌نویس را عوض می‌کند.
+model ToolLanding {
+  id              String            @id @default(cuid())
+  /// تا اولین انتشار قابل تغییر، بعد قفل؛ پس از حذف هم آزاد نمی‌شود
+  slug            String            @unique
+  title           String
+  status          ToolLandingStatus @default(DRAFT)
+  theme           Json
+  draftBlocks     Json
+  publishedBlocks Json?
+  publishedTheme  Json?
+  publishedAt     DateTime?
+  metaTitle       String?
+  metaDescription String?
+  /// تصویر پیش‌نمایش لینک در تلگرام/واتساپ — آدرس آپلود
+  ogImage         String?
+  /// پیش‌فرض روشن: لندینگ نباید با صفحات اصلی فروشگاه رقابت کند
+  noindex         Boolean           @default(true)
+  viewCount       Int               @default(0)
+  lastViewedAt    DateTime?
+  createdById     String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?
+
+  @@index([deletedAt, updatedAt])
+}
+
+/// تنظیمات درخواست ثبت نظر — تک‌ردیفی (`id = "singleton"`).
+model ReviewRequestSetting {
+  id            String    @id @default("singleton")
+  isEnabled     Boolean   @default(false)
+  /// فقط سفارش‌هایی که بعد از این لحظه تحویل شدند — روشن‌کردن نباید به مشتری‌های قدیمی پیامک بزند
+  enabledAt     DateTime?
+  /// آدرس صفحه‌ی مکان در هر سکو — هرکدام اختیاری، فقط https
+  neshanUrl     String?
+  baladUrl      String?
+  googleUrl     String?
+  /// ترتیب نمایش سکوها: ["NESHAN","BALAD","GOOGLE"]
+  platformOrder Json      @default("[\"NESHAN\",\"BALAD\",\"GOOGLE\"]")
+  /// محصولات همان سفارش هم برای نظر در خود سایت پیشنهاد شوند
+  askProducts   Boolean   @default(true)
+  /// کد پترن پیامک (ایران پیامک) — متغیرها: name و link
+  patternCode   String?
+  /// VARIABLE: لینک اختصاصی در متغیر link · FIXED: لینک عمومی ثابت داخل متن پترن
+  linkMode      String    @default("VARIABLE")
+  /// DELIVERED | COMPLETED — کدام وضعیت سفارش «تحویل» حساب شود
+  triggerStatus String    @default("DELIVERED")
+  /// فاصله از تحویل تا ارسال (ساعت)
+  delayHours    Int       @default(24)
+  /// بازه‌ی مجاز ارسال به ساعت تهران
+  sendFrom      Int       @default(10)
+  sendTo        Int       @default(20)
+  /// هر شماره حداکثر یک‌بار در این چند روز
+  cooldownDays  Int       @default(90)
+  /// متن صفحه‌ی انتخاب سکو — خنثی، نه «اگر راضی بودید» (review gating ممنوع است)
+  pageTitle     String?
+  pageMessage   String?
+  updatedAt     DateTime  @updatedAt
+}
+
+enum ReviewRequestStatus {
+  /// در صف — `dueAt` نرسیده یا بیرون از بازه‌ی ساعت است
+  PENDING
+  SENT
+  FAILED
+  /// ارسال نشد: تکراری در دوره، شماره‌ی نامعتبر، لغو اشتراک، دیر شده
+  SKIPPED
+}
+
+/// یک پیامک درخواست نظر. **یکتایی `orderId` قفل اتمی است** — هر سفارش حداکثر یک پیامک.
+model ReviewRequest {
+  id        String              @id @default(cuid())
+  orderId   String              @unique
+  userId    String
+  phone     String
+  name      String?
+  /// توکن ۶ کاراکتری لینک `/r/<token>`
+  token     String              @unique
+  status    ReviewRequestStatus @default(PENDING)
+  reason    String?
+  dueAt     DateTime
+  sentAt    DateTime?
+  openedAt  DateTime?
+  createdAt DateTime            @default(now())
+
+  order  Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  clicks ReviewPlatformClick[]
+
+  @@index([status, dueAt])
+  @@index([phone, sentAt])
+}
+
+enum ReviewPlatform {
+  NESHAN
+  BALAD
+  GOOGLE
+  /// نظر روی محصولات خود فروشگاه
+  SITE
+}
+
+/// کلیک روی دکمه‌ی هر سکو. `requestId` خالی یعنی لینک عمومی `/r/shop`.
+model ReviewPlatformClick {
+  id        String         @id @default(cuid())
+  requestId String?
+  platform  ReviewPlatform
+  at        DateTime       @default(now())
+
+  request ReviewRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  @@index([platform, at])
+  @@index([requestId])
 }

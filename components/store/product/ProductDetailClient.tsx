@@ -208,6 +208,13 @@ export default function ProductDetailClient({ product, reviewStats, categoryRela
   useEffect(() => { addToLastVisited(product.id); }, [product.id]);
 
   const [activeTab, setActiveTab] = useState<"overview" | "expert" | "specs" | "reviews" | "faq">("specs");
+
+  // `#reviews` (لینک پیامک درخواست نظر — docs/features/tools.md بخش ۴) زبانه‌ی نظرات را باز می‌کند
+  useEffect(() => {
+    if (window.location.hash !== "#reviews") return;
+    setActiveTab("reviews");
+    requestAnimationFrame(() => document.getElementById("tab-btn-reviews")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, []);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(null);
 
