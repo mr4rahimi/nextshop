@@ -135,8 +135,8 @@ export default function LandingEditor({ id }: { id: string }) {
       await api(`/api/admin/tools/landings/${id}`, { method: "PATCH", json: { blocks, theme } });
       const r = await fetch(`/api/admin/tools/landings/${id}/publish`, { method: "POST" });
       const d = await r.json().catch(() => ({}));
-      if (r.status === 422) setPublishErrors(d.errors ?? [d.error]);
-      else if (!r.ok) setPublishErrors([d.error ?? "منتشر نشد"]);
+      if (d.ok === false) setPublishErrors(d.errors ?? [d.error]);
+      else if (!r.ok || !d.id) setPublishErrors([d.error ?? "منتشر نشد"]);
       else {
         setL(d);
         setSave("saved");

@@ -7,14 +7,20 @@ export const runtime = "nodejs";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** انتشار — پیش‌نویس روی نسخه‌ی عمومی کپی می‌شود. خطاها با شماره‌ی بلوک (۴۲۲). */
+/**
+ * انتشار — پیش‌نویس روی نسخه‌ی عمومی کپی می‌شود. خطاها با شماره‌ی بلوک.
+ *
+ * ⚠️ ایرادهای انتشار با **۲۰۰ و `ok: false`** برمی‌گردند نه ۴۲۲: CDN جلوی بعضی
+ * سایت‌ها (ParsPack روی 9dm) بدنه‌ی هر پاسخ ۴xx را با صفحه‌ی HTML خودش عوض
+ * می‌کند و فهرست ایرادها به ویرایشگر نمی‌رسید.
+ */
 export async function POST(_req: Request, ctx: Ctx) {
   const g = await toolsGuard("manage");
   if (!g.ok) return g.res;
   const { id } = await ctx.params;
   try {
     const r = await publishLanding(id);
-    if (!r.ok) return NextResponse.json({ error: "پیش از انتشار این‌ها را درست کنید", errors: r.errors }, { status: 422 });
+    if (!r.ok) return NextResponse.json({ ok: false, error: "پیش از انتشار این‌ها را درست کنید", errors: r.errors });
     logActivityAsync({ action: "UPDATE", entity: "OTHER", entityId: id, entityTitle: r.landing.title, summary: `لندینگ /l/${r.landing.slug} منتشر شد` });
     return NextResponse.json(r.landing);
   } catch (e) {

@@ -375,7 +375,7 @@ function CallbackForm({
         body: JSON.stringify({ phone, name, website: trap }),
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d.error ?? "ارسال نشد");
+      if (!r.ok || d.ok !== true) throw new Error(d.error ?? "ارسال نشد");
       setState({ kind: "done" });
     } catch (err) {
       setState({ kind: "error", msg: err instanceof Error ? err.message : "ارسال نشد" });

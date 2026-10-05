@@ -162,6 +162,9 @@ export async function enqueueReviewRequest(orderId: string, newStatus: string): 
     const ok = s.triggerStatus === "COMPLETED" ? newStatus === "COMPLETED" : newStatus === "DELIVERED" || newStatus === "COMPLETED";
     if (!ok) return;
 
+    // پیش‌بررسی فقط برای تمیز ماندن لاگ؛ قفل واقعی همان یکتایی orderId است
+    if (await prisma.reviewRequest.findUnique({ where: { orderId }, select: { id: true } })) return;
+
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       select: { userId: true, user: { select: { phone: true, firstName: true, lastName: true } } },
