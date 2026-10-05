@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import BrandPageClient from "@/components/store/brands/BrandPageClient";
 import { SITE_URL, buildBaseMetadata, buildBreadcrumbSchema, buildItemListSchema, canonicalUrl } from "@/lib/seo";
 import { serialize } from "@/lib/serialize";
+import { getBrandData } from "@/lib/brand-data";
 import { fetchCatalog, analyzeListingParams, listingIndexPolicy } from "@/lib/catalog";
 
 type SP = Record<string, string | string[] | undefined>;
@@ -11,13 +12,12 @@ interface Props { params: Promise<{ slug: string }>; searchParams: Promise<SP> }
 
 const PAGE_SIZE = 12;
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-
 async function getBrand(slug: string) {
-  const res = await fetch(`${BASE_URL}/api/store/brands/${slug}`, { next: { revalidate: 60 } });
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    return await getBrandData(slug);
+  } catch {
+    return null;
+  }
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
