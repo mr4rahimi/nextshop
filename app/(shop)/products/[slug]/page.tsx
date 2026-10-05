@@ -133,7 +133,11 @@ async function getProduct(slug: string) {
 
     if (!product) return null;
 
-    // related products
+    /**
+     * محصولات مرتبط. کلیدی که ذخیره نشده یعنی **روشن** — `{}` پیش‌فرض ستون بود
+     * و ۲۸۰۴ از ۲۸۰۵ محصول مهام همین را داشتند، پس صفحه‌ی محصول بن‌بست بود
+     * و به هیچ محصول دیگری لینک نمی‌داد (ممیزی مهر ۱۴۰۵). خاموشِ صریح محترم است.
+     */
     const relatedSettings = (product.relatedSettings ?? {}) as {
       categoryEnabled?: boolean;
       categorySort?: string;
@@ -144,7 +148,7 @@ async function getProduct(slug: string) {
     let categoryRelated: any[] = [];
     let brandRelated: any[] = [];
 
-    if (relatedSettings.categoryEnabled && product.categoryId) {
+    if ((relatedSettings.categoryEnabled ?? true) && product.categoryId) {
       categoryRelated = serialize(
         await prisma.product.findMany({
           where: {
@@ -193,7 +197,7 @@ async function getProduct(slug: string) {
       );
     }
 
-    if (relatedSettings.brandEnabled && product.brandId) {
+    if ((relatedSettings.brandEnabled ?? true) && product.brandId) {
       brandRelated = serialize(
         await prisma.product.findMany({
           where: {
@@ -571,14 +575,16 @@ export default async function ProductDetailPage({
           رد می‌کند)، پس اینجا مستقیم ساخته می‌شود و React به head منتقلش می‌کند */}
       <meta property="og:type" content="product" />
 
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(
-            productSchema
-          ),
-        }}
-      />
+      {productSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              productSchema
+            ),
+          }}
+        />
+      )}
 
       <script
         type="application/ld+json"

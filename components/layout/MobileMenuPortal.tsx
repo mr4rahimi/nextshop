@@ -4,18 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-interface Sub { id: string; title: string; slug: string; imageUrl: string | null; }
-interface MegaCat {
-  id: string; isActive: boolean;
-  category: { id: string; title: string; slug: string; imageUrl: string | null; children: Sub[]; };
-}
-interface MenuItem { id: string; title: string; url: string | null; openInNewTab: boolean; }
+import type { HeaderMenuData } from "@/lib/headerMenu";
 
 export default function MobileMenuPortal({
   logoUrl,
   siteName,
   allowDesktop = false,
   glass = false,
+  menu,
 }: {
   logoUrl?: string | null;
   siteName?: string | null;
@@ -23,17 +19,11 @@ export default function MobileMenuPortal({
   allowDesktop?: boolean;
   /** حالت شیشه‌ای شفاف */
   glass?: boolean;
+  /** داده‌ی منو — در `Header` سمت سرور خوانده می‌شود */
+  menu: HeaderMenuData;
 }) {  const [open, setOpen]         = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [megaCats, setMegaCats] = useState<MegaCat[]>([]);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-
-  useEffect(() => {
-    fetch("/api/store/header-menu").then(r => r.json()).then(d => {
-      setMegaCats(d.megaMenuCats ?? []);
-      setMenuItems(d.menuItems ?? []);
-    });
-  }, []);
+  const { megaMenuCats: megaCats, menuItems } = menu;
 
   useEffect(() => {
     const toggle = () => setOpen(o => !o);

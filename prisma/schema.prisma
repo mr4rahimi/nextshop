@@ -772,6 +772,10 @@ model StoreSettings {
   siteFavicon              String?
   siteDescription          String?
   siteKeywords             String?
+  /// عنوان سئوی صفحه‌ی اصلی (<title>)؛ خالی = نام فروشگاه
+  homeSeoTitle             String?
+  /// H1 صفحه‌ی اصلی؛ خالی = نام فروشگاه. صفحه‌ی اصلی ویجتی است و H1 دیگری ندارد
+  homeH1                   String?
   siteEmail                String?
   sitePhone                String?
   siteAddress              String?

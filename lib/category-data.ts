@@ -77,6 +77,8 @@ export async function getCategoryData(slug: string) {
     parent: category.parent,
     children: category.children,
     brands,
+    // تعداد محصول فعال دسته و زیردسته‌ها — دسته‌ی صفر noindex می‌شود (soft-404)
+    productCount: conditionRows.reduce((n, r) => n + r._count._all, 0),
     // کمتر از دو وضعیت یعنی فیلتر بی‌معنی است — خالی برمی‌گردد
     conditions:
       conditionRows.length > 1

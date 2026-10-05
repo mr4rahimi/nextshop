@@ -1,10 +1,6 @@
-export function slugify(text: string) {
-  return text
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^\u0600-\u06FFa-z0-9\-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
+/**
+ * نام قدیمی — حالا همان مولد واحد `lib/slug.ts` (فارسی → لاتین).
+ * قبلاً اینجا حروف فارسی نگه داشته می‌شد و فرم محصول حذفشان می‌کرد؛ دو قاعده
+ * برای یک چیز. اسلاگ‌های موجود دست نمی‌خورند، فقط ساخت تازه یکدست می‌شود.
+ */
+export { slugify, slugifyDraft } from "./slug";

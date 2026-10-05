@@ -76,7 +76,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     siteName:    settings?.storeName || undefined,
     path:        policy.canonicalPath,
     canonicalPath: policy.canonicalPath,
-    noIndex:     policy.kind === "filtered",
+    // دسته‌ی بی‌محصول برای گوگل soft-404 است؛ لینک‌هایش (به والد) دنبال می‌شوند
+    noIndex:     policy.kind === "filtered" || category.productCount === 0,
     followWhenNoIndex: true,
   });
 }

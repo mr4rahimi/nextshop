@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { slugify } from "@/lib/slugify";
+import { slugify, slugifyDraft } from "@/lib/slug";
 
 const EMPTY_FORM = {
   title: "", slug: "", logoUrl: "", description: "",
@@ -128,7 +128,7 @@ export default function BrandsPage() {
                 <input
                   required
                   value={form.slug}
-                  onChange={e => handleChange("slug", slugify(e.target.value))}
+                  onChange={e => handleChange("slug", slugifyDraft(e.target.value))}
                   placeholder="samsung"
                   dir="ltr"
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"

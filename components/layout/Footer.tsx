@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { telHref } from "@/lib/tel";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -173,7 +174,7 @@ export default function Footer() {
 
                     <div className="space-y-3">
                       {settings.sitePhone && (
-                        <a href={`tel:${settings.sitePhone}`}
+                        <a href={telHref(settings.sitePhone) ?? undefined}
                           className="flex items-center gap-3 text-sm text-gray-500 hover:text-white transition-colors group">
                           <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary-500/20 group-hover:border-primary-500/30 transition-all">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

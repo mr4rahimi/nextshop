@@ -1,0 +1,462 @@
+[
+ {
+  "url": "https://mahamprint.com/",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-09-24T00:17:29Z",
+  "googleCanonical": "https://mahamprint.com/",
+  "userCanonical": "https://mahamprint.com/",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/categories/printer",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-08-20T08:49:22Z",
+  "googleCanonical": "https://mahamprint.com/categories/printer",
+  "userCanonical": null,
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/categories/label-printer",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-08-20T08:49:30Z",
+  "googleCanonical": "https://mahamprint.com/categories/label-printer",
+  "userCanonical": "https://mahamprint.com/categories/label-printer",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/categories/scanner",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-07-04T02:01:35Z",
+  "googleCanonical": "https://mahamprint.com/categories/scanner",
+  "userCanonical": "https://mahamprint.com/categories/scanner",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/categories/pademza",
+  "verdict": "NEUTRAL",
+  "coverage": "Discovered - currently not indexed",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/categories/toner",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-07-14T18:38:00Z",
+  "googleCanonical": "https://mahamprint.com/categories/toner",
+  "userCanonical": "https://mahamprint.com/categories/toner",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/products",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-06-27T11:38:57Z",
+  "googleCanonical": "https://mahamprint.com/products",
+  "userCanonical": null,
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/mag",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-06-19T03:23:40Z",
+  "googleCanonical": "https://mahamprint.com/mag",
+  "userCanonical": null,
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/brands/hp",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-08-17T21:37:45Z",
+  "googleCanonical": "https://mahamprint.com/brands/hp",
+  "userCanonical": "https://mahamprint.com/brands/hp",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/products/---hp--mfp-m236dw",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-07-07T10:44:31Z",
+  "googleCanonical": "https://mahamprint.com/products/---hp--mfp-m236dw",
+  "userCanonical": "https://mahamprint.com/products/---hp--mfp-m236dw",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/products/----hp-mfp-m-136-w",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-07-13T23:44:35Z",
+  "googleCanonical": "https://mahamprint.com/products/----hp-mfp-m-136-w",
+  "userCanonical": "https://mahamprint.com/products/----hp-mfp-m-136-w",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/products/---epson--t664",
+  "verdict": "NEUTRAL",
+  "coverage": "Discovered - currently not indexed",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/--nikita-pbd-9s",
+  "verdict": "NEUTRAL",
+  "coverage": "Discovered - currently not indexed",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/-----1000---magicard",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/---panasonic-pt-lw373",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/--avision--ad6090",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/----hp-m402dn",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-07-29T07:50:35Z",
+  "googleCanonical": "https://mahamprint.com/products/----hp-m402dn",
+  "userCanonical": "https://mahamprint.com/products/----hp-m402dn",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/products/---hp--m377dw",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/------hsm--b24",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-07-07T06:17:09Z",
+  "googleCanonical": "https://mahamprint.com/products/------hsm--b24",
+  "userCanonical": "https://mahamprint.com/products/------hsm--b24",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/products/--gtx-1650-ventus-xs-oc-d5-4g",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/-kodak-i1120",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-07-02T12:02:14Z",
+  "googleCanonical": "https://mahamprint.com/products/-kodak-i1120",
+  "userCanonical": "https://mahamprint.com/products/-kodak-i1120",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/products/---oscar----pos88c",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/---hp-251dw",
+  "verdict": "NEUTRAL",
+  "coverage": "Discovered - currently not indexed",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/--sharp-cs-4194hc",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/--------canon---pixma-g3410",
+  "verdict": "NEUTRAL",
+  "coverage": "Discovered - currently not indexed",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/-hp-85a",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-09-07T03:13:32Z",
+  "googleCanonical": "https://mahamprint.com/products/-hp-85a",
+  "userCanonical": "https://mahamprint.com/products/-hp-85a",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/products/--casio-hr-100tm",
+  "verdict": "NEUTRAL",
+  "coverage": "Discovered - currently not indexed",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/---ct-780",
+  "verdict": "NEUTRAL",
+  "coverage": "Discovered - currently not indexed",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/products/---scope-180x180cm",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-07-07T04:01:45Z",
+  "googleCanonical": "https://mahamprint.com/products/---scope-180x180cm",
+  "userCanonical": "https://mahamprint.com/products/---scope-180x180cm",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/products/-sharp-mx452-ps",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-07-15T04:25:41Z",
+  "googleCanonical": "https://mahamprint.com/products/-sharp-mx452-ps",
+  "userCanonical": "https://mahamprint.com/products/-sharp-mx452-ps",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/products/--pro-region-2-1tb",
+  "verdict": "NEUTRAL",
+  "coverage": "Discovered - currently not indexed",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/mag/-------",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/mag/a-guide-to-choosing-the-right-laptop-for-programmers",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/mag/Myprinter-cartridge",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/mag/------hp",
+  "verdict": "NEUTRAL",
+  "coverage": "Discovered - currently not indexed",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/mag/a-guide-to-buying-a-suitable-heli-shot-for-aerial-photography",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/mag/examining-the-differences-between-apples-new-generation-and-old-generation-airpods",
+  "verdict": "NEUTRAL",
+  "coverage": "Discovered - currently not indexed",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/brands/samsung",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-07-07T17:07:53Z",
+  "googleCanonical": "https://mahamprint.com/brands/samsung",
+  "userCanonical": "https://mahamprint.com/brands/samsung",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/brands/casic",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/brands/sony",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-08-29T06:59:44Z",
+  "googleCanonical": "https://mahamprint.com/brands/sony",
+  "userCanonical": "https://mahamprint.com/brands/sony",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/brands/optoma",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/categories/digital",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-08-20T08:49:19Z",
+  "googleCanonical": "https://mahamprint.com/categories/digital",
+  "userCanonical": null,
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/categories/barcode-reader",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-09-02T17:23:02Z",
+  "googleCanonical": "https://mahamprint.com/categories/barcode-reader",
+  "userCanonical": null,
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/categories/item-1780150636402-k1xm",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-07-05T18:08:32Z",
+  "googleCanonical": "https://mahamprint.com/categories/item-1780150636402-k1xm",
+  "userCanonical": "https://mahamprint.com/categories/item-1780150636402-k1xm",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ },
+ {
+  "url": "https://mahamprint.com/categories/printer3d",
+  "verdict": "NEUTRAL",
+  "coverage": "URL is unknown to Google",
+  "lastCrawl": null,
+  "googleCanonical": null,
+  "userCanonical": null,
+  "robots": "ROBOTS_TXT_STATE_UNSPECIFIED",
+  "fetch": "PAGE_FETCH_STATE_UNSPECIFIED"
+ },
+ {
+  "url": "https://mahamprint.com/categories/toner",
+  "verdict": "PASS",
+  "coverage": "Submitted and indexed",
+  "lastCrawl": "2026-07-14T18:38:00Z",
+  "googleCanonical": "https://mahamprint.com/categories/toner",
+  "userCanonical": "https://mahamprint.com/categories/toner",
+  "robots": "ALLOWED",
+  "fetch": "SUCCESSFUL"
+ }
+]

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { slugify, slugifyDraft } from "@/lib/slug";
 import { useRouter } from "next/navigation";
 import AiImageStudio from "@/components/admin/product/AiImageStudio";
 
@@ -53,12 +54,9 @@ export const EMPTY_FORM: FormState = {
   sku: "", gtin13: "", mpn: "",
   isActive: true,
   images: [], specs: [],
-  relatedSettings: { categoryEnabled: false, categorySort: "newest", brandEnabled: false, brandSort: "newest" },
+  relatedSettings: { categoryEnabled: true, categorySort: "newest", brandEnabled: true, brandSort: "newest" },
 };
 
-function slugify(str: string) {
-  return str.toLowerCase().trim().replace(/[\s_]+/g, "-").replace(/[^\w\-]/g, "");
-}
 
 // ── Section ───────────────────────────────────────────────────────────────────
 function Section({ title, icon, children, defaultOpen = true }: {
@@ -600,7 +598,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
             </Field>
             <Field label="Slug (آدرس) *">
               <input required value={form.slug} dir="ltr" className={inp}
-                onChange={e => set("slug", slugify(e.target.value))}
+                onChange={e => set("slug", slugifyDraft(e.target.value))}
                 placeholder="product-slug" />
             </Field>
             <Field label="دسته‌بندی *">

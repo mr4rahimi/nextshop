@@ -1,14 +1,30 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import MagPostClient from "@/components/blog/MagPostClient";
-import { SITE_URL, canonicalUrl, buildBaseMetadata, buildArticleSchema, buildBreadcrumbSchema, buildFAQSchema } from "@/lib/seo";
+import { SITE_URL, canonicalUrl, encodeSlug, buildBaseMetadata, buildArticleSchema, buildBreadcrumbSchema, buildFAQSchema } from "@/lib/seo";
 import { normalizeFaq } from "@/lib/faq";
 import { approvedCommentCount, approvedCommentsQuery } from "@/lib/blog-comments";
 import { publicAuthorName } from "@/lib/moderation";
 import type { SchemaComment } from "@/lib/seo";
 
 interface Props { params: Promise<{ slug: string }> }
+
+/**
+ * `/mag/MyPrinter-Cartridge` به اسلاگ واقعی `myprinter-cartridge` می‌رود (۳۰۸).
+ * جست‌وجوی اسلاگ در دیتابیس به بزرگی حروف حساس است و لینک‌های بیرونی و
+ * گوگل گاهی شکل دیگری دارند — قبلاً ۴۰۴ می‌شد (ممیزی مهر ۱۴۰۵).
+ * بیرون از try صدا زده شود: `permanentRedirect` با throw کار می‌کند.
+ */
+async function redirectCaseVariant(slug: string) {
+  const hit = await prisma.blogPost
+    .findFirst({
+      where: { slug: { equals: slug, mode: "insensitive" }, status: "PUBLISHED" },
+      select: { slug: true },
+    })
+    .catch(() => null);
+  if (hit && hit.slug !== slug) permanentRedirect(`/mag/${encodeSlug(hit.slug)}`);
+}
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
@@ -53,6 +69,7 @@ export default async function MagPostPage({ params }: Props) {
     ]);
   } catch (e) { notFound(); }
 
+  if (!post) await redirectCaseVariant(slug);
   if (!post || post.status !== "PUBLISHED") notFound();
 
   try {

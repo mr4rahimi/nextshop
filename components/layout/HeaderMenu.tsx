@@ -1,30 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import type { HeaderMenuData } from "@/lib/headerMenu";
 
-interface Sub { id: string; title: string; slug: string; imageUrl: string | null; }
-interface MegaCat {
-  id: string; isActive: boolean;
-  category: { id: string; title: string; slug: string; imageUrl: string | null; children: Sub[]; };
-}
-interface MenuItem { id: string; title: string; url: string | null; openInNewTab: boolean; }
-
-export default function HeaderMenu() {
-  const [megaCats, setMegaCats]     = useState<MegaCat[]>([]);
-  const [menuItems, setMenuItems]   = useState<MenuItem[]>([]);
+/**
+ * منوی دسکتاپ. داده از سرور می‌آید و پنل مگامنو **همیشه در HTML است** (فقط با
+ * `hidden` پنهان می‌شود) و دسته‌های ستون راست `<Link>` هستند نه `<button>`؛
+ * وگرنه گوگل هیچ لینکی به دسته‌ها و زیردسته‌ها در صفحه نمی‌دید.
+ */
+export default function HeaderMenu({ menu }: { menu: HeaderMenuData }) {
+  const { megaMenuCats: megaCats, menuItems } = menu;
   const [activeMega, setActiveMega] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  useEffect(() => {
-    fetch("/api/store/header-menu").then(r => r.json()).then(d => {
-      setMegaCats(d.megaMenuCats ?? []);
-      setMenuItems(d.menuItems ?? []);
-    });
-  }, []);
-
-  const activeCat = megaCats.find(m => m.category.id === activeMega)?.category ?? megaCats[0]?.category;
+  const activeId = megaCats.find(m => m.category.id === activeMega)?.category.id ?? megaCats[0]?.category.id;
 
   function megaEnter(id: string) { clearTimeout(timeoutRef.current); setActiveMega(id); }
   function megaLeave() { timeoutRef.current = setTimeout(() => setActiveMega(null), 150); }
@@ -48,21 +39,20 @@ export default function HeaderMenu() {
                 </svg>
               </button>
 
-              {activeMega && (
-                <div
+              <div
                   onMouseEnter={() => clearTimeout(timeoutRef.current)}
                   onMouseLeave={megaLeave}
-                  className="absolute top-full right-0 mt-2 w-[900px] rounded-3xl border border-gray-100 dark:border-white/10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl shadow-2xl overflow-hidden z-50"
+                  className={`${activeMega ? "" : "hidden "}absolute top-full right-0 mt-2 w-[900px] rounded-3xl border border-gray-100 dark:border-white/10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl shadow-2xl overflow-hidden z-50`}
                 >
                   <div className="flex" style={{ maxHeight: "min(500px, calc(100vh - 120px))" }}>
                     {}
                     <div className="w-70 bg-gray-50/80 dark:bg-gray-800/40 border-l border-gray-100 dark:border-white/5 py-2 overflow-y-auto flex-shrink-0">
                       {megaCats.map(m => (
-                        <button key={m.category.id} onMouseEnter={() => megaEnter(m.category.id)}
-                          className={`w-full flex items-center gap-3 px-4 py-3 text-right transition-all ${activeMega === m.category.id ? "bg-white dark:bg-gray-900 text-primary-600 dark:text-primary-400" : "text-gray-700 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-900/60"}`}>
+                        <Link key={m.category.id} href={`/categories/${m.category.slug}`} onMouseEnter={() => megaEnter(m.category.id)}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-right transition-all ${activeId === m.category.id ? "bg-white dark:bg-gray-900 text-primary-600 dark:text-primary-400" : "text-gray-700 dark:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-900/60"}`}>
                           <div className="w-7 h-7 rounded-lg flex-shrink-0 bg-primary-500/10 flex items-center justify-center overflow-hidden">
                             {m.category.imageUrl
-                              ? <Image src={m.category.imageUrl} alt={m.category.title} width={28} height={28} className="object-contain" unoptimized loading="eager" />
+                              ? <Image src={m.category.imageUrl} alt={m.category.title} width={28} height={28} className="object-contain" unoptimized loading="lazy" />
                               : <span className="text-[10px] font-black text-primary-600">{m.category.title.charAt(0)}</span>
                             }
                           </div>
@@ -70,13 +60,13 @@ export default function HeaderMenu() {
                           <svg className="w-3 h-3 opacity-30 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                           </svg>
-                        </button>
+                        </Link>
                       ))}
                     </div>
 
                     {}
-                    {activeCat && (
-                      <div className="flex-1 flex gap-5 p-6 overflow-hidden">
+                    {megaCats.map(({ category: activeCat }) => (
+                      <div key={activeCat.id} className={`${activeCat.id === activeId ? "flex" : "hidden"} flex-1 gap-5 p-6 overflow-hidden`}>
                         <div className="flex-1 overflow-y-auto">
                           <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100 dark:border-white/5">
                             <span className="text-base font-black text-gray-900 dark:text-white">{activeCat.title}</span>
@@ -100,7 +90,7 @@ export default function HeaderMenu() {
                           <Link href={`/categories/${activeCat.slug}`}
                             className="block relative rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-square group shadow-md">
                             {activeCat.imageUrl
-                              ? <Image src={activeCat.imageUrl} alt={activeCat.title} fill className="object-cover group-hover:scale-110 transition-transform duration-500" sizes="144px" loading="eager" />
+                              ? <Image src={activeCat.imageUrl} alt={activeCat.title} fill className="object-cover group-hover:scale-110 transition-transform duration-500" sizes="144px" loading="lazy" />
                               : <div className="w-full h-full flex items-center justify-center">
                                   <svg className="w-14 h-14 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -112,10 +102,9 @@ export default function HeaderMenu() {
                           </Link>
                         </div>
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
-              )}
             </li>
           )}
 

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import HeaderSwitcher from "./HeaderSwitcher";
+import { getHeaderMenu, EMPTY_HEADER_MENU, type HeaderMenuData } from "@/lib/headerMenu";
 import AnnouncementBar from "./AnnouncementBar";
 import { normalizeGlassConfig, type GlassHeaderConfig } from "./headers/registry";
 import {
@@ -15,9 +16,15 @@ export default async function Header() {
   let mobileMenuGlass = false;
   let glassConfig: GlassHeaderConfig | null = null;
   let announcement: AnnouncementBarConfig = normalizeAnnouncementBar(null);
+  let menu: HeaderMenuData = EMPTY_HEADER_MENU;
 
   try {
-    const s = await prisma.storeSettings.findUnique({ where: { id: "singleton" } });
+    const [s, m] = await Promise.all([
+      prisma.storeSettings.findUnique({ where: { id: "singleton" } }),
+      // خرابی منو نباید لوگو و تنظیمات هدر را هم از بین ببرد
+      getHeaderMenu().catch(() => EMPTY_HEADER_MENU),
+    ]);
+    menu = m;
     logoUrl = s?.storeLogo || null;
     siteName = s?.storeName || null;
     homeHeaderVariant = s?.homeHeaderVariant || "DEFAULT";
@@ -33,6 +40,7 @@ export default async function Header() {
       homeVariant={homeHeaderVariant}
       menuGlass={mobileMenuGlass}
       glassConfig={glassConfig}
+      menu={menu}
     />
   );
 

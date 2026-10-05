@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isValidSlug, slugify } from "@/lib/slug";
 import { validateFilters } from "@/lib/landing-pages";
+import { redirectSlugChange } from "@/lib/slugRedirect";
 
 export const runtime = "nodejs";
 
@@ -27,11 +28,12 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     const s = slugify(body.slug);
     if (!isValidSlug(s)) return NextResponse.json({ message: "نشانی نامعتبر" }, { status: 400 });
     const clash = await prisma.landingPage.findUnique({ where: { slug: s } });
-    if (clash) return NextResponse.json({ message: "این نشانی قبلاً استفاده شده" }, { status: 400 });
+    if (clash && clash.id !== id) return NextResponse.json({ message: "این نشانی قبلاً استفاده شده" }, { status: 400 });
     data.slug = s;
   }
 
   const updated = await prisma.landingPage.update({ where: { id }, data });
+  await redirectSlugChange(prisma, "landing", existing.slug, updated.slug);
   return NextResponse.json(updated);
 }
 

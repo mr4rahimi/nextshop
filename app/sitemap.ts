@@ -19,8 +19,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         orderBy: { updatedAt: "desc" },
         take: 45000,
       }),
+      // دسته‌ی بی‌محصول noindex است (صفحه‌ی دسته)؛ در سایت‌مپ نیامدنش همان قاعده است.
+      // محصول خودش یا زیردسته‌ی مستقیم — همان دامنه‌ای که صفحه‌ی دسته می‌شمارد.
       prisma.category.findMany({
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          OR: [
+            { products: { some: { isActive: true } } },
+            { children: { some: { isActive: true, products: { some: { isActive: true } } } } },
+          ],
+        },
         select: { slug: true, updatedAt: true },
       }),
       prisma.brand.findMany({

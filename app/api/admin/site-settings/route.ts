@@ -31,6 +31,8 @@ export async function PUT(req: Request) {
     siteFavicon:     data.siteFavicon     ?? null,
     siteDescription: data.siteDescription ?? null,
     siteKeywords:    data.siteKeywords    ?? null,
+    homeSeoTitle:    data.homeSeoTitle?.trim() || null,
+    homeH1:          data.homeH1?.trim()       || null,
     siteEmail:       data.siteEmail       ?? null,
     sitePhone:       data.sitePhone       ?? null,
     siteAddress:     data.siteAddress     ?? null,

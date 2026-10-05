@@ -18,6 +18,7 @@ import {
 interface SiteSettings {
   storeName: string; storeLogo: string; siteFavicon: string;
   siteDescription: string; siteKeywords: string;
+  homeSeoTitle: string; homeH1: string;
   siteEmail: string; sitePhone: string; siteAddress: string;
   siteCity: string; siteProvince: string; sitePostalCode: string;
   openingHours: string;
@@ -54,6 +55,7 @@ interface SiteSettings {
 const EMPTY: SiteSettings = {
   storeName: "", storeLogo: "", siteFavicon: "",
   siteDescription: "", siteKeywords: "",
+  homeSeoTitle: "", homeH1: "",
   siteEmail: "", sitePhone: "", siteAddress: "",
   siteCity: "", siteProvince: "", sitePostalCode: "",
   openingHours: "",
@@ -93,6 +95,8 @@ export default function AdminSiteSettingsPage() {
         siteFavicon:     d.siteFavicon     ?? "",
         siteDescription: d.siteDescription ?? "",
         siteKeywords:    d.siteKeywords    ?? "",
+        homeSeoTitle:    d.homeSeoTitle    ?? "",
+        homeH1:          d.homeH1          ?? "",
         siteEmail:       d.siteEmail       ?? "",
         sitePhone:       d.sitePhone       ?? "",
         siteAddress:     d.siteAddress     ?? "",
@@ -329,6 +333,18 @@ export default function AdminSiteSettingsPage() {
               </div>
             </div>
             <div>
+              <label className={lbl}>عنوان سئوی صفحه‌ی اصلی (Title)</label>
+              <input className={inp} placeholder={settings.storeName || "خالی = نام فروشگاه"}
+                value={settings.homeSeoTitle} onChange={e => set("homeSeoTitle", e.target.value)} />
+              <p className="text-[10px] text-gray-400 mt-1">{settings.homeSeoTitle.length}/60 کاراکتر — کلمه‌ی اصلی فروشگاه + نام برند، مثلاً «خرید پرینتر و لوازم جانبی | مهام پرینت»</p>
+            </div>
+            <div>
+              <label className={lbl}>تیتر اصلی صفحه‌ی اصلی (H1)</label>
+              <input className={inp} placeholder={settings.storeName || "خالی = نام فروشگاه"}
+                value={settings.homeH1} onChange={e => set("homeH1", e.target.value)} />
+              <p className="text-[10px] text-gray-400 mt-1">برای گوگل و صفحه‌خوان‌ها؛ در طراحی صفحه دیده نمی‌شود چون صفحه‌ی اصلی از ویجت ساخته شده</p>
+            </div>
+            <div>
               <label className={lbl}>توضیحات سایت (Meta Description)</label>
               <textarea rows={3} className={`${inp} resize-none`}
                 placeholder="توضیح کوتاه درباره فروشگاه — برای SEO مهم است (حداکثر ۱۶۰ کاراکتر)"
@@ -441,7 +457,7 @@ export default function AdminSiteSettingsPage() {
               <p className="text-[10px] text-gray-400 mb-2 uppercase tracking-widest">نمایش در نتایج جستجو</p>
               <div className="space-y-1">
                 <p className="text-blue-700 dark:text-blue-400 text-base font-medium leading-tight">
-                  {settings.storeName || "نام فروشگاه"} — خرید آنلاین
+                  {settings.homeSeoTitle || settings.storeName || "نام فروشگاه"}
                 </p>
                 <p className="text-green-700 dark:text-green-500 text-[11px]">
                   example.com

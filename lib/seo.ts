@@ -334,6 +334,15 @@ export function buildProductSchema(opts: {
   const reviewNodes = (opts.reviews ?? []).map(buildReviewNode);
   if (reviewNodes.length > 0) schema.review = reviewNodes;
 
+  /**
+   * گوگل برای Product یکی از offers، review یا aggregateRating را **الزامی**
+   * می‌داند. محصول «تماس بگیرید» (قیمت صفر) بی‌نظر هیچ‌کدام را ندارد و اسکیمایش
+   * در سرچ‌کنسول خطای Product snippets می‌ساخت (ممیزی مهر ۱۴۰۵). Offer بی‌قیمت هم
+   * نامعتبر است، پس برای این محصولات اصلاً Product منتشر نمی‌شود — breadcrumb و
+   * FAQ سر جایشان می‌مانند.
+   */
+  if (!schema.offers && !schema.aggregateRating && !schema.review) return null;
+
   return schema;
 }
 

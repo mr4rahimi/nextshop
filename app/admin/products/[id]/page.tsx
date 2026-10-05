@@ -66,7 +66,8 @@ export default function EditProductPage() {
                 value:      s.value,
               }))
             : [],
-          relatedSettings: product.relatedSettings ?? EMPTY_FORM.relatedSettings,
+          // کلید نبود = روشن (همان پیش‌فرض صفحه‌ی محصول)؛ اکثر محصولات `{}` دارند
+          relatedSettings: { ...EMPTY_FORM.relatedSettings, ...(product.relatedSettings ?? {}) },
         });
         setLoading(false);
       })

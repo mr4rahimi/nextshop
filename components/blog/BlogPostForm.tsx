@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { slugify } from "@/lib/slugify";
+import { slugify, slugifyDraft } from "@/lib/slug";
 import FaqEditor from "@/components/admin/FaqEditor";
 import { normalizeFaq, type FaqItem } from "@/lib/faq";
 
@@ -172,12 +172,12 @@ export default function BlogPostForm({ postId }: Props) {
               set("title", e.target.value);
               if (!isEdit) set("slug", "");
             }} />
-            <p className="text-[10px] text-amber-500 mt-1">⚠️ slug باید فقط حروف انگلیسی، اعداد و خط تیره باشد</p>
+            <p className="text-[10px] text-amber-500 mt-1">اگر slug خالی بماند از روی عنوان ساخته می‌شود (حروف کوچک انگلیسی، عدد و خط تیره)</p>
 
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-400 flex-shrink-0">/mag/</span>
               <input className={`${inp} text-xs font-mono`} dir="ltr" placeholder="slug"
-                value={form.slug} onChange={e => set("slug", e.target.value)} />
+                value={form.slug} onChange={e => set("slug", slugifyDraft(e.target.value))} />
             </div>
             <textarea rows={2} className={`${inp} resize-none`} placeholder="خلاصه مطلب (برای کارت در صفحه اصلی بلاگ)"
               value={form.excerpt} onChange={e => set("excerpt", e.target.value)} />

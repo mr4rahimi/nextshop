@@ -38,7 +38,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const data = await req.json();
-  const slug = data.slug || slugify(data.title);
+  const slug = slugify(data.slug || data.title || "");
+  if (!slug) return NextResponse.json({ error: "slug نامعتبر است — حروف، عدد یا عنوان لازم است" }, { status: 400 });
 
   const words = (data.content ?? "").replace(/<[^>]+>/g, "").split(/\s+/).length;
   const readingTime = Math.max(1, Math.round(words / 200));

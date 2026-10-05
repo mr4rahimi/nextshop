@@ -8,6 +8,7 @@ import CartIcon from "@/components/store/cart/CartIcon";
 import WishlistIcon from "@/components/store/wishlist/WishlistIcon";
 import SearchBox from "@/components/store/SearchBox";
 import HeaderMenu from "@/components/layout/HeaderMenu";
+import type { HeaderMenuData } from "@/lib/headerMenu";
 import {
   DEFAULT_GLASS_CONFIG,
   hexToRgbChannels,
@@ -155,10 +156,12 @@ export default function GlassHeader({
   logoUrl,
   siteName,
   config,
+  menu,
 }: {
   logoUrl: string | null;
   siteName: string | null;
   config?: GlassHeaderConfig | null;
+  menu: HeaderMenuData;
 }) {
   const cfg = normalizeGlassConfig(config ?? DEFAULT_GLASS_CONFIG);
   const { toggle } = useTheme();
@@ -358,7 +361,7 @@ export default function GlassHeader({
           ref={navWrapRef}
           className={`ghd-nav${navHidden || navAnimating ? " ghd-nav-clip" : ""}`}
         >
-          <HeaderMenu />
+          <HeaderMenu menu={menu} />
         </div>
       </header>
     </>

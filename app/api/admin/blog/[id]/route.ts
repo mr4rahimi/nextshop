@@ -4,6 +4,8 @@ import { serialize } from "@/lib/serialize";
 import { faqForPrisma } from "@/lib/faq-db";
 import { getStaffAccess } from "@/lib/permissions";
 import { detachDeletedBlogPost } from "@/lib/marketing/content-publish";
+import { resolveSlugInput } from "@/lib/slug";
+import { redirectSlugChange } from "@/lib/slugRedirect";
 
 export const runtime = "nodejs";
 
@@ -32,6 +34,11 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const words = (data.content ?? "").replace(/<[^>]+>/g, "").split(/\s+/).length;
   const readingTime = Math.max(1, Math.round(words / 200));
 
+  const before = await prisma.blogPost.findUnique({ where: { id }, select: { slug: true, status: true } });
+  if (!before) return NextResponse.json({ error: "یافت نشد" }, { status: 404 });
+  const slug = resolveSlugInput(data.slug, before.slug, data.title);
+  if (slug === "") return NextResponse.json({ error: "slug نامعتبر است" }, { status: 400 });
+
   await prisma.blogPostTag.deleteMany({ where: { postId: id } });
   await prisma.blogPostProduct.deleteMany({ where: { postId: id } });
 
@@ -39,7 +46,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
     where: { id },
     data: {
       title:          data.title,
-      slug:           data.slug,
+      slug,
       excerpt:        data.excerpt        ?? null,
       content:        data.content        ?? "",
       coverImage:     data.coverImage     ?? null,
@@ -62,6 +69,11 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
       } : undefined,
     },
   });
+
+  // پیش‌نویس هنوز آدرس عمومی ندارد؛ ریدایرکت فقط برای مقاله‌ی منتشرشده معنا دارد
+  if (before.status === "PUBLISHED") {
+    await redirectSlugChange(prisma, "blog", before.slug, post.slug);
+  }
 
   return NextResponse.json(serialize(post));
 }

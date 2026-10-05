@@ -170,20 +170,30 @@ function FilterSidebar({
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+/**
+ * محصولات صفحه‌ی اول (یا `?page=N`) در سرور رندر می‌شوند و از `initialData`
+ * می‌آیند؛ قبلاً فقط در مرورگر fetch می‌شدند و HTML صفحه‌ی برند هیچ لینک
+ * محصولی نداشت (ممیزی مهر ۱۴۰۵). صفحه‌ی بعد همیشه یک `<Link rel="next">`
+ * واقعی دارد تا خزنده بدون اجرای اسکرول بی‌نهایت هم به همه‌ی محصولات برسد.
+ */
 export default function BrandPageClient({
   brand,
   brandSlug,
+  initialData,
 }: {
   brand: Brand;
   brandSlug: string;
+  initialData?: ProductsResponse;
 }) {
   const gridCls = useProductGridClass();
   const skeletonCls = useProductSkeletonClass();
-  const [products, setProducts] = useState<ProductCardItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [products, setProducts] = useState<ProductCardItem[]>(initialData?.items ?? []);
+  const [total, setTotal] = useState(initialData?.total ?? 0);
+  const [page, setPage] = useState(initialData?.page ?? 1);
   const [loading, setLoading] = useState(false);
-  const [initialLoaded, setInitialLoaded] = useState(false);
+  const [initialLoaded, setInitialLoaded] = useState(!!initialData);
+  // داده‌ی سرور همان نتیجه‌ی فیلترهای پیش‌فرض است؛ fetch اول تکراری است
+  const skipFirstFetch = useRef(!!initialData);
 
   // Filters
   const [sort, setSort] = useState<SortType>("newest");
@@ -234,6 +244,10 @@ export default function BrandPageClient({
   );
 
   useEffect(() => {
+    if (skipFirstFetch.current) {
+      skipFirstFetch.current = false;
+      return;
+    }
     setPage(1);
     fetchProducts(1, false);
   }, [sort, selectedCategories, appliedMin, appliedMax, brandSlug]);
@@ -275,6 +289,23 @@ export default function BrandPageClient({
     fetchProducts(p, false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+
+  const hrefFor = (p: number) => `/brands/${brandSlug}${p > 1 ? `?page=${p}` : ""}`;
+
+  function handleLoadMore(e: React.MouseEvent) {
+    e.preventDefault();
+    if (loading || page >= totalPages) return;
+    const next = page + 1;
+    setPage(next);
+    fetchProducts(next, true);
+  }
+
+  /** پنج شماره دور صفحه‌ی جاری — قبلاً همیشه ۱۱ تا ۱۵ نشان داده می‌شد */
+  const pageWindow = (() => {
+    const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+    const end = Math.min(totalPages, start + 4);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  })();
 
   const sortLabels: Record<SortType, string> = {
     newest: "جدیدترین",
@@ -464,6 +495,16 @@ export default function BrandPageClient({
                   {/* Infinite scroll sentinel */}
                   {useInfiniteScroll && page < totalPages && (
                     <div ref={sentinelRef} className="flex justify-center py-10">
+                      {!loading && (
+                        <Link
+                          href={hrefFor(page + 1)}
+                          rel="next"
+                          onClick={handleLoadMore}
+                          className="px-6 py-2.5 rounded-xl border border-primary-500/30 text-primary-600 dark:text-primary-400 font-bold text-sm hover:bg-primary-500 hover:text-white transition-all"
+                        >
+                          نمایش محصولات بیشتر
+                        </Link>
+                      )}
                       {loading && (
                         <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
                           <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -480,23 +521,25 @@ export default function BrandPageClient({
                   {!useInfiniteScroll && totalPages > 1 && (
                     <div className="mt-16 flex items-center justify-center">
                       <div className="flex items-center gap-2 bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/40 dark:border-white/10 p-2 rounded-[2rem] shadow-xl">
-                        <button
-                          onClick={() => page > 1 && handlePageClick(page - 1)}
-                          disabled={page <= 1}
-                          className="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-primary-500 hover:bg-white dark:hover:bg-white/10 transition-all disabled:opacity-30"
+                        <Link
+                          href={hrefFor(Math.max(1, page - 1))}
+                          rel="prev"
+                          aria-disabled={page <= 1}
+                          onClick={(e) => { e.preventDefault(); if (page > 1) handlePageClick(page - 1); }}
+                          className={`w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-primary-500 hover:bg-white dark:hover:bg-white/10 transition-all ${page <= 1 ? "opacity-30 pointer-events-none" : ""}`}
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                           </svg>
-                        </button>
+                        </Link>
                         <div className="flex items-center gap-1.5 px-2">
-                          {Array.from({ length: Math.min(totalPages, 5) }).map((_, i) => {
-                            const p = i + INFINITE_SCROLL_LIMIT + 1;
-                            if (p > totalPages) return null;
+                          {pageWindow.map((p) => {
                             return (
-                              <button
+                              <Link
                                 key={p}
-                                onClick={() => handlePageClick(p)}
+                                href={hrefFor(p)}
+                                aria-current={page === p ? "page" : undefined}
+                                onClick={(e) => { e.preventDefault(); handlePageClick(p); }}
                                 className={`w-11 h-11 rounded-[1.2rem] flex items-center justify-center text-xs font-black transition-all ${
                                   page === p
                                     ? "bg-primary-500 text-white shadow-lg shadow-primary-500/40 ring-4 ring-primary-500/10"
@@ -504,19 +547,21 @@ export default function BrandPageClient({
                                 }`}
                               >
                                 {toFa(p)}
-                              </button>
+                              </Link>
                             );
                           })}
                         </div>
-                        <button
-                          onClick={() => page < totalPages && handlePageClick(page + 1)}
-                          disabled={page >= totalPages}
-                          className="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-primary-500 hover:bg-white dark:hover:bg-white/10 transition-all disabled:opacity-30"
+                        <Link
+                          href={hrefFor(Math.min(totalPages, page + 1))}
+                          rel="next"
+                          aria-disabled={page >= totalPages}
+                          onClick={(e) => { e.preventDefault(); if (page < totalPages) handlePageClick(page + 1); }}
+                          className={`w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-primary-500 hover:bg-white dark:hover:bg-white/10 transition-all ${page >= totalPages ? "opacity-30 pointer-events-none" : ""}`}
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                           </svg>
-                        </button>
+                        </Link>
                       </div>
                     </div>
                   )}

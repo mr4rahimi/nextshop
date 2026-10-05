@@ -1,0 +1,251 @@
+{
+ "capturedAt": "2026-09-29",
+ "jalali": "1405/07/07",
+ "property": "https://mahamprint.com/",
+ "gsc": {
+  "last28d": {
+   "range": "2026-08-30..2026-09-26",
+   "clicks": 608,
+   "impressions": 10098,
+   "ctr": 6.02,
+   "avgPosition": 16.5
+  },
+  "last90d": {
+   "range": "2026-06-28..2026-09-26",
+   "clicks": 1831,
+   "impressions": 32261,
+   "ctr": 5.68,
+   "avgPosition": 13.2
+  },
+  "preMigration4m": {
+   "range": "2025-11-01..2026-02-28",
+   "clicks": 6123,
+   "impressions": 121950,
+   "ctr": 5.02,
+   "avgPosition": 8.1
+  },
+  "monthly": {
+   "2025-11": {
+    "clicks": 1790,
+    "impressions": 35778,
+    "ctr": 5.0,
+    "avgPosition": 7.8
+   },
+   "2025-12": {
+    "clicks": 1504,
+    "impressions": 31136,
+    "ctr": 4.83,
+    "avgPosition": 8.5
+   },
+   "2026-01": {
+    "clicks": 1306,
+    "impressions": 22635,
+    "ctr": 5.77,
+    "avgPosition": 8.3
+   },
+   "2026-02": {
+    "clicks": 1523,
+    "impressions": 32401,
+    "ctr": 4.7,
+    "avgPosition": 7.8
+   },
+   "2026-03": {
+    "clicks": 11,
+    "impressions": 653,
+    "ctr": 1.68,
+    "avgPosition": 13.7
+   },
+   "2026-04": {
+    "clicks": 132,
+    "impressions": 999,
+    "ctr": 13.21,
+    "avgPosition": 7.9
+   },
+   "2026-05": {
+    "clicks": 197,
+    "impressions": 2014,
+    "ctr": 9.78,
+    "avgPosition": 7.1
+   },
+   "2026-06": {
+    "clicks": 211,
+    "impressions": 3975,
+    "ctr": 5.31,
+    "avgPosition": 8.7
+   },
+   "2026-07": {
+    "clicks": 642,
+    "impressions": 11208,
+    "ctr": 5.73,
+    "avgPosition": 9.3
+   },
+   "2026-08": {
+    "clicks": 584,
+    "impressions": 10990,
+    "ctr": 5.31,
+    "avgPosition": 14.8
+   },
+   "2026-09": {
+    "clicks": 579,
+    "impressions": 9379,
+    "ctr": 6.17,
+    "avgPosition": 16.5
+   }
+  },
+  "pagesWithImpr90d": 1426,
+  "queriesWithImpr90d": 988,
+  "keywords90d": {
+   "پرینتر": {
+    "clicks": 12,
+    "impressions": 733,
+    "position": 13.2
+   },
+   "خرید پرینتر": {
+    "clicks": 0,
+    "impressions": 37,
+    "position": 40.8
+   },
+   "قیمت پرینتر": {
+    "clicks": 2,
+    "impressions": 33,
+    "position": 20.9
+   },
+   "پرینتر سه کاره": {
+    "clicks": 1,
+    "impressions": 45,
+    "position": 9.7
+   },
+   "خرید پرینتر سه کاره": {
+    "clicks": 0,
+    "impressions": 18,
+    "position": 15.4
+   },
+   "قیمت پرینتر سه کاره": {
+    "clicks": 1,
+    "impressions": 31,
+    "position": 7.7
+   },
+   "پرینتر تک کاره": {
+    "clicks": 1,
+    "impressions": 246,
+    "position": 4.9
+   },
+   "پرینتر چند کاره": {
+    "clicks": 0,
+    "impressions": 27,
+    "position": 23.4
+   },
+   "پرینتر لیبل زن رنگی": {
+    "clicks": 4,
+    "impressions": 327,
+    "position": 20.2
+   },
+   "پرینتر لیبل زن": {
+    "clicks": 2,
+    "impressions": 149,
+    "position": 36.2
+   },
+   "لیبل پرینتر": {
+    "clicks": 0,
+    "impressions": 287,
+    "position": 54.5
+   },
+   "خرید لیبل پرینتر": {
+    "clicks": 0,
+    "impressions": 142,
+    "position": 58.3
+   },
+   "لیبل پرینتر حرارتی": {
+    "clicks": 0,
+    "impressions": 97,
+    "position": 49.7
+   },
+   "پرینتر استوک": {
+    "clicks": 0,
+    "impressions": 49,
+    "position": 64.1
+   },
+   "خرید پرینتر اداری": {
+    "clicks": 0,
+    "impressions": 37,
+    "position": 72.8
+   },
+   "خرید پرینتر خانگی": {
+    "clicks": 0,
+    "impressions": 26,
+    "position": 76.5
+   },
+   "پد امضا": {
+    "clicks": 0,
+    "impressions": 37,
+    "position": 10.8
+   },
+   "قلم نوری چیست": {
+    "clicks": 0,
+    "impressions": 25,
+    "position": 9.6
+   },
+   "ماشین حساب پیشرفته": {
+    "clicks": 0,
+    "impressions": 30,
+    "position": 16.6
+   },
+   "خرید ریبون رنگی زبرا": {
+    "clicks": 0,
+    "impressions": 26,
+    "position": 9.3
+   },
+   "مشخصات فنی پرینتر کانن 6030": {
+    "clicks": 0,
+    "impressions": 39,
+    "position": 10
+   },
+   "مهام پرینت": {
+    "clicks": 108,
+    "impressions": 129,
+    "position": 1
+   }
+  },
+  "sitemap": {
+   "submitted": 3056,
+   "lastDownloaded": "2026-09-22"
+  },
+  "indexSample": {
+   "randomProducts": 20,
+   "indexed": 8,
+   "discoveredNotIndexed": 6,
+   "unknown": 6
+  }
+ },
+ "siteData": {
+  "activeProducts": 2805,
+  "productsPriceZero": 2391,
+  "productsNoShortDesc": 2308,
+  "productsNoFaq": 2805,
+  "productsSlugBroken": 2733,
+  "productsRelatedEnabled": 1,
+  "productsNoSeoTitle": 64,
+  "productsNoSeoDesc": 87,
+  "categoriesItemSlug": 9,
+  "landingPages": 25,
+  "landingPagesWithBody": 0,
+  "blogPublished": 105,
+  "blogWithRelatedProducts": 9,
+  "blogBrokenSlug": 40,
+  "redirectsBefore": 707,
+  "notFoundLogRows": 363,
+  "oldUrlsWithClicksStill404": 98
+ },
+ "umami": {
+  "trackingSince": "2026-09-28",
+  "sessionsPerDay": 90,
+  "sessionsBySource2d": {
+   "direct": 62,
+   "torob": 57,
+   "google": 31,
+   "emalls": 3,
+   "instagram": 2
+  },
+  "note": "فقط ۲ روز داده — مبنای واقعی Umami را ۱۴۰۵/۰۸/۰۷ (یک ماه کامل) بگیرید"
+ }
+}

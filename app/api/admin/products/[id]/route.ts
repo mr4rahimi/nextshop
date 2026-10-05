@@ -3,6 +3,8 @@ import { serialize } from "@/lib/serialize";
 import { NextResponse } from "next/server";
 import { submitToIndexNow, productUrl } from "@/lib/indexnow";
 import { logActivityAsync, diffFields, summarizeChanges } from "@/lib/activity";
+import { resolveSlugInput } from "@/lib/slug";
+import { redirectSlugChange } from "@/lib/slugRedirect";
 
 // ─── GET /api/admin/products/[id] ────────────────────────────────────────────
 export async function GET(
@@ -79,6 +81,11 @@ export async function PUT(
     );
   }
 
+  const slug = resolveSlugInput(body.slug, before?.slug, body.title ?? before?.title);
+  if (slug === "") {
+    return NextResponse.json({ error: "نشانی (slug) نامعتبر است." }, { status: 400 });
+  }
+
   const specRows: { specItemId: string; value: string }[] | undefined = has("specs")
     ? (Array.isArray(body.specs) ? body.specs : [])
         .filter((sp: any) => sp?.specItemId)
@@ -91,11 +98,11 @@ export async function PUT(
       if (imageUrls) await tx.productImage.deleteMany({ where: { productId: id } });
       if (specRows)  await tx.productSpecValue.deleteMany({ where: { productId: id } });
 
-      return tx.product.update({
+      const saved = await tx.product.update({
         where: { id },
         data: {
           title:      pick("title", String),
-          slug:       pick("slug", String),
+          slug,
           categoryId: pick("categoryId", String),
           brandId:    pick("brandId", (v) => v || null),
 
@@ -151,6 +158,9 @@ export async function PUT(
           specs: { include: { specItem: true } },
         },
       });
+      // آدرس قدیم ایندکس شده — بدون ۳۰۱ با هر تغییر اسلاگ یک ۴۰۴ تازه می‌ساختیم
+      await redirectSlugChange(tx, "product", before?.slug, saved.slug);
+      return saved;
     });
 
     // اعلام به IndexNow (Bing/Yandex). عمداً await نمی‌شود تا پاسخ ادمین معطل نماند.

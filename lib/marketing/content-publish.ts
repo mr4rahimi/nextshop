@@ -22,7 +22,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { can, type StaffAccess } from "@/lib/permissions";
-import { slugify } from "@/lib/slugify";
+import { slugify, resolveSlugInput } from "@/lib/slug";
+import { redirectSlugChange } from "@/lib/slugRedirect";
 import { submitToIndexNow, blogPostUrl } from "@/lib/indexnow";
 import { countWords } from "./types";
 
@@ -231,8 +232,13 @@ export async function updateContentPost(
     if (!title) throw new Error("عنوان مقاله لازم است");
     data.title = title;
   }
+  const current = await prisma.blogPost.findUnique({
+    where: { id: task.blogPostId },
+    select: { slug: true, status: true },
+  });
   if (meta.slug !== undefined) {
-    const slug = slugify(meta.slug ?? "");
+    // همان نامک فعلی دست نمی‌خورد، حتی اگر به قاعده‌ی امروز نباشد
+    const slug = resolveSlugInput(meta.slug ?? "", current?.slug);
     if (!slug) throw new Error("نامک (اسلاگ) معتبر نیست");
     const hit = await prisma.blogPost.findUnique({ where: { slug }, select: { id: true } });
     if (hit && hit.id !== task.blogPostId) throw new Error("این نامک را مقاله‌ی دیگری دارد");
@@ -254,7 +260,7 @@ export async function updateContentPost(
     data.categoryId = categoryId;
   }
 
-  return prisma.blogPost.update({
+  const updated = await prisma.blogPost.update({
     where: { id: task.blogPostId },
     data,
     select: {
@@ -270,6 +276,12 @@ export async function updateContentPost(
       publishedAt: true,
     },
   });
+
+  // پیش‌نویس هنوز آدرس عمومی ندارد؛ ریدایرکت فقط برای مقاله‌ی منتشرشده معنا دارد
+  if (current?.status === "PUBLISHED") {
+    await redirectSlugChange(prisma, "blog", current.slug, updated.slug);
+  }
+  return updated;
 }
 
 /**

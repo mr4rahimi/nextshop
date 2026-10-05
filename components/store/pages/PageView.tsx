@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { normalizePageBlocks, withToc, type PageTemplate } from "@/lib/pages";
+import { telHref } from "@/lib/tel";
 import PageToc from "./PageToc";
 import FaqAccordion from "./FaqAccordion";
 
@@ -132,11 +133,11 @@ export default function PageView({ page }: { page: PageData }) {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {contact.phone && (
                 <ContactCard icon={icons.phone} label="تلفن ثابت" value={contact.phone}
-                  href={`tel:${contact.phone.replace(/[^\d+]/g, "")}`} />
+                  href={telHref(contact.phone) ?? undefined} />
               )}
               {contact.mobile && (
                 <ContactCard icon={icons.phone} label="موبایل" value={contact.mobile}
-                  href={`tel:${contact.mobile.replace(/[^\d+]/g, "")}`} />
+                  href={telHref(contact.mobile) ?? undefined} />
               )}
               {contact.email && (
                 <ContactCard icon={icons.mail} label="ایمیل" value={contact.email} href={`mailto:${contact.email}`} />

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logActivityAsync, diffFields, summarizeChanges } from "@/lib/activity";
+import { slugify, resolveSlugInput } from "@/lib/slug";
+import { redirectSlugChange } from "@/lib/slugRedirect";
 
 /** فیلدهای برند که تغییرشان در گزارش ثبت می‌شود */
 const BRAND_FIELDS = {
@@ -28,8 +30,11 @@ export async function GET() {
 export async function POST(req: Request) {
   const data = await req.json();
 
+  const slug = slugify(data.slug || data.title || "");
+  if (!slug) return NextResponse.json({ error: "نشانی (slug) نامعتبر است" }, { status: 400 });
+
   const brand = await prisma.brand.create({
-    data,
+    data: { ...data, slug },
   });
 
   logActivityAsync({
@@ -50,11 +55,14 @@ export async function PUT(req: Request) {
 
   const before = await prisma.brand.findUnique({ where: { id: data.id } });
 
+  const slug = resolveSlugInput(data.slug, before?.slug, data.title);
+  if (slug === "") return NextResponse.json({ error: "نشانی (slug) نامعتبر است" }, { status: 400 });
+
   const brand = await prisma.brand.update({
     where: { id: data.id },
     data: {
       title: data.title,
-      slug: data.slug,
+      slug,
       logoUrl: data.logoUrl || null,
       description: data.description || null,
       seoTitle: data.seoTitle || null,
@@ -64,8 +72,10 @@ export async function PUT(req: Request) {
     },
   });
 
+  await redirectSlugChange(prisma, "brand", before?.slug, brand.slug);
+
   if (before) {
-    const changes = diffFields(before as never, data, BRAND_FIELDS);
+    const changes = diffFields(before as never, { ...data, slug: brand.slug }, BRAND_FIELDS);
     if (changes.length > 0) {
       logActivityAsync({
         action: "UPDATE",

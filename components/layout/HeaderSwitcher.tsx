@@ -7,6 +7,7 @@ import MobileMenuPortal from "./MobileMenuPortal";
 import UniqueStarHeader from "./headers/UniqueStarHeader";
 import GlassHeader from "./headers/GlassHeader";
 import { normalizeVariant, type GlassHeaderConfig } from "./headers/registry";
+import type { HeaderMenuData } from "@/lib/headerMenu";
 
 export default function HeaderSwitcher({
   logoUrl,
@@ -14,12 +15,14 @@ export default function HeaderSwitcher({
   homeVariant,
   menuGlass = false,
   glassConfig = null,
+  menu,
 }: {
   logoUrl: string | null;
   siteName: string | null;
   homeVariant: string;
   menuGlass?: boolean;
   glassConfig?: GlassHeaderConfig | null;
+  menu: HeaderMenuData;
 }) {
   const pathname = usePathname();
   const isHome = pathname === "/";
@@ -35,6 +38,7 @@ export default function HeaderSwitcher({
           siteName={siteName}
           allowDesktop
           glass={menuGlass}
+          menu={menu}
         />
       </>
     );
@@ -44,8 +48,8 @@ export default function HeaderSwitcher({
   if (variant === "GLASS") {
     return (
       <>
-        <GlassHeader logoUrl={logoUrl} siteName={siteName} config={glassConfig} />
-        <MobileMenuPortal logoUrl={logoUrl} siteName={siteName} glass={menuGlass} />
+        <GlassHeader logoUrl={logoUrl} siteName={siteName} config={glassConfig} menu={menu} />
+        <MobileMenuPortal logoUrl={logoUrl} siteName={siteName} glass={menuGlass} menu={menu} />
       </>
     );
   }
@@ -54,9 +58,9 @@ export default function HeaderSwitcher({
     <>
       <header className="sticky top-0 z-40 border-b border-gray-200/50 dark:border-gray-800/50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl transition-all duration-300">
         <HeaderTop logoUrl={logoUrl} siteName={siteName} />
-        <HeaderMenu />
+        <HeaderMenu menu={menu} />
       </header>
-      <MobileMenuPortal logoUrl={logoUrl} siteName={siteName} glass={menuGlass} />
+      <MobileMenuPortal logoUrl={logoUrl} siteName={siteName} glass={menuGlass} menu={menu} />
     </>
   );
 }

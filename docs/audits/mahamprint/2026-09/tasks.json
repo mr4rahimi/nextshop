@@ -1,0 +1,473 @@
+{
+ "createdById": "cmp72zxxi00014y9sk7q1u5nz",
+ "seoTasks": [
+  {
+   "categoryKey": "REDIRECTS",
+   "title": "مهام — بازبینی و تست ۱۷۲ ریدایرکت آدرس‌های قدیمی سایت",
+   "description": "چرا: سایت در اسفند ۱۴۰۴ مهاجرت کرد و کلیک ماهانه از حدود ۱۵۰۰ به ۶۰۰ افتاد. ۹۸ آدرس قدیمی که قبل از مهاجرت\n۱۲۳۶ کلیک (در ۴ ماه) داشتند هنوز ۴۰۴ بودند؛ مهم‌ترینش صفحه‌ی «پرینتر سه کاره» (/category/75/3-job) با ۳۷۴ کلیک\nو رتبه‌ی ۴ گوگل برای «پرینتر سه کاره».\n\nچه شده: ۱۷۲ ریدایرکت ۳۰۱ در «ادمین ← سئو ← ریدایرکت‌ها» ثبت شده (یادداشت همه با «سئو ۱۴۰۵/۰۷/۰۷» شروع می‌شود).\nفهرست کامل: docs/audits/mahamprint/2026-09/redirects.csv\n⚠️ اگر در /admin/seo/redirects با جست‌وجوی «سئو ۱۴۰۵» چیزی پیدا نشد، یعنی هنوز اجرا نشده — به مهدی رحیمی خبر بدهید.\n\n۴۰ ریدایرکت مهم (قدیم ← جدید):\n• /category/75/3-job  ←قدیم | جدید→  /collections/kharid-printer-se-kare   (374 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/138/پد-امضاء  ←قدیم | جدید→  /categories/pademza   (78 کلیک در ۴ ماه قبل از مهاجرت)\n• /product/1603/پرینتر-جوهرافشان-canon-g3010  ←قدیم | جدید→  /products/--canon-g3010   (59 کلیک در ۴ ماه قبل از مهاجرت)\n• /mag/تعویض-کارتریج-کانن  ←قدیم | جدید→  /mag/how-to-replace-the-printer-cartridge-in-principle   (49 کلیک در ۴ ماه قبل از مهاجرت)\n• /product/2931/اسکنر-برند-kodak-مدل-e1040  ←قدیم | جدید→  /products/--kodak--e1040   (47 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/130/چرخ-دنده  ←قدیم | جدید→  /categories/charkh-dande   (42 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/96/رنگی  ←قدیم | جدید→  /collections/kharid-printer-rangi   (42 کلیک در ۴ ماه قبل از مهاجرت)\n• /mag/معرفی-ایرپاد  ←قدیم | جدید→  /categories/airpods   (42 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/110/لیبل-برچسب  ←قدیم | جدید→  /categories/labelprinter   (33 کلیک در ۴ ماه قبل از مهاجرت)\n• /mag/پرینتر-لیزری-اچ-پی-مدل-m402n-و-پرینتر-تک-کاره  ←قدیم | جدید→  /mag/hp-m402n-vs-m402dn   (30 کلیک در ۴ ماه قبل از مهاجرت)\n• /product/2674/پرینتر-لیزری-سیاه-و-سفید-sky-p100nw  ←قدیم | جدید→  /products/-----sky-p100nw   (26 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/115/برد-فرمتر  ←قدیم | جدید→  /categories/bord   (22 کلیک در ۴ ماه قبل از مهاجرت)\n• /mag/چگونه-گوشی-آیفون-را-به-ویدئو-پروژکتور-متصل-کنیم  ←قدیم | جدید→  /categories/video-projector1   (19 کلیک در ۴ ماه قبل از مهاجرت)\n• /mag/انواع-قلم-نوری  ←قدیم | جدید→  /mag/Digital-Signature-Pad-Usage-Selection-and-Setup   (16 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/119/برد-پاور  ←قدیم | جدید→  /categories/bordpower   (15 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/121/سایر-قطعات  ←قدیم | جدید→  /categories/mavadmasrafi   (15 کلیک در ۴ ماه قبل از مهاجرت)\n• /mag/تعمیر-پرینتر-سوزنی  ←قدیم | جدید→  /mag/Dot-Matrix-Printers-Why-They-Remain-Irreplaceable-in-Banks-and-Offices   (15 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/114/باتری  ←قدیم | جدید→  /categories/battery   (14 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/112/نوار-لیبل-پرینتر  ←قدیم | جدید→  /categories/labelprinter   (14 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/105/ریبون  ←قدیم | جدید→  /categories/ribbon   (12 کلیک در ۴ ماه قبل از مهاجرت)\n• /page/call  ←قدیم | جدید→  /contact-us   (8 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/127/هات-رول  ←قدیم | جدید→  /categories/hotrol   (11 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/108/مرکب-ریسوگراف  ←قدیم | جدید→  /categories/mavadmasrafi   (11 کلیک در ۴ ماه قبل از مهاجرت)\n• /mag/تست-پرینت-سیاه-سفید-و-رنگی  ←قدیم | جدید→  /mag/the-best-color-printer   (11 کلیک در ۴ ماه قبل از مهاجرت)\n• /mag/راهنمای-خرید-پول-شمار-و-اسکناس-شمار  ←قدیم | جدید→  /mag/Buying-Guide-for-Banknote-Counters-and-Detectors   (10 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/109/تانک-جوهر  ←قدیم | جدید→  /categories/tank   (9 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/132/فوم-رول  ←قدیم | جدید→  /categories/roll   (9 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/73/needle printer  ←قدیم | جدید→  /collections/printr-svzni   (8 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/128/هد-پرینتر  ←قدیم | جدید→  /categories/hed   (8 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/51/printer  ←قدیم | جدید→  /categories/printer   (8 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/59/inkjet-cartridges  ←قدیم | جدید→  /categories/laser-cartridge   (8 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/97/سیاه-و-سفید-2  ←قدیم | جدید→  /collections/kharid-printer-siah-sefid   (7 کلیک در ۴ ماه قبل از مهاجرت)\n• /mag/تعمیر-اسکنر  ←قدیم | جدید→  /mag/how-to-solve-common-problems-in-scanners-and-copiers   (7 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/122/سینی-خروجی-پرینتر  ←قدیم | جدید→  /categories/sini   (6 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/131/پیکاپ  ←قدیم | جدید→  /categories/pickup-roller   (6 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/118/مگنت  ←قدیم | جدید→  /categories/magnet   (6 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/120/سپریشن-پد  ←قدیم | جدید→  /categories/mavadmasrafi   (6 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/95/سیاه-و-سفید  ←قدیم | جدید→  /collections/kharid-printer-siah-sefid   (6 کلیک در ۴ ماه قبل از مهاجرت)\n• /mag/مخترع-پرینتر-لیزری  ←قدیم | جدید→  /mag/inkjet-vs-laser-printer   (6 کلیک در ۴ ماه قبل از مهاجرت)\n• /category/123/سینی-ورودی-پرینتر  ←قدیم | جدید→  /categories/sini   (5 کلیک در ۴ ماه قبل از مهاجرت)\n\nکار شما: تست و تأیید، نه ساختن دوباره.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/admin/seo/redirects\nhttps://mahamprint.com/category/75/3-job\nhttps://mahamprint.com/category/138/پد-امضاء\nhttps://mahamprint.com/page/call",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "URGENT",
+   "dueAt": "2026-10-01",
+   "reviewAt": "2026-11-01",
+   "checklist": [
+    "۲۰ ریدایرکت اول جدول بالا را در مرورگر (پنجره‌ی ناشناس) باز کنید و مطمئن شوید به صفحه‌ی درست می‌رود",
+    "در هر مقصد چک کنید صفحه محتوای مرتبط دارد (مثلاً پرینتر سه کاره واقعاً محصولات سه کاره نشان دهد)",
+    "هر ریدایرکتی که به صفحه‌ی نامرتبط می‌رود را در /admin/seo/redirects ویرایش و در گزارش بنویسید",
+    "سرچ کنسول ← Pages ← Not found (404) ← دکمه‌ی Validate Fix",
+    "یک هفته بعد: ستون «بازدید» ریدایرکت‌ها در پنل را نگاه کنید و ۱۰ تای پربازدید را در گزارش بنویسید"
+   ]
+  },
+  {
+   "categoryKey": "REDIRECTS",
+   "title": "مهام — ریدایرکت آدرس‌های ۴۰۴ باقی‌مانده که تصمیم انسانی می‌خواهند",
+   "description": "این آدرس‌ها در لاگ ۴۰۴ سایت (ادمین ← سئو ← گزارش ۴۰۴) بازدید دارند ولی مقصدشان با اطمینان پیدا نشد.\nبرای هر کدام مقصد درست را پیدا و در /admin/seo/redirects ثبت کنید (نوع ۳۰۱، تطبیق دقیق):\n\n• /categories/item-1780153016023-x699 ، item-1780153015988-nwdk ، item-1780153015995-9ue1 ، item-1780153016017-vnzx ،\n  item-1780153016108-v613 ، item-1780153016085-ztn9 ، item-1780153016061-vo8j ، item-1780150636473-k5kl ، item-1780153016047-44cy\n  ← این‌ها اسلاگ‌های قبلی دسته‌ها هستند که عوض شده‌اند. از روی تاریخچه‌ی ویرایش دسته‌ها یا حدس از فهرست دسته‌ها مقصد را پیدا کنید.\n• /categories/--- ، /categories/---2 ، /categories/---4 ، /categories/-2 ، /categories/-3 ، /categories/-5 ، /categories/-\n  ← اسلاگ‌های خراب قدیمی دسته‌ها؛ اگر مقصد معلوم نیست به /products بفرستید.\n• /products/--x103--a3 ، /products/-xvision-s-610 ← محصولی که اسلاگش عوض شده؛ در پنل با مدل جست‌وجو کنید.\n• /productid/vm12575 ، /productid/maham-265332 ، /product/1002 ← از سایت قدیم؛ اگر پیدا نشد → /products\n• /tag/1101/درام-سبز ← /categories/drum    ،   /tag/2580/فیلم-فیوزینگ-کانن ← /categories/fusing-film\n• /category/82/cart print (با فاصله) ← /categories/printer\n• /store/categories/ش ← /products\n\nقاعده: هیچ آدرسی را به صفحه‌ی اصلی ریدایرکت نکنید مگر واقعاً مرتبط باشد؛ ریدایرکت به صفحه‌ی بی‌ربط برای گوگل حکم ۴۰۴ دارد.\nبعد از ثبت، در گزارش ۴۰۴ همان آدرس‌ها را «نادیده» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/admin/seo/redirects",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-04",
+   "reviewAt": null,
+   "checklist": [
+    "۹ اسلاگ قدیمی item-… دسته‌ها",
+    "۷ اسلاگ خراب ---/-2/-3… دسته‌ها",
+    "محصولات x103 و xvision s-610",
+    "productid و tag و بقیه",
+    "بستن موارد در گزارش ۴۰۴"
+   ]
+  },
+  {
+   "categoryKey": "REDIRECTS",
+   "title": "مهام — بررسی هفتگی گزارش ۴۰۴ (تا پایان آبان)",
+   "description": "هر شنبه ۱۵ دقیقه: ادمین ← سئو ← گزارش ۴۰۴. آدرس‌هایی که بیش از ۲ بار دیده شده‌اند را ریدایرکت کنید.\n\n⚠️ مهم: هر وقت اسلاگ یک محصول، دسته، برند یا مقاله را در پنل عوض کردید، سیستم **خودش ریدایرکت نمی‌سازد**.\nهمان لحظه یک ریدایرکت از آدرس قدیم به جدید بسازید، وگرنه آدرس قبلی (که شاید در گوگل ایندکس است) ۴۰۴ می‌شود.\n(نمونه: /products/------hsm--b22 بعد از تغییر اسلاگ به hsm-b22 ۴۰۴ شد.)\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/admin/seo/redirects",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-11-21",
+   "reviewAt": null,
+   "checklist": [
+    "هفته‌ی ۱ (۱۲ مهر)",
+    "هفته‌ی ۲ (۱۹ مهر)",
+    "هفته‌ی ۳ (۲۶ مهر)",
+    "هفته‌ی ۴ (۳ آبان)",
+    "هفته‌ی ۵ (۱۰ آبان)",
+    "هفته‌ی ۶ (۱۷ آبان)",
+    "هفته‌ی ۷ (۲۴ آبان)"
+   ]
+  },
+  {
+   "categoryKey": "INDEXING",
+   "title": "مهام — درخواست ایندکس ۳۰ صفحه‌ی مهم پرینتر در سرچ کنسول",
+   "description": "وضعیت: در نمونه‌ی ۲۰ محصول تصادفی فقط ۸ تا در گوگل ایندکس بودند؛ ۶ تا «Discovered – currently not indexed» و ۶ تا\nاصلاً برای گوگل ناشناخته. دسته‌ی «پد امضا» (/categories/pademza) هم ایندکس نیست.\nسایت‌مپ ۳۰۵۶ آدرس دارد و آخرین بار ۳۱ شهریور خوانده شده.\n\nکار: در سرچ کنسول (mahamprint.com) با URL Inspection هر آدرس زیر را بررسی کنید؛ اگر «URL is not on Google» بود\n«Request Indexing» بزنید (سقف روزانه حدود ۱۰ تا است، پس ۳ روز طول می‌کشد).\nاولویت: ۱) لندینگ‌های تازه‌ی پرینتر ۲) دسته‌ها ۳) محصولات پرینتر.\nاگر دسترسی سرچ کنسول ندارید از مهدی رحیمی بگیرید (دسترسی Full کافی است).\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/collections/kharid-printer-se-kare\nhttps://mahamprint.com/collections/kharid-printer-chahar-kare\nhttps://mahamprint.com/collections/kharid-printer-tak-kare\nhttps://mahamprint.com/collections/kharid-printer-rangi\nhttps://mahamprint.com/collections/kharid-printer-siah-sefid\nhttps://mahamprint.com/categories/pademza\nhttps://mahamprint.com/categories/label-printer\nhttps://mahamprint.com/categories/printer\nhttps://mahamprint.com/categories/scanner\nhttps://mahamprint.com/categories/battery\nhttps://mahamprint.com/categories/ribbon\nhttps://mahamprint.com/categories/drum\nhttps://mahamprint.com/brands/canon\nhttps://mahamprint.com/products/---hp--mfp-m236dw\nhttps://mahamprint.com/products/----hp-mfp-m-136-w\nhttps://mahamprint.com/products/----canon-6030\nhttps://mahamprint.com/products/--epson-l4260\nhttps://mahamprint.com/products/----epson--l3556\nhttps://mahamprint.com/products/---canon--pixma--ts3640\nhttps://mahamprint.com/products/----hp--m680dn\nhttps://mahamprint.com/products/----brother-hl-1110\nhttps://mahamprint.com/products/----panasonic--2085\nhttps://mahamprint.com/products/---hp-251dw\nhttps://mahamprint.com/products/--------canon---pixma-g3410\nhttps://mahamprint.com/products/---hp--m377dw\nhttps://mahamprint.com/products/--canon-g3010\nhttps://mahamprint.com/products/--kodak--e1040\nhttps://mahamprint.com/products/-----sky-p100nw\nhttps://mahamprint.com/products/---ecotank-et-m2140\nhttps://mahamprint.com/products/-hp-scanjet-300",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-06",
+   "reviewAt": "2026-10-27",
+   "checklist": [
+    "روز ۱: ۵ لندینگ + ۵ دسته",
+    "روز ۲: ۱۰ محصول اول",
+    "روز ۳: بقیه",
+    "در گزارش: تعداد «ایندکس بود / درخواست شد» را بنویسید"
+   ]
+  },
+  {
+   "categoryKey": "INDEXING",
+   "title": "مهام — بررسی گزارش Pages و Enhancements سرچ کنسول و ثبت علت‌ها",
+   "description": "در سرچ کنسول ← Indexing ← Pages، برای هر دلیل عدم ایندکس (Not found 404, Crawled not indexed, Discovered not indexed,\nDuplicate without canonical, Alternate page with canonical, Page with redirect) تعداد و ۵ نمونه آدرس را در گزارش بنویسید.\nهمچنین Enhancements ← Product snippets / Merchant listings: خطاها را یادداشت کنید (انتظار: خطای «Either offers, review or\naggregateRating should be specified» برای محصولات بدون قیمت).\n\nاین گزارش مبنای کار ماه بعد است؛ اسکرین‌شات صفحه‌ها را پیوست کنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": null,
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-10-08",
+   "reviewAt": null,
+   "checklist": [
+    "Pages: جدول دلیل‌ها + تعداد + نمونه",
+    "Product snippets: خطاها",
+    "Merchant listings: خطاها",
+    "پیوست اسکرین‌شات‌ها"
+   ]
+  },
+  {
+   "categoryKey": "META",
+   "title": "مهام — عنوان و توضیحات صفحه‌ی اصلی",
+   "description": "الان عنوان صفحه‌ی اصلی فقط «مهام پرینت» است (۱۰ کاراکتر) و توضیحات ۳۶۱ کاراکتر (گوگل بعد از ~۱۵۵ کاراکتر می‌بُرد).\nصفحه‌ی اصلی H1 هم ندارد.\n\nپیشنهاد (در تنظیمات فروشگاه ← سئو):\n• عنوان (≤ ۶۰ کاراکتر): «مهام پرینت | خرید پرینتر، اسکنر و کارتریج با گارانتی»\n• توضیحات (۱۴۰–۱۵۵ کاراکتر): «فروشگاه مهام پرینت؛ خرید پرینتر سه کاره، لیزری و جوهرافشان، اسکنر، لیبل پرینتر و\n  کارتریج اورجینال HP، Canon و Epson با گارانتی معتبر، مشاوره‌ی رایگان و ارسال سریع.»\n• H1: اگر در ویجت‌های صفحه‌ی اصلی بلوک «عنوان/متن» هست، یک H1 بالای صفحه بگذارید:\n  «فروشگاه اینترنتی پرینتر و ماشین‌های اداری مهام پرینت». اگر ویجت H1 ندارد در گزارش بنویسید تا در سورس اضافه شود.\n• لینک تلفن در صفحه‌ها خراب است (tel:09129449453 - 09393338545 - 02188314150). در تنظیمات فیلد تلفن فقط **یک** شماره\n  بگذارید و شماره‌های دیگر را در متن فوتر/تماس بنویسید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-02",
+   "reviewAt": null,
+   "checklist": [
+    "عنوان صفحه‌ی اصلی",
+    "توضیحات متا ≤ ۱۵۵",
+    "H1 صفحه‌ی اصلی (یا گزارش نبودن امکان)",
+    "اصلاح تلفن تنظیمات"
+   ]
+  },
+  {
+   "categoryKey": "META",
+   "title": "مهام — عنوان سئو و توضیحات متا برای ۵۵ دسته",
+   "description": "تقریباً همه‌ی دسته‌ها عنوان سئوی خالی یا یک‌کلمه‌ای دارند («تونر»، «رول»، «مگنت») و ۲۰ دسته توضیحات متا ندارند.\nعنوان دسته‌ی «پرینتر» برعکس ۷۰ کاراکتر است و بریده می‌شود.\n\nفرمول عنوان (۴۵–۶۰ کاراکتر): «خرید [نام دسته] + [ویژگی/برند] | قیمت روز و گارانتی»\nفرمول توضیحات (۱۲۰–۱۵۵): «خرید [نام دسته] [برندها] با قیمت روز، گارانتی معتبر و ارسال سریع از مهام پرینت. مشاوره‌ی رایگان\nبرای انتخاب [نام دسته] مناسب.»\n\nنمونه‌های آماده:\n• پرینتر: «خرید پرینتر خانگی و اداری | قیمت روز پرینتر با گارانتی» (۵۰)\n• لیبل پرینتر: «خرید لیبل پرینتر و فیش پرینتر | قیمت روز لیبل زن» (۴۹)\n• اسکنر: «خرید اسکنر اسناد و اداری کداک، اپسون، ای‌ویژن | مهام» (۵۲)\n• کارتریج لیزری: «خرید کارتریج لیزری اورجینال HP و Canon | قیمت روز» (۴۸)\n• تونر: «خرید تونر و کارتریج پرینتر لیزری | قیمت و مشخصات» (۴۶)\n• پد امضا: «خرید پد امضای دیجیتال و پد امضا اثر انگشت | مهام» (۴۸)\n• موادمصرفی و قطعات: «خرید قطعات و مواد مصرفی پرینتر | درام، فیوزینگ، رول پرس» (۵۵)\n\nابتدا دسته‌های بدون عنوان: saathoshmand, mobile, cargeraphic, ghataat, bordpower, printerstock, rolperes, mavadmasrafi,\nprinter3d, hed, hotrol, labelprinter, charkh-dande, pademza, telephone, bord, sandogh, tank, fiozing.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/admin/categories",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-09",
+   "reviewAt": null,
+   "checklist": [
+    "پرینتر، اسکنر، لیبل پرینتر، کارتریج، تونر (۵ دسته‌ی پربازدید)",
+    "۱۹ دسته‌ی بدون عنوان سئو",
+    "بقیه‌ی دسته‌های یک‌کلمه‌ای",
+    "توضیحات متای ۲۰ دسته‌ی بدون توضیحات"
+   ]
+  },
+  {
+   "categoryKey": "META",
+   "title": "مهام — عنوان سئو و توضیحات متای محصولات بدون متا",
+   "description": "۶۴ محصول فعال عنوان سئو ندارند و ۸۷ محصول توضیحات متا ندارند. در پنل محصولات فیلتر/مرتب‌سازی کنید و پر کنید.\n\nفرمول عنوان محصول (≤ ۶۰): «[نوع دستگاه] [برند] مدل [مدل] | قیمت و مشخصات»\nمثال: «پرینتر سه کاره لیزری HP مدل M236dw | قیمت و مشخصات»\nفرمول توضیحات (۱۲۰–۱۵۵): «خرید [نام محصول] با گارانتی [گارانتی]؛ [۲ ویژگی کلیدی مثل سرعت چاپ، وای‌فای، دورو].\nمشخصات کامل، قیمت روز و ارسال سریع از مهام پرینت.»\n\nاولویت با پرینترها، اسکنرها و لیبل پرینترها.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/admin/products",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-10-16",
+   "reviewAt": null,
+   "checklist": [
+    "۶۴ عنوان سئو",
+    "۸۷ توضیحات متا"
+   ]
+  },
+  {
+   "categoryKey": "CATEGORY_SEO",
+   "title": "مهام — محتوای لندینگ «خرید پرینتر سه کاره» (مقصد رتبه‌ی قدیمی ۴ گوگل)",
+   "description": "قبل از مهاجرت، «پرینتر سه کاره» با رتبه‌ی ۴ ماهی ~۴۵ کلیک می‌آورد (۴۰۵۹ نمایش در ۴ ماه) و الان رتبه‌ی ۱۰ با ۱ کلیک است.\nلندینگ تازه‌ی https://mahamprint.com/collections/kharid-printer-se-kare (فیلتر: نوع کاربری = سه کاره) ساخته شد و آدرس قدیمی به آن ریدایرکت شد،\nولی متن ندارد. کار: تکمیل از «ادمین ← لندینگ‌ها (کالکشن‌ها)».\n\nفیلدها:\n• عنوان سئو: «خرید پرینتر سه کاره | قیمت روز پرینتر ۳ کاره لیزری و جوهرافشان» (≤ ۶۵)\n• H1: «پرینتر سه کاره»\n• توضیحات متا: «خرید پرینتر سه کاره (پرینت، اسکن، کپی) HP، Canon، Epson و Brother؛ مقایسه‌ی قیمت روز، مدل‌های لیزری و\n  جوهرافشان خانگی و اداری با گارانتی معتبر و مشاوره‌ی رایگان.»\n• intro (بالای فهرست، ۶۰–۹۰ کلمه، یک پاراگراف p): پرینتر سه کاره چیست در یک جمله + برای چه کسی مناسب است + لینک به\n  راهنمای «پرینتر تک کاره، سه کاره یا چهارکاره؟» (https://mahamprint.com/mag/printer-Single-function-3-in-1-Multifunctional)\n• bodyHtml (پایین فهرست، ۸۰۰–۱۲۰۰ کلمه):\n  H2 پرینتر سه کاره چیست و چه کاری انجام می‌دهد؟  — p کوتاه\n  H2 پرینتر سه کاره لیزری یا جوهرافشان؟\n     H3 پرینتر سه کاره لیزری — p + لینک به https://mahamprint.com/collections/printr-lizri-sh-karh-brnd-hp\n     H3 پرینتر سه کاره جوهرافشان (مخزن‌دار) — p + لینک به https://mahamprint.com/collections/printr-jvhrafshan-sh-karh-canon و epson\n     جدول مقایسه: هزینه‌ی هر برگ | سرعت | کیفیت عکس | مناسب برای | قیمت دستگاه\n  H2 راهنمای خرید پرینتر سه کاره\n     H3 حجم چاپ ماهانه   H3 وای‌فای و چاپ از موبایل   H3 چاپ دورو (دوبلکس)   H3 ADF برای اسکن چندبرگی\n     H4 هزینه‌ی کارتریج و تونر — لینک به https://mahamprint.com/mag/printer-cartridge-compatibility-table\n  H2 بهترین برندهای پرینتر سه کاره — فهرست ul: HP (https://mahamprint.com/brands/hp)، Canon (https://mahamprint.com/brands/canon)، Epson (https://mahamprint.com/brands/epson)، Brother\n  H2 پرسش‌های متداول — ۴ سؤال (FAQ دسته اگر فیلدش هست): «فرق پرینتر سه کاره و چهارکاره چیست؟»، «پرینتر سه کاره خانگی\n     ارزان کدام است؟»، «آیا پرینتر سه کاره رنگی هم هست؟»، «گارانتی پرینترهای مهام پرینت چیست؟»\n• لینک متقابل: از مقاله‌ی «پرینتر تک کاره، سه کاره یا چهارکاره؟» و از دسته‌ی پرینتر به این لندینگ لینک بدهید (انکر: «خرید پرینتر سه کاره»).\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/collections/kharid-printer-se-kare\nhttps://mahamprint.com/category/75/3-job",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "URGENT",
+   "dueAt": "2026-10-05",
+   "reviewAt": "2026-11-20",
+   "checklist": [
+    "عنوان سئو + H1 + توضیحات متا",
+    "intro",
+    "bodyHtml با H2/H3/H4 و جدول مقایسه",
+    "FAQ",
+    "لینک از مقاله‌ی راهنما به لندینگ",
+    "لینک از متن دسته‌ی پرینتر به لندینگ",
+    "درخواست ایندکس در سرچ کنسول"
+   ]
+  },
+  {
+   "categoryKey": "CATEGORY_SEO",
+   "title": "مهام — محتوای ۴ لندینگ تازه‌ی پرینتر (چهارکاره، تک کاره، رنگی، سیاه‌وسفید)",
+   "description": "همراه با ریدایرکت‌ها ۴ لندینگ دیگر ساخته شد که متن ندارند. برای هر کدام همان الگوی لندینگ «پرینتر سه کاره» (کار قبلی) ولی\nکوتاه‌تر (bodyHtml ۵۰۰–۸۰۰ کلمه):\n• https://mahamprint.com/collections/kharid-printer-chahar-kare — کلمه: «پرینتر چهارکاره»، «پرینتر ۴ کاره اداری»، «پرینتر فکس دار»\n• https://mahamprint.com/collections/kharid-printer-tak-kare — کلمه: «پرینتر تک کاره» (۲۴۶ نمایش، رتبه‌ی ۵ با صفحه‌ی یک محصول!)، «پرینتر تک کاره لیزری»\n• https://mahamprint.com/collections/kharid-printer-rangi — کلمه: «پرینتر رنگی»، «پرینتر رنگی خانگی»، «پرینتر رنگی لیزری»\n• https://mahamprint.com/collections/kharid-printer-siah-sefid — کلمه: «پرینتر سیاه و سفید»، «پرینتر لیزری سیاه سفید»\n\nساختار هر کدام: H1 | intro ۶۰ کلمه | H2 چیست | H2 لیزری یا جوهرافشان (H3 هر کدام + لینک کالکشن برند) | H2 نکات خرید (ul) |\nH2 پرسش‌های متداول (۳ سؤال). از هر لندینگ به ۲ لندینگ دیگر و به دسته‌ی پرینتر لینک بدهید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/collections/kharid-printer-chahar-kare\nhttps://mahamprint.com/collections/kharid-printer-tak-kare\nhttps://mahamprint.com/collections/kharid-printer-rangi\nhttps://mahamprint.com/collections/kharid-printer-siah-sefid",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-14",
+   "reviewAt": "2026-11-25",
+   "checklist": [
+    "چهارکاره",
+    "تک کاره",
+    "رنگی",
+    "سیاه و سفید"
+   ]
+  },
+  {
+   "categoryKey": "CATEGORY_SEO",
+   "title": "مهام — متن و توضیحات ۲۵ لندینگ برندی پرینتر",
+   "description": "۲۵ کالکشن موجود (مثل «خرید پرینتر لیزری سه کاره hp»، «خرید پرینتر سوزنی») متن پایین صفحه (bodyHtml) ندارند و توضیحات\nمتای‌شان ۴۰–۷۰ کاراکتر است. صفحه‌ی فهرستی بدون متن برای گوگل «نازک» است.\n\nبرای هر کالکشن:\n• توضیحات متا ۱۲۰–۱۵۵ کاراکتر\n• intro یک پاراگراف ۴۰–۶۰ کلمه\n• bodyHtml ۳۰۰–۵۰۰ کلمه: H2 «ویژگی‌های پرینتر [نوع] [برند]» ، H2 «مدل‌های پرفروش» (ul با لینک به ۳–۵ محصول) ،\n  H2 «پرسش‌های متداول» (۲ سؤال)\n• از هر کالکشن برندی به لندینگ عمومی همان نوع لینک بدهید (مثلاً «پرینتر لیزری سه کاره hp» ← «خرید پرینتر سه کاره»)\n\nترتیب: printr-lizri-sh-karh-brnd-hp ، printr-sh-karh-lizri-canon ، printr-jvhrafshan-sh-karh-canon ، printr-sh-karh-jvhrafshan-epson ،\nkhrid-printrhai-lizri ، khrid-printrhai-johrafshan ، khrid-printrhai-svzni ، kharid-printer-tak-kare-hp ، سپس بقیه.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/collections/printr-lizri-sh-karh-brnd-hp\nhttps://mahamprint.com/collections/khrid-printrhai-lizri\nhttps://mahamprint.com/collections/khrid-printrhai-svzni",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-10-30",
+   "reviewAt": null,
+   "checklist": [
+    "۸ کالکشن اول",
+    "۸ کالکشن دوم",
+    "۹ کالکشن آخر"
+   ]
+  },
+  {
+   "categoryKey": "CATEGORY_SEO",
+   "title": "مهام — بهینه‌سازی دسته‌ی لیبل پرینتر برای «لیبل پرینتر» و «پرینتر لیبل زن رنگی»",
+   "description": "این دسته برای کلمه‌های خرید زیادی نمایش می‌گیرد ولی رتبه‌اش ضعیف است:\n«لیبل پرینتر» ۲۸۷ نمایش رتبه‌ی ۵۴ | «پرینتر لیبل زن رنگی» ۳۲۷ نمایش رتبه‌ی ۲۰ | «قیمت پرینتر لیبل زن رنگی» ۱۷۳ رتبه‌ی ۳۸ |\n«خرید لیبل پرینتر» ۱۴۲ رتبه‌ی ۵۸ | «فروشگاه پرینتر لیبل زن» ۱۲۸ رتبه‌ی ۶۰ | «لیبل پرینتر حرارتی» ۹۷ رتبه‌ی ۵۰.\n\nمشکل: دسته هم لیبل پرینتر است هم فیش پرینتر («لیبل پرینتر و فیش پرینتر») و نیت کاربر را دوتکه می‌کند.\nکارها:\n۱. H1 و عنوان سئو را روی لیبل پرینتر متمرکز کنید: عنوان «خرید لیبل پرینتر و پرینتر لیبل زن | قیمت روز» ، H1 «لیبل پرینتر».\n۲. دو کالکشن تازه بسازید (ادمین ← لندینگ‌ها) زیر همین دسته: «خرید فیش پرینتر» و «خرید پرینتر لیبل زن رنگی» (با فیلتر مناسب؛\n   اگر ویژگی رنگی/فیش برای لیبل پرینترها تعریف نشده، ابتدا ویژگی را روی محصولات بزنید).\n۳. متن پایین دسته را بازنویسی کنید: H2 لیبل پرینتر چیست | H2 انواع لیبل پرینتر (H3 حرارتی مستقیم، H3 انتقال حرارتی، H3\n   رومیزی و صنعتی) + جدول مقایسه | H2 پرینتر لیبل زن رنگی | H2 راهنمای خرید (ul) — لینک به مقاله‌ی\n   https://mahamprint.com/mag/labelprinter-sanaati-romizi و به دسته‌ی https://mahamprint.com/categories/labelprinter (لیبل مصرفی) و https://mahamprint.com/categories/ribbon.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/categories/label-printer",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-12",
+   "reviewAt": "2026-11-30",
+   "checklist": [
+    "عنوان سئو + H1",
+    "کالکشن فیش پرینتر",
+    "کالکشن پرینتر لیبل زن رنگی",
+    "بازنویسی متن دسته با جدول",
+    "لینک از مقاله‌ی لیبل پرینتر"
+   ]
+  },
+  {
+   "categoryKey": "CATEGORY_SEO",
+   "title": "مهام — تکمیل دسته‌های بدون متن و اصلاح عنوان‌های دارای «ـ» و دسته‌های خالی",
+   "description": "الف) دسته‌های بدون متن (description) و بدون FAQ: mavadmasrafi (۱۱۱ محصول)، ribbon (۵۶)، karbonfaks، paper، printer3d،\nside-part، roll، mother-board. برای هر کدام: متن ۲۵۰–۴۰۰ کلمه (H2 چیست، H2 راهنمای انتخاب، H2 پرسش‌های متداول) + ۳ FAQ.\n\nب) کشیده (ـ) در عنوان‌ها: «لـیبل»، «ریـبون»، «باتـری»، «مـگنت»، «دولـوپر»، «فیلم فـیوزینگ» و برند «کـاسیو». این حرف در H1\nمی‌نشیند و گوگل «لـیبل» را با «لیبل» یکی نمی‌داند. عنوان‌ها را بدون ـ بنویسید. (عنوان دسته‌ی labelprinter را «لیبل و برچسب\nپرینتر» بگذارید تا با دسته‌ی لیبل پرینتر اشتباه نشود.)\n\nج) دسته‌های خالی یا آزمایشی: «ن» (نوارلیبل)، «ش» (شیرظرفشویی!)، cpu، helishot، black، pic-camera — صفر محصول دارند و ۴۰۴\nمی‌دهند. غیرفعال کنید. (ریدایرکت black ، helishot و pic-camera قبلاً ساخته شده.)\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/categories/mavadmasrafi\nhttps://mahamprint.com/categories/ribbon",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-10-20",
+   "reviewAt": null,
+   "checklist": [
+    "متن ۸ دسته",
+    "حذف ـ از ۷ عنوان",
+    "غیرفعال کردن دسته‌های خالی"
+   ]
+  },
+  {
+   "categoryKey": "PRODUCT_SEO",
+   "title": "مهام — قیمت‌گذاری محصولات بدون قیمت (۲۳۹۱ محصول، اولویت پرینترها)",
+   "description": "۲۳۹۱ محصول از ۲۸۰۵ محصول فعال قیمت صفر دارند. پیامدها:\n• گوگل برای آن‌ها اسنیپت قیمت/موجودی نشان نمی‌دهد و در Merchant listings خطا می‌گیرد (اسکیما offers ندارد).\n• ترب در ۴۲٪ نشست‌ها منبع ورود است (Umami، ۲ روز اخیر)؛ محصول بی‌قیمت در ترب نمایش ندارد.\n• کلمه‌های «قیمت پرینتر…» (مثل «قیمت پرینتر ۳ کاره» رتبه‌ی ۷) بدون قیمت روی صفحه کلیک نمی‌گیرند.\n\nکار (هماهنگ با مهدی رحیمی برای قیمت‌ها):\n۱. فهرست پرینترها، اسکنرها و لیبل پرینترهای بی‌قیمت را از پنل دربیاورید (حدود ۸۰۰ مورد).\n۲. محصولاتی که واقعاً موجود نیستند را «ناموجود» کنید، نه بی‌قیمت.\n۳. برای ۱۰۰ محصول پرینتر اول قیمت روز بگذارید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": null,
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "URGENT",
+   "dueAt": "2026-10-12",
+   "reviewAt": "2026-11-12",
+   "checklist": [
+    "استخراج فهرست پرینتر/اسکنر/لیبل بی‌قیمت",
+    "تأیید سیاست قیمت با مدیر",
+    "قیمت ۱۰۰ پرینتر اول",
+    "ناموجود کردن موارد تمام‌شده"
+   ]
+  },
+  {
+   "categoryKey": "PRODUCT_SEO",
+   "title": "مهام — تکمیل ۳۰ صفحه‌ی محصول پربازدید پرینتر (توضیح کوتاه، FAQ، دانلود درایور)",
+   "description": "این ۳۰ محصول بیشترین نمایش گوگل را دارند (آدرس‌ها پایین). ۲۳۰۸ محصول توضیح کوتاه ندارند و هیچ محصولی FAQ ندارد.\nکلمه‌هایی مثل «دانلود درایور اسکنر kodak e1040» و «درایور پرینتر sky p100nw» قبل از مهاجرت کلیک می‌آوردند.\n\nبرای هر محصول:\n• توضیح کوتاه (shortDescription) ۲–۳ جمله: برای چه کسی مناسب است + ۳ ویژگی کلیدی\n• ۳ سؤال متداول (FAQ): «این پرینتر وای‌فای دارد؟»، «کارتریج/تونر این مدل چیست؟» (با لینک به صفحه‌ی کارتریج همان مدل)،\n  «گارانتی و خدمات پس از فروش؟»\n• فیلد دانلود: عنوان «دانلود درایور [مدل]» + لینک صفحه‌ی رسمی درایور سازنده\n• در متن کارشناسی حداقل یک لینک به لندینگ نوع پرینتر (مثلاً «خرید پرینتر سه کاره») و یک لینک به کارتریج سازگار\n• عنوان سئو با فرمول کار «عنوان سئو محصولات» (اگر خالی یا ضعیف است)\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/products/-hp-scanjet-300\nhttps://mahamprint.com/products/----canon-6030\nhttps://mahamprint.com/products/----panasonic--2085\nhttps://mahamprint.com/products/----hp-mfp-m-136-w\nhttps://mahamprint.com/products/----------avision--ad5800\nhttps://mahamprint.com/products/----brother-hl-1110\nhttps://mahamprint.com/products/--epson-l4260\nhttps://mahamprint.com/products/----hp--m680dn\nhttps://mahamprint.com/products/-----xp-q200\nhttps://mahamprint.com/products/----epson--l3556\nhttps://mahamprint.com/products/-epson-dfx9000\nhttps://mahamprint.com/products/---ecotank-et-m2140\nhttps://mahamprint.com/products/-olivetti-pr4\nhttps://mahamprint.com/products/----hp-cp1215\nhttps://mahamprint.com/products/---canon--pixma--ts3640\nhttps://mahamprint.com/products/-hp-4010\nhttps://mahamprint.com/products/-fujitsu-fi-7260\nhttps://mahamprint.com/products/----brother--hl-5440d\nhttps://mahamprint.com/products/-avision-ad125\nhttps://mahamprint.com/products/----meva--tp-un\nhttps://mahamprint.com/products/-kodak-i3450\nhttps://mahamprint.com/products/----canon-i-7018c\nhttps://mahamprint.com/products/canon--633--cdw--single-function--laser--printer\nhttps://mahamprint.com/products/-----meva--4210\nhttps://mahamprint.com/products/--epson-tm-t20\nhttps://mahamprint.com/products/---hp--mfp-m236dw\nhttps://mahamprint.com/products/--canon-g3010\nhttps://mahamprint.com/products/--kodak--e1040\nhttps://mahamprint.com/products/-----sky-p100nw\nhttps://mahamprint.com/products/----hp-m402dn",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-26",
+   "reviewAt": "2026-12-01",
+   "checklist": [
+    "محصولات ۱ تا ۱۰",
+    "محصولات ۱۱ تا ۲۰",
+    "محصولات ۲۱ تا ۳۰"
+   ]
+  },
+  {
+   "categoryKey": "INTERNAL_LINKS",
+   "title": "مهام — اتصال محصولات مرتبط به مقاله‌ها و لینک‌دهی مقاله‌ها به لندینگ‌ها",
+   "description": "از ۱۰۵ مقاله‌ی منتشرشده فقط ۹ مقاله‌ی شهریور محصول مرتبط دارند؛ مقاله‌های قدیمی (حتی پربازدیدها) به هیچ محصولی وصل نیستند.\nصفحه‌ی محصول هم در HTML به محصول دیگری لینک نمی‌دهد (بخش «محصولات مرتبط» خاموش است — در سورس پیگیری می‌شود).\n\nبرای هر مقاله‌ی زیر: ۳–۶ محصول مرتبط وصل کنید (ویرایش مقاله ← محصولات مرتبط) و در متن ۲–۳ لینک به لندینگ/دسته بدهید:\n• /mag/advantages-and-disadvantages-of-multifunction-printers ← خرید پرینتر سه کاره، چهارکاره\n• /mag/the-best-office-printers ← خرید پرینتر لیزری، چهارکاره اداری\n• /mag/the-best-color-printer ← خرید پرینتر رنگی\n• /mag/wireless-printer-buying-guide-for-modern-offices ← پرینتر سه کاره\n• /mag/printer-buying-guide-for-small-businesses ← دسته‌ی پرینتر\n• /mag/save-printing-costs-by-using-economical-printers ← پرینتر مخزن‌دار (جوهرافشان)\n• /mag/inkjet-vs-laser-printer ← خرید پرینتر لیزری ، خرید پرینتر جوهرافشان\n• /mag/top-10-laser-printers ، /mag/top-10-inkjet-printers ، /mag/top-10-scanners ← محصولات ذکرشده در متن\n• /mag/how-the-banknote-counter-works-and-the-technologies-used-in-it (پربازدیدترین مقاله، ۵۹۴ نمایش) ← https://mahamprint.com/categories/banknote-count\n• /mag/how-to-choose-the-best-office-scanner ← https://mahamprint.com/categories/scanner\nانکر لینک‌ها توصیفی باشد («خرید پرینتر سه کاره»)، نه «اینجا کلیک کنید».\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": null,
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-19",
+   "reviewAt": null,
+   "checklist": [
+    "۶ مقاله‌ی پرینتر",
+    "۳ مقاله‌ی «بررسی ۱۰…»",
+    "مقاله‌ی اسکناس شمار و اسکنر"
+   ]
+  },
+  {
+   "categoryKey": "CONTENT_REFRESH",
+   "title": "مهام — پاک‌سازی مجله: پست‌های آزمایشی، تکراری و خبرهای بی‌ربط",
+   "description": "الف) پست آزمایشی منتشرشده — به پیش‌نویس برگردانید: «ddd» (سلام فروشگاه) و «t2» (عنوان دوم، بدون متن). این دو ۶۵۴ و ۱۰۰۵\nبار دیده شده‌اند.\nب) تکراری‌ها (یکی بماند، دیگری پیش‌نویس + ریدایرکت به ماندنی):\n  • «معرفی کامل ساندبار» — soundbar-guide بماند؛ item-1780153065926-ydin (ریدایرکتش ساخته شده)\n  • «همه چیز درباره غیر ممکن کردن استفاده از پرینتر در آپدیت ویندوز 10» — windows-10-update-printer-block بماند؛ نسخه‌ی\n    ۱۴۰۱ با اسلاگ d8badb8c… پیش‌نویس + ریدایرکت\n  • «معرفی گوشی سامسونگ S23» دو نسخه (--s23 و daafd988…)\nج) خبرهای ۱۴۰۰ بی‌ربط به فروشگاه (اپل تی‌وی، مک‌بوک، نوکیا G300، گوگل پیکسل پس، مینی‌پی‌سی مسترتک، گلکسی A14، آیفون ۱۴، ۵G):\n  این‌ها هیچ کلیکی ندارند و موضوع سایت را برای گوگل پخش می‌کنند. پیش‌نویس کنید و هر کدام را به نزدیک‌ترین دسته ریدایرکت کنید\n  (موبایل ← https://mahamprint.com/categories/mobile ، لپ‌تاپ ← https://mahamprint.com/categories/laptop).\nد) مقاله‌های با اسلاگ حروف بزرگ (IP-Phones-…، Dot-Matrix-…، Digital-Signature-…، The-Right-Choice-…، Buying-Guide-…،\n  Receipt-Printers-…، printer-Single-function-…): اسلاگ را **دست نزنید** (ایندکس شده‌اند)؛ از این به بعد اسلاگ مقاله را\n  همیشه با حروف کوچک انگلیسی بنویسید، چون آدرس با حروف کوچک ۴۰۴ می‌دهد.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": null,
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-07",
+   "reviewAt": null,
+   "checklist": [
+    "ddd و t2",
+    "۳ مورد تکراری + ریدایرکت",
+    "خبرهای بی‌ربط + ریدایرکت"
+   ]
+  },
+  {
+   "categoryKey": "CONTENT_REFRESH",
+   "title": "مهام — به‌روزرسانی ۶ مقاله‌ی قدیمی پرینتر",
+   "description": "این مقاله‌ها ۱۴۰۲–۱۴۰۳ نوشته شده‌اند، کوتاه‌اند و محصول مرتبط ندارند:\n• the-best-color-printer (۲۹۸۱ کاراکتر) — تبدیل به «بهترین پرینتر رنگی ۱۴۰۵» با جدول ۵ مدل موجود در سایت\n• maintenance-of-printers (۲۷۰۵) — افزودن H2 «تمیز کردن هد»، «ریست پرینتر» (آدرس‌های قدیمی همین موضوع به این مقاله ریدایرکت شده‌اند)\n• buy-the-best-cartridge-based-on-the-printer (۱۹۶۴) — ادغام با جدول تطبیق کارتریج یا لینک به آن\n• how-to-increase-the-life-of-your-cartridge (۳۲۹۷)\n• the-best-office-printers (۵۰۰۸) — به‌روزرسانی مدل‌ها با موجودی فعلی\n• advantages-and-disadvantages-of-multifunction-printers (۴۶۶۸، ۱۰۷ نمایش رتبه‌ی ۷) — افزودن FAQ و لینک به لندینگ سه کاره\n\nبرای هر کدام: سال را در عنوان به ۱۴۰۵ برسانید (اگر معنی دارد)، حداقل ۱۲۰۰ کلمه، ۳ FAQ، ۳–۶ محصول مرتبط، تاریخ به‌روزرسانی.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": null,
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-11-02",
+   "reviewAt": "2026-12-15",
+   "checklist": [
+    "the-best-color-printer",
+    "maintenance-of-printers",
+    "buy-the-best-cartridge-based-on-the-printer",
+    "how-to-increase-the-life-of-your-cartridge",
+    "the-best-office-printers",
+    "advantages-and-disadvantages-of-multifunction-printers"
+   ]
+  },
+  {
+   "categoryKey": "CANNIBALIZATION",
+   "title": "مهام — تعیین صفحه‌ی هدف برای کلمه‌های خرید پرینتر",
+   "description": "الان «خرید پرینتر» (رتبه‌ی ۴۱)، «پرینتر» (۱۳)، «قیمت پرینتر» (۲۱) و «پرینتر سه کاره» (۱۰) همه روی /categories/printer نمایش\nمی‌گیرند و «پرینتر تک کاره» روی صفحه‌ی یک محصول (HP P1102). یک کلمه باید یک صفحه‌ی هدف داشته باشد:\n\n| کلمه | صفحه‌ی هدف |\n|---|---|\n| پرینتر، خرید پرینتر، قیمت پرینتر | https://mahamprint.com/categories/printer |\n| پرینتر سه کاره، خرید/قیمت پرینتر سه کاره | https://mahamprint.com/collections/kharid-printer-se-kare |\n| پرینتر چهارکاره / چند کاره | https://mahamprint.com/collections/kharid-printer-chahar-kare |\n| پرینتر تک کاره | https://mahamprint.com/collections/kharid-printer-tak-kare |\n| پرینتر لیزری / جوهرافشان / سوزنی | کالکشن‌های khrid-printrhai-lizri / johrafshan / svzni |\n| پرینتر لیبل زن رنگی | کالکشن تازه‌ی لیبل زن رنگی (کار دسته‌ی لیبل) |\n| راهنمای انتخاب تک/سه/چهارکاره | https://mahamprint.com/mag/printer-Single-function-3-in-1-Multifunctional |\n\nکار: در متن هر صفحه، کلمه‌ی صفحه‌ی دیگر را با لینک به صفحه‌ی هدفش بنویسید (نه تکرار در H1/عنوان). عنوان سئوی محصول HP P1102\nنباید «پرینتر تک کاره» را جلو بیاورد؛ از متن آن محصول به لندینگ تک کاره لینک بدهید.\nاین جدول را در گزارش تأیید کنید؛ مرجع کارهای محتوایی هم هست.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": null,
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-10-10",
+   "reviewAt": null,
+   "checklist": [
+    "بررسی عنوان/H1 صفحه‌های جدول",
+    "لینک از محصول HP P1102 به لندینگ تک کاره",
+    "لینک از دسته‌ی پرینتر به ۴ لندینگ"
+   ]
+  },
+  {
+   "categoryKey": "LOCAL",
+   "title": "مهام — پروفایل گوگل بیزینس و یکسان‌سازی نام، آدرس و تلفن",
+   "description": "جست‌وجوهای برند («مهام پرینت» ۱۰۸ کلیک، «تامین مهام» ۸۳، «ترسیم مهام» ۳۳، «فروشگاه مهام»، «مهام») بزرگ‌ترین منبع کلیک\nگوگل‌اند. کارها:\n۱. پروفایل Google Business مهام پرینت را پیدا/ادعا کنید (اگر نیست بسازید): دسته «Computer accessories store / Printer store»،\n   ساعت کاری، عکس فروشگاه، لینک سایت، ۱۰ محصول شاخص.\n۲. نام، آدرس و تلفن (NAP) را در سایت (فوتر، تماس با ما، اسکیمای Store)، گوگل بیزینس، نشان، بلد، ترب و ایمالز یکسان کنید.\n۳. از ۵ مشتری راضی بخواهید در گوگل نظر بگذارند.\n۴. «تامین مهام» و «ترسیم مهام» چه ارتباطی با مهام پرینت دارند؟ اگر شرکت‌های مرتبط‌اند، در صفحه‌ی «درباره ما» یک پاراگراف\n   و لینک بگذارید تا این جست‌وجوها به سایت برسند.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "pageUrls": "https://mahamprint.com/contact-us\nhttps://mahamprint.com/about-us",
+   "assigneeId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-10-23",
+   "reviewAt": null,
+   "checklist": [
+    "گوگل بیزینس",
+    "NAP در ۶ جا یکسان",
+    "درخواست نظر از ۵ مشتری",
+    "پاراگراف تامین/ترسیم مهام در درباره ما"
+   ]
+  }
+ ],
+ "contentTasks": [
+  {
+   "title": "بهترین پرینتر سه کاره ۱۴۰۵ برای خانه و اداره (مقایسه و راهنمای خرید)",
+   "primaryKeyword": "بهترین پرینتر سه کاره",
+   "relatedKeywords": "پرینتر سه کاره خانگی، پرینتر سه کاره لیزری، پرینتر سه کاره جوهرافشان، قیمت پرینتر سه کاره، خرید پرینتر سه کاره، پرینتر ۳ کاره",
+   "brief": "چرا: «پرینتر سه کاره» قبل از مهاجرت بزرگ‌ترین کلمه‌ی سایت بود (رتبه‌ی ۴، ۴۰۵۹ نمایش در ۴ ماه) و الان رتبه‌ی ۱۰ است. این مقاله\nنیت «مقایسه/بهترین» را می‌گیرد و خواننده را به لندینگ خرید می‌فرستد. لندینگ هدف خرید: https://mahamprint.com/collections/kharid-printer-se-kare\n\nنیت کاربر: تحقیق قبل از خرید؛ می‌خواهد ۵–۸ مدل مشخص با دلیل ببیند.\nطول: ۲۵۰۰–۳۰۰۰ کلمه.\nعنوان سئو (≤۶۰): «بهترین پرینتر سه کاره ۱۴۰۵ | مقایسه مدل‌های لیزری و جوهرافشان»\nتوضیحات متا (≤۱۵۵): «بهترین پرینتر سه کاره ۱۴۰۵ برای خانه و اداره کدام است؟ مقایسه‌ی ۸ مدل HP، Canon، Epson و Brother از نظر هزینه‌ی چاپ، سرعت و قیمت + راهنمای خرید.»\n\nساختار:\nH1 بهترین پرینتر سه کاره ۱۴۰۵ برای خانه و اداره\np مقدمه ۸۰ کلمه: جواب کوتاه (بهترین برای خانه: …، برای اداره: …) + لینک «خرید پرینتر سه کاره»\nH2 جدول مقایسه‌ی سریع بهترین پرینترهای سه کاره\n   جدول: مدل | نوع (لیزری/جوهرافشان) | سرعت (صفحه در دقیقه) | وای‌فای | دورو | ADF | مناسب برای | لینک محصول\n   (۸ ردیف فقط از محصولات موجود و قیمت‌دار سایت؛ پیشنهاد: HP M236dw، HP M141w/M136w، Canon MF3010، Canon 272dw، Canon G3410 یا G3010، Epson L3256 یا L3556، Epson L4260، Brother DCP-T420W)\nH2 بهترین پرینتر سه کاره لیزری\n   H3 HP LaserJet MFP M236dw — p: برای چه کسی + ۳ ویژگی؛ ul مزایا/معایب؛ لینک محصول https://mahamprint.com/products/---hp--mfp-m236dw\n   H3 HP M136w/M141w — لینک https://mahamprint.com/products/----hp-mfp-m-136-w\n   H3 Canon i-SENSYS 272dw\nH2 بهترین پرینتر سه کاره جوهرافشان (مخزن‌دار)\n   H3 Canon PIXMA G3410/G3010 — لینک https://mahamprint.com/products/--canon-g3010\n   H3 Epson L3556/L3256 — لینک https://mahamprint.com/products/----epson--l3556\n   H3 Epson L4260 — لینک https://mahamprint.com/products/--epson-l4260\nH2 پرینتر سه کاره لیزری بهتر است یا جوهرافشان؟\n   p + جدول: هزینه‌ی هر برگ | چاپ عکس | خشک‌شدن جوهر در استفاده‌ی کم | سرعت | قیمت دستگاه\n   لینک به https://mahamprint.com/mag/inkjet-vs-laser-printer\nH2 راهنمای خرید پرینتر سه کاره: ۶ نکته\n   H3 حجم چاپ ماهانه   H3 اتصال وای‌فای و چاپ از موبایل   H3 چاپ دورو خودکار   H3 ADF   H3 هزینه‌ی کارتریج\n      H4 کارتریج کدام مدل گران‌تر است؟ — لینک https://mahamprint.com/mag/printer-cartridge-compatibility-table\n   H3 گارانتی و خدمات\nH2 پرینتر سه کاره خانگی ارزان: چه انتظاری داشته باشیم؟ — p + ul\nH2 جمع‌بندی: کدام را بخرم؟ — ul سه حالت (دانشجو/خانه، دفتر کوچک، اداره) + CTA به لندینگ\nلینک‌های داخلی دیگر: https://mahamprint.com/mag/printer-Single-function-3-in-1-Multifunctional ، https://mahamprint.com/collections/printr-lizri-sh-karh-brnd-hp ، https://mahamprint.com/brands/canon\nمحصولات مرتبط: همان ۶–۸ مدل جدول.\nFAQ (۵): فرق پرینتر سه کاره و چهارکاره؟ | ارزان‌ترین پرینتر سه کاره وای‌فای‌دار؟ | پرینتر سه کاره برای چاپ عکس؟ |\nعمر کارتریج پرینتر سه کاره لیزری؟ | پرینتر سه کاره استوک بخرم؟ (لینک https://mahamprint.com/categories/printerstock)\nتصاویر: شاخص (چند پرینتر کنار هم)، عکس هر مدل، اینفوگرافیک لیزری در برابر جوهرافشان.\n⚠️ هم‌پوشانی: H1 نباید «خرید پرینتر سه کاره» باشد (آن مال لندینگ است).\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "URGENT",
+   "dueAt": "2026-10-08"
+  },
+  {
+   "title": "راهنمای خرید پرینتر لیبل زن رنگی + معرفی بهترین مدل‌ها",
+   "primaryKeyword": "پرینتر لیبل زن رنگی",
+   "relatedKeywords": "لیبل زن رنگی، قیمت پرینتر لیبل زن رنگی، دستگاه لیبل زن رنگی، لیبل زن رنگی کوچک، لیبل پرینتر رنگی",
+   "brief": "چرا: «پرینتر لیبل زن رنگی» ۳۲۷ نمایش با رتبه‌ی ۲۰ و «قیمت پرینتر لیبل زن رنگی» ۱۷۳ نمایش با رتبه‌ی ۳۸؛ «لیبل زن رنگی» و\n«دستگاه لیبل زن رنگی» رتبه‌ی ۸. نزدیک صفحه‌ی اول‌اند و محتوای اختصاصی ندارند.\nطول: ۱۸۰۰–۲۲۰۰ کلمه.\nعنوان سئو: «پرینتر لیبل زن رنگی: راهنمای خرید و بهترین مدل‌ها + قیمت»\nتوضیحات متا: «پرینتر لیبل زن رنگی برای برچسب محصول، کافه و فروشگاه؛ مقایسه‌ی مدل‌های رومیزی و کوچک، هزینه‌ی چاپ، جوهر و ریبون + راهنمای خرید از مهام پرینت.»\n\nساختار:\nH1 پرینتر لیبل زن رنگی: راهنمای خرید و بهترین مدل‌ها\np جواب کوتاه: لیبل زن رنگی به چه کاری می‌آید + فرقش با لیبل پرینتر حرارتی (که فقط سیاه چاپ می‌کند)\nH2 پرینتر لیبل زن رنگی چیست و با چه فناوری چاپ می‌کند؟\n   H3 جوهرافشان رنگی (مثل Epson TM-C3500)   H3 انتقال حرارتی رنگی   H3 لیبل زن‌های کوچک و قابل‌حمل\nH2 کاربردها — ul: برچسب محصول و بسته‌بندی، کافه و قنادی، داروخانه، آموزشی/اداری\nH2 بهترین پرینترهای لیبل زن رنگی\n   H3 Epson TM-C3500 — لینک محصول در سایت\n   H3 … (۳–۵ مدل از دسته‌ی https://mahamprint.com/categories/label-printer که رنگی‌اند)\n   جدول: مدل | فناوری | حداکثر عرض لیبل | سرعت | اتصال | کاربرد\nH2 هزینه‌ی چاپ لیبل رنگی: جوهر، ریبون و کاغذ لیبل\n   H3 کاغذ لیبل مناسب — لینک https://mahamprint.com/categories/labelprinter   H3 ریبون — لینک https://mahamprint.com/categories/ribbon\nH2 راهنمای خرید: ۵ سؤال قبل از خرید — ol\nH2 لیبل زن رنگی کوچک؛ برای چه کسانی کافی است؟ — لینک https://mahamprint.com/categories/navarlabel\nلینک‌ها: https://mahamprint.com/categories/label-printer ، https://mahamprint.com/mag/labelprinter-sanaati-romizi ، https://mahamprint.com/mag/Receipt-Printers-for-Retail-Stores\nFAQ (۴): آیا لیبل پرینتر حرارتی رنگی چاپ می‌کند؟ | قیمت پرینتر لیبل زن رنگی از چند شروع می‌شود؟ | لیبل رنگی ضدآب است؟ |\nبا گوشی می‌شود لیبل رنگی چاپ کرد؟\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-12"
+  },
+  {
+   "title": "لیبل پرینتر حرارتی چیست؟ حرارتی مستقیم یا انتقال حرارتی + راهنمای انتخاب",
+   "primaryKeyword": "لیبل پرینتر حرارتی",
+   "relatedKeywords": "پرینتر حرارتی، حرارتی مستقیم، انتقال حرارتی، ریبون لیبل پرینتر، کاغذ لیبل حرارتی، لیبل پرینتر",
+   "brief": "چرا: «لیبل پرینتر حرارتی» ۹۷ نمایش رتبه‌ی ۵۰، «لیبل پرینتر» ۲۸۷ نمایش رتبه‌ی ۵۴. دسته‌ی لیبل پرینتر به یک مقاله‌ی آموزشی پایه\nنیاز دارد که به آن لینک بدهد.\nطول: ۱۵۰۰–۱۸۰۰ کلمه.\nعنوان سئو: «لیبل پرینتر حرارتی چیست؟ فرق حرارتی مستقیم و انتقال حرارتی»\nتوضیحات متا: «لیبل پرینتر حرارتی چطور کار می‌کند و کدام نوعش برای شما مناسب است؟ مقایسه‌ی حرارتی مستقیم و انتقال حرارتی، ریبون، کاغذ و هزینه‌ی چاپ.»\n\nساختار:\nH1 لیبل پرینتر حرارتی چیست؟\nH2 لیبل پرینتر حرارتی چطور کار می‌کند؟ — p + تصویر شماتیک هد حرارتی\nH2 حرارتی مستقیم (Direct Thermal)   H3 مزایا (ul)   H3 معایب (ul)   H3 مناسب برای: برچسب پستی، فیش\nH2 انتقال حرارتی (Thermal Transfer)   H3 ریبون وکس، وکس‌رزین، رزین — جدول: نوع ریبون | دوام | سطح مناسب | قیمت نسبی\n   لینک https://mahamprint.com/categories/ribbon\nH2 جدول مقایسه‌ی حرارتی مستقیم و انتقال حرارتی — ردیف‌ها: دوام چاپ، هزینه‌ی مصرفی، سرعت، کیفیت بارکد، کاربرد\nH2 رومیزی، صنعتی یا قابل‌حمل؟ — لینک https://mahamprint.com/mag/labelprinter-sanaati-romizi\nH2 رزولوشن ۲۰۳ یا ۳۰۰ dpi؟ — p\nH2 پیشنهاد مدل — ul با ۴ محصول (TSC، Zebra، Meva، XPrinter) و لینک هر کدام\nلینک‌ها: https://mahamprint.com/categories/label-printer ، https://mahamprint.com/categories/labelprinter ، https://mahamprint.com/categories/barcode-reader\nFAQ (۴): لیبل حرارتی مستقیم چقدر دوام دارد؟ | لیبل پرینتر ریبون می‌خواهد؟ | فرق فیش پرینتر و لیبل پرینتر؟ | با لیبل پرینتر حرارتی می‌شود رنگی چاپ کرد؟ (لینک به مقاله‌ی لیبل زن رنگی)\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-19"
+  },
+  {
+   "title": "راهنمای خرید پرینتر خانگی ۱۴۰۵: کدام پرینتر برای خانه بهتر است؟",
+   "primaryKeyword": "خرید پرینتر خانگی",
+   "relatedKeywords": "بهترین پرینتر خانگی، پرینتر خانگی ارزان، پرینتر خانگی سه کاره، پرینتر مخزن دار، پرینتر برای دانشجو",
+   "brief": "چرا: «خرید پرینتر خانگی» رتبه‌ی ۷۶ و «خرید پرینتر» رتبه‌ی ۴۱ است؛ سایت محتوای راهنمای خرید خانگی ندارد.\nطول: ۲۰۰۰–۲۵۰۰ کلمه.\nعنوان سئو: «راهنمای خرید پرینتر خانگی ۱۴۰۵ | بهترین پرینتر برای خانه»\nتوضیحات متا: «کدام پرینتر برای خانه بهتر است؟ جوهرافشان مخزن‌دار یا لیزری، تک‌کاره یا سه‌کاره؟ راهنمای خرید پرینتر خانگی ۱۴۰۵ با معرفی مدل‌های مناسب هر بودجه.»\n\nساختار:\nH1 راهنمای خرید پرینتر خانگی ۱۴۰۵\nH2 قبل از خرید: پرینتر را برای چه می‌خواهید؟ — ul سناریو: دانشجو و جزوه، چاپ عکس، کار از خانه، تکالیف بچه‌ها\nH2 پرینتر جوهرافشان مخزن‌دار یا لیزری برای خانه؟\n   H3 جوهرافشان مخزن‌دار (Epson L، Canon G) — لینک https://mahamprint.com/collections/khrid-printrhai-johrafshan\n   H3 لیزری سیاه‌وسفید — لینک https://mahamprint.com/collections/khrid-printrhai-lizri\n   H4 مشکل خشک‌شدن جوهر در استفاده‌ی کم\n   جدول: معیار | مخزن‌دار | لیزری\nH2 تک کاره یا سه کاره؟ — لینک https://mahamprint.com/collections/kharid-printer-se-kare و https://mahamprint.com/collections/kharid-printer-tak-kare\nH2 پیشنهاد بر اساس بودجه\n   H3 اقتصادی   H3 میان‌رده   H3 حرفه‌ای (هر کدام ۲ محصول با لینک)\nH2 ویژگی‌هایی که در خانه واقعاً لازم است — ul: وای‌فای، چاپ از موبایل، دورو، اندازه‌ی دستگاه\nH2 هزینه‌ی نگهداری سالانه — جدول تقریبی هزینه‌ی هر ۱۰۰ برگ\nلینک‌ها: https://mahamprint.com/mag/inkjet-vs-laser-printer ، https://mahamprint.com/mag/save-printing-costs-by-using-economical-printers ، https://mahamprint.com/collections/printr-khangi-tk-karh-brnd-hp\nFAQ (۴): ارزان‌ترین پرینتر خانگی خوب؟ | پرینتر خانگی برای چاپ عکس؟ | پرینتر وای‌فای‌دار لازم است؟ | پرینتر استوک برای خانه؟\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-15"
+  },
+  {
+   "title": "راهنمای خرید پرینتر اداری: انتخاب بر اساس حجم چاپ و تعداد کاربر",
+   "primaryKeyword": "خرید پرینتر اداری",
+   "relatedKeywords": "پرینتر اداری، بهترین پرینتر اداری، پرینتر لیزری اداری، پرینتر چهارکاره اداری، پرینتر شبکه",
+   "brief": "چرا: «خرید پرینتر اداری» رتبه‌ی ۷۳. مقاله‌ی قدیمی /mag/the-best-office-printers کوتاه و بی‌محصول است؛ این مقاله راهنمای\nتصمیم است و آن مقاله فهرست مدل (در کار «به‌روزرسانی ۶ مقاله» به‌روز می‌شود). به هم لینک بدهند.\nطول: ۲۰۰۰ کلمه.\nعنوان سئو: «راهنمای خرید پرینتر اداری | انتخاب بر اساس حجم چاپ»\nتوضیحات متا: «پرینتر اداری را بر اساس حجم چاپ ماهانه، تعداد کاربر، شبکه و هزینه‌ی تونر انتخاب کنید؛ راهنمای کامل خرید پرینتر لیزری و چهارکاره اداری.»\n\nساختار:\nH1 راهنمای خرید پرینتر اداری\nH2 حجم چاپ ماهانه را حساب کنید — جدول: تعداد کارمند | صفحه در ماه | کلاس دستگاه پیشنهادی (Duty cycle)\nH2 لیزری تک کاره یا چهارکاره؟ — لینک https://mahamprint.com/collections/kharid-printer-chahar-kare\nH2 ویژگی‌های ضروری در اداره\n   H3 شبکه (LAN) و چاپ از چند کامپیوتر   H3 دورو خودکار   H3 ADF و اسکن به ایمیل   H3 امنیت و رمز چاپ\nH2 هزینه‌ی کل مالکیت (TCO) — H3 قیمت تونر و درام  H4 تونر اورجینال یا شارژی؟ — لینک https://mahamprint.com/mag/original-or-non-original-cartridges\nH2 پیشنهاد مدل برای دفتر کوچک، اداره‌ی متوسط، سازمان — ۲ محصول هر کدام (مثل HP M404n، HP M521dw، HP M680dn، Canon 4870dn)\nH2 دستگاه کپی یا پرینتر چندکاره؟ — لینک https://mahamprint.com/categories/copying-machin\nلینک‌ها: https://mahamprint.com/mag/the-best-office-printers ، https://mahamprint.com/collections/printr-chharkarh-adari-brnd-hp ، https://mahamprint.com/collections/printr-adari-lizri-chharkarh-canon\nFAQ (۴): پرینتر اداری چند صفحه در ماه؟ | HP یا Canon برای اداره؟ | پرینتر رنگی برای اداره لازم است؟ | اجاره یا خرید؟\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-10-22"
+  },
+  {
+   "title": "قلم نوری چیست و چه کاربردی دارد؟ انواع قلم نوری و راهنمای انتخاب",
+   "primaryKeyword": "قلم نوری چیست",
+   "relatedKeywords": "قلم نوری، انواع قلم نوری، کاربرد قلم نوری، قلم نوری کامپیوتر، پد امضا، قلم نوری طراحی",
+   "brief": "چرا: «قلم نوری چیست و چه کاربردی دارد» ۴۴ نمایش و «قلم نوری چیست» ۲۵ نمایش در رتبه‌ی ۸–۱۰ هستند، بدون مقاله‌ی اختصاصی.\nآدرس قدیمی «انواع قلم نوری» ۱۵۴۵ نمایش داشت (فعلاً به مقاله‌ی پد امضا ریدایرکت شده؛ بعد از انتشار، ریدایرکت\n/mag/انواع-قلم-نوری را در پنل به این مقاله‌ی تازه عوض کنید).\nطول: ۱۲۰۰–۱۵۰۰ کلمه.\nعنوان سئو: «قلم نوری چیست و چه کاربردی دارد؟ + انواع قلم نوری»\nتوضیحات متا: «قلم نوری چیست، چطور کار می‌کند و چه انواعی دارد؟ کاربرد قلم نوری در طراحی، امضای دیجیتال و آموزش + راهنمای انتخاب.»\n\nساختار:\nH1 قلم نوری چیست و چه کاربردی دارد؟\np تعریف در ۲ جمله (برای Featured Snippet)\nH2 قلم نوری چطور کار می‌کند؟ — p\nH2 انواع قلم نوری — H3 قلم نوری پسیو   H3 اکتیو   H3 قلم نوری با پد (تبلت گرافیکی)   H3 قلم پد امضا\n   جدول: نوع | دقت | حساسیت به فشار | کاربرد\nH2 کاربردهای قلم نوری — ul: طراحی و گرافیک، امضای دیجیتال (لینک https://mahamprint.com/categories/pademza)، آموزش آنلاین، یادداشت‌برداری\nH2 فرق قلم نوری و پد امضا — لینک https://mahamprint.com/mag/Digital-Signature-Pad-Usage-Selection-and-Setup\nH2 راهنمای انتخاب قلم نوری — ul\nFAQ (۴): قلم نوری با گوشی کار می‌کند؟ | قلم نوری باتری می‌خواهد؟ | برای امضای الکترونیک قلم نوری بخرم یا پد امضا؟ | قلم نوری برای تدریس آنلاین؟\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-10"
+  },
+  {
+   "title": "صفحه‌ی تست پرینت سیاه‌وسفید و رنگی (دانلود رایگان) + آموزش تست پرینتر",
+   "primaryKeyword": "تست پرینت رنگی",
+   "relatedKeywords": "تست پرینت سیاه سفید، صفحه تست پرینتر، فایل تست پرینتر، تست هد پرینتر، nozzle check",
+   "brief": "چرا: آدرس قدیمی «تست-پرینت-سیاه-سفید-و-رنگی» ۱۳۱۸ نمایش و ۱۱ کلیک داشت و الان ۴۰۴ بود (موقتاً به «بهترین پرینتر رنگی»\nریدایرکت شده). بعد از انتشار، ریدایرکت /mag/تست-پرینت-سیاه-سفید-و-رنگی را در پنل به این مقاله عوض کنید.\nطول: ۱۰۰۰–۱۳۰۰ کلمه + فایل‌های دانلودی.\nعنوان سئو: «تست پرینت رنگی و سیاه‌وسفید | دانلود صفحه تست پرینتر»\nتوضیحات متا: «صفحه‌ی تست پرینت رنگی و سیاه‌وسفید را رایگان دانلود کنید و کیفیت چاپ، هد و کارتریج پرینتر را در چند دقیقه بسنجید. آموزش تست پرینتر اپسون، کانن و اچ‌پی.»\n\nساختار:\nH1 تست پرینت رنگی و سیاه‌وسفید\np جواب کوتاه + دکمه‌ی دانلود\nH2 دانلود صفحه‌ی تست پرینت — ul: ۱) تست رنگی CMYK (PDF A4)  ۲) تست سیاه‌وسفید/گرادیان  ۳) تست عکس\n   (فایل‌ها را با ابزار طراحی بسازید و در مدیا آپلود کنید؛ هر کدام با تصویر پیش‌نمایش و alt)\nH2 چطور صفحه‌ی تست را بخوانیم؟ — H3 خط‌خطی شدن  H3 کم‌رنگی یک رنگ  H3 لکه و نوار — جدول: نشانه | علت احتمالی | راه‌حل\nH2 تست هد از خود پرینتر (Nozzle Check) — H3 اپسون  H3 کانن  H3 اچ‌پی (ol مراحل)\nH2 اگر تست خراب بود — لینک https://mahamprint.com/mag/maintenance-of-printers ، https://mahamprint.com/mag/how-to-replace-the-printer-cartridge-in-principle ، https://mahamprint.com/categories/hed\nFAQ (۳): هر چند وقت تست پرینت بگیریم؟ | تست پرینت جوهر زیادی مصرف می‌کند؟ | پرینتر لیزری هم تست هد دارد؟\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "HIGH",
+   "dueAt": "2026-10-14"
+  },
+  {
+   "title": "خرید پرینتر استوک: مزایا، ریسک‌ها و چک‌لیست خرید مطمئن",
+   "primaryKeyword": "پرینتر استوک",
+   "relatedKeywords": "پرینتر سه کاره استوک، خرید پرینتر استوک، کالای استوک چیست، پرینتر لیزری استوک",
+   "brief": "چرا: «پرینتر استوک» رتبه‌ی ۶۴ و «پرینتر سه کاره استوک» رتبه‌ی ۵۵؛ آدرس قدیمی «کالای-استوک-چیست» در لاگ ۴۰۴ بود. دسته‌ی\nhttps://mahamprint.com/categories/printerstock (۱۲ محصول) متن پشتیبان ندارد.\nطول: ۱۴۰۰–۱۷۰۰ کلمه.\nعنوان سئو: «خرید پرینتر استوک | مزایا، ریسک‌ها و چک‌لیست خرید»\nتوضیحات متا: «پرینتر استوک چیست و ارزش خرید دارد؟ فرق استوک، کارکرده و آکبند، ریسک‌ها و چک‌لیست ۸ مرحله‌ای خرید پرینتر استوک مطمئن.»\n\nساختار:\nH1 خرید پرینتر استوک: راهنمای خرید مطمئن\nH2 کالای استوک چیست؟ — p (جواب مستقیم) + جدول: آکبند | استوک | کارکرده (قیمت، گارانتی، ریسک)\nH2 مزایای پرینتر استوک — ul\nH2 ریسک‌ها — ul\nH2 چک‌لیست خرید پرینتر استوک — ol ۸ بند: شمارنده‌ی صفحه، تست پرینت (لینک به مقاله‌ی تست پرینت)، درام و فیوزینگ، …\nH2 کدام مدل‌ها برای استوک مناسب‌اند؟ — H3 لیزری اداری HP  H3 سه کاره — لینک محصولات دسته‌ی استوک\nH2 گارانتی و خدمات مهام پرینت برای استوک\nلینک‌ها: https://mahamprint.com/categories/printerstock ، https://mahamprint.com/collections/kharid-printer-se-kare ، https://mahamprint.com/categories/drum ، https://mahamprint.com/categories/fiozing\nFAQ (۳): پرینتر استوک گارانتی دارد؟ | عمر پرینتر استوک؟ | استوک بخرم یا نو ارزان؟\nبعد از انتشار: ریدایرکت /mag/کالای-استوک-چیست؟ را به این مقاله عوض کنید.\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-10-26"
+  },
+  {
+   "title": "آموزش تعویض کارتریج پرینتر کانن (جوهرافشان و لیزری) مرحله‌به‌مرحله",
+   "primaryKeyword": "تعویض کارتریج کانن",
+   "relatedKeywords": "تعویض کارتریج پرینتر کانن، نصب کارتریج canon، تعویض تونر کانن، کارتریج کانن",
+   "brief": "چرا: آدرس قدیمی «تعویض-کارتریج-کانن» ۴۹ کلیک و ۶۶۱ نمایش داشت (رتبه‌ی ۶). فعلاً به مقاله‌ی کلی «نحوه تعویض کارتریج» ریدایرکت شده؛\nبعد از انتشار، ریدایرکت /mag/تعویض-کارتریج-کانن را به این مقاله عوض کنید.\nطول: ۱۲۰۰–۱۵۰۰ کلمه با تصویر هر مرحله.\nعنوان سئو: «آموزش تعویض کارتریج پرینتر کانن | جوهرافشان و لیزری»\nتوضیحات متا: «تعویض کارتریج پرینتر کانن در ۵ دقیقه: آموزش تصویری برای سری PIXMA، مخزن‌دار G و لیزری i-SENSYS + رفع خطای شناسایی کارتریج.»\n\nساختار:\nH1 آموزش تعویض کارتریج پرینتر کانن\nH2 قبل از شروع: کد کارتریج پرینترتان را پیدا کنید — لینک https://mahamprint.com/mag/printer-cartridge-compatibility-table\nH2 تعویض کارتریج کانن PIXMA (جوهرافشان) — ol مراحل با تصویر\nH2 شارژ مخزن کانن سری G — ol + لینک https://mahamprint.com/categories/ink\nH2 تعویض تونر کانن لیزری (i-SENSYS / LBP / MF) — ol\n   H3 کانن 6030 / 3010 — لینک https://mahamprint.com/products/----canon-6030\nH2 رفع خطاهای بعد از تعویض — جدول: پیام خطا | علت | راه‌حل\nH2 کارتریج اورجینال یا غیراورجینال؟ — لینک https://mahamprint.com/mag/original-or-non-original-cartridges\nمحصولات مرتبط: کارتریج‌های پرفروش کانن از https://mahamprint.com/categories/laser-cartridge\nFAQ (۳): بعد از تعویض کارتریج پرینتر چاپ نمی‌کند؟ | کارتریج را چطور ریست کنم؟ | عمر کارتریج کانن؟\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-10-29"
+  },
+  {
+   "title": "بررسی پرینتر کانن 6030: مشخصات فنی، کارتریج و مقایسه با 6030w",
+   "primaryKeyword": "پرینتر کانن 6030",
+   "relatedKeywords": "مشخصات فنی پرینتر کانن 6030، canon lbp6030، کارتریج کانن 6030، کانن 6030w، قیمت پرینتر کانن 6030",
+   "brief": "چرا: «مشخصات فنی پرینتر کانن 6030» ۳۹ نمایش رتبه‌ی ۱۰ و «6030» ۴۴ نمایش؛ صفحه‌ی محصول https://mahamprint.com/products/----canon-6030\n۱۵۶ نمایش ولی ۱ کلیک دارد. مقاله‌ی بررسی، کلمه‌های اطلاعاتی را می‌گیرد و به محصول لینک می‌دهد.\nطول: ۱۲۰۰–۱۵۰۰ کلمه.\nعنوان سئو: «بررسی پرینتر کانن 6030 | مشخصات فنی، کارتریج و قیمت»\nتوضیحات متا: «مشخصات فنی کامل پرینتر لیزری کانن LBP6030، سرعت و هزینه‌ی چاپ، کارتریج 725، مقایسه با 6030w و 6030b و اینکه برای چه کسی مناسب است.»\n\nساختار:\nH1 بررسی پرینتر کانن 6030\nH2 خلاصه: برای چه کسی مناسب است؟ — ul مزایا/معایب\nH2 مشخصات فنی کانن LBP6030 — جدول کامل (سرعت، رزولوشن، حافظه، سینی، اتصال، ابعاد، مصرف برق، کارتریج)\nH2 کارتریج کانن 6030 و هزینه‌ی چاپ — H3 کارتریج 725  H4 شارژ کارتریج 725 — لینک به صفحه‌ی کارتریج در سایت\nH2 تفاوت 6030 و 6030w و 6030b — جدول\nH2 نصب درایور کانن 6030 — لینک مقاله‌ی نصب درایور (کار محتوای بعدی)\nH2 جایگزین‌ها — ul: HP P1102، Canon 3010 (لینک محصولات) + لینک https://mahamprint.com/collections/kharid-printer-tak-kare\nمحصولات مرتبط: کانن 6030، کارتریج 725، HP 1102\nFAQ (۳): کانن 6030 وای‌فای دارد؟ | هر کارتریج چند برگ؟ | با ویندوز ۱۱ کار می‌کند؟\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-11-02"
+  },
+  {
+   "title": "بهترین ماشین حساب مهندسی ۱۴۰۵ برای دانشجو و کنکور",
+   "primaryKeyword": "ماشین حساب مهندسی",
+   "relatedKeywords": "ماشین حساب پیشرفته، ماشین حساب خیلی پیشرفته، ماشین حساب کنکور، کاسیو fx-991، ماشین حساب گرافیکی",
+   "brief": "چرا: «ماشین حساب پیشرفته» ۳۰ نمایش رتبه‌ی ۱۷ و «ماشین حساب خیلی پیشرفته» ۲۲ نمایش رتبه‌ی ۱۹؛ دسته‌ی ماشین حساب ۱۳۱ محصول دارد.\nمقاله‌ی قدیمی advanced-calculators-applications-and-features هم هست؛ این یکی «بهترین/خرید» است و به آن لینک بدهد.\nطول: ۱۵۰۰–۱۸۰۰ کلمه.\nعنوان سئو: «بهترین ماشین حساب مهندسی ۱۴۰۵ | کاسیو، سیتیزن، تگزاس»\nتوضیحات متا: «کدام ماشین حساب مهندسی برای دانشگاه و کنکور بهتر است؟ مقایسه‌ی کاسیو fx-991، fx-570، سیتیزن و ماشین حساب گرافیکی تگزاس با قیمت و کاربرد.»\n\nساختار:\nH1 بهترین ماشین حساب مهندسی ۱۴۰۵\nH2 جدول مقایسه — مدل | تعداد توابع | گرافیکی؟ | مجاز در کنکور/امتحان؟ | مناسب برای\nH2 بهترین برای دانشجوی مهندسی — H3 Casio fx-991 (لینک)  H3 Casio fx-570EX (https://mahamprint.com/products/--casio-fx-570ex)\nH2 بهترین ماشین حساب گرافیکی — H3 Texas TI-84 Plus CE (https://mahamprint.com/products/--texas-ti-84-plus-ce)\nH2 ارزان و کافی برای دبیرستان — H3 سیتیزن\nH2 ماشین حساب اصل و تقلبی را چطور تشخیص دهیم؟ — ol\nلینک‌ها: https://mahamprint.com/categories/calculator ، https://mahamprint.com/brands/casio ، https://mahamprint.com/mag/how-to-choose-the-best-calculator-for-professionals\nFAQ (۳): ماشین حساب مهندسی در کنکور مجاز است؟ | فرق fx-991 و fx-570؟ | ماشین حساب گرافیکی لازم است؟\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-11-05"
+  },
+  {
+   "title": "ریبون پرینتر کارت زبرا: انواع ریبون رنگی YMCKO و راهنمای انتخاب",
+   "primaryKeyword": "ریبون رنگی زبرا",
+   "relatedKeywords": "ریبون zebra، خرید ریبون رنگی زبرا، ریبون YMCKO، ریبون پرینتر کارت، ریبون مشکی زبرا",
+   "brief": "چرا: «خرید ریبون رنگی زبرا» ۲۶ نمایش رتبه‌ی ۹ و «ریبون رنگی zebra» ۲۳ نمایش رتبه‌ی ۷ — نیت خرید، نزدیک صفحه‌ی اول.\nدسته‌ی ریبون (https://mahamprint.com/categories/ribbon، ۵۶ محصول) متن ندارد.\nطول: ۱۰۰۰–۱۳۰۰ کلمه.\nعنوان سئو: «ریبون رنگی زبرا | انواع ریبون پرینتر کارت و راهنمای خرید»\nتوضیحات متا: «ریبون رنگی زبرا YMCKO، مشکی و نیمه‌پنل برای پرینتر کارت ZC300، ZXP؛ فرق انواع ریبون، تعداد چاپ و راهنمای خرید ریبون اورجینال.»\n\nساختار:\nH1 ریبون رنگی زبرا: انواع و راهنمای انتخاب\nH2 ریبون پرینتر کارت چیست؟ — p\nH2 انواع ریبون زبرا — H3 YMCKO  H3 نیمه‌پنل YMCKO  H3 مشکی (K)  H3 ریبون‌های خاص (UV، KdO)\n   جدول: نوع | تعداد کارت | کاربرد | مدل پرینتر سازگار\nH2 سازگاری ریبون با پرینترهای زبرا — جدول مدل پرینتر ← کد ریبون\nH2 ریبون اورجینال یا غیراورجینال؟\nH2 فرق ریبون پرینتر کارت و ریبون لیبل پرینتر — لینک به مقاله‌ی «لیبل پرینتر حرارتی چیست»\nلینک‌ها: https://mahamprint.com/categories/ribbon ، https://mahamprint.com/brands/zebra (اگر هست) ، دسته‌ی پرینتر کارت\nمحصولات مرتبط: ۴–۶ ریبون زبرا\nFAQ (۳): هر ریبون YMCKO چند کارت چاپ می‌کند؟ | ریبون تاریخ انقضا دارد؟ | ریبون غیراورجینال به هد آسیب می‌زند؟\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-11-09"
+  },
+  {
+   "title": "آموزش نصب درایور پرینتر و اسکنر در ویندوز ۱۱ (اچ‌پی، کانن، اپسون، کداک)",
+   "primaryKeyword": "نصب درایور پرینتر",
+   "relatedKeywords": "دانلود درایور پرینتر، نصب درایور اسکنر، درایور پرینتر ویندوز ۱۱، پرینتر شناسایی نمی‌شود",
+   "brief": "چرا: قبل از مهاجرت کلمه‌هایی مثل «دانلود درایور اسکنر kodak e1040»، «درایور پرینتر sky p100nw»، «نصب اسکنر canon dr c240»\nو «دانلود درایور فیش پرینتر sky e200» کلیک می‌آوردند. یک مقاله‌ی جامع + فیلد «دانلود» صفحه‌ی محصول (کار سئوی ۳۰ محصول) این\nترافیک را برمی‌گرداند.\nطول: ۱۵۰۰–۱۸۰۰ کلمه با تصویر.\nعنوان سئو: «آموزش نصب درایور پرینتر و اسکنر در ویندوز ۱۱»\nتوضیحات متا: «نصب درایور پرینتر و اسکنر HP، Canon، Epson و Kodak در ویندوز ۱۱ و ۱۰ قدم‌به‌قدم؛ دانلود از سایت رسمی و رفع خطای شناسایی نشدن پرینتر.»\n\nساختار:\nH1 آموزش نصب درایور پرینتر و اسکنر در ویندوز ۱۱\nH2 درایور پرینتر چیست و چرا لازم است؟ — p\nH2 روش ۱: نصب خودکار از تنظیمات ویندوز — ol\nH2 روش ۲: دانلود از سایت رسمی سازنده — H3 اچ‌پی (HP Smart)  H3 کانن  H3 اپسون  H3 کداک (اسکنر)\n   جدول: برند | آدرس صفحه‌ی درایور | نرم‌افزار همراه\nH2 نصب پرینتر شبکه و وای‌فای — ol\nH2 نصب اسکنر اسناد (TWAIN/ISIS) — لینک https://mahamprint.com/categories/scanner ، https://mahamprint.com/products/--kodak--e1040\nH2 رفع مشکل «پرینتر شناسایی نمی‌شود» — جدول: خطا | راه‌حل\nلینک‌ها: https://mahamprint.com/mag/windows-10-update-printer-block ، https://mahamprint.com/products/-----sky-p100nw\nFAQ (۳): درایور پرینتر قدیمی روی ویندوز ۱۱ کار می‌کند؟ | بدون سی‌دی درایور نصب کنم؟ | فرق درایور و نرم‌افزار کامل؟\n\n━━ قواعد مشترک همه‌ی مقاله‌ها ━━\n• فقط یک H1 (همان عنوان مقاله). زیرعنوان‌ها H2 → H3 → H4 به ترتیب؛ سطح نپرد (H2 بعد از H4 مجاز، H4 مستقیم زیر H2 نه).\n• پاراگراف (p) کوتاه: ۲–۴ جمله. پاراگراف اول هر H2 مستقیم جواب سؤال همان بخش را بدهد (برای Google و AI Overview).\n• کلمه‌ی کلیدی اصلی: در H1، در ۱۰۰ کلمه‌ی اول، در یک H2، در عنوان سئو و توضیحات متا، در alt تصویر شاخص. تکرار طبیعی، نه پرکردن.\n• لینک داخلی: انکر توصیفی (مثلاً «خرید پرینتر سه کاره»)؛ هر لینک یک بار؛ لینک‌ها در متن، نه فقط آخر مقاله.\n• محصولات مرتبط: از بخش «محصولات مرتبط» مقاله وصل شوند (فقط محصول قیمت‌دار و موجود).\n• FAQ: برای جواب دادن به سؤال‌های واقعی کاربر و کلمه‌های طولانی (long-tail) است، نه برای نتیجه‌ی ویژه‌ی گوگل؛ گوگل از اردیبهشت ۱۴۰۵ نتیجه‌ی ویژه‌ی FAQ را برای همه‌ی سایت‌ها برداشته. جواب هر سؤال ۲–۳ جمله‌ی مستقیم باشد. در فیلد FAQ مقاله وارد شود.\n• تصاویر: webp، عرض ۱۲۰۰، alt فارسی توصیفی. تصویر شاخص ۱۲۰۰×۶۳۰.\n• اسلاگ: انگلیسی، حروف کوچک، با خط تیره (مثال: best-3-in-1-printer). حروف بزرگ نه.\n• منبع مشخصات: سایت سازنده؛ ادعای قیمت با «قیمت روز در صفحه‌ی محصول».\n• بعد از انتشار: لینک مقاله را در سرچ کنسول «Request Indexing» بزنید.\n\n— ممیزی سئو ۱۴۰۵/۰۷/۰۷ — مرجع: docs/audits/mahamprint/2026-09/",
+   "destination": "BLOG",
+   "writerId": "cmq6plpw5003bxxpm2qrm34mg",
+   "publisherId": "cmq6plpw5003bxxpm2qrm34mg",
+   "priority": "NORMAL",
+   "dueAt": "2026-11-12"
+  }
+ ]
+}

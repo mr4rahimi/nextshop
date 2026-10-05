@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logActivityAsync, diffFields, summarizeChanges } from "@/lib/activity";
 import { faqForPrisma } from "@/lib/faq-db";
+import { slugify, resolveSlugInput } from "@/lib/slug";
+import { redirectSlugChange } from "@/lib/slugRedirect";
 
 /** فیلدهای دسته‌بندی که تغییرشان در گزارش ثبت می‌شود */
 const CATEGORY_FIELDS = {
@@ -37,9 +39,13 @@ export async function GET() {
 export async function POST(req: Request) {
   const data = await req.json();
 
+  const slug = slugify(data.slug || data.title || "");
+  if (!slug) return NextResponse.json({ error: "نشانی (slug) نامعتبر است" }, { status: 400 });
+
   const category = await prisma.category.create({
     data: {
       ...data,
+      slug,
       parentId: data.parentId ? data.parentId : null,
       // `...data` مقدار خام را می‌نوشت؛ ستون Json باید همیشه نرمال‌شده باشد
       // وگرنه ردیف ناقص به `Question` بدون پاسخ در اسکیما تبدیل می‌شود.
@@ -65,11 +71,14 @@ export async function PUT(req: Request) {
 
   const before = await prisma.category.findUnique({ where: { id: data.id } });
 
+  const slug = resolveSlugInput(data.slug, before?.slug, data.title);
+  if (slug === "") return NextResponse.json({ error: "نشانی (slug) نامعتبر است" }, { status: 400 });
+
   const category = await prisma.category.update({
     where: { id: data.id },
     data: {
       title: data.title,
-      slug: data.slug,
+      slug,
 
       description: data.description,
       imageUrl: data.imageUrl,
@@ -95,8 +104,10 @@ export async function PUT(req: Request) {
     },
   });
 
+  await redirectSlugChange(prisma, "category", before?.slug, category.slug);
+
   if (before) {
-    const changes = diffFields(before as never, data, CATEGORY_FIELDS);
+    const changes = diffFields(before as never, { ...data, slug: category.slug }, CATEGORY_FIELDS);
     if (changes.length > 0) {
       logActivityAsync({
         action: "UPDATE",

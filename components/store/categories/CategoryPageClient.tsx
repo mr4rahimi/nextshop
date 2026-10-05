@@ -950,21 +950,37 @@ export default function CategoryPageClient({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <h3 className="text-gray-700 dark:text-gray-300 font-black text-lg mb-2">محصولی یافت نشد</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-[250px] leading-6">
-                    فیلترهای انتخابی را تغییر دهید یا همه فیلترها را پاک کنید.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setSelectedBrands([]);
-                      setMinPrice(""); setMaxPrice("");
-                      setAppliedMin(""); setAppliedMax("");
-                      setSelectedAttributes({});
-                    }}
-                    className="mt-6 px-6 py-2.5 rounded-xl border border-primary-500/30 text-primary-600 dark:text-primary-400 font-bold text-sm hover:bg-primary-500 hover:text-white transition-all"
-                  >
-                    پاک کردن فیلترها
-                  </button>
+                  {/* دسته‌ی بی‌محصول بدون فیلتر: «فیلتر را پاک کنید» بی‌معناست؛ بازدیدکننده
+                      (و ریدایرکتی که به این دسته رسیده) به دسته‌ی والد هدایت می‌شود */}
+                  {selectedBrands.length === 0 && !appliedMin && !appliedMax && Object.keys(selectedAttributes).length === 0 ? (
+                    <>
+                      <h3 className="text-gray-700 dark:text-gray-300 font-black text-lg mb-2">محصولات این دسته به‌زودی اضافه می‌شوند</h3>
+                      <Link
+                        href={category.parent ? `/categories/${category.parent.slug}` : "/products"}
+                        className="mt-4 px-6 py-2.5 rounded-xl bg-primary-500 text-white font-bold text-sm hover:bg-primary-600 transition-all"
+                      >
+                        {category.parent ? `مشاهده‌ی ${category.parent.title}` : "مشاهده‌ی همه‌ی محصولات"}
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                    <h3 className="text-gray-700 dark:text-gray-300 font-black text-lg mb-2">محصولی یافت نشد</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 max-w-[250px] leading-6">
+                      فیلترهای انتخابی را تغییر دهید یا همه فیلترها را پاک کنید.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setSelectedBrands([]);
+                        setMinPrice(""); setMaxPrice("");
+                        setAppliedMin(""); setAppliedMax("");
+                        setSelectedAttributes({});
+                      }}
+                      className="mt-6 px-6 py-2.5 rounded-xl border border-primary-500/30 text-primary-600 dark:text-primary-400 font-bold text-sm hover:bg-primary-500 hover:text-white transition-all"
+                    >
+                      پاک کردن فیلترها
+                    </button>
+                    </>
+                  )}
                 </div>
               ) : (
                 <>

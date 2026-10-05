@@ -3,6 +3,7 @@ import { serialize } from "@/lib/serialize";
 import { NextResponse } from "next/server";
 import { submitToIndexNow, productUrl } from "@/lib/indexnow";
 import { logActivityAsync } from "@/lib/activity";
+import { slugify } from "@/lib/slug";
  
 // ─── GET /api/admin/products ──────────────────────────────────────────────────
 export const runtime = "nodejs";
@@ -83,6 +84,11 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const body = await req.json();
 
+  const slug = slugify(body.slug || body.title || "");
+  if (!slug) {
+    return NextResponse.json({ error: "نشانی (slug) نامعتبر است." }, { status: 400 });
+  }
+
   // نشانی تصویر باید رشته‌ی ناتهی باشد؛ null در آرایه یعنی آپلود ناتمام
   const galleryUrls: string[] = (Array.isArray(body.images) ? body.images : []).filter(
     (u: unknown): u is string => typeof u === "string" && u.trim() !== "",
@@ -99,7 +105,7 @@ export async function POST(req: Request) {
   product = await prisma.product.create({
     data: {
       title:             body.title,
-      slug:              body.slug,
+      slug,
       categoryId:        body.categoryId,
       brandId:           body.brandId || null,
  
