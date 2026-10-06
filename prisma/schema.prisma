@@ -176,6 +176,7 @@ model Product {
   relatedProducts    ProductRelated[]   @relation("ProductRelations")
   relatedTo          ProductRelated[]   @relation("RelatedToProducts")
   attributes         ProductAttribute[]
+  stockAlerts        StockAlert[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -4894,4 +4895,49 @@ model CartRecovery {
   @@index([userId, cartActivityAt])
   @@index([phone, sentAt])
   @@index([createdAt])
+}
+
+// ─── ابزارها: «موجود شد خبرم کن» — docs/plans/store-tools-2.md بخش ۲ ────────
+
+/// تنظیمات خبر موجود شدن — یک ردیف `singleton`
+model StockAlertSetting {
+  id          String   @id @default("singleton")
+  isEnabled   Boolean  @default(false)
+  /// کد پترن پیامک — متغیرها: product و (در حالت VARIABLE) link
+  patternCode String?
+  /// VARIABLE: لینک کوتاه `/n/<token>` در متغیر link · NONE: فقط نام کالا
+  linkMode    String   @default("VARIABLE")
+  sendFrom    Int      @default(10)
+  sendTo      Int      @default(21)
+  updatedAt   DateTime @updatedAt
+}
+
+enum StockAlertStatus {
+  /// منتظر موجود شدن
+  WAITING
+  SENT
+  FAILED
+  /// لغو: مشتری پیامک را لغو کرده، ادمین حذف کرده یا بیش از ۶ ماه منتظر مانده
+  CANCELLED
+}
+
+/// یک شماره برای یک کالا — ثبت دوباره بعد از ارسال، همان ردیف را به WAITING برمی‌گرداند
+model StockAlert {
+  id         String           @id @default(cuid())
+  productId  String
+  phone      String
+  userId     String?
+  /// توکن ۶ نویسه‌ای لینک `/n/<token>` در پیامک
+  token      String           @unique
+  status     StockAlertStatus @default(WAITING)
+  reason     String?
+  createdAt  DateTime         @default(now())
+  notifiedAt DateTime?
+  clickedAt  DateTime?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, phone])
+  @@index([status, productId])
+  @@index([notifiedAt])
 }

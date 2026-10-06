@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import AddToCartButton from "@/components/store/cart/AddToCartButton";
+import StockAlertBox from "@/components/store/product/StockAlertBox";
 import { useWishlist } from "@/components/store/wishlist/WishlistContext";
 import { addToLastVisited } from "@/lib/lastVisited";
 import ProductReviews, {
@@ -526,12 +527,17 @@ export default function ProductDetailClient({ product, reviewStats, categoryRela
                     {/* Add to cart */}
                     
                    {isOutOfStock ? (
-                      <div className="w-full py-4 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl flex items-center justify-center gap-2 text-gray-400 font-black text-sm cursor-not-allowed">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                        </svg>
-                        ناموجود
-                      </div>
+                      <StockAlertBox
+                        productId={product.id}
+                        fallback={
+                          <div className="w-full py-4 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl flex items-center justify-center gap-2 text-gray-400 font-black text-sm cursor-not-allowed">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                            ناموجود
+                          </div>
+                        }
+                      />
                     ) : (
                       <AddToCartButton variant="full" product={{
                         id: product.id,

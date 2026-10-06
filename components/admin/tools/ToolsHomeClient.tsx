@@ -22,6 +22,7 @@ interface Summary {
   cartSent30: number;
   cartRecovered30: number;
   cartEnabled: boolean;
+  stockWaiting: number;
 }
 
 const fa = (n: number) => n.toLocaleString("fa-IR");
@@ -40,7 +41,7 @@ export default function ToolsHomeClient() {
       <PageHeader
         title="ابزارها"
         help="tools"
-        desc="کیوآر کد، لینک کوتاه، لندینگ، درخواست ثبت نظر و یادآوری سبد رهاشده روی دامنه‌ی خود فروشگاه با آمار — و ابزارهای سریع متن مثل کاراکترشمار."
+        desc="کیوآر کد، لینک کوتاه، لندینگ، درخواست ثبت نظر، یادآوری سبد رهاشده و «موجود شد خبرم کن» روی دامنه‌ی خود فروشگاه با آمار — و ابزارهای سریع متن مثل کاراکترشمار."
       />
 
       <Card className="px-2 py-3 sm:px-4">
@@ -66,6 +67,7 @@ export default function ToolsHomeClient() {
             sub={`${fa(s.cartSent30)} پیامک · ${fa(s.cartRecovered30)} خرید در ۳۰ روز`}
             href="/admin/tools/cart-recovery"
           />
+          <Stat label="منتظر موجود شدن" value={fa(s.stockWaiting)} tone="blue" sub="مشتری منتظر کالای ناموجود" href="/admin/tools/stock-alerts" />
         </div>
       )}
     </div>

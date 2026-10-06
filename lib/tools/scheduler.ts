@@ -1,14 +1,15 @@
 /**
- * زمان‌بند ابزارها — هر ۵ دقیقه: پیامک درخواست نظر و یادآوری سبد رهاشده.
+ * زمان‌بند ابزارها — هر ۵ دقیقه: پیامک درخواست نظر، یادآوری سبد رهاشده و «موجود شد».
  *
  * جدا از زمان‌بند کارتابل و حسابداری است: گیت هر کار تنظیمات خود همان ابزار
  * است (`isEnabled`) و خاموش‌بودن یکی نباید اثری روی دیگری داشته باشد.
  *
- * مستندات: docs/features/tools.md بخش ۴، docs/plans/store-tools-2.md بخش ۱
+ * مستندات: docs/features/tools.md بخش‌های ۴، ۶ و ۷
  */
 
 import { runCartRecoveries, scanAbandonedCarts } from "./cart-recovery";
 import { runReviewRequests } from "./reviews";
+import { runStockAlerts } from "./stock-alerts";
 
 let started = false;
 const TICK_MS = 5 * 60_000;
@@ -31,6 +32,14 @@ async function tick() {
     }
   } catch (e) {
     console.error("[tools-scheduler] یادآوری سبد ناموفق:", e);
+  }
+  try {
+    const r = await runStockAlerts();
+    if (r.sent + r.failed + r.skipped > 0) {
+      console.log(`[stock-alert] ${r.sent} ارسال، ${r.skipped} کنار گذاشته، ${r.failed} ناموفق`);
+    }
+  } catch (e) {
+    console.error("[tools-scheduler] «موجود شد» ناموفق:", e);
   }
 }
 

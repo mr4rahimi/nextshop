@@ -1,4 +1,4 @@
-# ابزارها — کیوآر کد، لینک کوتاه، لندینگ‌ساز، درخواست ثبت نظر (از ۲.۶۸.۰)، کاراکترشمار و ویرایشگر متن (۲.۶۹.۰–۲.۷۰.۰)، سبد رهاشده (۲.۷۲.۰)
+# ابزارها — کیوآر کد، لینک کوتاه، لندینگ‌ساز، درخواست ثبت نظر (از ۲.۶۸.۰)، کاراکترشمار و ویرایشگر متن (۲.۶۹.۰–۲.۷۰.۰)، سبد رهاشده (۲.۷۲.۰)، «موجود شد خبرم کن» (۲.۷۳.۰)
 
 > ابزارهای دور دوم (سبد رهاشده، «موجود شد خبرم کن»، ماشین‌حساب قیمت، پاپ‌آپ) با ترتیب و وضعیت در
 > `docs/plans/store-tools-2.md` طراحی شده‌اند؛ هر کدام بعد از ساخت اینجا یک بخش می‌گیرد.
@@ -58,6 +58,8 @@ QR پویا ← لینک کوتاه /s/… (+UTM) ← لندینگ /l/… یا �
 | `/admin/tools` · `/qr` · `/links` · `/landings` · `/landings/[id]` · `/reviews` · `/text-counter` | پنل | سشن + بخش ابزارها |
 | `/api/admin/tools/{links,qr,landings,products,reviews,summary,text-check}` | API پنل | سشن + `toolsGuard` |
 | `/s/[code]` | ریدایرکت لینک کوتاه (route handler) | عمومی، **بیرون از matcher پروکسی** |
+| `/n/[token]` | لینک پیامک «موجود شد» (بخش ۷) | عمومی، **بیرون از matcher** |
+| `/c/[token]` | بازگشت به سبد (بخش ۶) | عمومی، داخل matcher |
 | `/l/[slug]` | لندینگ عمومی | عمومی، داخل matcher (کوکی منبع ورود ثبت می‌شود) |
 | `/api/store/landing/[slug]/callback` | فرم درخواست تماس لندینگ | عمومی |
 | `/r/[token]`، `/r/shop`، `/r/[token]/go/[platform]` | صفحه‌ی ثبت نظر و شمارش کلیک | عمومی، **بیرون از matcher** |
@@ -286,6 +288,36 @@ CartRecovery         userId (بدون رابطه), phone, name?, token @unique, 
                      couponId?, couponCode?, recoveredOrderId?, recoveredAt?, recoveredTotal BigInt?
 ```
 مایگریشن `20261006150000_cart_recovery` افزایشی است.
+
+## ۷. «موجود شد خبرم کن» (۲.۷۳.۰)
+
+طرح: `docs/plans/store-tools-2.md` بخش ۲.
+
+| فایل | نقش |
+|---|---|
+| `lib/tools/stock-alerts.ts` | تنظیمات، `stockAlertState`، `subscribeStockAlert`، `resolveAlertClick`، `runStockAlerts`، `cancelStockAlert`، گزارش |
+| `components/store/product/StockAlertBox.tsx` | فرم جای دکمه‌ی خرید در `ProductDetailClient` (`isOutOfStock`)؛ خاموش → همان کادر «ناموجود» قبلی (`fallback`) |
+| `app/api/store/stock-alert/route.ts` | GET وضعیت (`enabled`، شماره‌ی کاربر واردشده، `subscribed`) · POST ثبت — خطا با ۲۰۰ + `ok:false` |
+| `app/n/[token]/route.ts` | لینک پیامک → `/products/<slug>?utm_source=sms&utm_campaign=back-in-stock`، 302 + `no-store`، اولین کلیک غیرربات |
+| `app/api/admin/tools/stock-alerts/route.ts` · `components/admin/tools/StockAlertsClient.tsx` | پنل `/admin/tools/stock-alerts`؛ POST `{phone}` آزمایشی، `{cancelId}` لغو |
+
+- «ناموجود» = `trackStock && stock <= 0` (همان صفحه‌ی محصول)؛ ثبت روی کالای موجود یا غیرفعال رد می‌شود. سقف ۱۰ ثبت در ساعت
+  به‌ازای IP (در حافظه)، فیلد تله `website`. یکتایی `(productId, phone)`: ثبت دوباره‌ی ردیف غیرمنتظر آن را به WAITING
+  برمی‌گرداند (`createdAt` تازه)؛ ردیف منتظر `already: true`.
+- **ارسال با اسکن** (`runStockAlerts`، هر ۵ دقیقه، ۳۰ در هر دور): WAITING روی کالای فعالِ موجود (`!trackStock || stock > 0`)،
+  قدیمی‌ترها اول. گیت روشن/پترن/`getSmsReadiness`/بازه‌ی ساعت. منتظرِ بیش از ۱۸۰ روز → CANCELLED؛ شماره‌ی نامعتبر و
+  `SmsOptOut` → CANCELLED؛ قفل `WAITING → SENT`؛ خطا → FAILED بی‌تلاش دوباره. هیچ مسیر ویرایش موجودی قلاب ندارد.
+- متغیرها: `product` (حداکثر ۴۰ نویسه) و در حالت `VARIABLE` `link` (`<دامنه>/n/<token>` بدون https). حالت `NONE` بی‌لینک.
+- `/n/` مثل `/s/` و `/r/` از matcher `proxy.ts` و `SKIP_PREFIXES` بیرون است.
+- **گزارش:** منتظرها، پرتقاضاترین‌ها (`groupBy productId`)، ارسال/کلیک ۳۰ روز، «همان کالا را خرید» = سفارش غیرلغو با همان
+  کالا از کاربری با همان شماره تا ۷ روز بعد از پیامک (محاسبه‌ای، ستونی ذخیره نمی‌شود).
+
+```
+StockAlertSetting  id "singleton", isEnabled, patternCode?, linkMode(VARIABLE|NONE), sendFrom(10), sendTo(21)
+StockAlert         productId → Product (Cascade), phone, userId?, token @unique, status(WAITING|SENT|FAILED|CANCELLED),
+                   reason?, createdAt, notifiedAt?, clickedAt?   @@unique([productId, phone])
+```
+مایگریشن `20261006170000_stock_alerts` افزایشی است (فقط رابطه‌ی معکوس روی `Product`).
 
 ## مدل داده
 

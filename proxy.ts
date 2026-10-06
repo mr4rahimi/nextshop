@@ -276,8 +276,9 @@ export const config = {
    * فراخوانی است، آن یکی برای درستی.
    */
   matcher: [
-    // `s/` و `r/` (لینک کوتاه و ثبت نظر — docs/features/tools.md) عمداً بیرون‌اند:
-    // QR چاپ‌شده نباید به ریدایرکت‌های مدیریت‌شده یا کوکی منبع ورود گره بخورد.
-    "/((?!_next/static|_next/image|favicon.ico|uploads/|upload/|assets/|api/internal/|tq/|s/|r/).*)",
+    // `s/`، `r/` و `n/` (لینک کوتاه، ثبت نظر، لینک پیامک «موجود شد» — docs/features/tools.md)
+    // عمداً بیرون‌اند: لینک چاپ‌شده یا پیامک‌شده نباید به ریدایرکت‌های مدیریت‌شده یا کوکی
+    // منبع ورود گره بخورد؛ منبع را صفحه‌ی مقصد با UTM خودش می‌سازد.
+    "/((?!_next/static|_next/image|favicon.ico|uploads/|upload/|assets/|api/internal/|tq/|s/|r/|n/).*)",
   ],
 };
