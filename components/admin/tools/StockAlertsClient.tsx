@@ -175,7 +175,7 @@ export default function StockAlertsClient() {
           </Field>
           <p className="text-[11px] leading-5 text-gray-400">
             {s.linkMode === "VARIABLE"
-              ? "لینکی کوتاه مثل 9dm.ir/n/ab3k7x که مستقیم صفحه‌ی همان کالا را باز می‌کند و کلیکش شمرده می‌شود."
+              ? `لینکی کوتاه مثل ${typeof window !== "undefined" ? window.location.host : ""}/n/ab3k7x که مستقیم صفحه‌ی همان کالا را باز می‌کند و کلیکش شمرده می‌شود.`
               : "فقط نام کالا فرستاده می‌شود؛ اگر سامانه‌ی پیامک «لینک در متغیر» را تأیید نکرد."}
           </p>
           <div className="rounded-xl bg-gray-50 p-3 dark:bg-white/5">

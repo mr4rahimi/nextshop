@@ -155,10 +155,13 @@ export function inWindow(p: Pick<PopupPublic, "startsAt" | "endsAt">, now: numbe
 
 const FREQ_MS: Record<PopupFrequency, number> = { SESSION: 0, DAY: 86_400_000, WEEK: 7 * 86_400_000, ONCE: Infinity };
 
-/** با زمان آخرین نمایش (همان نسخه)، الان دوباره نشان داده شود؟ — SESSION را میزبان با sessionStorage می‌سنجد */
+/**
+ * با زمان آخرین نمایش (همان نسخه)، الان دوباره نشان داده شود؟
+ * ⚠️ SESSION همیشه `true` است: «در این بازدید دیده شده» را میزبان با sessionStorage
+ * می‌سنجد؛ زمانِ ذخیره در localStorage نباید بازدید بعدی را هم ببندد.
+ */
 export function dueAgain(freq: PopupFrequency, lastShown: number | null, now: number): boolean {
-  if (lastShown === null) return true;
-  if (freq === "SESSION") return false;
+  if (freq === "SESSION" || lastShown === null) return true;
   return now - lastShown >= FREQ_MS[freq];
 }
 
