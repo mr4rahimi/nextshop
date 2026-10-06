@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { slugify, slugifyDraft } from "@/lib/slug";
 import { useRouter } from "next/navigation";
 import AiImageStudio from "@/components/admin/product/AiImageStudio";
+import TextMeter from "@/components/admin/tools/TextMeter";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Category { id: string; title: string }
@@ -1022,6 +1023,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="عنوان SEO">
               <input dir="ltr" value={form.seoTitle} className={inp} onChange={e => set("seoTitle", e.target.value)} />
+              <TextMeter text={form.seoTitle} profile="seoTitle" keyword={form.seoKeywords.split(",")[0]?.trim()} className="mt-1" />
             </Field>
             <Field label="کلمات کلیدی">
               <input dir="ltr" value={form.seoKeywords} className={inp}
@@ -1030,6 +1032,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
           </div>
           <Field label="توضیحات SEO">
             <textarea rows={2} dir="ltr" value={form.seoDescription} className={ta} onChange={e => set("seoDescription", e.target.value)} />
+            <TextMeter text={form.seoDescription} profile="metaDesc" keyword={form.seoKeywords.split(",")[0]?.trim()} className="mt-1" />
           </Field>
           <Field label="Schema JSON-LD">
             <textarea rows={4} dir="ltr" value={form.seoSchema} className={`${ta} font-mono text-xs`}

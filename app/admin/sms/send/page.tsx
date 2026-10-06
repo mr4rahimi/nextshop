@@ -255,12 +255,13 @@ export default function SendPage() {
             hint={
               mode === "keywords"
                 ? "برای شخصی‌سازی از {name} استفاده کنید — مقدار هر گیرنده از فهرست خوانده می‌شود"
-                : `${fa(text.length)} کاراکتر`
+                : undefined
             }
             value={text}
             onChange={setText}
             rows={5}
             placeholder="متن پیامک..."
+            meter="sms"
           />
 
           {needsRecipients && (

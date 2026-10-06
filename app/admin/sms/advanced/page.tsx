@@ -144,7 +144,7 @@ function NumberBankTab() {
           </div>
 
           <Field label="تعداد گیرنده" type="number" dir="ltr" value={limit} onChange={setLimit} />
-          <TextArea label="متن پیامک" value={text} onChange={setText} rows={4} />
+          <TextArea label="متن پیامک" value={text} onChange={setText} rows={4} meter="sms" />
 
           {notice && <Notice text={notice} ok />}
           <ErrorBox err={err} />
@@ -361,7 +361,7 @@ function LbsTab() {
         title="درخواست جدید"
         hint="ارسال به افرادی که در یک محدوده‌ی جغرافیایی حضور دارند. مختصات را از نقشه بردارید."
       >
-        <TextArea label="متن پیامک" value={text} onChange={setText} rows={3} />
+        <TextArea label="متن پیامک" value={text} onChange={setText} rows={3} meter="sms" />
 
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="عرض جغرافیایی (Latitude)" dir="ltr" value={lat} onChange={setLat} placeholder="35.6892" />

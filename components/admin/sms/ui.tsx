@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import TextMeter from "@/components/admin/tools/TextMeter";
+import type { ProfileKey } from "@/lib/tools/text-profiles";
 
 import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 
@@ -221,6 +223,7 @@ export function TextArea({
   onChange,
   rows = 5,
   placeholder,
+  meter,
 }: {
   label: string;
   hint?: string;
@@ -228,6 +231,8 @@ export function TextArea({
   onChange: (v: string) => void;
   rows?: number;
   placeholder?: string;
+  /** شمارنده‌ی کاراکترشمار زیر فیلد — docs/features/tools.md بخش ۵ */
+  meter?: ProfileKey;
 }) {
   return (
     <label className="block">
@@ -239,6 +244,7 @@ export function TextArea({
         onChange={(e) => onChange(e.target.value)}
         className={`${inputClass} mt-1.5 leading-relaxed resize-y`}
       />
+      {meter && <TextMeter text={value} profile={meter} className="mt-1.5" />}
       {hint && <span className="block text-[10px] font-bold text-gray-400 mt-1.5 leading-relaxed">{hint}</span>}
     </label>
   );
