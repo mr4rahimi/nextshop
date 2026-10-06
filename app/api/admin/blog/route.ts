@@ -58,6 +58,9 @@ export async function POST(req: Request) {
       seoTitle:       data.seoTitle       ?? null,
       seoDescription: data.seoDescription ?? null,
       seoKeywords:    data.seoKeywords    ?? null,
+      focusKeyword:   data.focusKeyword?.trim() || null,
+      canonicalUrl:   data.canonicalUrl?.trim() || null,
+      noIndex:        !!data.noIndex,
       faq:            faqForPrisma(data.faq),
       readingTime,
       tags: data.tags?.length ? {

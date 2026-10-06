@@ -18,6 +18,7 @@
 | سند | محتوا |
 |-----|-------|
 | [ریدایرکت و گزارش ۴۰۴](features/redirects.md) | پنل `/admin/seo` — ریدایرکت‌های مدیریت‌شده، انواع تطبیق، ورود CSV، کش، **ریدایرکت خودکار با تغییر اسلاگ** |
+| [مجله: ادیتور، سئوی مقاله و نمایش](features/blog-mag.md) | ادیتور Tiptap با جدول، کادر نکته، چک‌لیست، آپلود تصویر؛ تحلیلگر سئوی مقاله؛ `/mag` و `/mag/[slug]` با پوسته‌ی روز/شب `mag.css`؛ `enhanceRichHtml`. **۲.۷۱.۰** |
 | [سئو](features/seo.md) | متادیتا، اسکیما، sitemap، robots، صفحات فرود |
 | [چیدمان لیست محصولات](features/product-grid.md) | تک‌ستونه/دوستونه موبایل، `ProductLayoutContext` |
 | [هدر شیشه‌ای](features/glass-header.md) | سیستم هدرها، `registry.ts`، تنظیمات ظاهری |

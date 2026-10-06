@@ -7,6 +7,8 @@ import { normalizeFaq } from "@/lib/faq";
 import { approvedCommentCount, approvedCommentsQuery } from "@/lib/blog-comments";
 import { publicAuthorName } from "@/lib/moderation";
 import type { SchemaComment } from "@/lib/seo";
+import { MAG_LIST_SELECT } from "@/lib/mag-list";
+import { countWords, htmlToText } from "@/lib/blog-seo";
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -31,17 +33,25 @@ export async function generateMetadata({ params }: Props) {
   try {
     const post = await prisma.blogPost.findUnique({
       where: { slug },
-      select: { title: true, seoTitle: true, seoDescription: true, seoKeywords: true, coverImage: true, excerpt: true },
+      select: { title: true, seoTitle: true, seoDescription: true, seoKeywords: true, coverImage: true, excerpt: true, canonicalUrl: true, noIndex: true },
     });
     if (!post) return { title: "مطلب یافت نشد" };
-    return buildBaseMetadata({
-      title:       post.seoTitle       ?? post.title,
-      description: post.seoDescription ?? post.excerpt ?? undefined,
-      keywords:    post.seoKeywords    ?? undefined,
+    const canon = post.canonicalUrl?.trim();
+    const meta = buildBaseMetadata({
+      title:       post.seoTitle       || post.title,
+      description: post.seoDescription || post.excerpt || undefined,
+      keywords:    post.seoKeywords    || undefined,
       image:       post.coverImage,
       path:        `/mag/${slug}`,
       ogType:      "article",
+      noIndex:     post.noIndex,
+      // noindex مقاله لینک‌هایش را بی‌اعتبار نمی‌کند
+      followWhenNoIndex: true,
+      ...(canon && canon.startsWith("/") ? { canonicalPath: canon } : {}),
     });
+    // canonical کامل (دامنه‌ی دیگر) مستقیم می‌نشیند؛ canonicalUrl() فقط مسیر می‌گیرد
+    if (canon && /^https?:\/\//i.test(canon)) meta.alternates = { canonical: canon };
+    return meta;
   } catch { return { title: "مجله" }; }
 }
 
@@ -75,8 +85,8 @@ export default async function MagPostPage({ params }: Props) {
   try {
     related = await prisma.blogPost.findMany({
       where: { status: "PUBLISHED", slug: { not: slug }, ...(post.categoryId ? { categoryId: post.categoryId } : {}) },
-      take: 3, orderBy: { publishedAt: "desc" },
-      select: { id: true, title: true, slug: true, coverImage: true, publishedAt: true, readingTime: true, category: { select: { title: true, slug: true } } },
+      take: 4, orderBy: { publishedAt: "desc" },
+      select: MAG_LIST_SELECT,
     });
   } catch {}
 
@@ -110,6 +120,9 @@ export default async function MagPostPage({ params }: Props) {
     publisherLogo:  settings?.storeLogo  ?? null,
     comments:       (post.comments ?? []).map(toSchemaComment),
     commentCount,
+    section:        post.category?.title ?? null,
+    keywords:       [post.focusKeyword, post.seoKeywords].filter(Boolean).join("، ") || null,
+    wordCount:      countWords(htmlToText(post.content ?? "")),
   });
 
   const faqSchema = buildFAQSchema(normalizeFaq(post.faq));
@@ -131,6 +144,7 @@ export default async function MagPostPage({ params }: Props) {
       <MagPostClient
         post={serialize({ ...post, _count: { comments: commentCount } })}
         related={serialize(related)}
+        storeName={settings?.storeName ?? null}
       />
     </>
   );

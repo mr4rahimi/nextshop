@@ -4,6 +4,7 @@ import { normalizePageBlocks, withToc, type PageTemplate } from "@/lib/pages";
 import { telHref } from "@/lib/tel";
 import PageToc from "./PageToc";
 import FaqAccordion from "./FaqAccordion";
+import { enhanceRichHtml } from "@/lib/rich-html";
 
 export interface PageData {
   slug: string;
@@ -55,7 +56,7 @@ export default function PageView({ page }: { page: PageData }) {
 
   const content = hasContent && (
     <div className={`${CARD} p-6 md:p-9 overflow-x-auto`}>
-      <div className="rich-content" dir="rtl" dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="rich-content" dir="rtl" dangerouslySetInnerHTML={{ __html: enhanceRichHtml(html).html }} />
     </div>
   );
 

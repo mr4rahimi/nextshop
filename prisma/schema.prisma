@@ -969,6 +969,12 @@ model BlogPost {
   seoTitle        String?
   seoDescription  String?
   seoKeywords     String?
+  /// کلمه‌ی کلیدی اصلی — تحلیلگر سئوی فرم مقاله بر پایه‌ی آن امتیاز می‌دهد
+  focusKeyword    String?
+  /// آدرس canonical دلخواه (نسبی یا کامل)؛ خالی = آدرس خود مقاله
+  canonicalUrl    String?
+  /// true = noindex و بیرون از sitemap
+  noIndex         Boolean           @default(false)
   /// سوالات متداول — آرایه‌ی [{question, answer}]. با `normalizeFaq()` امن شود.
   faq             Json?
   viewCount       Int               @default(0)

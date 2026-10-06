@@ -2,6 +2,7 @@
 
 @import "./styles/mana.css";
 @import "./styles/rich-content.css";
+@import "./styles/mag.css";
 /* 👇 مسیرها */
 @source "../**/*.{js,ts,jsx,tsx,mdx}";
 

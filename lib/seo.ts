@@ -437,6 +437,10 @@ export function buildArticleSchema(opts: {
   comments?: SchemaComment[];
   /** تعداد نظرهای تأییدشده، شامل پاسخ‌ها */
   commentCount?: number;
+  /** دسته‌ی مقاله */
+  section?: string | null;
+  keywords?: string | null;
+  wordCount?: number;
 }) {
   return {
     "@context":      "https://schema.org",
@@ -459,6 +463,9 @@ export function buildArticleSchema(opts: {
         : undefined,
     },
     inLanguage: "fa",
+    articleSection: opts.section || undefined,
+    keywords:       opts.keywords || undefined,
+    wordCount:      opts.wordCount || undefined,
     /**
      * فقط نظرهای **تأییدشده** — و `commentCount` هم همان‌ها را می‌شمارد.
      * عددی که با فهرست زیرش نخواند، از نظر گوگل خطاست.

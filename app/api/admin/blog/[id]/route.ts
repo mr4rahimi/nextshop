@@ -57,6 +57,10 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
       seoTitle:       data.seoTitle       ?? null,
       seoDescription: data.seoDescription ?? null,
       seoKeywords:    data.seoKeywords    ?? null,
+      // مثل faq: فقط وقتی کلید در بدنه هست — بدنه‌ی ناقص نباید پاکشان کند
+      ...("focusKeyword" in data ? { focusKeyword: data.focusKeyword?.trim() || null } : {}),
+      ...("canonicalUrl" in data ? { canonicalUrl: data.canonicalUrl?.trim() || null } : {}),
+      ...("noIndex" in data ? { noIndex: !!data.noIndex } : {}),
       // فقط وقتی نوشته می‌شود که کلید در بدنه باشد — بدنه‌ی ناقص نباید
       // سوالات متداول موجود را پاک کند.
       ...("faq" in data ? { faq: faqForPrisma(data.faq) } : {}),
