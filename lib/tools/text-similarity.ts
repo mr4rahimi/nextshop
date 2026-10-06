@@ -133,7 +133,7 @@ export function createDuplicateScanner(input: string) {
       }
       if (!mask) return;
       const prev = hits.get(src.id);
-      if (prev) prev.mask.forEach((v, i) => (mask![i] |= v));
+      if (prev) prev.mask.forEach((v, i) => (mask![i] = mask![i]! | v));
       hits.set(src.id, { src: { id: src.id, kind: src.kind, title: src.title, url: src.url }, mask });
     },
 
@@ -141,7 +141,7 @@ export function createDuplicateScanner(input: string) {
       const all = new Uint8Array(words.length);
       const matches: DupMatch[] = [];
       for (const { src, mask } of hits.values()) {
-        mask.forEach((v, i) => (all[i] |= v));
+        mask.forEach((v, i) => (all[i] = all[i]! | v));
         matches.push({
           id: src.id,
           kind: src.kind,
@@ -168,5 +168,5 @@ export function tokenRangesToChars(text: string, ranges: [number, number][]): { 
   const toks = tokenize(text);
   return ranges
     .filter(([a, b]) => toks[a] && toks[b - 1])
-    .map(([a, b]) => ({ start: toks[a].start, end: toks[b - 1].end }));
+    .map(([a, b]) => ({ start: toks[a]!.start, end: toks[b - 1]!.end }));
 }

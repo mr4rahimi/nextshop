@@ -37,7 +37,7 @@ export function fixArabicChars(text: string): FixResult {
     [/[يى]/g, "ی"],
     [/ك/g, "ک"],
     [/ە/g, "ه"],
-    [/[٠-٩]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d.charCodeAt(0) - 0x0660]],
+    [/[٠-٩]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d.charCodeAt(0) - 0x0660] ?? d],
   ]);
 }
 
@@ -82,7 +82,7 @@ export function digitsToPersian(text: string): FixResult {
     const latin = /[A-Za-z@]|:\/\//.test(tok);
     if (!latin && !prevLatin && /[0-9]/.test(tok)) {
       count++;
-      parts[i] = tok.replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
+      parts[i] = tok.replace(/[0-9]/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)] ?? d);
     }
     prevLatin = latin;
   }
@@ -120,7 +120,7 @@ export function fixPunctuation(text: string): FixResult {
       [new RegExp(`(?<=[${FA}])\\.(?=[${FA}])`, "gu"), ". "],
     ]);
     count += r.count;
-    l = r.text.replace(/\u0000(\d+)\u0000/g, (_, i) => urls[Number(i)]);
+    l = r.text.replace(/\u0000(\d+)\u0000/g, (_, i) => urls[Number(i)] ?? "");
     return l;
   });
   return { text: lines.join("\n"), count };

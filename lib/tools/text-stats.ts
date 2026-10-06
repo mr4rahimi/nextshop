@@ -94,7 +94,7 @@ export function normalizeToken(w: string): string {
     .replace(/[أإآ]/g, "ا")
     .replace(/ؤ/g, "و")
     .replace(/[ً-ٰٟـ]/g, "")
-    .replace(/[۰-۹٠-٩]/g, (d) => LATIN_DIGIT[d])
+    .replace(/[۰-۹٠-٩]/g, (d) => LATIN_DIGIT[d] ?? d)
     .toLowerCase();
 }
 
@@ -267,8 +267,8 @@ export function textStats(text: string): TextStats {
     avgSentence,
     avgParagraph,
     longShare,
-    hashtags: [...text.matchAll(HASHTAG)].map((m) => m[2]),
-    mentions: [...text.matchAll(MENTION)].map((m) => m[2]),
+    hashtags: [...text.matchAll(HASHTAG)].map((m) => m[2] ?? ""),
+    mentions: [...text.matchAll(MENTION)].map((m) => m[2] ?? ""),
     urls: text.match(URL_RE) ?? [],
     emojis: (text.match(EMOJI) ?? []).length,
     halfSpaces: text.split(ZWNJ).length - 1,
@@ -321,7 +321,7 @@ export function topPhrases(text: string, n: 2 | 3, limit = 10): WordFreq[] {
   const map = new Map<string, number>();
   for (let i = 0; i + n <= toks.length; i++) {
     const g = toks.slice(i, i + n);
-    if (STOP_WORDS.has(g[0]) || STOP_WORDS.has(g[n - 1])) continue;
+    if (STOP_WORDS.has(g[0]!) || STOP_WORDS.has(g[n - 1]!)) continue;
     const key = g.join(" ");
     map.set(key, (map.get(key) ?? 0) + 1);
   }
@@ -352,8 +352,8 @@ export function keywordStats(text: string, keyword: string): KeywordStats | null
   const toks = tokenize(text);
   const hits: { start: number; end: number }[] = [];
   for (let i = 0; i + kw.length <= toks.length; i++) {
-    if (kw.every((w, j) => toks[i + j].w === w)) {
-      hits.push({ start: toks[i].start, end: toks[i + kw.length - 1].end });
+    if (kw.every((w, j) => toks[i + j]?.w === w)) {
+      hits.push({ start: toks[i]!.start, end: toks[i + kw.length - 1]!.end });
       i += kw.length - 1;
     }
   }
@@ -363,7 +363,7 @@ export function keywordStats(text: string, keyword: string): KeywordStats | null
     count: hits.length,
     density: toks.length ? Math.round(((hits.length * kw.length) / toks.length) * 1000) / 10 : 0,
     inFirstParagraph: !!firstPara && hits.some((h) => h.start < firstPara.end),
-    nearStart: hits.length > 0 && hits[0].start <= Math.max(text.length * 0.1, 60),
+    nearStart: hits.length > 0 && hits[0]!.start <= Math.max(text.length * 0.1, 60),
     hits,
   };
 }

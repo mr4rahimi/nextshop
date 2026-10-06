@@ -273,7 +273,7 @@ export default function TextCounterClient() {
             <ToolBtn onClick={runAll} disabled={empty || !FIXES.some((f) => f.standard && fixCounts[f.key])} icon={Wand2} accent>
               استانداردسازی
             </ToolBtn>
-            <ToolBtn onClick={undo} disabled={!history.length} icon={Undo2} title={history.length ? `برگرداندن «${history[history.length - 1].label}»` : undefined}>
+            <ToolBtn onClick={undo} disabled={!history.length} icon={Undo2} title={history.length ? `برگرداندن «${history.at(-1)?.label}»` : undefined}>
               برگرداندن
             </ToolBtn>
             <ToolBtn onClick={paste} icon={ClipboardPaste}>چسباندن</ToolBtn>

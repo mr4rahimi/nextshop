@@ -32,8 +32,8 @@ function MarkedTextInner({ text, marks }: { text: string; marks: Mark[] }) {
     const sorted = [...cuts].sort((a, b) => a - b);
     const out: { s: number; e: number; kinds: MarkKind[] }[] = [];
     for (let i = 0; i < sorted.length - 1; i++) {
-      const s = sorted[i];
-      const e = sorted[i + 1];
+      const s = sorted[i]!;
+      const e = sorted[i + 1]!;
       if (s === e) continue;
       const kinds = [...new Set(marks.filter((m) => m.start <= s && m.end >= e).map((m) => m.kind))];
       out.push({ s, e, kinds });
