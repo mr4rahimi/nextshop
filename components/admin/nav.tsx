@@ -347,6 +347,7 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   // ابزارها — docs/features/tools.md
   tools: "ابزارها", qr: "کیوآر کد", landings: "لندینگ‌ساز",
   "tools/links": "لینک کوتاه", "tools/reviews": "درخواست ثبت نظر",
+  "text-counter": "کاراکترشمار",
   // حسابداری — docs/plans/accounting.md
   accounting: "حسابداری", parties: "اشخاص", treasury: "صندوق و بانک",
   vouchers: "اسناد", accounts: "سرفصل حساب‌ها", opening: "اول دوره",

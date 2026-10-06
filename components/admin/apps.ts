@@ -14,7 +14,7 @@ import {
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
-  CalendarDays, Lock, QrCode, LayoutTemplate, Star,
+  CalendarDays, Lock, QrCode, LayoutTemplate, Star, Type,
 } from "lucide-react";
 
 /** رنگ کاشی — کلاس‌ها کامل نوشته شده‌اند تا Tailwind پیدایشان کند */
@@ -131,6 +131,7 @@ export const TOOLS_APPS: AppItem[] = [
   { href: "/admin/tools/links", label: "لینک کوتاه", icon: Link2, tone: "blue", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
   { href: "/admin/tools/landings", label: "لندینگ‌ساز", icon: LayoutTemplate, tone: "emerald", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
   { href: "/admin/tools/reviews", label: "درخواست ثبت نظر", icon: Star, tone: "amber", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
+  { href: "/admin/tools/text-counter", label: "کاراکترشمار", icon: Type, tone: "teal", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
 ];
 
 // ── تطبیق مسیر ────────────────────────────────────────────────────────────
