@@ -146,6 +146,11 @@
 .rich-content tr:nth-child(even) > td { background-color: rgba(15, 23, 42, .022); }
 .dark .rich-content tr:nth-child(even) > td { background-color: rgba(255, 255, 255, .025); }
 .rich-content td[data-bg], .rich-content th[data-bg] { color: #111827; }
+/* رنگ خانه برای روز انتخاب شده؛ در شب با لایه‌ی تیره ملایم می‌شود */
+.dark .rich-content td[data-bg], .dark .rich-content th[data-bg] {
+  color: #fff;
+  background-image: linear-gradient(rgba(10, 12, 30, .72), rgba(10, 12, 30, .72));
+}
 .rich-content th p, .rich-content td p { margin: 0; }
 
 /* ── کادر نکته/هشدار ──────────────────────────────────────────────── */
@@ -199,7 +204,7 @@
 .rich-content img[data-align="right"] { margin-right: 0; margin-left: auto; }
 .rich-content img[data-align="left"]  { margin-left: 0; margin-right: auto; }
 
-.rich-content mark { border-radius: .3rem; padding: .05rem .25rem; color: inherit; }
+.rich-content mark { border-radius: .3rem; padding: .05rem .25rem; color: #111827; }
 .rich-content sub, .rich-content sup { font-size: .72em; }
 
 /* ── فقط داخل ادیتور ──────────────────────────────────────────────── */

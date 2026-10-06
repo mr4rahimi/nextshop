@@ -25,7 +25,7 @@
   --mag-bg: color-mix(in oklch, var(--color-primary-900) 78%, #05060f);
   --mag-surface: color-mix(in oklch, var(--color-primary-800) 62%, var(--color-primary-900));
   --mag-surface-2: color-mix(in oklch, var(--color-primary-700) 55%, var(--color-primary-900));
-  --mag-hero: color-mix(in oklch, var(--color-primary-700) 70%, var(--color-primary-900));
+  --mag-hero: color-mix(in oklch, var(--color-primary-700) 48%, var(--color-primary-900));
   --mag-text: #f8fafc;
   --mag-muted: color-mix(in oklch, var(--color-primary-100) 70%, #94a3b8);
   --mag-border: color-mix(in oklch, var(--color-primary-400) 18%, transparent);
