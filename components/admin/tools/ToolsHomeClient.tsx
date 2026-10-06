@@ -19,6 +19,9 @@ interface Summary {
   clicks30: number;
   reviewsSent30: number;
   reviewsEnabled: boolean;
+  cartSent30: number;
+  cartRecovered30: number;
+  cartEnabled: boolean;
 }
 
 const fa = (n: number) => n.toLocaleString("fa-IR");
@@ -37,7 +40,7 @@ export default function ToolsHomeClient() {
       <PageHeader
         title="ابزارها"
         help="tools"
-        desc="کیوآر کد، لینک کوتاه، لندینگ و درخواست ثبت نظر روی دامنه‌ی خود فروشگاه با آمار — و ابزارهای سریع متن مثل کاراکترشمار."
+        desc="کیوآر کد، لینک کوتاه، لندینگ، درخواست ثبت نظر و یادآوری سبد رهاشده روی دامنه‌ی خود فروشگاه با آمار — و ابزارهای سریع متن مثل کاراکترشمار."
       />
 
       <Card className="px-2 py-3 sm:px-4">
@@ -55,6 +58,13 @@ export default function ToolsHomeClient() {
             tone={s.reviewsEnabled ? "green" : "gray"}
             sub={`${fa(s.reviewsSent30)} پیامک در ۳۰ روز`}
             href="/admin/tools/reviews"
+          />
+          <Stat
+            label="یادآوری سبد رهاشده"
+            value={s.cartEnabled ? "روشن" : "خاموش"}
+            tone={s.cartEnabled ? "green" : "gray"}
+            sub={`${fa(s.cartSent30)} پیامک · ${fa(s.cartRecovered30)} خرید در ۳۰ روز`}
+            href="/admin/tools/cart-recovery"
           />
         </div>
       )}

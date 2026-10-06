@@ -1,12 +1,13 @@
 /**
- * زمان‌بند ابزارها — فعلاً فقط ارسال پیامک درخواست نظر، هر ۵ دقیقه.
+ * زمان‌بند ابزارها — هر ۵ دقیقه: پیامک درخواست نظر و یادآوری سبد رهاشده.
  *
- * جدا از زمان‌بند کارتابل و حسابداری است: گیتش خودِ تنظیمات «درخواست نظر»
- * است (`ReviewRequestSetting.isEnabled`) و خاموش‌بودن بقیه نباید اثری داشته باشد.
+ * جدا از زمان‌بند کارتابل و حسابداری است: گیت هر کار تنظیمات خود همان ابزار
+ * است (`isEnabled`) و خاموش‌بودن یکی نباید اثری روی دیگری داشته باشد.
  *
- * مستندات: docs/features/tools.md بخش ۴
+ * مستندات: docs/features/tools.md بخش ۴، docs/plans/store-tools-2.md بخش ۱
  */
 
+import { runCartRecoveries, scanAbandonedCarts } from "./cart-recovery";
 import { runReviewRequests } from "./reviews";
 
 let started = false;
@@ -21,6 +22,15 @@ async function tick() {
     }
   } catch (e) {
     console.error("[tools-scheduler] چرخه ناموفق:", e);
+  }
+  try {
+    const found = await scanAbandonedCarts();
+    const r = await runCartRecoveries();
+    if (found + r.sent + r.failed + r.skipped > 0) {
+      console.log(`[cart-recovery] ${found} سبد تازه، ${r.sent} ارسال، ${r.skipped} کنار گذاشته، ${r.failed} ناموفق`);
+    }
+  } catch (e) {
+    console.error("[tools-scheduler] یادآوری سبد ناموفق:", e);
   }
 }
 

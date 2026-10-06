@@ -4820,3 +4820,78 @@ model ReviewPlatformClick {
   @@index([platform, at])
   @@index([requestId])
 }
+
+// ─── ابزارها: یادآوری سبد رهاشده — docs/plans/store-tools-2.md بخش ۱ ────────
+
+/// تنظیمات یادآوری سبد رهاشده — یک ردیف `singleton`
+model CartRecoverySetting {
+  id                String    @id @default("singleton")
+  isEnabled         Boolean   @default(false)
+  /// فعالیت سبد پیش از این لحظه نادیده گرفته می‌شود — روشن‌کردن به سبدهای قدیمی پیامک نمی‌زند
+  enabledAt         DateTime?
+  /// کد پترن پیامک — متغیرها: name، link و (با تخفیف) code
+  patternCode       String?
+  /// VARIABLE: لینک اختصاصی در متغیر link · FIXED: لینک ثابت /cart داخل متن پترن
+  linkMode          String    @default("VARIABLE")
+  /// چند دقیقه بی‌تغییر ماندن سبد یعنی رها شده
+  delayMinutes      Int       @default(120)
+  /// بازه‌ی مجاز ارسال به ساعت تهران
+  sendFrom          Int       @default(10)
+  sendTo            Int       @default(21)
+  /// سبد کمتر از این مبلغ (تومان) پیامک نمی‌گیرد
+  minCartTotal      BigInt    @default(0)
+  /// هر شماره حداکثر یک‌بار در این چند روز
+  cooldownDays      Int       @default(7)
+  couponEnabled     Boolean   @default(false)
+  /// PERCENT | FIXED
+  couponType        String    @default("PERCENT")
+  /// درصد یا مبلغ ثابت (تومان)
+  couponValue       BigInt    @default(5)
+  /// سقف تخفیف درصدی (تومان) — ۰ یعنی بی‌سقف
+  couponMaxDiscount BigInt    @default(0)
+  /// مهلت کد از لحظه‌ی ارسال (ساعت)
+  couponValidHours  Int       @default(48)
+  updatedAt         DateTime  @updatedAt
+}
+
+enum CartRecoveryStatus {
+  /// در صف — زمانش نرسیده یا بیرون از بازه‌ی ساعت است
+  PENDING
+  SENT
+  FAILED
+  /// ارسال نشد: سبد خالی شد، تکراری در دوره، شماره‌ی نامعتبر، لغو اشتراک، دیر شده
+  SKIPPED
+  /// بعد از پیامک سفارش ثبت شد
+  RECOVERED
+}
+
+/// یک یادآوری برای یک «دور» سبد. `userId` عمداً رابطه ندارد — حذف کاربر گزارش را نمی‌شکند.
+model CartRecovery {
+  id               String             @id @default(cuid())
+  userId           String
+  phone            String
+  name             String?
+  /// توکن ۶ نویسه‌ای لینک `/c/<token>`
+  token            String             @unique
+  status           CartRecoveryStatus @default(PENDING)
+  reason           String?
+  /// عکس اقلام هنگام تشخیص: [{ productId, title, qty, unitPrice }]
+  items            Json               @default("[]")
+  cartTotal        BigInt             @default(0)
+  /// آخرین تغییر سبد که این یادآوری برایش ساخته شد
+  cartActivityAt   DateTime
+  dueAt            DateTime
+  sentAt           DateTime?
+  openedAt         DateTime?
+  couponId         String?
+  couponCode       String?
+  recoveredOrderId String?
+  recoveredAt      DateTime?
+  recoveredTotal   BigInt?
+  createdAt        DateTime           @default(now())
+
+  @@index([status, dueAt])
+  @@index([userId, cartActivityAt])
+  @@index([phone, sentAt])
+  @@index([createdAt])
+}

@@ -6,6 +6,7 @@ import { useCart } from "@/components/store/cart/CartContext";
 import { PROVINCES } from "@/lib/iran-cities";
 import { track } from "@/lib/analytics/track";
 import { EVENTS } from "@/lib/analytics/events";
+import { COUPON_HANDOFF_KEY } from "@/components/store/cart/CartRecoveryView";
 
 interface Address {
   id: string;
@@ -117,6 +118,20 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
   } | null>(null);
   const [couponError, setCouponError] = useState("");
   const [couponBusy, setCouponBusy] = useState(false);
+
+  // کد تخفیف پیامک یادآوری سبد (`/c/<token>`) — فقط فیلد پر می‌شود، اعمال با خود مشتری
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COUPON_HANDOFF_KEY);
+      if (!raw) return;
+      const h = JSON.parse(raw) as { code?: string; expiresAt?: string | null };
+      if (!h.code || (h.expiresAt && new Date(h.expiresAt) < new Date())) {
+        localStorage.removeItem(COUPON_HANDOFF_KEY);
+        return;
+      }
+      setCouponInput((v) => v || h.code!);
+    } catch {}
+  }, []);
 
   // ── امتیاز باشگاه ─────────────────────────────────────────────
   const [club, setClub] = useState<{
@@ -272,8 +287,8 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
 
     // «ثبت شد» نه «پرداخت شد» — پرداخت را دیتابیس دقیق می‌داند (بخش ۱۳.۴)
     track(EVENTS.placeOrder, { revenue: Number(data.grandTotal) || 0, currency: "IRT" });
+    try { localStorage.removeItem(COUPON_HANDOFF_KEY); } catch {}
 
-  
     router.push(`/checkout/confirm/${data.orderId}`);
   }
 

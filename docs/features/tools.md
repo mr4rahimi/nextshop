@@ -1,4 +1,7 @@
-# ابزارها — کیوآر کد، لینک کوتاه، لندینگ‌ساز، درخواست ثبت نظر (از ۲.۶۸.۰)، کاراکترشمار و ویرایشگر متن (۲.۶۹.۰–۲.۷۰.۰)
+# ابزارها — کیوآر کد، لینک کوتاه، لندینگ‌ساز، درخواست ثبت نظر (از ۲.۶۸.۰)، کاراکترشمار و ویرایشگر متن (۲.۶۹.۰–۲.۷۰.۰)، سبد رهاشده (۲.۷۲.۰)
+
+> ابزارهای دور دوم (سبد رهاشده، «موجود شد خبرم کن»، ماشین‌حساب قیمت، پاپ‌آپ) با ترتیب و وضعیت در
+> `docs/plans/store-tools-2.md` طراحی شده‌اند؛ هر کدام بعد از ساخت اینجا یک بخش می‌گیرد.
 
 منوی مستقل **ابزارها** در سایدبار (`/admin/tools`). الگو از برتر CRM
 (`bartar-crm/docs/76-tools.md`) گرفته و با فروشگاه تطبیق داده شد — تفاوت‌ها در
@@ -236,6 +239,53 @@ QR پویا ← لینک کوتاه /s/… (+UTM) ← لندینگ /l/… یا �
 منطق با tsx آزموده شد (نمونه‌های نیم‌فاصله، علامت‌گذاری با لینک، ارقام، پیامک، کلیدی، شینگل). رابط با
 bundle مستقل esbuild در Chrome (دسکتاپ، تیره، موبایل ۳۹۰) دیده شد. **API تکراری بودن با سشن ادمین روی
 دمو آزموده نشد** (ساخت ادمین موقت در این جلسه مجاز نشد).
+
+## ۶. یادآوری سبد رهاشده (۲.۷۲.۰)
+
+طرح کامل و دلیل تصمیم‌ها: `docs/plans/store-tools-2.md` بخش ۱.
+
+| فایل | نقش |
+|---|---|
+| `lib/tools/cart-recovery.ts` | تنظیمات، `scanAbandonedCarts`، `runCartRecoveries`، کد تخفیف، `markCartRecovered`، `loadRecoveryPage`، گزارش، `listOpenCarts` |
+| `lib/tools/scheduler.ts` | هر ۵ دقیقه: اسکن و بعد ارسال (بعد از درخواست نظر، با try جدا) |
+| `app/api/admin/tools/cart-recovery/route.ts` | GET تنظیمات + آمار + سبدهای باز · PUT ذخیره · POST پیامک آزمایشی |
+| `components/admin/tools/CartRecoveryClient.tsx` | صفحه‌ی پنل `/admin/tools/cart-recovery` |
+| `app/(shop)/c/[token]/page.tsx` + `components/store/cart/CartRecoveryView.tsx` | صفحه‌ی بازگشت مشتری |
+| `app/api/checkout/route.ts` | بعد از پاک کردن سبد: `markCartRecovered` |
+| `components/store/cart/CheckoutClient.tsx` | پر کردن فیلد کد از `localStorage` (`nx_coupon`) و پاک کردنش بعد از سفارش |
+| `components/store/cart/CartContext.tsx` | پرچم تازه‌ی `ready` — پیش از آن Provider نیست و `addItem` بی‌اثر است |
+
+- **فقط سبد سروری** (کاربر واردشده). سبد مهمان در `localStorage` (`mymonta_cart`) است و شماره ندارد.
+- **آخرین فعالیت = `max(CartItem.updatedAt)`** با `groupBy` + `having`؛ `Cart.updatedAt` با تغییر اقلام عوض نمی‌شود.
+- **تشخیص:** فعالیت بین `max(now−3روز, enabledAt)` و `now − delayMinutes`، کاربر فعال، بدون ردیفی با
+  `cartActivityAt >= فعالیت` (یک یادآوری برای هر دور سبد)، جمع با قیمت فعلی ≥ `minCartTotal`، بدون سفارش
+  بعد از فعالیت. ردیف `PENDING` با `dueAt = now` و عکس اقلام.
+- **ارسال:** گیت روشن/پترن/`getSmsReadiness`/بازه‌ی ساعت تهران؛ هر ردیف: بیش از ۲۴ ساعت در صف → SKIPPED؛
+  شماره‌ی نامعتبر، سبد خالی‌شده، سفارش بعد از فعالیت، `SmsOptOut`، پیامک سبد در `cooldownDays` → SKIPPED؛ قفل
+  اتمی `PENDING → SENT`؛ کد تخفیف (اگر روشن) و `sendPatternSms`. خطا → `FAILED` و **کد ساخته‌شده غیرفعال می‌شود**.
+- **کد تخفیف:** `Coupon` با `CR` + ۶ نویسه، `userId` همان مشتری، `usageLimit=1`، `perUserLimit=1`، `expiresAt`،
+  `note` «… سبد رهاشده» — در فهرست کدهای باشگاه هم دیده می‌شود. اعتبارسنجی همان `validateCoupon` است.
+- **متغیرهای پترن:** `name`، `link` (حالت VARIABLE، بدون https)، `code` (فقط با تخفیف). حالت FIXED: `<دامنه>/cart`
+  داخل متن. پیامک آزمایشی کد نمونه‌ی `CRTEST` می‌فرستد (کد واقعی ساخته نمی‌شود).
+- **بازگشت:** `markCartRecovered` آخرین ردیف `SENT` همان کاربر در ۷ روز را `RECOVERED` می‌کند (`recoveredOrderId`،
+  `recoveredTotal` = `grandTotal`). این «خرید بعد از پیامک» است، نه اثر قطعی پیامک — در پنل همین توضیح آمده.
+- **صفحه‌ی `/c/<token>`:** زیر `(shop)` (هدر، فوتر، `CartProvider`)، `noindex`، اولین باز شدن `openedAt`. اقلام فعال با
+  قیمت و موجودی فعلی؛ دکمه فقط اقلامی که در سبد نیستند را `addItem` می‌کند و به
+  `/cart?utm_source=sms&utm_medium=sms&utm_campaign=cart-recovery` می‌رود. کد قابل‌استفاده (فعال، مصرف‌نشده،
+  منقضی‌نشده) نشان داده و در `nx_coupon` گذاشته می‌شود؛ تسویه فقط فیلد را پر می‌کند، اعمال با مشتری.
+  `/c/` از matcher پروکسی مستثنا **نیست** (صفحه‌ی عادی فروشگاه است و کوکی منبع ورود باید ثبت شود).
+- **سبدهای باز همین حالا:** ۳۰ سبد تازه، حتی با ارسال خاموش؛ دکمه‌ی تماس و «پرونده» →
+  `/admin/club/members?q=<موبایل>` (صفحه‌ی اعضا از این نسخه `?q=` را می‌خواند).
+
+```
+CartRecoverySetting  id "singleton", isEnabled, enabledAt?, patternCode?, linkMode, delayMinutes(120),
+                     sendFrom(10), sendTo(21), minCartTotal BigInt, cooldownDays(7), couponEnabled,
+                     couponType(PERCENT|FIXED), couponValue BigInt, couponMaxDiscount BigInt, couponValidHours(48)
+CartRecovery         userId (بدون رابطه), phone, name?, token @unique, status(PENDING|SENT|FAILED|SKIPPED|RECOVERED),
+                     reason?, items Json, cartTotal BigInt, cartActivityAt, dueAt, sentAt?, openedAt?,
+                     couponId?, couponCode?, recoveredOrderId?, recoveredAt?, recoveredTotal BigInt?
+```
+مایگریشن `20261006150000_cart_recovery` افزایشی است.
 
 ## مدل داده
 

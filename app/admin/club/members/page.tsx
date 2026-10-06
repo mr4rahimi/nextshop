@@ -148,10 +148,12 @@ export default function AdminClubMembersPage() {
     category: "",
   });
 
-  // لینک «مشتریان من» از منوی کارتابل با ?owner=me می‌آید
+  // لینک «مشتریان من» از منوی کارتابل با ?owner=me می‌آید؛ ?q= از پیگیری سبد رهاشده
   useEffect(() => {
-    const owner = new URLSearchParams(window.location.search).get("owner");
-    if (owner) setFilters((f) => ({ ...f, owner }));
+    const sp = new URLSearchParams(window.location.search);
+    const owner = sp.get("owner");
+    const q = sp.get("q");
+    if (owner || q) setFilters((f) => ({ ...f, ...(owner ? { owner } : {}), ...(q ? { q } : {}) }));
   }, []);
 
   const queryString = useCallback(

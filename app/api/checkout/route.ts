@@ -9,6 +9,7 @@ import { setClubConsent } from "@/lib/club/consent";
 import { ensureClubProfile } from "@/lib/club/profile";
 import { emitPaymentsReceived } from "@/lib/accounting/events";
 import { ATTRIBUTION_COOKIE, decodeTouch, orderFieldsFromTouch } from "@/lib/analytics/attribution";
+import { markCartRecovered } from "@/lib/tools/cart-recovery";
 
 export const runtime = "nodejs";
 
@@ -254,6 +255,9 @@ export async function POST(req: Request) {
 
   const cart = await prisma.cart.findUnique({ where: { userId: user.id } });
   if (cart) await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+  // یادآوری سبد رهاشده — اگر پیامک یادآوری گرفته بود، «بازگشته» ثبت می‌شود (docs/plans/store-tools-2.md بخش ۱)
+  await markCartRecovered(user.id, order.id, order.grandTotal);
 
   // کسر موجودی فقط وقتی سفارش همین لحظه پرداخت‌شده ساخته شده (پرداخت کامل با کیف پول)
   // سایر سفارش‌ها بعد از پرداخت موفق (callback درگاه یا تأیید ادمین) کسر می‌شوند

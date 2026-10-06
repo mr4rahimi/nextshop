@@ -29,12 +29,14 @@ interface CartCtx {
   updateQty: (productId: string, qty: number) => void;
   clearCart: () => void;
   isLoggedIn: boolean;
+  /** سبد از سرور/localStorage خوانده شده — پیش از آن `addItem` اثری ندارد */
+  ready: boolean;
 }
 
 const CartContext = createContext<CartCtx>({
   items: [], count: 0, total: 0,
   addItem: () => {}, removeItem: () => {}, updateQty: () => {}, clearCart: () => {},
-  isLoggedIn: false,
+  isLoggedIn: false, ready: false,
 });
 
 export function useCart() { return useContext(CartContext); }
@@ -156,7 +158,7 @@ export function CartProvider({ children, isLoggedIn }: { children: ReactNode; is
   const total = calcTotal(items);
 
   return (
-    <CartContext.Provider value={{ items, count, total, addItem, removeItem, updateQty, clearCart, isLoggedIn }}>
+    <CartContext.Provider value={{ items, count, total, addItem, removeItem, updateQty, clearCart, isLoggedIn, ready }}>
       {children}
     </CartContext.Provider>
   );
