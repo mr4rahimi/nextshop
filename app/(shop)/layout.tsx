@@ -5,6 +5,7 @@ import { CartProvider } from "@/components/store/cart/CartContext";
 import { WishlistProvider } from "@/components/store/wishlist/WishlistContext";
 import { prisma } from "@/lib/prisma";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
+import PopupHost from "@/components/store/PopupHost";
 import { ProductLayoutProvider } from "@/components/store/product/ProductLayoutContext";
 import { normalizeGridMode } from "@/lib/productGrid";
 
@@ -24,6 +25,8 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         </main>
         <Footer />
         <MobileBottomNav phone={settings?.sitePhone ?? null} />
+        {/* پاپ‌آپ‌های ابزارها — docs/features/tools.md بخش ۹ */}
+        <PopupHost />
         </ProductLayoutProvider>
       </WishlistProvider>
     </CartProvider>

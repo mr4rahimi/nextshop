@@ -21,6 +21,12 @@ export interface AnnouncementBarConfig {
   dismissible: boolean;
   /** چسبان بالای صفحه (با اسکرول می‌ماند) یا فقط در ابتدای صفحه */
   sticky: boolean;
+  /** شروع نمایش «YYYY-MM-DDTHH:mm» به وقت تهران؛ خالی = از همین حالا */
+  startsAt: string;
+  /** پایان نمایش با همان قالب؛ خالی = بی‌پایان */
+  endsAt: string;
+  /** شمارش معکوس تا `endsAt` کنار متن */
+  countdown: boolean;
 }
 
 export const DEFAULT_ANNOUNCEMENT_BAR: AnnouncementBarConfig = {
@@ -31,6 +37,9 @@ export const DEFAULT_ANNOUNCEMENT_BAR: AnnouncementBarConfig = {
   textColor: "#ffffff",
   dismissible: true,
   sticky: true,
+  startsAt: "",
+  endsAt: "",
+  countdown: false,
 };
 
 /** حداکثر طول متن — نوار باید باریک بماند */
@@ -72,12 +81,35 @@ export function normalizeAnnouncementBar(raw: unknown): AnnouncementBarConfig {
     textColor:   safeColor(c.textColor, DEFAULT_ANNOUNCEMENT_BAR.textColor),
     dismissible: safeBool(c.dismissible, DEFAULT_ANNOUNCEMENT_BAR.dismissible),
     sticky:      safeBool(c.sticky, DEFAULT_ANNOUNCEMENT_BAR.sticky),
+    startsAt:    safeDateTime(c.startsAt),
+    endsAt:      safeDateTime(c.endsAt),
+    countdown:   safeBool(c.countdown, DEFAULT_ANNOUNCEMENT_BAR.countdown),
   };
 }
 
-/** آیا نوار واقعاً باید رندر شود؟ (فعال + متن غیرخالی) */
-export function isAnnouncementVisible(cfg: AnnouncementBarConfig): boolean {
-  return cfg.enabled && cfg.text.trim().length > 0;
+function safeDateTime(v: unknown): string {
+  return typeof v === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v.trim()) ? v.trim() : "";
+}
+
+/**
+ * «YYYY-MM-DDTHH:mm» تهران ← میلی‌ثانیه. تهران از ۱۴۰۱ ساعت تابستانی ندارد، پس افست
+ * ثابت ۳:۳۰ است — سرور (UTC) و مرورگر (هر منطقه‌ای) یک لحظه را می‌فهمند.
+ */
+export function tehranMs(v: string): number | null {
+  if (!v) return null;
+  const t = new Date(`${v}:00+03:30`).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
+/**
+ * آیا نوار باید رندر شود؟ فعال + متن غیرخالی + هنوز تمام نشده.
+ * شروعِ آینده رندر می‌شود ولی اسکریپت inline پنهانش می‌کند — صفحه‌ی کش‌شده هم
+ * سر ساعت درست رفتار کند.
+ */
+export function isAnnouncementVisible(cfg: AnnouncementBarConfig, now = Date.now()): boolean {
+  if (!cfg.enabled || cfg.text.trim().length === 0) return false;
+  const end = tehranMs(cfg.endsAt);
+  return end === null || end > now;
 }
 
 /**

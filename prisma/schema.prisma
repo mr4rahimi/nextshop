@@ -4941,3 +4941,67 @@ model StockAlert {
   @@index([status, productId])
   @@index([notifiedAt])
 }
+
+// ─── ابزارها: پاپ‌آپ — docs/features/tools.md بخش ۹ ───────────────────────
+
+enum ToolPopupKind {
+  /// اعلان: عنوان، متن، عکس و دکمه
+  ANNOUNCE
+  /// جمع‌کردن شماره: موبایل ← نمایش کد تخفیف و (با رضایت) عضویت باشگاه
+  LEAD
+}
+
+/// پاپ‌آپ سایت. فقط یکی در هر صفحه نشان داده می‌شود (بیشترین `priority`).
+model ToolPopup {
+  id           String        @id @default(cuid())
+  /// نام داخلی در پنل
+  name         String
+  kind         ToolPopupKind @default(ANNOUNCE)
+  isActive     Boolean       @default(false)
+  priority     Int           @default(0)
+  /// heading, body, imageUrl, buttonText, buttonUrl, couponCode, successText, consentText — lib/tools/popups.ts
+  content      Json          @default("{}")
+  /// DELAY (ثانیه) | SCROLL (درصد) | EXIT (قصد خروج، فقط دسکتاپ)
+  trigger      String        @default("DELAY")
+  triggerValue Int           @default(8)
+  /// ALL | HOME | PRODUCT | CATEGORY | CUSTOM
+  pages        String        @default("ALL")
+  /// برای CUSTOM: پیشوند مسیرها مثل /products/iphone
+  paths        String[]      @default([])
+  /// ALL | MOBILE | DESKTOP
+  device       String        @default("ALL")
+  /// SESSION | DAY | WEEK | ONCE — در مرورگر بازدیدکننده
+  frequency    String        @default("DAY")
+  /// AUTO (موبایل پایین، دسکتاپ وسط) | CENTER | BOTTOM
+  position     String        @default("AUTO")
+  accent       String        @default("#2563eb")
+  startsAt     DateTime?
+  endsAt       DateTime?
+  viewCount    Int           @default(0)
+  clickCount   Int           @default(0)
+  closeCount   Int           @default(0)
+  leadCount    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+
+  leads PopupLead[]
+
+  @@index([isActive, deletedAt])
+}
+
+/// شماره‌ی ثبت‌شده در پاپ‌آپ نوع LEAD
+model PopupLead {
+  id        String   @id @default(cuid())
+  popupId   String
+  phone     String
+  userId    String?
+  /// رضایت صریح دریافت پیامک تبلیغاتی (تیک جدا)
+  consent   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  popup ToolPopup @relation(fields: [popupId], references: [id], onDelete: Cascade)
+
+  @@unique([popupId, phone])
+  @@index([createdAt])
+}

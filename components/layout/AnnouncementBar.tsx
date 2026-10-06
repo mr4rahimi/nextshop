@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   announcementKey,
   ANNOUNCEMENT_OFF_CLASS,
   ANNOUNCEMENT_STORAGE_KEY,
+  tehranMs,
   type AnnouncementBarConfig,
 } from "@/lib/announcementBar";
 
@@ -43,6 +44,11 @@ html.${ANNOUNCEMENT_OFF_CLASS} .ann-bar{display:none}
 }
 @media (min-width:768px){ .ann-bar-text{font-size:.8125rem} }
 a.ann-bar-text:hover{text-decoration:underline}
+.ann-bar-cd{
+  display:inline-flex;gap:.25rem;align-items:center;margin-inline-start:.5rem;
+  padding:.05rem .45rem;border-radius:.4rem;background:rgba(255,255,255,.18);
+  font-size:.75rem;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap;
+}
 .ann-bar-x{
   position:absolute;inset-inline-end:.25rem;top:50%;transform:translateY(-50%);
   display:flex;align-items:center;justify-content:center;
@@ -57,10 +63,14 @@ a.ann-bar-text:hover{text-decoration:underline}
 export default function AnnouncementBar({ config }: { config: AnnouncementBarConfig }) {
   const barRef = useRef<HTMLDivElement>(null);
   const key = announcementKey(config);
+  const start = tehranMs(config.startsAt);
+  const end = tehranMs(config.endsAt);
 
-  // قبل از اولین رنگ‌آمیزی اجرا می‌شود؛ فقط کلاس روی <html> می‌گذارد و به DOMِ React دست نمی‌زند
+  // قبل از اولین رنگ‌آمیزی اجرا می‌شود؛ فقط کلاس روی <html> می‌گذارد و به DOMِ React دست نمی‌زند.
+  // بسته‌شده توسط کاربر، یا بیرون از بازه‌ی شروع/پایان (با ساعت مرورگر) → پنهان
   const script =
-    `(function(){try{if(localStorage.getItem(${JSON.stringify(ANNOUNCEMENT_STORAGE_KEY)})===${JSON.stringify(key)})` +
+    `(function(){try{var n=Date.now(),s=${start ?? "null"},e=${end ?? "null"};` +
+    `if((s&&n<s)||(e&&n>e)||localStorage.getItem(${JSON.stringify(ANNOUNCEMENT_STORAGE_KEY)})===${JSON.stringify(key)})` +
     `document.documentElement.classList.add(${JSON.stringify(ANNOUNCEMENT_OFF_CLASS)})}catch(e){}})()`;
 
   function dismiss() {
@@ -81,7 +91,8 @@ export default function AnnouncementBar({ config }: { config: AnnouncementBarCon
     window.setTimeout(() => document.documentElement.classList.add(ANNOUNCEMENT_OFF_CLASS), 300);
   }
 
-  const text = <span className="ann-bar-text">{config.text}</span>;
+  const countdown = config.countdown && end ? <Countdown to={end} /> : null;
+  const text = <span className="ann-bar-text">{config.text}{countdown}</span>;
 
   return (
     <div
@@ -99,6 +110,7 @@ export default function AnnouncementBar({ config }: { config: AnnouncementBarCon
           {config.linkUrl ? (
             <Link href={config.linkUrl} className="ann-bar-text">
               {config.text}
+              {countdown}
             </Link>
           ) : (
             text
@@ -114,5 +126,36 @@ export default function AnnouncementBar({ config }: { config: AnnouncementBarCon
         </div>
       </div>
     </div>
+  );
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * شمارش معکوس تا پایان اعلان. تا mount چیزی نشان نمی‌دهد (ساعت سرور و مرورگر
+ * فرق دارد و hydration نباید بشکند). صفر که شد نوار پنهان می‌شود.
+ */
+function Countdown({ to }: { to: number }) {
+  const [left, setLeft] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => {
+      const ms = to - Date.now();
+      setLeft(ms);
+      if (ms <= 0) document.documentElement.classList.add(ANNOUNCEMENT_OFF_CLASS);
+    };
+    tick();
+    const t = window.setInterval(tick, 1000);
+    return () => window.clearInterval(t);
+  }, [to]);
+  if (left === null || left <= 0) return null;
+  const s = Math.floor(left / 1000);
+  const d = Math.floor(s / 86_400);
+  const hms = `${pad(Math.floor((s % 86_400) / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+  const faDigits = (x: string) => x.replace(/\d/g, (c) => "۰۱۲۳۴۵۶۷۸۹"[Number(c)]);
+  return (
+    <span className="ann-bar-cd" aria-label="زمان باقی‌مانده">
+      {d > 0 && <span>{faDigits(String(d))} روز</span>}
+      <span dir="ltr">{faDigits(hms)}</span>
+    </span>
   );
 }

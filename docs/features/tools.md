@@ -1,4 +1,4 @@
-# ابزارها — کیوآر کد، لینک کوتاه، لندینگ‌ساز، درخواست ثبت نظر (از ۲.۶۸.۰)، کاراکترشمار و ویرایشگر متن (۲.۶۹.۰–۲.۷۰.۰)، سبد رهاشده (۲.۷۲.۰)، «موجود شد خبرم کن» (۲.۷۳.۰)، ماشین‌حساب قیمت (۲.۷۴.۰)
+# ابزارها — کیوآر کد، لینک کوتاه، لندینگ‌ساز، درخواست ثبت نظر (از ۲.۶۸.۰)، کاراکترشمار و ویرایشگر متن (۲.۶۹.۰–۲.۷۰.۰)، سبد رهاشده (۲.۷۲.۰)، «موجود شد خبرم کن» (۲.۷۳.۰)، ماشین‌حساب قیمت (۲.۷۴.۰)، پاپ‌آپ (۲.۷۵.۰)
 
 > ابزارهای دور دوم (سبد رهاشده، «موجود شد خبرم کن»، ماشین‌حساب قیمت، پاپ‌آپ) با ترتیب و وضعیت در
 > `docs/plans/store-tools-2.md` طراحی شده‌اند؛ هر کدام بعد از ساخت اینجا یک بخش می‌گیرد.
@@ -337,6 +337,51 @@ StockAlert         productId → Product (Cascade), phone, userId?, token @uniqu
   ورودی و کانال‌ها در `localStorage` (`tools.priceCalc`). فرم تا خواندن آن رسم نمی‌شود (ورودی درصد متن خودش را نگه می‌دارد).
 - قیمت خرید از حسابداری خوانده **نمی‌شود**: این ابزار با `TOOLS_VIEW` باز است و بهای تمام‌شده داده‌ی مالی است.
 - آزمون: assertهای tsx روی گرد کردن، حاشیه/مارک‌آپ، کارمزد + مالیات (جمع اجزا = قیمت)، سربه‌سر، تخفیف و هدف ناممکن.
+
+## ۹. پاپ‌آپ (۲.۷۵.۰)
+
+`/admin/tools/popups`. نوار اعلان جدا و در «تنظیمات سایت» است (`docs/features/announcement-bar.md`)؛ در همین نسخه
+شروع/پایان و شمارش معکوس گرفت.
+
+| فایل | نقش |
+|---|---|
+| `lib/tools/popup-rules.ts` | **خالص**: نوع‌ها، `sanitizeContent`، `safeHref`/`safeImage`، `matchesPage`، `isExcludedPath`، `dueAgain`، `inWindow`، `contentVersion` |
+| `lib/tools/popups.ts` | CRUD، `publicPopups`، `recordPopupEvent`، `submitPopupLead`، `popupLeads` |
+| `components/tools/PopupView.tsx` | نمای مشترک سایت و پیش‌نمایش پنل |
+| `components/store/PopupHost.tsx` | در `app/(shop)/layout.tsx`؛ انتخاب و trigger |
+| `app/api/store/popups/route.ts` | GET فهرست (`s-maxage=60`) · POST `{id,type: view\|click\|close}` → 204 |
+| `app/api/store/popups/lead/route.ts` | ثبت شماره — ۲۰۰ + `ok:false` برای خطا |
+| `app/api/admin/tools/popups/…` · `components/admin/tools/PopupsClient.tsx` | پنل؛ PUT خطای اعتبارسنجی را با ۲۰۰ + `ok:false` می‌دهد |
+
+- **انتخاب در مرورگر:** فهرست یک‌بار گرفته می‌شود؛ با هر تغییر مسیر: `matchesPage` + دستگاه (`max-width: 767px`) + `inWindow` +
+  دفعات (`localStorage` `nx_popup` = `{id: {v: نسخه, t}}`، `sessionStorage` `nx_popup_s`) → اولین با بیشترین `priority`.
+  حداکثر یکی در هر صفحه. EXIT (`mouseout` با `clientY <= 0`) در موبایل حذف می‌شود.
+- **هرگز:** `/cart`، `/checkout`، `/c`، `/user`، `/auth`، `/account`، `/seller` (و زیرمسیرها).
+- **نسخه = هش** نوع + عنوان + متن + لینک + کد؛ ویرایش این‌ها پاپ‌آپ را دوباره به همه نشان می‌دهد (همان روش نوار اعلان).
+- **AUTO:** موبایل کارت پایین (`bottom-24`، بالای نوار پایین)، دسکتاپ پنجره‌ی وسط با پس‌زمینه. پیش‌فرض تأخیر ۸ ثانیه
+  (گوگل پاپ‌آپ تمام‌صفحه‌ی فوری موبایل را مزاحم می‌داند).
+- **کد تخفیف** (`content.couponCode`) باید در `Coupon` باشد و **شخصی نباشد** (`userId` خالی)؛ روشن کردن با کد غیرفعال یا منقضی
+  رد می‌شود. در فهرست عمومی فقط پرچم `"1"` است — خود کد فقط در پاسخ ثبت شماره برمی‌گردد.
+- **ثبت شماره:** سقف ۵ در ساعت به‌ازای IP، فیلد تله. اگر `clubEnabled`: `upsertClubCustomer({source: ONLINE, sourcePlatform:
+  "popup", smsConsent})`. رضایت فقط با تیک (و فقط اگر `consentText` پر باشد). `PopupLead` یکتا روی `(popupId, phone)`؛
+  `leadCount` فقط برای شماره‌ی تازه.
+- **آمار** شمارنده‌های روی خود ردیف‌اند (بدون جدول رویداد)؛ از مرورگر می‌آیند و احراز ندارند — تقریبی.
+- **UTM به لینک دکمه اضافه نمی‌شود** (برخلاف طرح اولیه): بازدیدکننده از قبل منبع ورود (`nx_src`) دارد و UTM داخلی آن را با
+  «پاپ‌آپ» بازنویسی می‌کرد. برای همین «سفارش از پاپ‌آپ» هم شمرده نمی‌شود.
+- پاپ‌آپ تازه خاموش ساخته می‌شود؛ حذف نرم (`deletedAt`).
+
+### نوار اعلان: زمان‌بندی (همین نسخه)
+`startsAt`/`endsAt` («YYYY-MM-DDTHH:mm» تهران، خروجی `JalaliDatePicker` حالت datetime) و `countdown` در
+`StoreSettings.announcementBar`. `tehranMs` با افست ثابت `+03:30`. سرور بعد از پایان رندر نمی‌کند؛ شروعِ آینده رندر
+می‌شود و اسکریپت inline با ساعت مرورگر پنهانش می‌کند (همان کلاس `ann-off`). شمارش معکوس بعد از mount تیک می‌خورد و در
+صفر نوار را پنهان می‌کند.
+
+```
+ToolPopup  name, kind(ANNOUNCE|LEAD), isActive, priority, content Json, trigger, triggerValue, pages, paths[], device,
+           frequency, position, accent, startsAt?, endsAt?, viewCount, clickCount, closeCount, leadCount, deletedAt?
+PopupLead  popupId → ToolPopup (Cascade), phone, userId?, consent   @@unique([popupId, phone])
+```
+مایگریشن `20261006190000_tool_popups` افزایشی است.
 
 ## مدل داده
 

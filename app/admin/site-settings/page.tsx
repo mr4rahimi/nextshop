@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import {
   HEADER_VARIANTS,
   DEFAULT_GLASS_CONFIG,
@@ -1050,6 +1051,38 @@ export default function AdminSiteSettingsPage() {
                 type="checkbox"
                 checked={settings.announcementBar.sticky}
                 onChange={e => setAnn("sticky", e.target.checked)}
+                className="w-5 h-5 rounded flex-shrink-0"
+                style={{ accentColor: "#2563eb" }}
+              />
+            </label>
+
+            {/* زمان‌بندی و شمارش معکوس — docs/features/announcement-bar.md */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={lbl}>شروع نمایش (اختیاری)</label>
+                <JalaliDatePicker mode="datetime" value={settings.announcementBar.startsAt} onChange={v => setAnn("startsAt", v)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>پایان نمایش (اختیاری)</label>
+                <JalaliDatePicker mode="datetime" value={settings.announcementBar.endsAt} onChange={v => setAnn("endsAt", v)} className={inp} />
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400 -mt-2 leading-relaxed">
+              به وقت تهران. نوار سر ساعت شروع ظاهر و سر ساعت پایان خودبه‌خود برداشته می‌شود — برای حراج و جشنواره.
+            </p>
+
+            <label className={`flex items-center justify-between gap-4 p-4 rounded-2xl border-2 border-gray-100 dark:border-white/5 transition-all ${settings.announcementBar.endsAt ? "cursor-pointer hover:border-gray-300 dark:hover:border-white/20" : "opacity-50"}`}>
+              <span className="min-w-0">
+                <span className="block text-sm font-black text-gray-900 dark:text-white">شمارش معکوس تا پایان</span>
+                <span className="block text-[11px] text-gray-500 mt-1 leading-relaxed">
+                  کنار متن زمان باقی‌مانده را نشان می‌دهد، مثل «۲ روز ۰۳:۱۲:۴۵». فقط وقتی «پایان نمایش» تعیین شده باشد.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                disabled={!settings.announcementBar.endsAt}
+                checked={settings.announcementBar.countdown && !!settings.announcementBar.endsAt}
+                onChange={e => setAnn("countdown", e.target.checked)}
                 className="w-5 h-5 rounded flex-shrink-0"
                 style={{ accentColor: "#2563eb" }}
               />
