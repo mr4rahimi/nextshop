@@ -6,6 +6,7 @@
  *
  * AUTO: در موبایل کارت پایین صفحه (بالای نوار پایین)، در دسکتاپ پنجره‌ی وسط.
  * پاپ‌آپ تمام‌صفحه‌ی فوری در موبایل را گوگل «مزاحم» می‌داند؛ پیش‌فرض‌ها از آن دورند.
+ * z-index بالاتر از دکمه‌ی چت هوشمند (`AiChat`، ۹۹۹۹) تا دکمه‌ی پاپ‌آپ زیرش نماند.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -157,14 +158,14 @@ export default function PopupView({ kind, content, accent, position, isMobile, p
 
   if (bottom) {
     return (
-      <div className="fixed inset-x-0 bottom-24 z-[70] flex justify-center px-3 md:bottom-6 animate-[popupUp_.3s_ease-out]" role="dialog" aria-label={content.heading || "پیام"}>
+      <div className="fixed inset-x-0 bottom-24 z-[10000] flex justify-center px-3 md:bottom-6 animate-[popupUp_.3s_ease-out]" role="dialog" aria-label={content.heading || "پیام"}>
         <style>{"@keyframes popupUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}"}</style>
         {card}
       </div>
     );
   }
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label={content.heading || "پیام"} onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label={content.heading || "پیام"} onClick={(e) => e.target === e.currentTarget && onClose()}>
       {card}
     </div>
   );
