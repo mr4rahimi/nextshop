@@ -4,8 +4,17 @@ import { logActivityAsync } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
+/** محصول تنوع‌دار: موجودی جمع تنوع‌هاست و اینجا عوض نمی‌شود (docs/plans/inventory-items.md تله‌ی ۱) */
+async function variantProducts(ids: string[]) {
+  const rows = await prisma.productVariant.findMany({ where: { productId: { in: ids } }, select: { productId: true }, distinct: ["productId"] });
+  return new Set(rows.map((r) => r.productId));
+}
+
 export async function PATCH(req: Request) {
   const { id, stock, trackStock, lowStockThreshold } = await req.json();
+  if ((await variantProducts([id])).has(id)) {
+    return NextResponse.json({ error: "موجودی این محصول جمع رنگ/سایزهایش است — در ویرایش محصول، بخش «تنوع» عوض کنید" }, { status: 400 });
+  }
   await prisma.product.update({
     where: { id },
     data: {
@@ -18,7 +27,9 @@ export async function PATCH(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { ids, type, value } = await req.json();
+  const { ids: all, type, value } = await req.json();
+  const skip = await variantProducts(all);
+  const ids: string[] = all.filter((id: string) => !skip.has(id));
   // type: "set" | "increase" | "decrease"
 
   if (type === "set") {
@@ -51,5 +62,5 @@ export async function POST(req: Request) {
     changes: [{ field: "stock", label: "موجودی", before: null, after: `${type}: ${value}` }],
   });
 
-  return NextResponse.json({ success: true, count: ids.length });
+  return NextResponse.json({ success: true, count: ids.length, skippedVariants: skip.size });
 }

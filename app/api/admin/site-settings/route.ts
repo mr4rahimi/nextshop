@@ -4,6 +4,7 @@ import { serialize } from "@/lib/serialize";
 import { normalizeGlassConfig, normalizeVariant } from "@/components/layout/headers/registry";
 import { normalizeGridMode } from "@/lib/productGrid";
 import { normalizeAnnouncementBar } from "@/lib/announcementBar";
+import { refreshVariantProducts } from "@/lib/variants";
 
 export const runtime = "nodejs";
 
@@ -94,10 +95,13 @@ export async function PUT(req: Request) {
   if (data.announcementBar !== undefined)
     updateData.announcementBar = normalizeAnnouncementBar(data.announcementBar);
 
+  const before = await prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { variantsEnabled: true } });
   const s = await prisma.storeSettings.upsert({
     where: { id: "singleton" },
     update: updateData,
     create: { id: "singleton", ...updateData },
   });
+  // کارت فهرست محصولات تنوع‌دار تابع کلید است (docs/plans/inventory-items.md فاز ۴)
+  if ((before?.variantsEnabled ?? false) !== s.variantsEnabled) await refreshVariantProducts();
   return NextResponse.json(serialize(s));
 }

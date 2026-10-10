@@ -31,6 +31,9 @@ export async function GET(req: Request) {
     slug: p.slug,
     price: p.price,
     salePrice: p.salePrice,
+    // تنوع (فاز ۴): «انتخاب» و «از X» روی کارت
+    hasVariants: p.hasVariants,
+    priceFrom: p.priceFrom,
     category: p.category,
     image: p.mainImage ?? p.images[0]?.url ?? null,
     stock: p.stock,

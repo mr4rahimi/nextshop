@@ -41,7 +41,7 @@ export default async function SearchPage({ searchParams }: Props) {
           take: PAGE_SIZE,
           select: {
             id: true, title: true, slug: true,
-            price: true, salePrice: true, mainImage: true,
+            price: true, salePrice: true, hasVariants: true, priceFrom: true, mainImage: true,
             stock: true,
             trackStock: true,
             lowStockThreshold: true,

@@ -138,6 +138,10 @@ model Product {
   warranty           String?
   stock              Int                @default(0)
   trackStock         Boolean            @default(false)
+  /// تنوع فعال دارد **و** کلید تنوع روشن است — کارت فهرست «انتخاب» نشان می‌دهد نه «افزودن» (فاز ۴)
+  hasVariants        Boolean            @default(false)
+  /// کمترین قیمت مؤثر تنوع‌های فعال وقتی قیمت‌ها یکی نیستند — «از X تومان»؛ فقط `recomputeProductStock`
+  priceFrom          BigInt?
   lowStockThreshold  Int                @default(3)
   ratingAvg          Float              @default(0)
   ratingCount        Int                @default(0)
@@ -5121,6 +5125,8 @@ enum StockAlertStatus {
 model StockAlert {
   id         String           @id @default(cuid())
   productId  String
+  /// تنوع (فاز ۴) یا "" = خود محصول
+  variantKey String           @default("")
   phone      String
   userId     String?
   /// توکن ۶ نویسه‌ای لینک `/n/<token>` در پیامک
@@ -5133,7 +5139,7 @@ model StockAlert {
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@unique([productId, phone])
+  @@unique([productId, variantKey, phone])
   @@index([status, productId])
   @@index([notifiedAt])
 }

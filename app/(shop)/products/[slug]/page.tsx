@@ -11,6 +11,7 @@ import {
   externalImageOrigins,
   buildBaseMetadata,
   buildProductSchema,
+  buildProductGroupSchema,
   buildBreadcrumbSchema,
   buildFAQSchema,
 } from "@/lib/seo";
@@ -100,6 +101,7 @@ async function getProduct(slug: string) {
                 mainImage: true,
                 price: true,
                 salePrice: true,
+                priceFrom: true,
                 stock: true,
                 trackStock: true,
 
@@ -189,6 +191,7 @@ async function getProduct(slug: string) {
             mainImage: true,
             price: true,
             salePrice: true,
+            priceFrom: true,
             stock: true,
             trackStock: true,
 
@@ -238,6 +241,7 @@ async function getProduct(slug: string) {
             mainImage: true,
             price: true,
             salePrice: true,
+            priceFrom: true,
             stock: true,
             trackStock: true,
 
@@ -544,6 +548,20 @@ export default async function ProductDetailPage({
         product.category?.title,
     });
 
+  // تنوع‌دار (فاز ۴): ProductGroup با یک آفر برای هر تنوع؛ محصول ساده همان اسکیمای قبلی
+  const v = product.variants;
+  const finalProductSchema = v
+    ? buildProductGroupSchema(productSchema, {
+        groupId: product.id,
+        axes: v.axes,
+        axisIds: v.axes.map((a: { attributeId: string }) => a.attributeId),
+        variants: v.items.map((it: { id: string; options: Record<string, string> } & Record<string, any>) => ({
+          ...it,
+          image: Object.values(it.options).map((val) => v.images[val]?.[0]).find(Boolean) ?? null,
+        })),
+      })
+    : productSchema;
+
   const breadcrumbSchema =
     buildBreadcrumbSchema([
       {
@@ -589,12 +607,12 @@ export default async function ProductDetailPage({
           رد می‌کند)، پس اینجا مستقیم ساخته می‌شود و React به head منتقلش می‌کند */}
       <meta property="og:type" content="product" />
 
-      {productSchema && (
+      {finalProductSchema && (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(
-              productSchema
+              finalProductSchema
             ),
           }}
         />

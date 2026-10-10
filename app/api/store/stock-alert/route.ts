@@ -13,9 +13,10 @@ export const runtime = "nodejs";
  * با صفحه‌ی HTML خودش عوض می‌کند.
  */
 export async function GET(req: Request) {
-  const productId = new URL(req.url).searchParams.get("productId") ?? "";
+  const url = new URL(req.url);
+  const productId = url.searchParams.get("productId") ?? "";
   const user = await getAuthUser();
-  const state = await stockAlertState(productId, user);
+  const state = await stockAlertState(productId, user, url.searchParams.get("variantId") || null);
   return NextResponse.json(state, { headers: { "Cache-Control": "no-store" } });
 }
 

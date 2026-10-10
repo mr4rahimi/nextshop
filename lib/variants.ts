@@ -33,17 +33,51 @@ export function effectivePrice(
   return { price: variant.price, salePrice: variant.salePrice };
 }
 
-/** محصول‌های دارای تنوع: موجودی = جمع تنوع‌های فعال. بی‌تنوع‌ها دست نمی‌خورند */
+/**
+ * محصول‌های دارای تنوع: موجودی = جمع تنوع‌های فعال، و فیلدهای کارت فهرست
+ * (`hasVariants`، `priceFrom` — فقط با کلید روشن). محصول بی‌تنوع دست نمی‌خورد،
+ * مگر نشانه‌ی تنوعِ قبلی داشته باشد که پاک می‌شود.
+ */
 export async function recomputeProductStock(db: Db, productIds: string[]) {
   const ids = [...new Set(productIds)];
   if (!ids.length) return;
-  const sums = await db.productVariant.groupBy({ by: ["productId"], where: { productId: { in: ids }, isActive: true }, _sum: { stock: true } });
-  const withAny = new Set((await db.productVariant.findMany({ where: { productId: { in: ids } }, select: { productId: true }, distinct: ["productId"] })).map((v) => v.productId));
-  const sum = new Map(sums.map((s) => [s.productId, s._sum.stock ?? 0]));
-  for (const id of ids) {
-    if (!withAny.has(id)) continue;
-    await db.product.update({ where: { id }, data: { stock: Math.max(0, sum.get(id) ?? 0), trackStock: true } });
+  const [rows, products] = await Promise.all([
+    db.productVariant.findMany({ where: { productId: { in: ids } }, select: { productId: true, isActive: true, stock: true, price: true, salePrice: true } }),
+    db.product.findMany({ where: { id: { in: ids } }, select: { id: true, price: true, salePrice: true, hasVariants: true, priceFrom: true } }),
+  ]);
+  const enabled = rows.length || products.some((p) => p.hasVariants || p.priceFrom !== null) ? await variantsEnabled(db) : false;
+  for (const p of products) {
+    const mine = rows.filter((r) => r.productId === p.id);
+    if (!mine.length) {
+      if (p.hasVariants || p.priceFrom !== null) await db.product.update({ where: { id: p.id }, data: { hasVariants: false, priceFrom: null } });
+      continue;
+    }
+    const active = mine.filter((r) => r.isActive);
+    const prices = active.map((v) => {
+      const e = effectivePrice(p, v);
+      return e.salePrice && e.salePrice > 0n ? e.salePrice : e.price;
+    });
+    const min = prices.reduce<bigint | null>((m, x) => (m === null || x < m ? x : m), null);
+    const ranged = prices.some((x) => x !== min);
+    await db.product.update({
+      where: { id: p.id },
+      data: {
+        stock: Math.max(0, active.reduce((t, v) => t + v.stock, 0)),
+        trackStock: true,
+        hasVariants: enabled && active.length > 0,
+        priceFrom: enabled && ranged ? min : null,
+      },
+    });
   }
+}
+
+/** همه‌ی محصول‌های تنوع‌دار — با روشن/خاموش شدن کلید (`hasVariants` و `priceFrom` تابع کلیدند) */
+export async function refreshVariantProducts(db: Db = prisma) {
+  const ids = new Set([
+    ...(await db.productVariant.findMany({ select: { productId: true }, distinct: ["productId"] })).map((v) => v.productId),
+    ...(await db.product.findMany({ where: { OR: [{ hasVariants: true }, { priceFrom: { not: null } }] }, select: { id: true } })).map((p) => p.id),
+  ]);
+  for (let i = 0, all = [...ids]; i < all.length; i += 200) await recomputeProductStock(db, all.slice(i, i + 200));
 }
 
 /**

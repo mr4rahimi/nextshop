@@ -13,6 +13,9 @@ interface Product {
   slug: string;
   price: string;
   salePrice: string | null;
+  /** تنوع (فاز ۴) — «انتخاب» و «از X» */
+  hasVariants?: boolean;
+  priceFrom?: string | null;
   category: { title: string; slug: string } | null;
   image: string | null;
   stock?: number;
@@ -44,9 +47,9 @@ function discountPercent(price: string, salePrice: string | null): number | null
 }
 
 function ProductSlide({ product }: { product: Product }) {
-  const discount = discountPercent(product.price, product.salePrice);
+  const discount = (product.priceFrom ? null : discountPercent(product.price, product.salePrice));
   const isOutOfStock = product.trackStock && (product.stock ?? 0) <= 0;
-  const displayPrice = product.salePrice || product.price;
+  const displayPrice = product.priceFrom ?? (product.salePrice || product.price);
   const { has, toggle } = useWishlist();
   const isWished = has(product.id);
 
@@ -130,7 +133,7 @@ function ProductSlide({ product }: { product: Product }) {
                   )}
                   <div className="flex items-center gap-1.5">
                     <span className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter tabular-nums">
-                      {formatPrice(displayPrice)}
+                      {product.priceFrom ? "از " : ""}{formatPrice(displayPrice)}
                     </span>
                     <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-bold">تومان</span>
                   </div>
@@ -139,7 +142,7 @@ function ProductSlide({ product }: { product: Product }) {
                   variant="icon"
                   product={{
                     id: product.id, title: product.title, slug: product.slug,
-                    price: product.price, salePrice: product.salePrice,
+                    price: product.price, salePrice: product.salePrice, hasVariants: product.hasVariants,
                     mainImage: product.image, images: [],
                   }}
                 />

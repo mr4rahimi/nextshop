@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useCart } from "@/components/store/cart/CartContext";
+import { useCart, cartLineKey } from "@/components/store/cart/CartContext";
 import type { RecoveryPageData } from "@/lib/tools/cart-recovery";
 
 export const COUPON_HANDOFF_KEY = "nx_coupon";
@@ -35,10 +35,10 @@ export default function CartRecoveryView({ data }: { data: RecoveryPageData }) {
 
   function restore() {
     setBusy(true);
-    const inCart = new Set(items.map((i) => i.productId));
+    const inCart = new Set(items.map((i) => cartLineKey(i)));
     for (const p of available) {
-      if (inCart.has(p.id)) continue;
-      addItem({ id: p.id, title: p.title, slug: p.slug, price: p.price, salePrice: p.salePrice, mainImage: p.mainImage, images: [] }, p.qty);
+      if (inCart.has(cartLineKey({ productId: p.id, variantId: p.variantId }))) continue;
+      addItem({ id: p.id, title: p.title, slug: p.slug, price: p.price, salePrice: p.salePrice, mainImage: p.mainImage, images: [] }, p.qty, p.variantId);
     }
     if (coupon) {
       try {
@@ -79,7 +79,7 @@ export default function CartRecoveryView({ data }: { data: RecoveryPageData }) {
         ) : (
           <ul className="mt-6 divide-y divide-gray-100 dark:divide-white/[0.06]">
             {data.products.map((p) => (
-              <li key={p.id} className={`flex items-center gap-3 py-3 ${p.inStock ? "" : "opacity-50"}`}>
+              <li key={`${p.id}:${p.variantId ?? ""}`} className={`flex items-center gap-3 py-3 ${p.inStock ? "" : "opacity-50"}`}>
                 {p.mainImage ? (
                   // eslint-disable-next-line @next/next/no-img-element -- تصویر محصول از کتابخانه‌ی رسانه
                   <img src={p.mainImage} alt={p.title} className="h-16 w-16 shrink-0 rounded-xl bg-gray-50 object-contain dark:bg-white/5" />

@@ -20,6 +20,7 @@ import { SITE_URL } from "@/lib/seo";
 import { getSmsReadiness, sendPatternSms } from "@/lib/sms";
 import { Prisma, type CartRecoveryStatus } from "@prisma/client";
 import { ToolError, displayUrl, randomToken, tehranHour } from "./common";
+import { effectivePrice, resolveVariants } from "@/lib/variants";
 
 // ─── تنظیمات ─────────────────────────────────────────────────────────────
 
@@ -123,6 +124,7 @@ async function loadCarts(cartIds: string[]) {
       items: {
         select: {
           qty: true,
+          variantKey: true,
           product: { select: { id: true, title: true, price: true, salePrice: true, isActive: true } },
         },
       },
@@ -137,6 +139,8 @@ function cartSnapshot(cart: LoadedCart) {
     .filter((i) => i.product.isActive)
     .map((i) => ({
       productId: i.product.id,
+      // تنوع (فاز ۴) — بازیابی همان رنگ/سایز را به سبد برمی‌گرداند
+      variantId: i.variantKey || null,
       title: i.product.title,
       qty: i.qty,
       unitPrice: Number(i.product.salePrice ?? i.product.price),
@@ -419,7 +423,7 @@ export interface RecoveryPageData {
   token: string;
   name: string | null;
   storeName: string;
-  products: { id: string; title: string; slug: string; price: string; salePrice: string | null; mainImage: string | null; qty: number; inStock: boolean }[];
+  products: { id: string; variantId: string | null; title: string; slug: string; price: string; salePrice: string | null; mainImage: string | null; qty: number; inStock: boolean }[];
   coupon: { code: string; expiresAt: string | null; usable: boolean } | null;
 }
 
@@ -435,7 +439,7 @@ export async function loadRecoveryPage(rawToken: string): Promise<RecoveryPageDa
     prisma.cartRecovery.update({ where: { id: rec.id }, data: { openedAt: new Date() } }).catch(() => {});
   }
 
-  const snap = (Array.isArray(rec.items) ? rec.items : []) as { productId: string; qty: number }[];
+  const snap = (Array.isArray(rec.items) ? rec.items : []) as { productId: string; variantId?: string | null; qty: number }[];
   const ids = snap.map((i) => i.productId).filter((x) => typeof x === "string");
   const [products, coupon, store] = await Promise.all([
     prisma.product.findMany({
@@ -449,6 +453,7 @@ export async function loadRecoveryPage(rawToken: string): Promise<RecoveryPageDa
     prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { storeName: true } }),
   ]);
   const byId = new Map(products.map((p) => [p.id, p]));
+  const variants = await resolveVariants(prisma, snap.map((i) => ({ productId: i.productId, variantId: i.variantId ?? null })));
 
   return {
     token,
@@ -458,15 +463,20 @@ export async function loadRecoveryPage(rawToken: string): Promise<RecoveryPageDa
       .map((i) => {
         const p = byId.get(i.productId);
         if (!p) return null;
+        // تنوع حذف/غیرفعال‌شده ← ردیف کنار می‌رود (سبد ساده‌اش را نمی‌پذیرد)
+        const v = i.variantId ? variants.get(i.variantId) : null;
+        if (i.variantId && !v) return null;
+        const e = effectivePrice(p, v);
         return {
           id: p.id,
-          title: p.title,
+          variantId: v?.id ?? null,
+          title: v ? `${p.title} — ${v.title}` : p.title,
           slug: p.slug,
-          price: p.price.toString(),
-          salePrice: p.salePrice?.toString() ?? null,
-          mainImage: p.mainImage ?? p.images[0]?.url ?? null,
+          price: e.price.toString(),
+          salePrice: e.salePrice?.toString() ?? null,
+          mainImage: v?.image ?? p.mainImage ?? p.images[0]?.url ?? null,
           qty: Math.max(1, Math.min(99, Number(i.qty) || 1)),
-          inStock: !p.trackStock || p.stock > 0,
+          inStock: !p.trackStock || (v ? v.stock : p.stock) > 0,
         };
       })
       .filter((x): x is NonNullable<typeof x> => !!x),

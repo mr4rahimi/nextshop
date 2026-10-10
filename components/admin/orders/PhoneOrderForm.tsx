@@ -31,6 +31,9 @@ interface ProductHit {
 
 interface Line {
   productId: string;
+  /** تنوع (رنگ/سایز) — docs/plans/inventory-items.md فاز ۴ */
+  variantId?: string | null;
+  variants?: { id: string; title: string; price: string; stock: number }[];
   title: string;
   qty: number;
   /** خالی یعنی قیمت کاتالوگ */
@@ -163,10 +166,22 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
     return () => clearTimeout(h);
   }, [productQuery, open]);
 
-  function addLine(p: ProductHit) {
+  async function addLine(p: ProductHit) {
+    setProductQuery("");
+    setHits([]);
+    // محصول تنوع‌دار: هر بار ردیف تازه با انتخاب رنگ/سایز (دو تنوع از یک محصول ممکن است)
+    const vs = await fetch(`/api/admin/products/${p.id}/variants?brief=1`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { enabled: boolean; variants: Line["variants"] } | null) => (d?.enabled ? d.variants ?? [] : []))
+      .catch(() => []);
+    if (vs && vs.length) {
+      const first = vs.find((v) => v.stock > 0) ?? vs[0];
+      setLines((prev) => [...prev, { productId: p.id, variantId: first.id, variants: vs, title: p.title, qty: 1, unitPrice: "", catalogPrice: first.price, unitCost: "" }]);
+      return;
+    }
     setLines((prev) =>
-      prev.some((l) => l.productId === p.id)
-        ? prev.map((l) => (l.productId === p.id ? { ...l, qty: l.qty + 1 } : l))
+      prev.some((l) => l.productId === p.id && !l.variantId)
+        ? prev.map((l) => (l.productId === p.id && !l.variantId ? { ...l, qty: l.qty + 1 } : l))
         : [...prev, {
             productId: p.id,
             title: p.title,
@@ -176,8 +191,6 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
             unitCost: "",
           }],
     );
-    setProductQuery("");
-    setHits([]);
   }
 
   const lineTotal = (l: Line) => {
@@ -226,6 +239,7 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
             : { phone: contactQuery.trim(), firstName: newFirst.trim(), lastName: newLast.trim() },
           items: lines.map((l) => ({
             productId: l.productId,
+            variantId: l.variantId ?? null,
             qty: l.qty,
             unitPrice: l.unitPrice.replace(/[^\d]/g, "") || null,
             unitCost: digits(l.unitCost) || null,
@@ -395,7 +409,7 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
                 {lines.length > 0 && (
                   <div className="mt-3 space-y-2">
                     {lines.map((l, i) => (
-                      <div key={l.productId} className="rounded-xl border border-gray-200 dark:border-white/10 p-3">
+                      <div key={`${l.productId}:${l.variantId ?? ""}:${i}`} className="rounded-xl border border-gray-200 dark:border-white/10 p-3">
                         <div className="flex items-center justify-between gap-2 mb-2">
                           <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{l.title}</p>
                           <button
@@ -405,6 +419,23 @@ export default function PhoneOrderForm({ open, onClose, onCreated }: Props) {
                             حذف
                           </button>
                         </div>
+                        {l.variants && (
+                          <select
+                            value={l.variantId ?? ""}
+                            onChange={(e) => {
+                              const v = l.variants!.find((x) => x.id === e.target.value);
+                              if (v) setLines((prev) => prev.map((x, j) => (j === i ? { ...x, variantId: v.id, catalogPrice: v.price } : x)));
+                            }}
+                            className="w-full mb-2 px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-xs text-gray-900 dark:text-white outline-none"
+                            aria-label="رنگ/سایز"
+                          >
+                            {l.variants.map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {v.title} — {Number(v.price).toLocaleString("fa-IR")} تومان — موجودی {v.stock.toLocaleString("fa-IR")}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-center">
                           <div>
                             <label className="block text-[10px] text-gray-500 mb-1">تعداد</label>

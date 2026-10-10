@@ -12,6 +12,7 @@ import { ensureClubProfile } from "@/lib/club/profile";
 import type { OrderStatus, Prisma } from "@prisma/client";
 import { claimIfUnowned } from "@/lib/club/ownership";
 import { PURCHASE_TASK_SLUG, syncDealSafe } from "@/lib/worklist/deals";
+import { checkVariant, effectivePrice, resolveVariants } from "@/lib/variants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,6 +50,8 @@ const ALLOWED_STATUS: OrderStatus[] = ["PENDING_PAYMENT", "PAID", "CONFIRMED"];
 
 interface ItemInput {
   productId: string;
+  /** تنوع (رنگ/سایز) — docs/plans/inventory-items.md فاز ۴ */
+  variantId?: string | null;
   qty: number;
   /** قیمت دستی — وقتی روی تلفن قیمت دیگری توافق شده */
   unitPrice?: string | number | null;
@@ -173,6 +176,12 @@ export async function POST(req: Request) {
   if (missing.length > 0) {
     return NextResponse.json({ error: "یکی از کالاها پیدا نشد" }, { status: 400 });
   }
+  const variants = await resolveVariants(prisma, items.map((i) => ({ productId: i.productId, variantId: i.variantId || null })));
+  for (const it of items) {
+    if (it.variantId ? !variants.has(it.variantId) : (await checkVariant(it.productId, null)) === null) {
+      return NextResponse.json({ error: `رنگ/سایز «${byId.get(it.productId)!.title}» را انتخاب کنید` }, { status: 400 });
+    }
+  }
 
   const orderItems: Prisma.OrderItemCreateWithoutOrderInput[] = [];
   let itemsTotal = 0n;
@@ -181,22 +190,26 @@ export async function POST(req: Request) {
 
   for (const it of items) {
     const p = byId.get(it.productId)!;
+    const v = it.variantId ? variants.get(it.variantId)! : null;
+    const vp = effectivePrice(p, v);
     const qty = Math.max(1, Math.floor(Number(it.qty)));
     // قیمت دستی بر قیمت کاتالوگ اولویت دارد — روی تلفن مذاکره می‌شود
     const manual = toBigInt(it.unitPrice, 0n);
-    const effective = manual > 0n ? manual : (p.salePrice ?? p.price);
+    const effective = manual > 0n ? manual : (vp.salePrice ?? vp.price);
 
     itemsTotal += effective * BigInt(qty);
     const unitCost = toBigInt(it.unitCost, 0n);
-    if (unitCost <= 0n) noCost.push(`${p.title} × ${qty}`);
+    const title = v ? `${p.title} — ${v.title}` : p.title;
+    if (unitCost <= 0n) noCost.push(`${title} × ${qty}`);
     orderItems.push({
       product: { connect: { id: p.id } },
       qty,
-      unitPrice: p.price,
+      unitPrice: vp.price,
       // قیمت مؤثر همیشه در `unitSalePrice` می‌نشیند تا فاکتور همان را نشان دهد
       unitSalePrice: effective,
-      titleSnapshot: p.title,
-      skuSnapshot: p.sku ?? null,
+      titleSnapshot: title,
+      skuSnapshot: v?.sku ?? p.sku ?? null,
+      ...(v ? { variantId: v.id, variantTitleSnapshot: v.title } : {}),
       // کل ردیف ذخیره می‌شود، نه واحد — `OrderItemCost` در schema
       ...(unitCost > 0n ? { cost: { create: { cost: unitCost * BigInt(qty) } } } : {}),
     });
@@ -286,7 +299,7 @@ export async function POST(req: Request) {
   // گذار وضعیت در مسیر ویرایش سفارش این کار را می‌کند.
   if (paid) {
     await deductStockForOrderItems(
-      items.map((i) => ({ productId: i.productId, qty: Math.max(1, Math.floor(Number(i.qty))) })),
+      items.map((i) => ({ productId: i.productId, variantId: i.variantId || null, qty: Math.max(1, Math.floor(Number(i.qty))) })),
       order.id,
     ).catch((e: unknown) =>
       console.error("[order-stock] کسر موجودی سفارش تلفنی ناموفق:", e),

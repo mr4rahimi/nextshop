@@ -2,14 +2,29 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { loadVariantAdmin, saveVariants, VariantError, type VariantsInput } from "@/lib/variants-admin";
-import { variantsEnabled } from "@/lib/variants";
+import { effectivePrice, variantsEnabled } from "@/lib/variants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** GET — تنوع‌ها، محورها، عکس‌ها، ویژگی‌های فروشگاه (docs/plans/inventory-items.md فاز ۴) */
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // `?brief=1` — فقط تنوع‌های فعال با قیمت مؤثر، برای سفارش تلفنی
+  if (new URL(req.url).searchParams.get("brief")) {
+    const enabled = await variantsEnabled();
+    const product = await prisma.product.findUnique({ where: { id }, select: { price: true, salePrice: true } });
+    const vs = enabled && product ? await prisma.productVariant.findMany({ where: { productId: id, isActive: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }) : [];
+    return NextResponse.json(
+      serialize({
+        enabled,
+        variants: vs.map((v) => {
+          const e = effectivePrice(product!, v);
+          return { id: v.id, title: v.title, price: e.salePrice ?? e.price, stock: v.stock };
+        }),
+      }),
+    );
+  }
   const data = await loadVariantAdmin(id);
   if (!data.product) return NextResponse.json({ error: "محصول پیدا نشد" }, { status: 404 });
   return NextResponse.json(serialize({ ...data, enabled: await variantsEnabled() }));

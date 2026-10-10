@@ -11,6 +11,9 @@ export interface ProductCardItem {
   slug: string;
   price: string;
   salePrice: string | null;
+  /** تنوع (فاز ۴) — «انتخاب» و «از X» */
+  hasVariants?: boolean;
+  priceFrom?: string | null;
   ratingAvg: number;
   ratingCount: number;
   image: string | null;
@@ -38,7 +41,7 @@ function toFarsi(n: number): string {
 
 export default function ManaProductCard({ product }: Props) {
   const discountPercent =
-    product.salePrice && Number(product.price) > 0
+    !product.priceFrom && product.salePrice && Number(product.price) > 0
       ? Math.round(
           ((Number(product.price) - Number(product.salePrice)) /
             Number(product.price)) *
@@ -47,7 +50,7 @@ export default function ManaProductCard({ product }: Props) {
       : null;
      
 
-  const displayPrice = product.salePrice || product.price;
+  const displayPrice = product.priceFrom ?? (product.salePrice || product.price);
   const { has, toggle } = useWishlist();
   const isOutOfStock = product.trackStock && (product.stock ?? 0) <= 0;
   const isWished = has(product.id);
@@ -147,7 +150,7 @@ export default function ManaProductCard({ product }: Props) {
                 )}
                 <div className="flex items-center gap-1.5">
                   <span className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter tabular-nums">
-                    {formatPrice(displayPrice)}
+                    {product.priceFrom ? "از " : ""}{formatPrice(displayPrice)}
                   </span>
                   <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-bold">تومان</span>
                 </div>
@@ -156,7 +159,7 @@ export default function ManaProductCard({ product }: Props) {
                 variant="icon"
                 product={{
                   id: product.id, title: product.title, slug: product.slug,
-                  price: product.price, salePrice: product.salePrice,
+                  price: product.price, salePrice: product.salePrice, hasVariants: product.hasVariants,
                   mainImage: product.image, images: [],
                 }}
               />

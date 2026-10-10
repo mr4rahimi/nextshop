@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCart, CartProduct, cartLineKey } from "@/components/store/cart/CartContext";
 
 interface Props {
@@ -25,6 +26,21 @@ export default function AddToCartButton({ product, className, variant = "icon", 
   const removeItem = () => remove(key);
   const qty = cartItem?.qty ?? 0;
   const sm = size === "sm";
+
+  // محصول تنوع‌دار بی انتخاب رنگ/سایز به سبد نمی‌رود — دکمه به صفحه‌ی محصول می‌برد
+  if (product.hasVariants && !variantId) {
+    const cls =
+      variant === "icon"
+        ? sm
+          ? "h-9 px-3 bg-primary-600 text-white rounded-xl flex items-center justify-center text-[11px] font-black shadow-md shadow-primary-500/30 hover:scale-105 transition-all"
+          : "h-14 px-4 bg-primary-600 text-white rounded-[1.5rem] flex items-center justify-center text-xs font-black shadow-lg shadow-primary-500/30 hover:scale-105 transition-all"
+        : "w-full h-14 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-black text-sm transition-all shadow-xl shadow-primary-500/20 flex items-center justify-center";
+    return (
+      <Link href={`/products/${product.slug}`} onClick={(e) => e.stopPropagation()} className={className ?? cls} aria-label={`انتخاب رنگ و سایز ${product.title}`}>
+        انتخاب
+      </Link>
+    );
+  }
 
   if (variant === "icon") {
     if (qty === 0) {

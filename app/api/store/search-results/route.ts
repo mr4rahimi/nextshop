@@ -53,7 +53,7 @@ export async function GET(req: Request) {
         slug: true,
         mainImage: true,
         price: true,
-        salePrice: true,
+        salePrice: true, hasVariants: true, priceFrom: true,
         ratingAvg: true,
         ratingCount: true,
         stock: true,
@@ -77,6 +77,9 @@ export async function GET(req: Request) {
         image: p.images[0]?.url ?? p.mainImage ?? null,
         price: p.price,
         salePrice: p.salePrice,
+        // تنوع (فاز ۴): «انتخاب» و «از X» روی کارت
+        hasVariants: p.hasVariants,
+        priceFrom: p.priceFrom,
         ratingAvg: p.ratingAvg,
         ratingCount: p.ratingCount,
         stock: p.stock,

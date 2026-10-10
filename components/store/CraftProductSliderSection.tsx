@@ -98,6 +98,9 @@ interface CraftProduct {
   slug: string;
   price: string;
   salePrice: string | null;
+  /** تنوع (فاز ۴) — «انتخاب» و «از X» */
+  hasVariants?: boolean;
+  priceFrom?: string | null;
   image: string | null;
   excerpt?: string | null;
   brand?: { title: string; slug: string } | null;
@@ -133,13 +136,22 @@ function BuyControl({ product, accent, accentText }: { product: CraftProduct; ac
     );
   }
 
+  // تنوع‌دار (فاز ۴): انتخاب رنگ/سایز در صفحه‌ی محصول
+  if (product.hasVariants) {
+    return (
+      <Link href={`/products/${product.slug}`} className={`${cls} hover:brightness-110`} style={style}>
+        انتخاب رنگ و سایز
+      </Link>
+    );
+  }
+
   if (qty === 0) {
     return (
       <button
         type="button"
         onClick={() => addItem({
           id: product.id, title: product.title, slug: product.slug,
-          price: product.price, salePrice: product.salePrice,
+          price: product.price, salePrice: product.salePrice, hasVariants: product.hasVariants,
           mainImage: product.image, images: [],
         })}
         className={`${cls} hover:brightness-110 active:scale-95`}
@@ -264,7 +276,7 @@ export default function CraftProductSliderSection({ config }: { config?: Record<
     if (!s) return;
     if (loop) s.slideToLoop(i); else s.slideTo(i);
   };
-  const discount = current ? discountPercent(current.price, current.salePrice) : null;
+  const discount = current && !current.priceFrom ? discountPercent(current.price, current.salePrice) : null;
   const brandTitle = current?.brand?.title ?? (isBrand ? cfg.brandTitle : null);
 
   const header = (cfg.eyebrow || cfg.heading) ? (
@@ -325,7 +337,7 @@ export default function CraftProductSliderSection({ config }: { config?: Record<
                     {/* قیمت */}
                     <div className="mt-2 flex items-baseline gap-2">
                       <span className="text-xl font-black tabular-nums sm:text-2xl">
-                        {formatPrice(current.salePrice || current.price)}
+                        {current.priceFrom ? "از " : ""}{formatPrice(current.priceFrom ?? (current.salePrice || current.price))}
                       </span>
                       <span className="text-[11px] font-bold opacity-60">تومان</span>
                       {discount && (

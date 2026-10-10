@@ -12,6 +12,8 @@ export interface CartProduct {
   salePrice: string | null;
   mainImage: string | null;
   images: { url: string }[];
+  /** محصول تنوع دارد — کارت فهرست به‌جای افزودن به صفحه‌ی محصول می‌برد (فاز ۴) */
+  hasVariants?: boolean;
 }
 
 export interface CartItem {

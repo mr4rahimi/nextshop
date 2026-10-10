@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     orderBy: { createdAt: "desc" },
     select: {
       id: true, title: true, slug: true,
-      price: true, salePrice: true, mainImage: true,
+      price: true, salePrice: true, hasVariants: true, priceFrom: true, mainImage: true,
       stock: true, trackStock: true, lowStockThreshold: true,
       brand: { select: { title: true, slug: true } },
       category: { select: { title: true, slug: true } },
@@ -44,6 +44,9 @@ export async function GET(req: Request) {
     slug: p.slug,
     price: p.price,
     salePrice: p.salePrice,
+    // تنوع (فاز ۴): «انتخاب» و «از X» روی کارت
+    hasVariants: p.hasVariants,
+    priceFrom: p.priceFrom,
     image: p.mainImage ?? p.images[0]?.url ?? null,
     stock: p.stock,
     trackStock: p.trackStock,

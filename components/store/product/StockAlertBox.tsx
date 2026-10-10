@@ -9,7 +9,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 type State = { enabled: boolean; phone: string | null; subscribed: boolean };
 
-export default function StockAlertBox({ productId, fallback }: { productId: string; fallback: ReactNode }) {
+export default function StockAlertBox({ productId, variantId = null, fallback }: { productId: string; /** تنوع ناموجود (فاز ۴) */ variantId?: string | null; fallback: ReactNode }) {
   const [st, setSt] = useState<State | null>(null);
   const [phone, setPhone] = useState("");
   const [trap, setTrap] = useState("");
@@ -18,7 +18,9 @@ export default function StockAlertBox({ productId, fallback }: { productId: stri
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/store/stock-alert?productId=${encodeURIComponent(productId)}`)
+    setDone(null);
+    setError(null);
+    fetch(`/api/store/stock-alert?productId=${encodeURIComponent(productId)}${variantId ? `&variantId=${encodeURIComponent(variantId)}` : ""}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((x: State | null) => {
         if (!x) return;
@@ -27,7 +29,7 @@ export default function StockAlertBox({ productId, fallback }: { productId: stri
         if (x.subscribed) setDone("درخواست شما ثبت شده است؛ وقتی موجود شد پیامک می‌گیرید.");
       })
       .catch(() => {});
-  }, [productId]);
+  }, [productId, variantId]);
 
   if (!st?.enabled) return <>{fallback}</>;
 
@@ -39,7 +41,7 @@ export default function StockAlertBox({ productId, fallback }: { productId: stri
       const r = await fetch("/api/store/stock-alert", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, phone, website: trap }),
+        body: JSON.stringify({ productId, variantId, phone, website: trap }),
       });
       const x = await r.json().catch(() => null);
       if (x?.ok) setDone(x.already ? "این شماره قبلاً ثبت شده است؛ وقتی موجود شد پیامک می‌گیرید." : "ثبت شد ✓ وقتی موجود شد پیامک می‌گیرید.");

@@ -23,6 +23,9 @@ export interface ShowcaseProductItem {
   slug: string;
   price: string;
   salePrice: string | null;
+  /** تنوع (فاز ۴) — «انتخاب» و «از X» */
+  hasVariants?: boolean;
+  priceFrom?: string | null;
   image: string | null;
   brand?: { title: string; slug: string } | null;
   stock?: number;
@@ -62,9 +65,9 @@ export default function ShowcaseProductCard({
 }: Props) {
   const { has, toggle } = useWishlist();
 
-  const discount = discountPercent(product.price, product.salePrice);
+  const discount = (product.priceFrom ? null : discountPercent(product.price, product.salePrice));
   const isOutOfStock = product.trackStock && (product.stock ?? 0) <= 0;
-  const displayPrice = product.salePrice || product.price;
+  const displayPrice = product.priceFrom ?? (product.salePrice || product.price);
   const isWished = has(product.id);
   const brandTitle = product.brand?.title ?? fallbackBrandTitle;
 
@@ -162,7 +165,7 @@ export default function ShowcaseProductCard({
                   </span>
                   <span className="flex items-baseline gap-1 truncate">
                     <span className="text-[15px] font-black tracking-tight text-gray-900 tabular-nums dark:text-white sm:text-[17px]">
-                      {formatPrice(displayPrice)}
+                      {product.priceFrom ? "از " : ""}{formatPrice(displayPrice)}
                     </span>
                     <span className="text-[9px] font-bold text-gray-400 dark:text-zinc-500 sm:text-[10px]">تومان</span>
                   </span>
@@ -174,7 +177,7 @@ export default function ShowcaseProductCard({
                     size="sm"
                     product={{
                       id: product.id, title: product.title, slug: product.slug,
-                      price: product.price, salePrice: product.salePrice,
+                      price: product.price, salePrice: product.salePrice, hasVariants: product.hasVariants,
                       mainImage: product.image, images: [],
                     }}
                   />

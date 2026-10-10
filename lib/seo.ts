@@ -423,6 +423,54 @@ function buildReviewNode(r: SchemaReview) {
   return node;
 }
 
+/**
+ * محصول تنوع‌دار (فاز ۴، docs/plans/inventory-items.md) — `ProductGroup` با یک `Product`
+ * برای هر تنوع فعال (قیمت، موجودی و نشانی `?v=` خودش). `base` همان خروجی
+ * `buildProductSchema` محصول است؛ امتیاز و نظرها روی گروه می‌مانند. محصول ساده
+ * هرگز به اینجا نمی‌رسد.
+ */
+export function buildProductGroupSchema(
+  base: Record<string, any>,
+  opts: {
+    groupId: string;
+    axes: { title: string; values: { id: string; value: string }[] }[];
+    variants: { id: string; title: string; sku: string | null; price: string; salePrice: string | null; stock: number; options: Record<string, string>; image?: string | null }[];
+    axisIds: string[];
+  },
+) {
+  const prop = (t: string) => (/رنگ|color/i.test(t) ? "color" : /سایز|اندازه|size/i.test(t) ? "size" : /جنس|material/i.test(t) ? "material" : /طرح|pattern/i.test(t) ? "pattern" : null);
+  const props = opts.axes.map((a) => prop(a.title));
+  const { offers: _offers, "@context": ctx, ...rest } = base;
+  void _offers;
+  return {
+    "@context": ctx,
+    ...rest,
+    "@type": "ProductGroup",
+    productGroupID: base.sku ?? opts.groupId,
+    variesBy: [...new Set(props.filter(Boolean).map((p) => `https://schema.org/${p}`))],
+    hasVariant: opts.variants.map((v) => {
+      const one: any = buildProductSchema({
+        name: `${base.name} ${v.title}`,
+        image: v.image ?? null,
+        images: v.image ? [v.image] : base.image,
+        sku: v.sku,
+        brand: base.brand?.name ?? null,
+        price: v.price,
+        salePrice: v.salePrice,
+        inStock: v.stock > 0,
+        url: `${base.url}?v=${encodeURIComponent(v.id)}`,
+      });
+      delete one["@context"];
+      opts.axisIds.forEach((axisId, i) => {
+        const key = props[i];
+        const val = opts.axes[i].values.find((x) => x.id === v.options[axisId])?.value;
+        if (key && val) one[key] = val;
+      });
+      return one;
+    }),
+  };
+}
+
 export function buildArticleSchema(opts: {
   title: string;
   description?: string | null;

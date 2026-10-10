@@ -8,6 +8,8 @@ import Link from "next/link";
 interface Product {
   id: string; title: string; slug: string;
   price: string; salePrice: string | null;
+  /** تنوع (فاز ۴) — «از X» */
+  priceFrom?: string | null;
   mainImage: string | null; images: { url: string }[];
   brand: { title: string } | null;
   category: { title: string; slug: string } | null;
@@ -165,9 +167,9 @@ const doSearch = useCallback(async (query: string, p: number) => {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
               {products.map(p => {
                 const img   = p.mainImage ?? p.images[0]?.url ?? null;
-                const price = Number(p.salePrice ?? p.price);
+                const price = Number(p.priceFrom ?? p.salePrice ?? p.price);
                 const orig  = Number(p.price);
-                const disc  = p.salePrice && Number(p.salePrice) < orig ? Math.round(((orig - price) / orig) * 100) : 0;
+                const disc  = !p.priceFrom && p.salePrice && Number(p.salePrice) < orig ? Math.round(((orig - price) / orig) * 100) : 0;
                 return (
                   <Link key={p.id} href={`/products/${p.slug}`}
                     className="group bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-white/5 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col">
@@ -190,7 +192,7 @@ const doSearch = useCallback(async (query: string, p: number) => {
                         {p.trackStock && p.stock === 0 ? (
                           <span className="text-sm font-black text-secondary-500">ناموجود</span>
                         ) : (
-                          <span className="text-sm font-black text-primary-600 dark:text-primary-400 tabular-nums">{toFa(price)} تومان</span>
+                          <span className="text-sm font-black text-primary-600 dark:text-primary-400 tabular-nums">{p.priceFrom ? "از " : ""}{toFa(price)} تومان</span>
                         )}
                       </div>
                     </div>

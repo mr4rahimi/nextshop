@@ -249,6 +249,7 @@ export function mapCatalogProduct(p: any) {
   return {
     id: p.id, title: p.title, slug: p.slug,
     mainImage: p.mainImage, price: p.price, salePrice: p.salePrice,
+    hasVariants: p.hasVariants, priceFrom: p.priceFrom, // تنوع (فاز ۴)
     ratingAvg: p.ratingAvg, ratingCount: p.ratingCount,
     brand: p.brand, category: p.category,
     image: p.images[0]?.url ?? p.mainImage ?? null,

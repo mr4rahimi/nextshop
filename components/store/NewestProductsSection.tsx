@@ -13,6 +13,9 @@ interface Product {
   slug: string;
   price: string;
   salePrice: string | null;
+  /** تنوع (فاز ۴) — «انتخاب» و «از X» */
+  hasVariants?: boolean;
+  priceFrom?: string | null;
   shortDescription: string | null;
   ratingAvg: number;
   ratingCount: number;
@@ -46,8 +49,8 @@ function discountPercent(price: string, salePrice: string | null): number | null
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
 function NewestProductCard({ product }: { product: Product }) {
-  const discount = discountPercent(product.price, product.salePrice);
-  const displayPrice = product.salePrice || product.price;
+  const discount = (product.priceFrom ? null : discountPercent(product.price, product.salePrice));
+  const displayPrice = product.priceFrom ?? (product.salePrice || product.price);
   const isOutOfStock = product.trackStock && (product.stock ?? 0) <= 0;
 
   return (
@@ -119,7 +122,7 @@ function NewestProductCard({ product }: { product: Product }) {
                   )}
                   <div className="flex items-baseline justify-end gap-1">
                     <span className="text-xl font-black text-gray-900 dark:text-white tracking-tighter">
-                      {formatPrice(displayPrice)}
+                      {product.priceFrom ? "از " : ""}{formatPrice(displayPrice)}
                     </span>
                     <span className="text-[10px] font-bold text-gray-500">تومان</span>
                   </div>

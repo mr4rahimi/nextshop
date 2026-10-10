@@ -75,6 +75,8 @@ interface Product {
 interface RelatedProduct {
   id: string; title: string; slug: string;
   mainImage: string | null; price: string; salePrice: string | null;
+  /** تنوع (فاز ۴) — «از X» */
+  priceFrom?: string | null;
   stock?: number; trackStock?: boolean;
   category?: { title: string; slug: string } | null;
   brand?: { title: string } | null;
@@ -162,9 +164,9 @@ function RelatedSection({ title, products }: { title: string; products: RelatedP
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {products.map(p => {
-          const price = Number(p.salePrice || p.price);
+          const price = Number(p.priceFrom ?? (p.salePrice || p.price));
           const orig  = Number(p.price);
-          const disc  = p.salePrice && price < orig ? Math.round(((orig - price) / orig) * 100) : 0;
+          const disc  = !p.priceFrom && p.salePrice && price < orig ? Math.round(((orig - price) / orig) * 100) : 0;
           const outOfStock = p.trackStock && (p.stock ?? 0) <= 0;
           return (
             <Link key={p.id} href={`/products/${p.slug}`}
@@ -197,7 +199,7 @@ function RelatedSection({ title, products }: { title: string; products: RelatedP
                     <span className="text-xs font-black text-gray-400">ناموجود</span>
                   ) : (
                     <span className="text-sm font-black text-primary-600 dark:text-primary-400 tabular-nums">
-                      {price.toLocaleString("fa-IR")} <span className="text-[10px] font-bold text-gray-400">تومان</span>
+                      {p.priceFrom ? "از " : ""}{price.toLocaleString("fa-IR")} <span className="text-[10px] font-bold text-gray-400">تومان</span>
                     </span>
                   )}
                 </div>
@@ -558,6 +560,7 @@ export default function ProductDetailClient({ product: base, variants, reviewSta
                    {isOutOfStock ? (
                       <StockAlertBox
                         productId={product.id}
+                        variantId={variant?.id ?? null}
                         fallback={
                           <div className="w-full py-4 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl flex items-center justify-center gap-2 text-gray-400 font-black text-sm cursor-not-allowed">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -89,13 +89,13 @@ function rateLimited(key: string): boolean {
   return false;
 }
 
-/** وضعیت فرم برای صفحه‌ی محصول: روشن است؟ این کاربر قبلاً ثبت کرده؟ */
-export async function stockAlertState(productId: string, user: { id: string; phone: string } | null) {
+/** وضعیت فرم برای صفحه‌ی محصول: روشن است؟ این کاربر قبلاً ثبت کرده؟ `variantId` = همان تنوع (فاز ۴) */
+export async function stockAlertState(productId: string, user: { id: string; phone: string } | null, variantId: string | null = null) {
   const s = await prisma.stockAlertSetting.findUnique({ where: { id: "singleton" }, select: { isEnabled: true } });
   if (!s?.isEnabled) return { enabled: false, phone: null, subscribed: false };
   const phone = user ? normalizePhone(user.phone) : null;
   const existing = phone
-    ? await prisma.stockAlert.findUnique({ where: { productId_phone: { productId, phone } }, select: { status: true } })
+    ? await prisma.stockAlert.findUnique({ where: { productId_variantKey_phone: { productId, variantKey: variantId ?? "", phone } }, select: { status: true } })
     : null;
   return { enabled: true, phone, subscribed: existing?.status === "WAITING" };
 }
@@ -105,7 +105,7 @@ export async function stockAlertState(productId: string, user: { id: string; pho
  * ثبت تکراری خطا نیست — همان ردیف به WAITING برمی‌گردد.
  */
 export async function subscribeStockAlert(
-  input: { productId?: unknown; phone?: unknown; website?: unknown },
+  input: { productId?: unknown; variantId?: unknown; phone?: unknown; website?: unknown },
   ctx: { ip: string | null; userId: string | null },
 ): Promise<{ already: boolean }> {
   // فیلد تله: انسان نمی‌بیندش، ربات پرش می‌کند
@@ -118,10 +118,17 @@ export async function subscribeStockAlert(
   const productId = typeof input.productId === "string" ? input.productId : "";
   const p = await prisma.product.findUnique({ where: { id: productId }, select: { isActive: true, trackStock: true, stock: true } });
   if (!p || !p.isActive) throw new ToolError("کالا پیدا نشد");
-  if (!p.trackStock || p.stock > 0) throw new ToolError("این کالا الان موجود است — می‌توانید همین حالا سفارش دهید");
+  // تنوع (رنگ/سایز): ناموجود بودن خود همان تنوع ملاک است، نه جمع محصول
+  let variantKey = "";
+  if (typeof input.variantId === "string" && input.variantId) {
+    const v = await prisma.productVariant.findFirst({ where: { id: input.variantId, productId, isActive: true }, select: { id: true, stock: true } });
+    if (!v) throw new ToolError("این رنگ/سایز پیدا نشد");
+    if (!p.trackStock || v.stock > 0) throw new ToolError("این رنگ/سایز الان موجود است — می‌توانید همین حالا سفارش دهید");
+    variantKey = v.id;
+  } else if (!p.trackStock || p.stock > 0) throw new ToolError("این کالا الان موجود است — می‌توانید همین حالا سفارش دهید");
   if (rateLimited(ctx.ip ?? "unknown")) throw new ToolError("درخواست‌های زیادی فرستاده‌اید؛ کمی بعد دوباره تلاش کنید");
 
-  const existing = await prisma.stockAlert.findUnique({ where: { productId_phone: { productId, phone } } });
+  const existing = await prisma.stockAlert.findUnique({ where: { productId_variantKey_phone: { productId, variantKey, phone } } });
   if (existing) {
     if (existing.status === "WAITING") return { already: true };
     await prisma.stockAlert.update({
@@ -132,7 +139,7 @@ export async function subscribeStockAlert(
   }
   for (let i = 0; i < 4; i++) {
     try {
-      await prisma.stockAlert.create({ data: { productId, phone, userId: ctx.userId, token: randomToken(6) } });
+      await prisma.stockAlert.create({ data: { productId, variantKey, phone, userId: ctx.userId, token: randomToken(6) } });
       return { already: false };
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
@@ -150,10 +157,11 @@ export async function subscribeStockAlert(
 export async function resolveAlertClick(rawToken: string, count = true): Promise<string | null> {
   const token = rawToken.trim().toLowerCase();
   if (!/^[a-z0-9]{6}$/.test(token)) return null;
-  const a = await prisma.stockAlert.findUnique({ where: { token }, select: { id: true, clickedAt: true, product: { select: { slug: true } } } });
+  const a = await prisma.stockAlert.findUnique({ where: { token }, select: { id: true, clickedAt: true, variantKey: true, product: { select: { slug: true } } } });
   if (!a) return null;
   if (count && !a.clickedAt) prisma.stockAlert.update({ where: { id: a.id }, data: { clickedAt: new Date() } }).catch(() => {});
-  return `/products/${encodeURIComponent(a.product.slug)}?utm_source=sms&utm_medium=sms&utm_campaign=back-in-stock`;
+  const v = a.variantKey ? `&v=${encodeURIComponent(a.variantKey)}` : "";
+  return `/products/${encodeURIComponent(a.product.slug)}?utm_source=sms&utm_medium=sms&utm_campaign=back-in-stock${v}`;
 }
 
 // ─── ارسال ───────────────────────────────────────────────────────────────
@@ -161,6 +169,27 @@ export async function resolveAlertClick(rawToken: string, count = true): Promise
 const BATCH = 30;
 /** درخواستی که بیش از این منتظر مانده دیگر پیامک نمی‌گیرد — مشتری احتمالاً جای دیگری خریده */
 const EXPIRE_MS = 180 * 86_400_000;
+
+/**
+ * درخواست‌های آماده‌ی ارسال، قدیمی‌تر اول. درخواست خود محصول: محصول موجود.
+ * درخواست یک تنوع (فاز ۴، docs/plans/inventory-items.md): همان تنوعِ فعال موجود.
+ */
+export async function dueStockAlerts(take: number) {
+  const sel = { id: true, phone: true, token: true, variantKey: true, createdAt: true, product: { select: { title: true, isActive: true, trackStock: true } } } as const;
+  const [plain, forVariant] = await Promise.all([
+    prisma.stockAlert.findMany({ where: { status: "WAITING", variantKey: "", product: inStockWhere }, orderBy: { createdAt: "asc" }, take, select: sel }),
+    prisma.stockAlert.findMany({ where: { status: "WAITING", variantKey: { not: "" }, product: { isActive: true } }, orderBy: { createdAt: "asc" }, take: 500, select: sel }),
+  ]);
+  const variants = new Map(
+    forVariant.length
+      ? (await prisma.productVariant.findMany({ where: { id: { in: forVariant.map((a) => a.variantKey) }, isActive: true }, select: { id: true, title: true, stock: true } })).map((v) => [v.id, v])
+      : [],
+  );
+  const due = [...plain, ...forVariant.filter((a) => { const v = variants.get(a.variantKey); return v && (!a.product.trackStock || v.stock > 0); })]
+    .sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime())
+    .slice(0, take);
+  return { due, variants };
+}
 
 /**
  * یک دور ارسال — حداکثر ۳۰ پیامک. زمان‌بند (`scheduler.ts`) هر ۵ دقیقه صدا می‌زند.
@@ -182,12 +211,7 @@ export async function runStockAlerts(now = new Date()): Promise<{ sent: number; 
   });
   r.skipped += expired.count;
 
-  const due = await prisma.stockAlert.findMany({
-    where: { status: "WAITING", product: inStockWhere },
-    orderBy: { createdAt: "asc" },
-    take: BATCH,
-    select: { id: true, phone: true, token: true, product: { select: { title: true } } },
-  });
+  const { due, variants } = await dueStockAlerts(BATCH);
 
   for (const a of due) {
     const phone = normalizePhone(a.phone);
@@ -207,7 +231,8 @@ export async function runStockAlerts(now = new Date()): Promise<{ sent: number; 
     const claim = await prisma.stockAlert.updateMany({ where: { id: a.id, status: "WAITING" }, data: { status: "SENT", notifiedAt: now } });
     if (claim.count !== 1) continue;
 
-    const attributes: Record<string, string> = { product: productVar(a.product.title) };
+    const vTitle = a.variantKey ? variants.get(a.variantKey)?.title : null;
+    const attributes: Record<string, string> = { product: productVar(vTitle ? `${a.product.title} ${vTitle}` : a.product.title) };
     if (s.linkMode === "VARIABLE") attributes.link = displayUrl(alertUrl(a.token));
     try {
       await sendPatternSms(phone, s.patternCode, attributes);
