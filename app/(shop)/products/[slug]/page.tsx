@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import ProductDetailClient from "@/components/store/product/ProductDetailClient";
+import { loadVariantView } from "@/lib/variants";
 import {
   SITE_URL,
   canonicalUrl,
@@ -132,6 +133,17 @@ async function getProduct(slug: string) {
     });
 
     if (!product) return null;
+
+    // تنوع (فاز ۴، docs/plans/inventory-items.md): فقط با کلید روشن و تنوع فعال؛ آن وقت
+    // همه‌ی عکس‌ها با رنگشان (بقیه‌ی محصولات همان ۱۰ عکس قبلی را می‌گیرند)
+    const variants = await loadVariantView(product);
+    const variantImages = variants
+      ? await prisma.productImage.findMany({
+          where: { productId: product.id },
+          orderBy: { sortOrder: "asc" },
+          select: { url: true, id: true, alt: true, sortOrder: true, attributeValueId: true },
+        })
+      : null;
 
     /**
      * محصولات مرتبط. کلیدی که ذخیره نشده یعنی **روشن** — `{}` پیش‌فرض ستون بود
@@ -295,6 +307,8 @@ async function getProduct(slug: string) {
 
     return {
       ...serialize(product),
+      ...(variantImages ? { images: variantImages } : {}),
+      variants: variants ? serialize(variants) : null,
       categoryRelated,
       brandRelated,
       manualRelated,
@@ -619,6 +633,7 @@ export default async function ProductDetailPage({
 
       <ProductDetailClient
         product={product}
+        variants={product.variants}
         reviewStats={
           product.reviewStats
         }

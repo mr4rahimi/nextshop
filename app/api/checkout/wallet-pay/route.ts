@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { id: true, userId: true, grandTotal: true, status: true, items: { select: { productId: true, qty: true } } },
+    select: { id: true, userId: true, grandTotal: true, status: true, items: { select: { productId: true, qty: true, variantId: true } } },
   });
 
   if (!order) return NextResponse.json({ error: "سفارش یافت نشد" }, { status: 404 });

@@ -74,7 +74,7 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
     where: { id },
     select: {
       status: true,
-      items: { select: { productId: true, qty: true } },
+      items: { select: { productId: true, qty: true, variantId: true } },
       user: { select: { phone: true, firstName: true, lastName: true } },
     },
   });
@@ -101,7 +101,7 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   if (shouldDeductStock && prevOrder.items.length > 0) {
     await deductStockForOrderItems(
-      prevOrder.items.map((item) => ({ productId: item.productId, qty: item.qty })),
+      prevOrder.items.map((item) => ({ productId: item.productId, qty: item.qty, variantId: item.variantId })),
       id,
     ).catch((e: unknown) => console.error("[order-stock] کسر موجودی در تأیید ادمین ناموفق:", e));
   }

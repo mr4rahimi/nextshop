@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCart } from "@/components/store/cart/CartContext";
+import { useCart, cartLineKey } from "@/components/store/cart/CartContext";
 
 function toFa(n: number | string) { return Number(n).toLocaleString("fa-IR"); }
 
@@ -132,7 +132,7 @@ export default function CartPageClient() {
                 const hasDiscount = item.product.salePrice && Number(item.product.salePrice) < origPrice;
 
                 return (
-                  <div key={item.productId}
+                  <div key={cartLineKey(item)}
                     className="group relative bg-white/40 dark:bg-white/[0.03] backdrop-blur-[30px] border border-white/40 dark:border-white/10 rounded-[2.8rem] p-6 md:p-8 transition-all duration-500 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] hover:-translate-y-1">
                     <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
 
@@ -162,21 +162,21 @@ export default function CartPageClient() {
                       {}
                       <div className="flex flex-col items-center md:items-end gap-6 md:min-w-[200px] border-t md:border-t-0 md:border-r border-gray-200/50 dark:border-white/5 pt-6 md:pt-2 md:pr-8">
                         <div className="flex items-center gap-3">
-                          <button onClick={() => removeItem(item.productId)}
+                          <button onClick={() => removeItem(cartLineKey(item))}
                             className="w-10 h-10 flex items-center justify-center bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all active:scale-90">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
                           <div className="flex items-center bg-gray-100/50 dark:bg-white/5 p-1.5 rounded-[1.2rem] border border-gray-200/50 dark:border-white/10 shadow-inner">
-                            <button onClick={() => updateQty(item.productId, item.qty + 1)}
+                            <button onClick={() => updateQty(cartLineKey(item), item.qty + 1)}
                               className="w-9 h-9 flex items-center justify-center bg-primary-600 text-white rounded-lg shadow-lg shadow-primary-500/30 hover:scale-105 active:scale-90 transition-all">
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v12M6 12h12" />
                               </svg>
                             </button>
                             <span className="w-10 text-center text-sm font-black text-gray-900 dark:text-white">{toFa(item.qty)}</span>
-                            <button onClick={() => updateQty(item.productId, item.qty - 1)}
+                            <button onClick={() => updateQty(cartLineKey(item), item.qty - 1)}
                               className="w-9 h-9 flex items-center justify-center bg-white dark:bg-white/10 text-gray-400 rounded-lg border border-gray-200/60 dark:border-white/5 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10 transition-all active:scale-90">
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18 12H6" />

@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import AddToCartButton from "@/components/store/cart/AddToCartButton";
+import VariantPicker, { useVariantSelection } from "@/components/store/product/VariantPicker";
+import type { VariantView } from "@/lib/variants";
 import StockAlertBox from "@/components/store/product/StockAlertBox";
 import { useWishlist } from "@/components/store/wishlist/WishlistContext";
 import { addToLastVisited } from "@/lib/lastVisited";
@@ -28,6 +30,8 @@ interface ProductImage {
   url: string;
   alt: string | null;
   sortOrder: number;
+  /** عکس یک رنگ — فقط وقتی محصول تنوع دارد می‌آید */
+  attributeValueId?: string | null;
 }
 type Review = StoreReview;
 interface FaqItem {
@@ -78,6 +82,8 @@ interface RelatedProduct {
 
 interface Props {
   product: Product;
+  /** تنوع (رنگ/سایز) — null یعنی محصول ساده، دقیقاً مثل قبل */
+  variants?: VariantView | null;
   reviewStats?: ReviewStats;
   categoryRelated?: RelatedProduct[];
   brandRelated?: RelatedProduct[];
@@ -205,7 +211,23 @@ function RelatedSection({ title, products }: { title: string; products: RelatedP
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function ProductDetailClient({ product, reviewStats, categoryRelated = [], brandRelated = [], manualRelated = [] }: Props) {
+export default function ProductDetailClient({ product: base, variants, reviewStats, categoryRelated = [], brandRelated = [], manualRelated = [] }: Props) {
+  // تنوع انتخاب‌شده قیمت، موجودی و عکس‌ها را عوض می‌کند؛ بی‌تنوع `product` همان `base` است
+  const { current: variant, choose } = useVariantSelection(variants);
+  const product = useMemo(() => {
+    if (!variant) return base;
+    const values = new Set(Object.values(variant.options));
+    const own = base.images.filter((i) => i.attributeValueId && values.has(i.attributeValueId));
+    const general = base.images.filter((i) => !i.attributeValueId);
+    return {
+      ...base,
+      price: variant.price,
+      salePrice: variant.salePrice,
+      stock: variant.stock,
+      mainImage: own[0]?.url ?? base.mainImage,
+      images: own.length ? [...own, ...general] : general.length ? general : base.images,
+    };
+  }, [base, variant]);
   useEffect(() => { addToLastVisited(product.id); }, [product.id]);
 
   const [activeTab, setActiveTab] = useState<"overview" | "expert" | "specs" | "reviews" | "faq">("specs");
@@ -217,6 +239,7 @@ export default function ProductDetailClient({ product, reviewStats, categoryRela
     requestAnimationFrame(() => document.getElementById("tab-btn-reviews")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }, []);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
+  useEffect(() => setSelectedImageIdx(0), [variant?.id]);
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(null);
 
   // Build gallery: videoUrl first if exists, then mainImage, then images
@@ -504,6 +527,12 @@ export default function ProductDetailClient({ product, reviewStats, categoryRela
                       </div>
                     )}
 
+                    {variants && variant && (
+                      <div className="pt-4 border-t border-gray-200 dark:border-white/5">
+                        <VariantPicker view={variants} current={variant} onChoose={choose} />
+                      </div>
+                    )}
+
                     {/* Price */}
                     <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-white/5">
                       {discountPercent && (
@@ -539,9 +568,9 @@ export default function ProductDetailClient({ product, reviewStats, categoryRela
                         }
                       />
                     ) : (
-                      <AddToCartButton variant="full" product={{
+                      <AddToCartButton variant="full" variantId={variant?.id ?? null} product={{
                         id: product.id,
-                        title: product.title,
+                        title: variant ? `${product.title} — ${variant.title}` : product.title,
                         slug: product.slug,
                         price: String(product.price),
                         salePrice: product.salePrice ? String(product.salePrice) : null,

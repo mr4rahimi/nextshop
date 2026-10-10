@@ -1,6 +1,6 @@
 "use client";
 
-import { useCart, CartProduct } from "@/components/store/cart/CartContext";
+import { useCart, CartProduct, cartLineKey } from "@/components/store/cart/CartContext";
 
 interface Props {
   product: CartProduct;
@@ -12,11 +12,17 @@ interface Props {
    * پیش‌فرض "md" است تا رفتار همه‌ی استفاده‌های قبلی دست‌نخورده بماند.
    */
   size?: "sm" | "md";
+  /** تنوع انتخاب‌شده (فاز ۴) — `product` قیمت و عنوان همان تنوع را دارد */
+  variantId?: string | null;
 }
 
-export default function AddToCartButton({ product, className, variant = "icon", size = "md" }: Props) {
-  const { items, addItem, updateQty, removeItem } = useCart();
-  const cartItem = items.find(i => i.productId === product.id);
+export default function AddToCartButton({ product, className, variant = "icon", size = "md", variantId = null }: Props) {
+  const { items, addItem: add, updateQty: setQty, removeItem: remove } = useCart();
+  const key = cartLineKey({ productId: product.id, variantId });
+  const cartItem = items.find(i => cartLineKey(i) === key);
+  const addItem = (p: CartProduct) => add(p, 1, variantId);
+  const updateQty = (_id: string, q: number) => setQty(key, q);
+  const removeItem = () => remove(key);
   const qty = cartItem?.qty ?? 0;
   const sm = size === "sm";
 
@@ -49,7 +55,7 @@ export default function AddToCartButton({ product, className, variant = "icon", 
         <span className={`text-center font-black text-gray-900 dark:text-white ${sm ? "w-6 text-xs" : "w-10 text-sm"}`}>
           {qty.toLocaleString("fa-IR")}
         </span>
-        <button onClick={e => { e.preventDefault(); qty === 1 ? removeItem(product.id) : updateQty(product.id, qty - 1); }}
+        <button onClick={e => { e.preventDefault(); qty === 1 ? removeItem() : updateQty(product.id, qty - 1); }}
           aria-label={qty === 1 ? "حذف از سبد خرید" : "کاهش تعداد"}
           className={`flex items-center justify-center bg-white dark:bg-white/10 text-gray-400 rounded-lg border border-gray-200/60 dark:border-white/5 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10 transition-all active:scale-90 ${sm ? "w-7 h-7" : "w-9 h-9"}`}>
           <svg className={sm ? "w-4 h-4" : "w-5 h-5"} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,7 +93,7 @@ export default function AddToCartButton({ product, className, variant = "icon", 
         <span className="text-lg font-black text-primary-600">{qty.toLocaleString("fa-IR")} عدد در سبد</span>
         <span className="text-[10px] text-primary-400 font-bold">در سبد خرید شما</span>
       </div>
-      <button onClick={() => qty === 1 ? removeItem(product.id) : updateQty(product.id, qty - 1)}
+      <button onClick={() => qty === 1 ? removeItem() : updateQty(product.id, qty - 1)}
         className="w-10 h-10 flex items-center justify-center bg-white dark:bg-white/10 text-gray-400 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-rose-50 hover:text-rose-500 transition-all active:scale-90">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18 12H6" />

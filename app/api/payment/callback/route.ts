@@ -52,7 +52,7 @@ async function handleCallback(req: Request, p: CallbackParams) {
 
   const order = await prisma.order.findUnique({
     where:  { id: orderId },
-    select: { id: true, grandTotal: true, status: true, items: { select: { productId: true, qty: true } } },
+    select: { id: true, grandTotal: true, status: true, items: { select: { productId: true, qty: true, variantId: true } } },
   });
 
   if (!order) return redirect(`/checkout/failed/${orderId}`);

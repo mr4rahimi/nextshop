@@ -57,9 +57,10 @@ const cartItem = assembledId
     })
   : await tx.cartItem.upsert({
       where: {
-        cartId_productId: {
+        cartId_productId_variantKey: {
           cartId: cart.id,
           productId: product.id,
+          variantKey: "",
         },
       },
       update: { qty: { increment: qty } },

@@ -27,6 +27,15 @@ export const orderReturnKey = (orderId: string) => `order:${orderId}:return`;
 export const integSaleKey = (rowId: string) => `integ:${rowId}:sale`;
 export const taskPurchaseKey = (taskId: string) => `task:${taskId}:purchase`;
 
+/** ردیف سفارش ← شناسه‌ی کالای حسابداری: کالای تنوع اگر وصل است، وگرنه کالای محصول */
+async function variantItems(tx: Tx, items: { productId: string; variantId?: string | null }[]) {
+  const ids = items.map((i) => i.variantId).filter((x): x is string => !!x);
+  const map = new Map(
+    ids.length ? (await tx.productVariant.findMany({ where: { id: { in: ids }, accItemId: { not: null } }, select: { id: true, accItemId: true } })).map((v) => [v.id, v.accItemId!]) : [],
+  );
+  return (i: { productId: string; variantId?: string | null }) => (i.variantId && map.get(i.variantId)) || i.productId;
+}
+
 async function vatDefaults(tx: Tx, productIds: string[]) {
   const s = await tx.accSettings.findUnique({ where: { id: "singleton" }, select: { vatEnabled: true, vatRateBp: true } });
   const costs = new Map((await tx.accProductCost.findMany({ where: { productId: { in: productIds } } })).map((c) => [c.productId, c]));
@@ -49,15 +58,17 @@ export async function saleFromOrder(tx: Tx, orderId: string, at: Date): Promise<
   if (!order.items.length) return null;
 
   const party = await partyForUser(tx, order.userId);
-  const vat = await vatDefaults(tx, order.items.map((i) => i.productId));
+  // ردیف تنوع ← کالای حسابداریِ همان تنوع (فاز ۴)؛ تنوعِ بی‌کالا ← کالای خود محصول
+  const itemOf = await variantItems(tx, order.items);
+  const vat = await vatDefaults(tx, order.items.map((i) => itemOf(i)));
   const lines: InvoiceLineInput[] = order.items.map((i) => ({
-    productId: i.productId,
+    productId: itemOf(i),
     title: i.titleSnapshot,
     qty: i.qty,
     // قیمت مؤثر همان است که مشتری پرداخته؛ فروش ویژه تخفیف حساب نمی‌شود
     unitPrice: i.unitSalePrice && i.unitSalePrice > 0n ? i.unitSalePrice : i.unitPrice,
     orderItemId: i.id,
-    ...vat(i.productId),
+    ...vat(itemOf(i)),
   }));
 
   // `discountTotal` سفارش کیف پول را هم دارد — کیف پول روش پرداخت است، نه تخفیف (فاز ۶)
@@ -220,18 +231,19 @@ export async function purchaseFromTask(tx: Tx, taskId: string): Promise<AccInvoi
   const items = await tx.orderItem.findMany({
     where: { orderId: task.entityId },
     orderBy: { id: "asc" },
-    select: { id: true, productId: true, titleSnapshot: true, qty: true, cost: { select: { cost: true } } },
+    select: { id: true, productId: true, variantId: true, titleSnapshot: true, qty: true, cost: { select: { cost: true } } },
   });
   const priced = items.filter((i) => i.cost && i.cost.cost > 0n);
   if (!priced.length) return null;
 
   const party = await partyForSupplier(tx, task.supplierId);
+  const itemOf = await variantItems(tx, items);
   const order = await tx.order.findUnique({ where: { id: task.entityId }, select: { orderNumber: true } });
   const lines: InvoiceLineInput[] = priced.map((i) => {
     // قیمت خرید کل ردیف ذخیره شده؛ فی گرد به بالا و خرده به‌صورت تخفیف تا جمع دقیق بماند
     const cost = i.cost!.cost;
     const unit = (cost + BigInt(i.qty) - 1n) / BigInt(i.qty);
-    return { productId: i.productId, title: i.titleSnapshot, qty: i.qty, unitPrice: unit, discount: unit * BigInt(i.qty) - cost, orderItemId: i.id };
+    return { productId: itemOf(i), title: i.titleSnapshot, qty: i.qty, unitPrice: unit, discount: unit * BigInt(i.qty) - cost, orderItemId: i.id };
   });
 
   return saveInvoice(

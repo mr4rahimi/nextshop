@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { decrementMappingStockForOrder } from "@/lib/integration/core/inventory";
 import { emitAccEventSafe } from "@/lib/accounting/events";
+import { deductVariantStock } from "@/lib/variants";
 
 // کسر موجودی سایت + موجودی نگاشت برای اقلام یک سفارش.
 // باید فقط «یک بار» و در گذار سفارش به وضعیت پرداخت‌شده صدا زده شود.
@@ -9,7 +10,7 @@ import { emitAccEventSafe } from "@/lib/accounting/events";
 // (docs/plans/accounting.md بخش ۵ و تله‌ی ۴). کاردکس فاکتور `Product.stock` را
 // دوباره کم نمی‌کند — کسر همین تابع کافی است (تله‌ی ۱۵).
 export async function deductStockForOrderItems(
-  items: { productId: string; qty: number }[],
+  items: { productId: string; qty: number; variantId?: string | null }[],
   orderId: string,
 ): Promise<void> {
   await emitAccEventSafe({
@@ -19,8 +20,12 @@ export async function deductStockForOrderItems(
     payload: { orderId },
   });
 
+  // ردیف تنوع: موجودی تنوع کم و جمع محصول بازسازی می‌شود (docs/plans/inventory-items.md فاز ۴)
+  const variantLines = items.filter((i): i is { productId: string; qty: number; variantId: string } => !!i.variantId);
+  if (variantLines.length) await deductVariantStock(prisma, variantLines);
+
   await Promise.all(
-    items.map((item) =>
+    items.filter((i) => !i.variantId).map((item) =>
       prisma.product.updateMany({
         where: { id: item.productId, trackStock: true, stock: { gt: 0 } },
         data:  { stock: { decrement: item.qty } },

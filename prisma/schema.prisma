@@ -177,11 +177,65 @@ model Product {
   relatedTo          ProductRelated[]   @relation("RelatedToProducts")
   attributes         ProductAttribute[]
   stockAlerts        StockAlert[]
+  variants           ProductVariant[]
+  variantAxes        ProductVariantAxis[]
 
   @@index([categoryId])
   @@index([brandId])
   @@index([isActive])
   @@index([condition])
+}
+
+/// تنوع محصول — docs/plans/inventory-items.md فاز ۴.
+///
+/// ⚠️ محصول بی‌تنوع **هیچ ردیفی اینجا ندارد** و همان محصول قبلی است؛ تنوع فقط
+///    برای محصولی ساخته می‌شود که ادمین تعریف کند (سایت‌های فعال دست نمی‌خورند).
+///    محصول دارای تنوع: `Product.stock` = جمع موجودی تنوع‌های فعال (فقط
+///    `lib/variants.ts` می‌نویسد)؛ قیمت خالی = قیمت محصول.
+model ProductVariant {
+  id        String                 @id @default(cuid())
+  productId String
+  /// کالای حسابداری — موجودی از کاردکس (حالت داخلی)
+  accItemId String?                @unique
+  /// «آبی / L» — کش عنوان از مقدارها
+  title     String
+  sku       String?
+  price     BigInt?
+  salePrice BigInt?
+  stock     Int                    @default(0)
+  isActive  Boolean                @default(true)
+  sortOrder Int                    @default(0)
+  /// «attributeId:valueId|…» مرتب — یک ترکیب در هر محصول
+  optionKey String
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  product   Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  options   ProductVariantOption[]
+
+  @@unique([productId, optionKey])
+  @@index([productId])
+}
+
+/// محورهای تنوع یک محصول به ترتیب نمایش — از ویژگی‌های فروشگاه
+model ProductVariantAxis {
+  productId   String
+  attributeId String
+  sortOrder   Int     @default(0)
+  /// CHIP | SWATCH (نمونه‌رنگ)
+  display     String  @default("CHIP")
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([productId, attributeId])
+}
+
+model ProductVariantOption {
+  variantId        String
+  attributeId      String
+  attributeValueId String
+  variant          ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@id([variantId, attributeId])
+  @@index([attributeValueId])
 }
 
 model ProductImage {
@@ -190,6 +244,8 @@ model ProductImage {
   url       String
   alt       String?
   sortOrder Int     @default(0)
+  /// عکس یک رنگ (مقدار محور تنوع) — خالی = عکس عمومی همه‌ی تنوع‌ها (فاز ۴، تصمیم ۱۱)
+  attributeValueId String?
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
@@ -390,6 +446,10 @@ model OrderItem {
   unitSalePrice BigInt?
   titleSnapshot String
   skuSnapshot   String?
+  /// تنوع خریداری‌شده (فاز ۴) — عمداً بی کلید خارجی: حذف تنوع سفارش قدیمی را نمی‌شکند
+  variantId            String?
+  /// «آبی / L»
+  variantTitleSnapshot String?
   order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product       Product        @relation(fields: [productId], references: [id])
   cost          OrderItemCost?
@@ -613,7 +673,10 @@ model CartItem {
   cart               Cart              @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product            Product           @relation(fields: [productId], references: [id])
 
-  @@unique([cartId, productId])
+  /// شناسه‌ی تنوع، یا "" برای محصول بی‌تنوع — یکتایی ردیف سبد (فاز ۴)
+  variantKey         String            @default("")
+
+  @@unique([cartId, productId, variantKey])
   @@unique([cartId, assembledProductId])
   @@index([cartId])
   @@index([productId])
@@ -810,6 +873,8 @@ model StoreSettings {
   smsPatternOrderDone      String?
   smsPatternOrderCancel    String?
   walletEnabled            Boolean  @default(false)
+  /// تنوع محصول (رنگ، سایز…) — docs/plans/inventory-items.md فاز ۴. خاموش = فروشگاه دقیقاً مثل قبل
+  variantsEnabled          Boolean  @default(false)
   themeConfig              Json?
   homeHeaderVariant        String   @default("DEFAULT")
   mobileMenuGlass          Boolean  @default(false)
@@ -1121,6 +1186,8 @@ model AttributeValue {
   value       String
   slug        String?
   sortOrder   Int                @default(0)
+  /// نمونه‌رنگ انتخابگر تنوع (#1e40af)
+  colorHex    String?
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   attribute   Attribute          @relation(fields: [attributeId], references: [id], onDelete: Cascade)

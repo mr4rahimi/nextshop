@@ -279,7 +279,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
         ...(coupon ? { couponCode: coupon.code } : {}),
         ...(usePoints ? { usePoints: true } : {}),
         ...(smsConsent ? { smsConsent: true } : {}),
-        items: items.map(i => ({ productId: i.productId, qty: i.qty })),
+        items: items.map(i => ({ productId: i.productId, variantId: i.variantId ?? null, qty: i.qty })),
       }),
     });
     const data = await res.json();

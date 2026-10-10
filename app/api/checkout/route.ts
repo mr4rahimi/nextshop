@@ -10,6 +10,7 @@ import { ensureClubProfile } from "@/lib/club/profile";
 import { emitPaymentsReceived } from "@/lib/accounting/events";
 import { ATTRIBUTION_COOKIE, decodeTouch, orderFieldsFromTouch } from "@/lib/analytics/attribution";
 import { markCartRecovered } from "@/lib/tools/cart-recovery";
+import { checkVariant, effectivePrice, resolveVariants } from "@/lib/variants";
 
 export const runtime = "nodejs";
 
@@ -45,7 +46,8 @@ export async function POST(req: Request) {
   const shipping = await prisma.shippingMethod.findUnique({ where: { id: shippingMethodId } });
   if (!shipping || !shipping.isActive) return NextResponse.json({ error: "روش ارسال نامعتبر است" }, { status: 400 });
 
-  const productIds = items.map((i: any) => i.productId);
+  // یک محصول ممکن است با دو تنوع (آبی L، مشکی M) دو ردیف باشد — docs/plans/inventory-items.md فاز ۴
+  const productIds = [...new Set<string>(items.map((i: any) => i.productId))];
   const products = await prisma.product.findMany({
     where: { id: { in: productIds }, isActive: true },
     select: { id: true, title: true, price: true, salePrice: true },
@@ -54,11 +56,17 @@ export async function POST(req: Request) {
   if (products.length !== productIds.length)
     return NextResponse.json({ error: "یک یا چند محصول در دسترس نیست" }, { status: 400 });
 
+  const variants = await resolveVariants(prisma, items.map((i: any) => ({ productId: i.productId, variantId: i.variantId || null })));
+  for (const i of items as { productId: string; variantId?: string | null }[]) {
+    if (i.variantId ? !variants.has(i.variantId) : (await checkVariant(i.productId, null)) === null)
+      return NextResponse.json({ error: "رنگ یا سایز یکی از کالاهای سبد دیگر موجود نیست — سبد را دوباره ببینید" }, { status: 400 });
+  }
+
   let itemsTotal = BigInt(0);
   const orderItems = items.map((i: any) => {
     const p = products.find(pr => pr.id === i.productId)!;
-    const unitPrice = p.price;
-    const unitSalePrice = p.salePrice;
+    const v = i.variantId ? variants.get(i.variantId)! : null;
+    const { price: unitPrice, salePrice: unitSalePrice } = effectivePrice(p, v);
     const linePrice = (unitSalePrice ?? unitPrice) * BigInt(i.qty);
     itemsTotal += linePrice;
     return {
@@ -66,7 +74,8 @@ export async function POST(req: Request) {
       qty: i.qty,
       unitPrice,
       unitSalePrice,
-      titleSnapshot: p.title,
+      titleSnapshot: v ? `${p.title} — ${v.title}` : p.title,
+      ...(v ? { variantId: v.id, variantTitleSnapshot: v.title, skuSnapshot: v.sku } : {}),
     };
   });
 

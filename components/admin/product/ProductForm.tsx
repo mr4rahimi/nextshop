@@ -5,6 +5,7 @@ import { slugify, slugifyDraft } from "@/lib/slug";
 import { useRouter } from "next/navigation";
 import AiImageStudio from "@/components/admin/product/AiImageStudio";
 import TextMeter from "@/components/admin/tools/TextMeter";
+import VariantsSection from "./VariantsSection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Category { id: string; title: string }
@@ -923,6 +924,9 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
             productId={productId}
           />
         </Section>
+
+        {/* تنوع رنگ/سایز — فقط با «تنوع محصول» روشن در تنظیمات (docs/plans/inventory-items.md فاز ۴) */}
+        {productId && <VariantsSection productId={productId} />}
 
         {}
         <Section title="سوالات متداول (FAQ)" icon="❓" defaultOpen={false}>

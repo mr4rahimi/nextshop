@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 import { CONDITIONS, type ConditionType } from "./product-condition";
+import { variantsEnabled } from "@/lib/variants";
 
 export { CONDITIONS, CONDITION_LABELS, type ConditionType } from "./product-condition";
 
@@ -216,9 +217,16 @@ export async function buildCatalogWhere(
     valueGroups.push(...byAttr.values());
   }
 
+  // تنوع (فاز ۴، docs/plans/inventory-items.md تله‌ی ۶): «آبی» محصولی را هم می‌گیرد که
+  // آبی را فقط در تنوع فعالش دارد — فقط وقتی کلید تنوع روشن است تا کوئری بقیه سنگین نشود
+  const withVariants = valueGroups.length > 0 && (await variantsEnabled());
   for (const ids of valueGroups) {
     where.AND = where.AND ?? [];
-    where.AND.push({ attributes: { some: { attributeValueId: { in: ids } } } });
+    where.AND.push(
+      withVariants
+        ? { OR: [{ attributes: { some: { attributeValueId: { in: ids } } } }, { variants: { some: { isActive: true, options: { some: { attributeValueId: { in: ids } } } } } }] }
+        : { attributes: { some: { attributeValueId: { in: ids } } } },
+    );
   }
 
   return where;

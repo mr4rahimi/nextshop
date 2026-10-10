@@ -22,6 +22,7 @@ import { assertPostable } from "../ledger/fiscal-year";
 import type { Actor } from "../ledger/post";
 import { faNum } from "../money";
 import { ensureItems } from "./items";
+import { syncVariantStockFromItems } from "@/lib/variants";
 
 type Tx = Prisma.TransactionClient;
 
@@ -232,17 +233,23 @@ async function syncShopStock(tx: Tx, deltas: Map<string, number>, absolute: Set<
   if (mode?.mode !== "INTERNAL") return;
   const sellable = new Set((await tx.accWarehouse.findMany({ where: { sellable: true }, select: { id: true } })).map((w) => w.id));
 
+  const absTotals = new Map<string, number>();
   for (const productId of absolute) {
     const rows = await tx.accStock.findMany({ where: { productId } });
     const total = rows.filter((r) => sellable.has(r.warehouseId)).reduce((s, r) => s + r.qty, 0);
+    absTotals.set(productId, total);
     await tx.product.updateMany({ where: { id: productId }, data: { stock: Math.max(0, total) } });
   }
+  const relDeltas = new Map<string, number>();
   for (const [productId, d] of deltas) {
     if (absolute.has(productId) || d === 0) continue;
+    relDeltas.set(productId, d);
     // موجودی سایت منفی نمی‌شود — کاردکس خودش منفی را نگه می‌دارد و هشدار می‌دهد
     const p = await tx.product.findUnique({ where: { id: productId }, select: { stock: true } });
     if (p) await tx.product.update({ where: { id: productId }, data: { stock: Math.max(0, p.stock + d) } });
   }
+  // تنوعِ وصل به همین کالاها (فاز ۴، docs/plans/inventory-items.md) — و جمع محصولشان
+  await syncVariantStockFromItems(tx, absTotals, relDeltas);
 }
 
 async function finish(

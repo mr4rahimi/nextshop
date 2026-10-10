@@ -74,6 +74,7 @@ export async function PUT(req: Request) {
   if (data.smsPatternOrderCancel !== undefined) updateData.smsPatternOrderCancel = data.smsPatternOrderCancel ?? null;
   // Wallet
   if (data.walletEnabled !== undefined) updateData.walletEnabled = data.walletEnabled ?? false;
+  if (data.variantsEnabled !== undefined) updateData.variantsEnabled = !!data.variantsEnabled;
   // Payment gateway
   if (data.paymentGatewayProvider  !== undefined) updateData.paymentGatewayProvider  = data.paymentGatewayProvider  ?? null;
   if (data.paymentGatewayMerchant  !== undefined) updateData.paymentGatewayMerchant  = data.paymentGatewayMerchant  ?? null;

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { NextResponse } from "next/server";
+import { recomputeProductStock } from "@/lib/variants";
 import { submitToIndexNow, productUrl } from "@/lib/indexnow";
 import { logActivityAsync, diffFields, summarizeChanges } from "@/lib/activity";
 import { resolveSlugInput } from "@/lib/slug";
@@ -54,7 +55,7 @@ export async function PUT(
   // وضعیت قبل — برای ثبت «قبل ← بعد» در گزارش عملکرد
   const before = await prisma.product.findUnique({
     where: { id },
-    include: { images: { orderBy: { sortOrder: "asc" }, select: { url: true } }, specs: { select: { id: true } } },
+    include: { images: { orderBy: { sortOrder: "asc" }, select: { url: true, attributeValueId: true } }, specs: { select: { id: true } } },
   });
 
   /** فقط اگر کلید در بدنه آمده باشد مقدار را برمی‌گرداند، وگرنه undefined (Prisma رد می‌کند) */
@@ -91,6 +92,8 @@ export async function PUT(
         .filter((sp: any) => sp?.specItemId)
         .map((sp: any) => ({ specItemId: sp.specItemId, value: sp.value ?? "" }))
     : undefined;
+
+  const colorOf = new Map((before?.images ?? []).filter((i) => i.attributeValueId).map((i) => [i.url, i.attributeValueId]));
 
   try {
     const updated = await prisma.$transaction(async (tx) => {
@@ -148,8 +151,9 @@ export async function PUT(
           gtin13: str("gtin13"),
           mpn:    str("mpn"),
 
+          // رنگ هر عکس (تنوع، فاز ۴) با بازسازی گالری از روی نشانی حفظ می‌شود
           ...(imageUrls && {
-            images: { create: imageUrls.map((url, index) => ({ url, sortOrder: index })) },
+            images: { create: imageUrls.map((url, index) => ({ url, sortOrder: index, attributeValueId: colorOf.get(url) ?? null })) },
           }),
           ...(specRows && { specs: { create: specRows } }),
         },
@@ -160,6 +164,8 @@ export async function PUT(
       });
       // آدرس قدیم ایندکس شده — بدون ۳۰۱ با هر تغییر اسلاگ یک ۴۰۴ تازه می‌ساختیم
       await redirectSlugChange(tx, "product", before?.slug, saved.slug);
+      // محصول دارای تنوع: موجودی = جمع تنوع‌ها، نه عدد فرم (بی‌تنوع دست نمی‌خورد)
+      await recomputeProductStock(tx, [id]);
       return saved;
     });
 
