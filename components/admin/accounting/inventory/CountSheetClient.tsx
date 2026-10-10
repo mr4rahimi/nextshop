@@ -135,7 +135,7 @@ export default function CountSheetClient({ id }: { id: string }) {
 
       {editable && (
         <Card className="p-3 space-y-2 sticky top-2 z-20 shadow-md">
-          <ProductPicker onPick={scan} warehouseId={data.warehouse?.id} autoFocus placeholder="اسکن بارکد یا جستجوی کالا — هر بار یک عدد" />
+          <ProductPicker allowCreate onPick={scan} warehouseId={data.warehouse?.id} autoFocus placeholder="اسکن بارکد یا جستجوی کالا — هر بار یک عدد" />
           {flash && <p className="text-xs font-bold text-emerald-600">✓ {flash}</p>}
         </Card>
       )}

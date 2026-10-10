@@ -5,13 +5,14 @@ import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
 import { stockRows } from "@/lib/accounting/inventory/query";
 import { itemCards, itemSearchWhere } from "@/lib/accounting/inventory/items";
+import { listGroups } from "@/lib/accounting/inventory/catalog";
 import { ensureDefaultWarehouse } from "@/lib/accounting/inventory/docs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET ?q&filter=all|instock|negative|low|noproduct|inactive&warehouseId&take — موجودی کالاها
+ * GET ?q&filter=all|instock|negative|low|noproduct|inactive&warehouseId&groupId&take — موجودی کالاها
  * (`AccItem`، docs/plans/inventory-items.md). «همه» یعنی کالاهای فعال.
  * بها و ارزش فقط با ACC_COST_VIEW.
  */
@@ -38,6 +39,22 @@ export async function GET(req: Request) {
     ).map((s) => s.productId);
     where.AND = [{ id: { in: ids } }];
     delete where.isActive;
+  }
+  const groupId = url.searchParams.get("groupId");
+  if (groupId) {
+    // گروه و همه‌ی زیرگروه‌هایش
+    const groups = await listGroups();
+    const ids = new Set([groupId]);
+    for (let added = true; added; ) {
+      added = false;
+      for (const g of groups) {
+        if (g.parentId && ids.has(g.parentId) && !ids.has(g.id)) {
+          ids.add(g.id);
+          added = true;
+        }
+      }
+    }
+    where.groupId = { in: [...ids] };
   }
   if (filter === "noproduct") {
     const bare = await prisma.$queryRaw<{ id: string }[]>`SELECT i.id FROM "AccItem" i WHERE NOT EXISTS (SELECT 1 FROM "Product" p WHERE p.id = i.id)`;

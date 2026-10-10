@@ -185,6 +185,20 @@ export default function InvoiceDetail({ id }: { id: string }) {
                         {o.label}
                       </a>
                     ))}
+                    {inv.type === "PURCHASE" && inv.lines.some((l) => l.productId) && (
+                      <a
+                        href={`/admin/accounting/inventory/labels/print?items=${inv.lines
+                          .filter((l) => l.productId)
+                          .map((l) => `${l.productId}:${l.qty}`)
+                          .join(",")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => setPrintMenu(false)}
+                        className="block px-3 py-2 rounded-lg text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5"
+                      >
+                        برچسب بارکد کالاها (به تعداد خرید)
+                      </a>
+                    )}
                   </div>
                 )}
               </div>

@@ -4056,13 +4056,84 @@ model AccItem {
   /// در فروش آنلاین؟ false = در پیشنهاد ساخت محصول (فاز ۵) نیاید
   sellOnline   Boolean          @default(true)
   isActive     Boolean          @default(true)
+  groupId      String?
+  /// مدل (پیراهن قاجاری) — کالاهای چند رنگ/سایز یک مدل
+  modelId      String?
+  /// «axisId:valueId|…» مرتب — یک ترکیب ویژگی در هر مدل فقط یک کالا (فاز ۲)
+  attrKey      String?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   barcodes     AccItemBarcode[]
   aliases      AccItemAlias[]
+  attrs        AccItemAttr[]
+  group        AccItemGroup?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  model        AccItemModel?    @relation(fields: [modelId], references: [id], onDelete: SetNull)
 
+  @@unique([modelId, attrKey])
   @@index([title])
   @@index([isActive])
+  @@index([groupId])
+  @@index([modelId])
+}
+
+/// گروه کالا — درختی (پوشاک ← پیراهن)
+model AccItemGroup {
+  id        String         @id @default(cuid())
+  parentId  String?
+  name      String
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+  parent    AccItemGroup?  @relation("AccItemGroupTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  AccItemGroup[] @relation("AccItemGroupTree")
+  items     AccItem[]
+  models    AccItemModel[]
+
+  @@unique([parentId, name])
+}
+
+/// مدل کالا — «پیراهن قاجاری»؛ کالاهایش ترکیب‌های رنگ و سایزند
+model AccItemModel {
+  id        String        @id @default(cuid())
+  title     String        @unique
+  groupId   String?
+  /// محصول سایتی که از این مدل ساخته شد (فاز ۵)
+  productId String?
+  createdAt DateTime      @default(now())
+  group     AccItemGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  items     AccItem[]
+}
+
+/// محور ویژگی کالا — رنگ، سایز. ⚠️ عمداً جدا از `Attribute` فروشگاه: مقدار تازه
+/// اینجا هرگز در فیلتر سایت دیده نمی‌شود. نگاشت به ویژگی فروشگاه هنگام ساخت محصول (فاز ۵).
+model AccAxis {
+  id        String         @id @default(cuid())
+  name      String         @unique
+  sortOrder Int            @default(0)
+  values    AccAxisValue[]
+  itemAttrs AccItemAttr[]
+}
+
+model AccAxisValue {
+  id        String        @id @default(cuid())
+  axisId    String
+  value     String
+  sortOrder Int           @default(0)
+  axis      AccAxis       @relation(fields: [axisId], references: [id], onDelete: Cascade)
+  itemAttrs AccItemAttr[]
+
+  @@unique([axisId, value])
+}
+
+model AccItemAttr {
+  itemId  String
+  axisId  String
+  valueId String
+  item    AccItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  axis    AccAxis      @relation(fields: [axisId], references: [id], onDelete: Restrict)
+  value   AccAxisValue @relation(fields: [valueId], references: [id], onDelete: Restrict)
+
+  @@id([itemId, axisId])
+  @@index([valueId])
 }
 
 /// بارکدهای کالا — هر بارکد در کل یکتا، چند بارکد برای یک کالا

@@ -105,6 +105,7 @@ export default function OpeningInventoryClient() {
       {!ro && (
         <Card className="p-3 space-y-2">
           <ProductPicker
+            allowCreate
             onPick={(p) => {
               const key = `${p.id}|${data.defaultWarehouseId}`;
               setRows((x) => (x.some((r) => r.key === key) ? x : [{ key, productId: p.id, title: p.title, warehouseId: data.defaultWarehouseId, qty: String(Math.max(0, p.siteStock)), unitCost: "" }, ...x]));

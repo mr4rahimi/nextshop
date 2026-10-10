@@ -133,13 +133,27 @@ export interface ItemInput {
   sellOnline?: boolean;
   isActive?: boolean;
   barcodes?: string[];
+  groupId?: string | null;
 }
+
+/** فقط ماتریس (`matrix.ts`) — مدل و ترکیب ویژگی کالا */
+export interface ItemPlacement {
+  modelId: string;
+  attrs: { axisId: string; valueId: string }[];
+}
+
+export const attrKeyOf = (attrs: { axisId: string; valueId: string }[]) =>
+  [...attrs].sort((a, b) => a.axisId.localeCompare(b.axisId)).map((a) => `${a.axisId}:${a.valueId}`).join("|");
 
 async function assertCodeFree(db: Db, code: string, selfId: string | null) {
   const other = await db.accItem.findUnique({ where: { code }, select: { id: true, title: true } });
   if (other && other.id !== selfId) throw new AccError(`کد «${code}» مال «${other.title}» است`, 409);
   const alias = await db.accItemAlias.findFirst({ where: { code, ...(selfId ? { itemId: { not: selfId } } : {}) }, include: { item: { select: { title: true } } } });
   if (alias) throw new AccError(`کد «${code}» کد قبلی «${alias.item.title}» است`, 409);
+}
+
+async function assertGroup(db: Db, groupId: string | null | undefined) {
+  if (groupId && !(await db.accItemGroup.findUnique({ where: { id: groupId }, select: { id: true } }))) throw new AccError("گروه کالا پیدا نشد");
 }
 
 async function setBarcodes(db: Db, itemId: string, raw: string[]) {
@@ -151,13 +165,18 @@ async function setBarcodes(db: Db, itemId: string, raw: string[]) {
 }
 
 /** کالای تازه — بی‌محصول. کد خالی = خودکار */
-export async function createItem(db: Prisma.TransactionClient, input: ItemInput) {
+export async function createItem(db: Prisma.TransactionClient, input: ItemInput, place?: ItemPlacement) {
   const title = input.title?.trim();
   if (!title) throw new AccError("نام کالا را بنویسید");
   const code = normalizeItemCode(input.code) ?? (await nextItemCode(db));
   await assertCodeFree(db, code, null);
+  await assertGroup(db, input.groupId);
   const item = await db.accItem.create({
     data: {
+      groupId: input.groupId || null,
+      ...(place
+        ? { modelId: place.modelId, attrKey: attrKeyOf(place.attrs), attrs: { create: place.attrs.map((a) => ({ axisId: a.axisId, valueId: a.valueId })) } }
+        : {}),
       code,
       title,
       unit: input.unit?.trim() || "عدد",
@@ -196,6 +215,10 @@ export async function updateItem(db: Prisma.TransactionClient, id: string, input
   if (input.reorderPoint !== undefined) data.reorderPoint = input.reorderPoint;
   if (input.sellOnline !== undefined) data.sellOnline = input.sellOnline;
   if (input.isActive !== undefined) data.isActive = input.isActive;
+  if (input.groupId !== undefined) {
+    await assertGroup(db, input.groupId);
+    data.group = input.groupId ? { connect: { id: input.groupId } } : { disconnect: true };
+  }
   const item = await db.accItem.update({ where: { id }, data });
   if (input.barcodes) await setBarcodes(db, id, input.barcodes);
   return item;

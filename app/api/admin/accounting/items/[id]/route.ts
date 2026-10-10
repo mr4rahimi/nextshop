@@ -17,7 +17,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const item = await prisma.accItem.findUnique({
     where: { id },
-    include: { barcodes: { orderBy: { barcode: "asc" } }, aliases: { orderBy: { createdAt: "desc" } } },
+    include: {
+      barcodes: { orderBy: { barcode: "asc" } },
+      aliases: { orderBy: { createdAt: "desc" } },
+      model: { select: { id: true, title: true } },
+      attrs: { include: { axis: { select: { name: true, sortOrder: true } }, value: { select: { value: true } } } },
+    },
   });
   if (!item) return NextResponse.json({ error: "کالا پیدا نشد" }, { status: 404 });
   const product = await prisma.product.findUnique({ where: { id }, select: { id: true, title: true, slug: true } });

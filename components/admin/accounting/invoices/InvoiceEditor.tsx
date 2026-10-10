@@ -487,6 +487,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
             partyId={batch ? undefined : party?.id}
             autoFocus={!id}
             placeholder="افزودن کالا: نام، کد کالا یا اسکن بارکد"
+            allowCreate={type === "PURCHASE"}
           />
         )}
 

@@ -11,7 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { faNum } from "@/lib/accounting/money";
 import InventoryTabs from "./InventoryTabs";
-import ItemForm from "./ItemForm";
+import ItemForm, { useItemGroups } from "./ItemForm";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, inputCls, Money, PageHeader, Stat } from "../ui";
 
 interface Warehouse {
@@ -50,6 +50,8 @@ export default function InventoryClient() {
   // `?filter=negative|low` از «کارهای مانده»ی خانه‌ی حسابداری
   const [filter, setFilter] = useState<Filter>(() => (["all", "low", "negative", "noproduct", "inactive"].includes(sp.get("filter") ?? "") ? (sp.get("filter") as Filter) : "instock"));
   const [creating, setCreating] = useState(false);
+  const [groupId, setGroupId] = useState("");
+  const groups = useItemGroups();
   const router = useRouter();
   const [wh, setWh] = useState("");
   const [data, setData] = useState<Data | null>(null);
@@ -59,13 +61,14 @@ export default function InventoryClient() {
     const p = new URLSearchParams({ filter });
     if (q.trim()) p.set("q", q.trim());
     if (wh) p.set("warehouseId", wh);
+    if (groupId) p.set("groupId", groupId);
     api<Data>(`/api/admin/accounting/inventory?${p}`)
       .then((d) => {
         setData(d);
         setError(null);
       })
       .catch((e) => setError(e.message));
-  }, [q, filter, wh]);
+  }, [q, filter, wh, groupId]);
   useEffect(() => {
     const h = setTimeout(load, q ? 250 : 0);
     return () => clearTimeout(h);
@@ -114,6 +117,16 @@ export default function InventoryClient() {
             { value: "inactive", label: "غیرفعال" },
           ]}
         />
+        {groups.length > 0 && (
+          <select value={groupId} onChange={(e) => setGroupId(e.target.value)} className={`${inputCls} !w-auto !py-1.5 text-xs`} aria-label="گروه کالا">
+            <option value="">همه‌ی گروه‌ها</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.path}
+              </option>
+            ))}
+          </select>
+        )}
         {multi && (
           <Chips
             value={wh}

@@ -18,6 +18,7 @@ export function parseItemInput(b: Record<string, unknown>): ItemInput {
   }
   if (b.sellOnline !== undefined) out.sellOnline = !!b.sellOnline;
   if (b.isActive !== undefined) out.isActive = !!b.isActive;
+  if (b.groupId !== undefined) out.groupId = b.groupId ? String(b.groupId) : null;
   if (b.barcodes !== undefined) {
     if (!Array.isArray(b.barcodes)) throw new AccError("بارکدها نامعتبر است");
     out.barcodes = b.barcodes.map(String);

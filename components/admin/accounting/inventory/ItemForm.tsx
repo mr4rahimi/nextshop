@@ -1,10 +1,12 @@
 "use client";
 
 /**
- * فرم کالای حسابداری — docs/plans/inventory-items.md فاز ۱.
+ * فرم کالای حسابداری — docs/plans/inventory-items.md فاز ۱ و ۲.
  * کد خالی = خودکار؛ کد عوض‌شده در «کدهای قبلی» می‌ماند و جستجو با آن هم کار می‌کند.
+ * `initial` برای ساخت درجا (انتخابگر کالا) و «کپی کالا».
  */
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { faNum } from "@/lib/accounting/money";
 import AmountInput from "../AmountInput";
@@ -20,16 +22,62 @@ interface ItemData {
     reorderPoint: number | null;
     sellOnline: boolean;
     isActive: boolean;
+    groupId: string | null;
     barcodes: { barcode: string }[];
     aliases: { id: string; code: string; source: string }[];
+    model: { id: string; title: string } | null;
+    attrs: { axisId: string; axis: { name: string; sortOrder: number }; value: { value: string } }[];
   };
   product: { id: string; title: string; slug: string } | null;
 }
 
-export default function ItemForm({ itemId, onClose, onSaved }: { itemId: string | null; onClose: () => void; onSaved: (id: string) => void }) {
+export interface ItemInitial {
+  title?: string;
+  barcode?: string;
+  unit?: string;
+  salePrice?: string;
+  groupId?: string | null;
+  sellOnline?: boolean;
+}
+
+type Group = { id: string; path: string };
+
+export function useItemGroups() {
+  const [groups, setGroups] = useState<Group[]>([]);
+  useEffect(() => {
+    api<{ items: Group[] }>("/api/admin/accounting/items/groups")
+      .then((d) => setGroups(d.items))
+      .catch(() => {});
+  }, []);
+  return groups;
+}
+
+export default function ItemForm({
+  itemId,
+  initial,
+  onClose,
+  onSaved,
+}: {
+  itemId: string | null;
+  initial?: ItemInitial;
+  onClose: () => void;
+  onSaved: (id: string) => void;
+}) {
   const [data, setData] = useState<ItemData | null>(null);
   const [auto, setAuto] = useState("");
-  const [f, setF] = useState({ code: "", title: "", unit: "عدد", salePrice: "", reorderPoint: "", barcodes: "", sellOnline: true, isActive: true });
+  const [copyOf, setCopyOf] = useState<ItemInitial | null>(null);
+  const groups = useItemGroups();
+  const [f, setF] = useState({
+    code: "",
+    title: initial?.title ?? "",
+    unit: initial?.unit ?? "عدد",
+    salePrice: initial?.salePrice ?? "",
+    reorderPoint: "",
+    barcodes: initial?.barcode ?? "",
+    sellOnline: initial?.sellOnline ?? true,
+    isActive: true,
+    groupId: initial?.groupId ?? "",
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +99,7 @@ export default function ItemForm({ itemId, onClose, onSaved }: { itemId: string 
           barcodes: i.barcodes.map((b) => b.barcode).join("\n"),
           sellOnline: i.sellOnline,
           isActive: i.isActive,
+          groupId: i.groupId ?? "",
         });
       })
       .catch((e) => setError(e.message));
@@ -68,6 +117,7 @@ export default function ItemForm({ itemId, onClose, onSaved }: { itemId: string 
         reorderPoint: f.reorderPoint.trim() === "" ? null : f.reorderPoint,
         barcodes: f.barcodes.split(/[\s,،]+/).filter(Boolean),
         sellOnline: f.sellOnline,
+        groupId: f.groupId || null,
         ...(itemId ? { isActive: f.isActive } : {}),
       };
       const r = itemId
@@ -81,8 +131,12 @@ export default function ItemForm({ itemId, onClose, onSaved }: { itemId: string 
     }
   }
 
+  // کپی: فرم تازه با همه‌چیز جز کد و بارکد (یکتا هستند)
+  if (copyOf) return <ItemForm itemId={null} initial={copyOf} onClose={onClose} onSaved={onSaved} />;
+
   const product = data?.product ?? null;
   const loading = itemId && !data;
+  const attrs = [...(data?.item.attrs ?? [])].sort((a, b) => a.axis.sortOrder - b.axis.sortOrder);
 
   return (
     <Sheet
@@ -91,9 +145,25 @@ export default function ItemForm({ itemId, onClose, onSaved }: { itemId: string 
       title={itemId ? "ویرایش کالا" : "کالای تازه"}
       help="accountingItem"
       footer={
-        <button onClick={save} disabled={busy || !!loading} className={`${btn.primary} w-full`}>
-          {busy ? "…" : "ذخیره"}
-        </button>
+        <div className="flex gap-2">
+          <button onClick={save} disabled={busy || !!loading} className={`${btn.primary} flex-1`}>
+            {busy ? "…" : "ذخیره"}
+          </button>
+          {itemId && data && (
+            <>
+              <button
+                type="button"
+                onClick={() => setCopyOf({ title: `${f.title} (کپی)`, unit: f.unit, salePrice: f.salePrice, groupId: f.groupId || null, sellOnline: f.sellOnline })}
+                className={btn.soft}
+              >
+                کپی
+              </button>
+              <Link href={`/admin/accounting/inventory/labels/print?items=${itemId}:1`} target="_blank" className={btn.soft}>
+                برچسب
+              </Link>
+            </>
+          )}
+        </div>
       }
     >
       {loading ? (
@@ -104,6 +174,16 @@ export default function ItemForm({ itemId, onClose, onSaved }: { itemId: string 
             <p className="text-xs text-gray-500 leading-6">
               این کالا محصول سایت «{product.title}» است. تا وقتی نامش را اینجا عوض نکنید، با نام محصول همگام می‌ماند.
             </p>
+          )}
+          {data?.item.model && (
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+              مدل «{data.item.model.title}»
+              {attrs.map((a) => (
+                <Badge key={a.axisId} tone="blue">
+                  {a.axis.name}: {a.value.value}
+                </Badge>
+              ))}
+            </div>
           )}
           <Field label="نام کالا">
             <input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} className={inputCls} autoFocus={!itemId} placeholder="مثلاً: پیراهن قاجاری آبی سایز L" />
@@ -127,6 +207,16 @@ export default function ItemForm({ itemId, onClose, onSaved }: { itemId: string 
               ))}
             </div>
           )}
+          <Field label="گروه کالا">
+            <select value={f.groupId} onChange={(e) => setF({ ...f, groupId: e.target.value })} className={inputCls}>
+              <option value="">بی‌گروه</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.path}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label="بارکد" hint="هر بارکد در یک خط؛ می‌توانید با بارکدخوان اسکن کنید.">
             <textarea value={f.barcodes} onChange={(e) => setF({ ...f, barcodes: e.target.value })} className={`${inputCls} font-mono`} dir="ltr" rows={2} />
           </Field>

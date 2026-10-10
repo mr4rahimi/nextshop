@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import { faNum } from "@/lib/accounting/money";
 import { api, inputCls } from "./ui";
+import ItemForm from "./inventory/ItemForm";
 
 export interface ProductOption {
   id: string;
@@ -33,6 +34,7 @@ export default function ProductPicker({
   autoFocus,
   priceFor,
   partyId,
+  allowCreate,
 }: {
   onPick: (p: ProductOption) => void;
   /** موجودی همین انبار کنار هر نتیجه نشان داده می‌شود */
@@ -42,7 +44,10 @@ export default function ProductPicker({
   /** قیمت پیش‌فرض فاکتور: فروش از سایت، خرید از آخرین خرید همین طرف حساب */
   priceFor?: "sales" | "purchase";
   partyId?: string | null;
+  /** «ساخت کالای تازه» با همان متن جستجو — فاکتور خرید، اول دوره (docs/plans/inventory-items.md بخش ۴) */
+  allowCreate?: boolean;
 }) {
+  const [creating, setCreating] = useState<{ title?: string; barcode?: string } | null>(null);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<ProductOption[]>([]);
@@ -148,7 +153,40 @@ export default function ProductPicker({
             </button>
           ))}
           {!loading && !items.length && <p className="px-3 py-3 text-xs text-gray-400">کالایی پیدا نشد.</p>}
+          {allowCreate && !loading && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                const t = q.trim();
+                // عدد بلند = اسکن بارکد ناشناخته؛ بقیه نام کالا
+                setCreating(/^[0-9۰-۹]{8,}$/.test(t) ? { barcode: t } : { title: t });
+                setOpen(false);
+              }}
+              className="w-full px-3 py-2.5 text-right text-xs font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-white/5 border-t border-gray-100 dark:border-white/5"
+            >
+              + ساخت کالای تازه «{q.trim()}»
+            </button>
+          )}
         </div>
+      )}
+      {creating && (
+        <ItemForm
+          itemId={null}
+          initial={creating}
+          onClose={() => setCreating(null)}
+          onSaved={async (id) => {
+            setCreating(null);
+            const p = new URLSearchParams({ q: "" });
+            if (priceFor) p.set("for", priceFor);
+            if (partyId) p.set("partyId", partyId);
+            const code = (await api<{ item: { code: string } }>(`/api/admin/accounting/items/${id}`)).item.code;
+            p.set("q", code);
+            const d = await api<{ items: ProductOption[]; exactId: string | null }>(`/api/admin/accounting/inventory/products?${p}`);
+            const hit = d.items.find((i) => i.id === id);
+            if (hit) pick(hit);
+          }}
+        />
       )}
     </div>
   );
