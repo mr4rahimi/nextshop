@@ -10,7 +10,7 @@
 
 import {
   Activity, ArrowLeftRight, Banknote, CalendarClock, ChartColumn, ChartPie, ClipboardList,
-  ClockCheck, Coins, FolderTree, House, Landmark, Link2, ListTodo, NotebookPen,
+  ClockCheck, Coins, FileSpreadsheet, FolderTree, House, Landmark, Link2, ListTodo, NotebookPen,
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
@@ -119,6 +119,7 @@ export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting/accounts", label: "سرفصل حساب‌ها", icon: FolderTree, tone: "lime", perm: ["ACC_VOUCHER", "ACC_SETTINGS"], tag: "حسابدار", img: "acc-accounts" },
   { href: "/admin/accounting/events", label: "رویدادهای مالی", icon: Zap, tone: "red", perm: ["ACC_VIEW", "ACC_SETTINGS"], img: "acc-events" },
   { href: "/admin/accounting/settings", label: "تنظیمات", icon: Settings, tone: "slate", perm: ["ACC_VIEW", "ACC_SETTINGS"], img: "acc-settings" },
+  { href: "/admin/accounting/import", label: "ورود از اکسل", icon: FileSpreadsheet, tone: "emerald", perm: ["ACC_INVENTORY", "ACC_PARTY_MANAGE", "ACC_SETTINGS"] },
   { href: "/admin/accounting/settings?tab=years", label: "بستن سال مالی", icon: Lock, tone: "slate", perm: ["ACC_SETTINGS"], img: "acc-closing" },
 ];
 

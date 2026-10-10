@@ -118,6 +118,11 @@ export default function OpeningClient() {
         help="accountingOpening"
         desc={`وضعیت مالی در روز اول سال مالی ${faNum(data.year.title)} — ${formatJalali(new Date(data.year.startDate))}`}
         back={{ href: "/admin/accounting", label: "حسابداری" }}
+        actions={
+          <Link href="/admin/accounting/import" className={btn.soft}>
+            ورود از اکسل
+          </Link>
+        }
       />
 
       {sp.get("welcome") && (

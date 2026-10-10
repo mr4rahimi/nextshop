@@ -3868,6 +3868,8 @@ model AccParty {
   supplierId    String?       @unique
   platformCode  String?       @unique
   hesabanId     Int?
+  /// کد شخص در نرم‌افزار قبلی — تطبیق ورود دوباره از اکسل (docs/plans/inventory-items.md فاز ۳)
+  externalCode  String?
   note          String?
   isActive      Boolean       @default(true)
   createdAt     DateTime      @default(now())
@@ -3881,6 +3883,7 @@ model AccParty {
 
   @@index([mobile])
   @@index([name])
+  @@index([externalCode])
 }
 
 enum AccTreasuryKind {

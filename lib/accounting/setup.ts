@@ -79,62 +79,65 @@ export async function readOpening(db: Tx | typeof prisma, yearId: string) {
 }
 
 export async function saveOpening(yearId: string, input: OpeningBalances, actor: Actor) {
-  return prisma.$transaction(async (tx) => {
-    const year = await tx.accFiscalYear.findUnique({ where: { id: yearId } });
-    if (!year) throw new AccError("سال مالی پیدا نشد", 404);
-    if (await hasCarriedOpening(tx, yearId)) throw new AccError(CARRIED_MSG, 409);
+  return prisma.$transaction((tx) => saveOpeningTx(tx, yearId, input, actor));
+}
 
-    const lines: LineInput[] = [];
-    const seenT = new Set<string>();
-    for (const t of input.treasuries) {
-      if (t.amount === 0n) continue;
-      if (seenT.has(t.treasuryId)) throw new AccError("یک صندوق یا بانک دو بار آمده است");
-      seenT.add(t.treasuryId);
-      const tr = await tx.accTreasury.findUnique({ where: { id: t.treasuryId } });
-      if (!tr) throw new AccError("صندوق یا بانک پیدا نشد");
-      if (t.amount < 0n && tr.kind === "CASH") throw new AccError(`موجودی «${tr.name}» منفی نمی‌شود`);
-      lines.push({
-        accountKey: TREASURY_ACCOUNT_KEY[tr.kind],
-        treasuryId: tr.id,
-        debit: t.amount > 0n ? t.amount : 0n,
-        credit: t.amount < 0n ? -t.amount : 0n,
-        description: "موجودی اول دوره",
-      });
-    }
-    const seenP = new Set<string>();
-    for (const p of input.parties) {
-      if (p.amount === 0n) continue;
-      if (seenP.has(p.partyId)) throw new AccError("یک شخص دو بار آمده است");
-      seenP.add(p.partyId);
-      lines.push(
-        p.amount > 0n
-          ? { accountKey: "AR", partyId: p.partyId, debit: p.amount, description: "طلب اول دوره" }
-          : { accountKey: "AP", partyId: p.partyId, credit: -p.amount, description: "بدهی اول دوره" },
-      );
-    }
+/** همان `saveOpening` در تراکنش فراخوان — ورود از اکسل (`lib/accounting/import/run.ts`) */
+export async function saveOpeningTx(tx: Tx, yearId: string, input: OpeningBalances, actor: Actor) {
+  const year = await tx.accFiscalYear.findUnique({ where: { id: yearId } });
+  if (!year) throw new AccError("سال مالی پیدا نشد", 404);
+  if (await hasCarriedOpening(tx, yearId)) throw new AccError(CARRIED_MSG, 409);
 
-    const existing = await tx.accVoucher.findFirst({
-      where: { source: "OPENING", sourceId: openingKey(yearId), status: "POSTED" },
+  const lines: LineInput[] = [];
+  const seenT = new Set<string>();
+  for (const t of input.treasuries) {
+    if (t.amount === 0n) continue;
+    if (seenT.has(t.treasuryId)) throw new AccError("یک صندوق یا بانک دو بار آمده است");
+    seenT.add(t.treasuryId);
+    const tr = await tx.accTreasury.findUnique({ where: { id: t.treasuryId } });
+    if (!tr) throw new AccError("صندوق یا بانک پیدا نشد");
+    if (t.amount < 0n && tr.kind === "CASH") throw new AccError(`موجودی «${tr.name}» منفی نمی‌شود`);
+    lines.push({
+      accountKey: TREASURY_ACCOUNT_KEY[tr.kind],
+      treasuryId: tr.id,
+      debit: t.amount > 0n ? t.amount : 0n,
+      credit: t.amount < 0n ? -t.amount : 0n,
+      description: "موجودی اول دوره",
     });
-    if (input.wallets) lines.push(...(await walletOpeningLines(tx, existing?.id ?? null)).lines);
-    if (!lines.length) {
-      if (existing) await voidVoucher(tx, existing.id, "مانده‌های اول دوره پاک شد", actor, { fromSource: true });
-      return null;
-    }
-    // اختلاف دارایی و بدهی = سرمایه‌ی اول دوره — روی «تراز افتتاحیه» می‌نشیند
-    const net = lines.reduce((s, l) => s + (l.debit ?? 0n) - (l.credit ?? 0n), 0n);
-    if (net !== 0n) {
-      lines.push(
-        net > 0n
-          ? { accountKey: "OPENING_BALANCE", credit: net, description: "تراز افتتاحیه" }
-          : { accountKey: "OPENING_BALANCE", debit: -net, description: "تراز افتتاحیه" },
-      );
-    }
-    if (lines.length < 2) throw new AccError("مانده‌ها سند تراز نمی‌سازند");
+  }
+  const seenP = new Set<string>();
+  for (const p of input.parties) {
+    if (p.amount === 0n) continue;
+    if (seenP.has(p.partyId)) throw new AccError("یک شخص دو بار آمده است");
+    seenP.add(p.partyId);
+    lines.push(
+      p.amount > 0n
+        ? { accountKey: "AR", partyId: p.partyId, debit: p.amount, description: "طلب اول دوره" }
+        : { accountKey: "AP", partyId: p.partyId, credit: -p.amount, description: "بدهی اول دوره" },
+    );
+  }
 
-    const input2 = { date: year.startDate, description: `مانده‌های اول دوره‌ی سال ${year.title}`, lines, actor };
-    return existing
-      ? rebuildVoucher(tx, existing.id, input2)
-      : postVoucher(tx, { ...input2, source: "OPENING", sourceId: openingKey(yearId) });
+  const existing = await tx.accVoucher.findFirst({
+    where: { source: "OPENING", sourceId: openingKey(yearId), status: "POSTED" },
   });
+  if (input.wallets) lines.push(...(await walletOpeningLines(tx, existing?.id ?? null)).lines);
+  if (!lines.length) {
+    if (existing) await voidVoucher(tx, existing.id, "مانده‌های اول دوره پاک شد", actor, { fromSource: true });
+    return null;
+  }
+  // اختلاف دارایی و بدهی = سرمایه‌ی اول دوره — روی «تراز افتتاحیه» می‌نشیند
+  const net = lines.reduce((s, l) => s + (l.debit ?? 0n) - (l.credit ?? 0n), 0n);
+  if (net !== 0n) {
+    lines.push(
+      net > 0n
+        ? { accountKey: "OPENING_BALANCE", credit: net, description: "تراز افتتاحیه" }
+        : { accountKey: "OPENING_BALANCE", debit: -net, description: "تراز افتتاحیه" },
+    );
+  }
+  if (lines.length < 2) throw new AccError("مانده‌ها سند تراز نمی‌سازند");
+
+  const input2 = { date: year.startDate, description: `مانده‌های اول دوره‌ی سال ${year.title}`, lines, actor };
+  return existing
+    ? rebuildVoucher(tx, existing.id, input2)
+    : postVoucher(tx, { ...input2, source: "OPENING", sourceId: openingKey(yearId) });
 }
