@@ -13,6 +13,7 @@ import { GLOBAL_SEQ, nextNumber } from "../ledger/sequence";
 import { postVoucher, rebuildVoucher, voidVoucher, type Actor, type LineInput } from "../ledger/post";
 import { hasCarriedOpening } from "../ledger/closing";
 import { applyMoves, assertAvailable, qtyAt, registerCostRebuilder, removeMoves } from "./stock";
+import { itemTitles } from "./items";
 
 type Tx = Prisma.TransactionClient;
 
@@ -80,7 +81,7 @@ export async function createTransfer(
   const lines = input.lines.filter((l) => l.qty > 0);
   if (!lines.length) throw new AccError("دست‌کم یک کالا با تعداد وارد کنید");
   const year = await assertPostable(tx, input.date);
-  const titles = new Map((await tx.product.findMany({ where: { id: { in: lines.map((l) => l.productId) } }, select: { id: true, title: true } })).map((p) => [p.id, p.title]));
+  const titles = await itemTitles(lines.map((l) => l.productId), tx);
   if (titles.size !== new Set(lines.map((l) => l.productId)).size) throw new AccError("کالا پیدا نشد");
   await assertAvailable(tx, lines.map((l) => ({ ...l, title: titles.get(l.productId) })), input.fromWarehouseId, input.date);
 
@@ -114,7 +115,7 @@ export async function voidTransfer(tx: Tx, id: string, reason: string, actor: Ac
   if (t.status === "VOID") return t;
   if (!reason.trim()) throw new AccError("دلیل ابطال را بنویسید");
   // برگرداندن کالا به مبدأ یعنی خروج از مقصد — باید آنجا مانده باشد
-  const titles = new Map((await tx.product.findMany({ where: { id: { in: t.lines.map((l) => l.productId) } }, select: { id: true, title: true } })).map((p) => [p.id, p.title]));
+  const titles = await itemTitles(t.lines.map((l) => l.productId), tx);
   await assertAvailable(tx, t.lines.map((l) => ({ productId: l.productId, qty: l.qty, title: titles.get(l.productId) })), t.toWarehouseId, null);
   await removeMoves(tx, "AccTransfer", t.id, actor);
   return tx.accTransfer.update({ where: { id }, data: { status: "VOID", voidReason: `${reason.trim()} — ${actor.name}` } });

@@ -5,6 +5,7 @@ import { can, requirePermission } from "@/lib/permissions";
 import { createTransfer } from "@/lib/accounting/inventory/docs";
 import { AccError, accErrorResponse } from "@/lib/accounting/errors";
 import { actorOf, rangeFrom, readJson, requireDay } from "@/lib/accounting/api";
+import { itemTitles } from "@/lib/accounting/inventory/items";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,9 +21,7 @@ export async function GET(req: Request) {
     include: { lines: true },
   });
   const ids = [...new Set(items.flatMap((t) => t.lines.map((l) => l.productId)))];
-  const titles = Object.fromEntries(
-    (await prisma.product.findMany({ where: { id: { in: ids } }, select: { id: true, title: true } })).map((p) => [p.id, p.title]),
-  );
+  const titles = Object.fromEntries(await itemTitles(ids));
   return NextResponse.json(serialize({ items, titles, can: { manage: can(guard.access, "ACC_INVENTORY") } }));
 }
 

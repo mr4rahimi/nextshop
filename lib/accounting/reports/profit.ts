@@ -14,6 +14,7 @@
 import type { AccChannel } from "@prisma/client";
 import { INVOICE_SOURCE } from "../invoices/service";
 import type { Db, DateRange } from "./common";
+import { itemTitles } from "../inventory/items";
 
 export type ProfitDim = "product" | "category" | "channel";
 
@@ -55,6 +56,7 @@ export async function profitBy(db: Db, range: DateRange, dim: ProfitDim) {
   const productIds = [...new Set(invs.flatMap((i) => i.lines.map((l) => l.productId)).filter((x): x is string => !!x))];
   const products = dim === "channel" ? [] : await db.product.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true, categoryId: true } });
   const pInfo = new Map(products.map((p) => [p.id, p]));
+  const titles = dim === "product" ? await itemTitles(productIds, db) : new Map<string, string>();
   const cats = dim === "category" ? await db.category.findMany({ where: { id: { in: [...new Set(products.map((p) => p.categoryId))] } }, select: { id: true, title: true } }) : [];
   const catName = new Map(cats.map((c) => [c.id, c.title]));
 
@@ -72,7 +74,7 @@ export async function profitBy(db: Db, range: DateRange, dim: ProfitDim) {
         label = "خدمات (بی‌کالا)";
       } else if (dim === "product") {
         key = l.productId;
-        label = pInfo.get(l.productId)?.title ?? l.title;
+        label = titles.get(l.productId) ?? l.title;
       } else {
         const c = pInfo.get(l.productId)?.categoryId;
         key = c ?? "_none";

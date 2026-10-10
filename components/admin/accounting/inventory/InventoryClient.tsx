@@ -7,10 +7,12 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Plus } from "lucide-react";
 import { faNum } from "@/lib/accounting/money";
 import InventoryTabs from "./InventoryTabs";
-import { api, Badge, Card, Chips, Empty, ErrorText, inputCls, Money, PageHeader, Stat } from "../ui";
+import ItemForm from "./ItemForm";
+import { api, Badge, btn, Card, Chips, Empty, ErrorText, inputCls, Money, PageHeader, Stat } from "../ui";
 
 interface Warehouse {
   id: string;
@@ -22,9 +24,11 @@ interface Warehouse {
 interface Item {
   id: string;
   title: string;
-  sku: string | null;
+  sku: string;
   image: string | null;
-  siteStock: number;
+  hasProduct: boolean;
+  isActive: boolean;
+  siteStock: number | null;
   lowStockThreshold: number;
   qty: number;
   byWarehouse: Record<string, number>;
@@ -38,13 +42,15 @@ interface Data {
   can: { cost: boolean; manage: boolean };
 }
 
-type Filter = "instock" | "all" | "low" | "negative";
+type Filter = "instock" | "all" | "low" | "negative" | "noproduct" | "inactive";
 
 export default function InventoryClient() {
   const [q, setQ] = useState("");
   const sp = useSearchParams();
   // `?filter=negative|low` از «کارهای مانده»ی خانه‌ی حسابداری
-  const [filter, setFilter] = useState<Filter>(() => (["all", "low", "negative"].includes(sp.get("filter") ?? "") ? (sp.get("filter") as Filter) : "instock"));
+  const [filter, setFilter] = useState<Filter>(() => (["all", "low", "negative", "noproduct", "inactive"].includes(sp.get("filter") ?? "") ? (sp.get("filter") as Filter) : "instock"));
+  const [creating, setCreating] = useState(false);
+  const router = useRouter();
   const [wh, setWh] = useState("");
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +76,20 @@ export default function InventoryClient() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="کالا و انبار" help="accountingInventory" desc="موجودی هر کالا در هر انبار، با کاردکس کامل ورود و خروج." />
+      <PageHeader
+        title="کالا و انبار"
+        help="accountingInventory"
+        desc="موجودی هر کالا در هر انبار، با کاردکس کامل ورود و خروج."
+        actions={
+          data?.can.manage && (
+            <button onClick={() => setCreating(true)} className={btn.primary}>
+              <Plus className="h-4 w-4" aria-hidden />
+              کالای تازه
+            </button>
+          )
+        }
+      />
+      {creating && <ItemForm itemId={null} onClose={() => setCreating(false)} onSaved={(id) => router.push(`/admin/accounting/inventory/${id}`)} />}
       <InventoryTabs />
 
       {data && (
@@ -91,6 +110,8 @@ export default function InventoryClient() {
             { value: "low", label: "رو به اتمام" },
             { value: "negative", label: "منفی" },
             { value: "all", label: "همه‌ی کالاها" },
+            { value: "noproduct", label: "بی‌محصول در سایت" },
+            { value: "inactive", label: "غیرفعال" },
           ]}
         />
         {multi && (
@@ -118,7 +139,10 @@ export default function InventoryClient() {
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-bold truncate">{i.title}</span>
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-400 mt-0.5">
-                  {i.sku && <span>کد {faNum(i.sku)}</span>}
+                  <span>
+                    کد <span dir="ltr">{faNum(i.sku)}</span>
+                  </span>
+                  {!i.hasProduct && <span className="text-amber-600">بی‌محصول</span>}
                   {multi &&
                     !wh &&
                     active

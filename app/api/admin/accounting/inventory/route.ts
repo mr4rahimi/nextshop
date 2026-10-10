@@ -3,14 +3,16 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
-import { productSearchWhere, stockRows } from "@/lib/accounting/inventory/query";
+import { stockRows } from "@/lib/accounting/inventory/query";
+import { itemCards, itemSearchWhere } from "@/lib/accounting/inventory/items";
 import { ensureDefaultWarehouse } from "@/lib/accounting/inventory/docs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET ?q&filter=all|instock|negative|low&warehouseId&take — موجودی کالاها.
+ * GET ?q&filter=all|instock|negative|low|noproduct|inactive&warehouseId&take — موجودی کالاها
+ * (`AccItem`، docs/plans/inventory-items.md). «همه» یعنی کالاهای فعال.
  * بها و ارزش فقط با ACC_COST_VIEW.
  */
 export async function GET(req: Request) {
@@ -25,7 +27,7 @@ export async function GET(req: Request) {
   await prisma.$transaction((tx) => ensureDefaultWarehouse(tx));
   const warehouses = await prisma.accWarehouse.findMany({ orderBy: [{ isDefault: "desc" }, { code: "asc" }] });
 
-  const where: Prisma.ProductWhereInput = { ...productSearchWhere(url.searchParams.get("q")) };
+  const where: Prisma.AccItemWhereInput = { ...(await itemSearchWhere(url.searchParams.get("q"))), isActive: filter !== "inactive" };
   if (filter === "instock" || filter === "negative") {
     const ids = (
       await prisma.accStock.findMany({
@@ -34,25 +36,37 @@ export async function GET(req: Request) {
         distinct: ["productId"],
       })
     ).map((s) => s.productId);
-    where.id = { in: ids };
+    where.AND = [{ id: { in: ids } }];
+    delete where.isActive;
+  }
+  if (filter === "noproduct") {
+    const bare = await prisma.$queryRaw<{ id: string }[]>`SELECT i.id FROM "AccItem" i WHERE NOT EXISTS (SELECT 1 FROM "Product" p WHERE p.id = i.id)`;
+    where.AND = [{ id: { in: bare.map((r) => r.id) } }];
   }
 
-  const products = await prisma.product.findMany({
+  const found = await prisma.accItem.findMany({
     where,
     orderBy: { title: "asc" },
     take: filter === "low" ? 1000 : take,
-    select: { id: true, title: true, sku: true, mainImage: true, stock: true, lowStockThreshold: true, trackStock: true },
+    select: { id: true },
   });
-  const rows = await stockRows(products.map((p) => p.id), withCost);
-  let items = products.map((p) => ({
-    id: p.id,
-    title: p.title,
-    sku: p.sku,
-    image: p.mainImage,
-    siteStock: p.stock,
-    lowStockThreshold: p.lowStockThreshold,
-    ...rows.get(p.id)!,
-  }));
+  const ids = found.map((i) => i.id);
+  const [cards, rows] = await Promise.all([itemCards(ids), stockRows(ids, withCost)]);
+  let items = ids.map((id) => {
+    const c = cards.get(id)!;
+    return {
+      id,
+      title: c.title,
+      sku: c.code,
+      code: c.code,
+      image: c.image,
+      hasProduct: c.hasProduct,
+      isActive: c.isActive,
+      siteStock: c.siteStock,
+      lowStockThreshold: c.lowStockThreshold,
+      ...rows.get(id)!,
+    };
+  });
   if (filter === "low") items = items.filter((i) => i.qty <= i.lowStockThreshold).slice(0, take);
 
   const totals = withCost

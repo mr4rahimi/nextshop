@@ -7,6 +7,7 @@
 
 import { accountIndex, dateWhere, natural, sumBig, sumsByAccount, type Db, type DateRange } from "./common";
 import { balanceOf, NOT_CARRY } from "../ledger/balances";
+import { itemTitles } from "../inventory/items";
 
 // ── ارزش افزوده ──
 
@@ -107,6 +108,7 @@ export async function inventoryValue(db: Db, opts: { warehouseId: string | null;
   };
   const products = await db.product.findMany({ where: { id: { in: [...new Set(stocks.map((s) => s.productId))] } }, select: { id: true, title: true, categoryId: true } });
   const pInfo = new Map(products.map((p) => [p.id, p]));
+  const titles = opts.by === "product" ? await itemTitles(stocks.map((s) => s.productId), db) : new Map<string, string>();
   const cats = opts.by === "category" ? await db.category.findMany({ where: { id: { in: [...new Set(products.map((p) => p.categoryId))] } }, select: { id: true, title: true } }) : [];
   const catName = new Map(cats.map((c) => [c.id, c.title]));
   const whName = new Map(warehouses.map((w) => [w.id, w.name]));
@@ -117,7 +119,7 @@ export async function inventoryValue(db: Db, opts: { warehouseId: string | null;
     const p = pInfo.get(s.productId);
     const [key, label] =
       opts.by === "product"
-        ? [s.productId, p?.title ?? "—"]
+        ? [s.productId, titles.get(s.productId) ?? p?.title ?? "—"]
         : opts.by === "warehouse"
           ? [s.warehouseId, whName.get(s.warehouseId) ?? "—"]
           : [p?.categoryId ?? "_none", (p && catName.get(p.categoryId)) || "بی‌دسته"];

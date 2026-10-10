@@ -23,6 +23,7 @@ import { applyMoves, registerCostRebuilder, removeMoves, type MoveInput } from "
 import { ensureDefaultWarehouse } from "../inventory/docs";
 import { faNum, formatAmount } from "../money";
 import { calcInvoice, CalcError, divRound, INVOICE_TYPE_LABELS, allocate } from "./calc";
+import { ensureItems } from "../inventory/items";
 
 type Tx = Prisma.TransactionClient;
 
@@ -193,8 +194,9 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
   const refLines = new Map((ref?.lines ?? []).map((l) => [l.id, l]));
   const already = ref ? await returnedQty(tx, [...refLines.keys()], id) : new Map<string, number>();
   const productIds = [...new Set(input.lines.map((l) => (l.refLineId ? refLines.get(l.refLineId)?.productId : l.productId)).filter((x): x is string => !!x))];
+  await ensureItems(tx, productIds);
   const products = new Map(
-    (await tx.product.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true } })).map((p) => [p.id, p]),
+    (await tx.accItem.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true } })).map((p) => [p.id, p]),
   );
 
   const lines: (Required<Omit<InvoiceLineInput, "discount" | "vatRateBp" | "title">> & { title: string; discount: bigint; vatRateBp: number })[] = [];

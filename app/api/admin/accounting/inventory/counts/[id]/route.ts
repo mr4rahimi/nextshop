@@ -6,6 +6,7 @@ import { postCount, setCountLines, voidCount } from "@/lib/accounting/inventory/
 import { qtyAt } from "@/lib/accounting/inventory/stock";
 import { AccError, accErrorResponse } from "@/lib/accounting/errors";
 import { actorOf, readJson } from "@/lib/accounting/api";
+import { itemBriefs } from "@/lib/accounting/inventory/items";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!c) return NextResponse.json({ error: "انبارگردانی پیدا نشد" }, { status: 404 });
   const [warehouse, products] = await Promise.all([
     prisma.accWarehouse.findUnique({ where: { id: c.warehouseId } }),
-    prisma.product.findMany({ where: { id: { in: c.lines.map((l) => l.productId) } }, select: { id: true, title: true, sku: true, mainImage: true } }),
+    itemBriefs(c.lines.map((l) => l.productId)),
   ]);
   const pm = new Map(products.map((p) => [p.id, p]));
   const lines = await Promise.all(

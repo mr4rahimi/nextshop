@@ -21,6 +21,7 @@ import { AccError } from "../errors";
 import { assertPostable } from "../ledger/fiscal-year";
 import type { Actor } from "../ledger/post";
 import { faNum } from "../money";
+import { ensureItems } from "./items";
 
 type Tx = Prisma.TransactionClient;
 
@@ -285,6 +286,7 @@ export async function applyMoves(tx: Tx, moves: MoveInput[], actor: Actor, opts:
   if (!moves.length) return;
   for (const d of new Set(moves.map((m) => m.date.getTime()))) await assertPostable(tx, new Date(d));
   await lockProducts(tx, moves.map((m) => m.productId));
+  await ensureItems(tx, moves.map((m) => m.productId));
 
   const warehouses = new Map((await tx.accWarehouse.findMany()).map((w) => [w.id, w]));
   const touched = new Map<string, Date>();

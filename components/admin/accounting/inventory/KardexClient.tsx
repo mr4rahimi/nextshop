@@ -7,7 +7,8 @@ import { useCallback, useEffect, useState } from "react";
 import { formatJalali } from "@/lib/club/jalali";
 import { faNum, formatAmount } from "@/lib/accounting/money";
 import { RangeBar, rangeFor, rangeQuery, type Range } from "../Statement";
-import { api, Badge, Card, Chips, Empty, ErrorText, Money, PageHeader, Stat } from "../ui";
+import { api, Badge, btn, Card, Chips, Empty, ErrorText, Money, PageHeader, Stat } from "../ui";
+import ItemForm from "./ItemForm";
 
 const MOVE_LABELS: Record<string, string> = {
   OPENING: "موجودی اول دوره",
@@ -43,13 +44,13 @@ interface Row {
   balanceQty?: number;
 }
 interface Data {
-  product: { id: string; title: string; sku: string | null; gtin13: string | null; mainImage: string | null; stock: number; lowStockThreshold: number };
+  product: { id: string; title: string; sku: string; unit: string; mainImage: string | null; isActive: boolean; hasProduct: boolean; stock: number | null; lowStockThreshold: number };
   stocks: { warehouseId: string; qty: number }[];
   warehouses: { id: string; name: string; sellable: boolean }[];
   opening: number;
   rows: Row[];
   cost: { avgCost: string; totalValue: string; qtyOnHand: number; lastCost: string } | null;
-  can: { cost: boolean };
+  can: { cost: boolean; manage: boolean };
 }
 
 export default function KardexClient({ productId }: { productId: string }) {
@@ -57,6 +58,7 @@ export default function KardexClient({ productId }: { productId: string }) {
   const [range, setRange] = useState<Range>(() => rangeFor("year"));
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   const load = useCallback(() => {
     const p = new URLSearchParams(rangeQuery(range));
@@ -77,11 +79,43 @@ export default function KardexClient({ productId }: { productId: string }) {
 
   return (
     <div className="space-y-4">
-      <PageHeader title={data.product.title} help="accountingKardex" back={{ href: "/admin/accounting/inventory", label: "کالا و انبار" }} />
+      <PageHeader
+        title={data.product.title}
+        help="accountingKardex"
+        back={{ href: "/admin/accounting/inventory", label: "کالا و انبار" }}
+        desc={
+          <span className="flex flex-wrap items-center gap-1.5">
+            <span>
+              کد <span dir="ltr">{faNum(data.product.sku)}</span>
+            </span>
+            {!data.product.hasProduct && <Badge tone="amber">بی‌محصول در سایت</Badge>}
+            {!data.product.isActive && <Badge tone="red">غیرفعال</Badge>}
+          </span>
+        }
+        actions={
+          data.can.manage && (
+            <button onClick={() => setEditing(true)} className={btn.soft}>
+              ✏️ ویرایش کالا
+            </button>
+          )
+        }
+      />
+      {editing && (
+        <ItemForm
+          itemId={productId}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            load();
+          }}
+        />
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Stat label="موجودی دفتری" value={faNum(total)} tone={total < 0 ? "red" : "gray"} />
-        <Stat label="موجودی سایت" value={faNum(data.product.stock)} sub={sellable !== data.product.stock ? `انبارهای قابل فروش: ${faNum(sellable)}` : undefined} tone={sellable !== data.product.stock ? "amber" : "gray"} />
+        {data.product.stock !== null && (
+          <Stat label="موجودی سایت" value={faNum(data.product.stock)} sub={sellable !== data.product.stock ? `انبارهای قابل فروش: ${faNum(sellable)}` : undefined} tone={sellable !== data.product.stock ? "amber" : "gray"} />
+        )}
         {data.cost && <Stat label="میانگین بها" value={<Money value={data.cost.avgCost} />} />}
         {data.cost && <Stat label="ارزش موجودی" value={<Money value={data.cost.totalValue} />} />}
       </div>

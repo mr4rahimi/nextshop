@@ -13,6 +13,7 @@ import { parseDay } from "../dates";
 import { toLatinDigits } from "../money";
 import { returnedQty, INVOICE_SOURCE, type InvoiceInput } from "./service";
 import { invoiceOpenAmounts } from "../cash/allocation";
+import { itemCards } from "../inventory/items";
 
 export const SALES_TYPES: AccInvoiceType[] = ["SALES", "SALES_RETURN", "PROFORMA"];
 export const PURCHASE_TYPES: AccInvoiceType[] = ["PURCHASE", "PURCHASE_RETURN"];
@@ -168,7 +169,7 @@ export async function invoiceDetail(id: string, access: StaffAccess) {
   const productIds = inv.lines.map((l) => l.productId).filter((x): x is string => !!x);
   const accountIds = inv.lines.map((l) => l.accountId).filter((x): x is string => !!x);
   const [products, accounts, warehouse, ref, returns, convertedTo, convertedFrom, voucher, order, moves] = await Promise.all([
-    prisma.product.findMany({ where: { id: { in: productIds } }, select: { id: true, sku: true, mainImage: true, slug: true } }),
+    itemCards(productIds).then((m) => [...m.values()]),
     prisma.accAccount.findMany({ where: { id: { in: accountIds } }, select: { id: true, code: true, name: true } }),
     inv.warehouseId ? prisma.accWarehouse.findUnique({ where: { id: inv.warehouseId }, select: { id: true, name: true } }) : null,
     inv.refInvoiceId ? prisma.accInvoice.findUnique({ where: { id: inv.refInvoiceId }, select: { id: true, type: true, number: true, date: true } }) : null,
@@ -187,8 +188,8 @@ export async function invoiceDetail(id: string, access: StaffAccess) {
   const lines = inv.lines.map((l) => ({
     ...l,
     net: l.lineTotal - l.vatAmount,
-    sku: l.productId ? byProduct.get(l.productId)?.sku ?? null : null,
-    image: l.productId ? byProduct.get(l.productId)?.mainImage ?? null : null,
+    sku: l.productId ? byProduct.get(l.productId)?.code ?? null : null,
+    image: l.productId ? byProduct.get(l.productId)?.image ?? null : null,
     account: l.accountId ? byAccount.get(l.accountId) ?? null : null,
     returnedQty: returned.get(l.id) ?? 0,
     ...(withCost && l.productId ? { cost: costByLine.get(l.id) ?? 0n } : {}),

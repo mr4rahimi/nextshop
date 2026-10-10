@@ -4034,6 +4034,61 @@ model AccEvent {
   @@index([createdAt])
 }
 
+// ── حسابداری — کالا (docs/plans/inventory-items.md) ──
+
+/// کالای حسابداری — چیزی که شمرده می‌شود، جدا از محصول فروشگاه.
+///
+/// ⚠️ `productId` در همه‌ی جدول‌های `Acc*` یعنی **شناسه‌ی همین مدل**.
+///    کالای هر `Product` همان `id` محصول را دارد و تریگر `acc_item_from_product`
+///    (مهاجرت `20261010120000_acc_items`) با ساخته‌شدن هر محصول کالایش را می‌سازد
+///    و عنوانش را تا وقتی دستی عوض نشده همگام نگه می‌دارد. کالای بی‌محصول هم
+///    مجاز است (`cuid`). کالا حذف نمی‌شود؛ `isActive = false`.
+model AccItem {
+  id           String           @id @default(cuid())
+  /// یکتا، قابل تعیین توسط کسب‌وکار — فقط از `normalizeItemCode` (lib/accounting/inventory/items.ts)
+  code         String           @unique
+  title        String
+  unit         String           @default("عدد")
+  /// قیمت فروش پیش‌فرض فاکتور دستی — فقط برای کالایی که محصول ندارد (تصمیم ۱۰)
+  salePrice    BigInt?
+  /// نقطه‌ی سفارش؛ خالی = `Product.lowStockThreshold` محصول هم‌شناسه
+  reorderPoint Int?
+  /// در فروش آنلاین؟ false = در پیشنهاد ساخت محصول (فاز ۵) نیاید
+  sellOnline   Boolean          @default(true)
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  barcodes     AccItemBarcode[]
+  aliases      AccItemAlias[]
+
+  @@index([title])
+  @@index([isActive])
+}
+
+/// بارکدهای کالا — هر بارکد در کل یکتا، چند بارکد برای یک کالا
+model AccItemBarcode {
+  barcode String  @id
+  itemId  String
+  item    AccItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+}
+
+/// کدهای قبلی کالا — کد عوض‌شده یا کد حسابداری دیگر؛ جستجو و اسکن با آن هم کالا را پیدا می‌کند
+model AccItemAlias {
+  id        String   @id @default(cuid())
+  itemId    String
+  code      String
+  /// «کد قبلی»، «sku تکراری» یا نام نرم‌افزار مبدأ انتقال
+  source    String   @default("کد قبلی")
+  createdAt DateTime @default(now())
+  item      AccItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([source, code])
+  @@index([code])
+  @@index([itemId])
+}
+
 // ── حسابداری — کالا و انبار (فاز ۳، docs/plans/accounting.md بخش ۶.۵ و ۸) ──
 
 model AccWarehouse {

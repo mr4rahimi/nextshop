@@ -3,22 +3,7 @@
  * (بخش ۱۴): اعداد بها سمت سرور حذف می‌شوند، نه با پنهان‌کردن در مرورگر.
  */
 
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { toLatinDigits } from "../money";
-
-export function productSearchWhere(q: string | null | undefined): Prisma.ProductWhereInput {
-  const term = q?.trim();
-  if (!term) return {};
-  const lat = toLatinDigits(term);
-  return {
-    OR: [
-      { title: { contains: term, mode: "insensitive" } },
-      { sku: { contains: lat, mode: "insensitive" } },
-      { gtin13: lat },
-    ],
-  };
-}
 
 export interface StockRow {
   id: string;

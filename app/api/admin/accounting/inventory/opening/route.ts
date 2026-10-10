@@ -6,6 +6,7 @@ import { firstYear } from "@/lib/accounting/ledger/fiscal-year";
 import { ensureDefaultWarehouse, OPENING_INV_SOURCE, saveOpeningInventory } from "@/lib/accounting/inventory/docs";
 import { AccError, accErrorResponse, toAmount } from "@/lib/accounting/errors";
 import { actorOf, readJson } from "@/lib/accounting/api";
+import { itemBriefs } from "@/lib/accounting/inventory/items";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +41,7 @@ export async function GET(req: Request) {
     }
 
     const ids = [...new Set([...moves.map((m) => m.productId), ...suggestions.map((s) => s.productId)])];
-    const products = await prisma.product.findMany({ where: { id: { in: ids } }, select: { id: true, title: true, sku: true, mainImage: true, stock: true } });
+    const products = await itemBriefs(ids);
     return NextResponse.json(
       serialize({
         year,

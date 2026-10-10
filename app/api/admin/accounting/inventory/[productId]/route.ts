@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
 import { rangeFrom } from "@/lib/accounting/api";
+import { itemCards } from "@/lib/accounting/inventory/items";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,11 +19,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ productI
   const { from, to } = rangeFrom(url);
   const withCost = can(guard.access, "ACC_COST_VIEW");
 
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    select: { id: true, title: true, sku: true, gtin13: true, mainImage: true, stock: true, lowStockThreshold: true },
-  });
-  if (!product) return NextResponse.json({ error: "کالا پیدا نشد" }, { status: 404 });
+  const card = (await itemCards([productId])).get(productId);
+  if (!card) return NextResponse.json({ error: "کالا پیدا نشد" }, { status: 404 });
+  const product = {
+    id: card.id,
+    title: card.title,
+    sku: card.code,
+    unit: card.unit,
+    mainImage: card.image,
+    isActive: card.isActive,
+    hasProduct: card.hasProduct,
+    stock: card.siteStock,
+    lowStockThreshold: card.lowStockThreshold,
+  };
 
   const where: Prisma.AccStockMoveWhereInput = { productId, ...(warehouseId ? { warehouseId } : {}) };
   const dateWhere = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
@@ -64,7 +73,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ productI
       opening: openingQty?._sum.qty ?? 0,
       rows,
       cost: withCost ? cost : null,
-      can: { cost: withCost },
+      can: { cost: withCost, manage: can(guard.access, "ACC_INVENTORY") },
     }),
   );
 }

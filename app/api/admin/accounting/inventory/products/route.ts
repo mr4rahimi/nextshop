@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
-import { productSearchWhere, stockRows } from "@/lib/accounting/inventory/query";
-import { toLatinDigits } from "@/lib/accounting/money";
+import { stockRows } from "@/lib/accounting/inventory/query";
+import { exactItem, itemCards, itemSearchWhere } from "@/lib/accounting/inventory/items";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET ?q — انتخابگر کالا. بارکد یا کد کالای دقیق اول می‌آید (بارکدخوان
+ * GET ?q — انتخابگر کالا (`AccItem`). بارکد، کد یا کد قبلی دقیق اول می‌آید (بارکدخوان
  * مثل کیبورد تایپ می‌کند و Enter می‌زند؛ `exact` یعنی همین را بی‌پرسش اضافه کن).
  *
  * `for=sales|purchase&partyId` — قیمت پیش‌فرض فرم فاکتور (بخش ۱۰): فروش از
@@ -22,32 +22,34 @@ export async function GET(req: Request) {
   const q = url.searchParams.get("q")?.trim() ?? "";
   const forType = url.searchParams.get("for");
   const partyId = url.searchParams.get("partyId");
-  const lat = toLatinDigits(q);
-
-  const exact = lat
-    ? await prisma.product.findFirst({ where: { OR: [{ gtin13: lat }, { sku: lat }] }, select: { id: true } })
-    : null;
-  const products = await prisma.product.findMany({
-    where: productSearchWhere(q),
+  const exact = q ? await exactItem(q) : null;
+  const found = await prisma.accItem.findMany({
+    where: { ...(await itemSearchWhere(q)), isActive: true },
     orderBy: { title: "asc" },
     take: 15,
-    select: { id: true, title: true, sku: true, mainImage: true, stock: true, price: true, salePrice: true },
+    select: { id: true },
   });
-  const ids = products.map((p) => p.id);
-  const rows = await stockRows(ids, can(guard.access, "ACC_COST_VIEW"));
+  const ids = [...new Set([...(exact ? [exact] : []), ...found.map((i) => i.id)])];
+  const [cards, rows] = await Promise.all([itemCards(ids), stockRows(ids, can(guard.access, "ACC_COST_VIEW"))]);
   const prices = forType === "sales" || forType === "purchase" ? await defaultPrices(ids, forType, partyId, guard.access) : null;
-  const items = products
-    .map((p) => ({
-      id: p.id,
-      title: p.title,
-      sku: p.sku,
-      image: p.mainImage,
-      siteStock: p.stock,
-      ...rows.get(p.id)!,
-      ...(prices ? { price: prices.get(p.id)?.price ?? (p.salePrice && p.salePrice > 0n ? p.salePrice : p.price), vatRateBp: prices.get(p.id)?.vatRateBp ?? null, taxCode: prices.get(p.id)?.taxCode ?? null } : {}),
-    }))
-    .sort((a, b) => (a.id === exact?.id ? -1 : b.id === exact?.id ? 1 : 0));
-  return NextResponse.json(serialize({ items, exactId: exact?.id ?? null }));
+  const items = ids
+    .filter((id) => cards.has(id))
+    .map((id) => {
+      const c = cards.get(id)!;
+      return {
+        id,
+        title: c.title,
+        sku: c.code,
+        code: c.code,
+        unit: c.unit,
+        image: c.image,
+        siteStock: c.siteStock ?? 0,
+        hasProduct: c.hasProduct,
+        ...rows.get(id)!,
+        ...(prices ? { price: prices.get(id)?.price ?? c.price ?? 0n, vatRateBp: prices.get(id)?.vatRateBp ?? null, taxCode: prices.get(id)?.taxCode ?? null } : {}),
+      };
+    });
+  return NextResponse.json(serialize({ items, exactId: exact ?? null }));
 }
 
 async function defaultPrices(ids: string[], forType: "sales" | "purchase", partyId: string | null, access: Parameters<typeof can>[0]) {
