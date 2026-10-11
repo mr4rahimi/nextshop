@@ -5,6 +5,7 @@ import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
 import { rangeFrom } from "@/lib/accounting/api";
 import { itemCards } from "@/lib/accounting/inventory/items";
+import { itemLinks } from "@/lib/accounting/inventory/to-product";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ productI
 
   const card = (await itemCards([productId])).get(productId);
   if (!card) return NextResponse.json({ error: "کالا پیدا نشد" }, { status: 404 });
+  const link = (await itemLinks([productId])).get(productId) ?? null;
   const product = {
     id: card.id,
     title: card.title,
@@ -28,7 +30,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ productI
     unit: card.unit,
     mainImage: card.image,
     isActive: card.isActive,
-    hasProduct: card.hasProduct,
+    hasProduct: card.hasProduct || !!link,
+    link,
     stock: card.siteStock,
     lowStockThreshold: card.lowStockThreshold,
   };

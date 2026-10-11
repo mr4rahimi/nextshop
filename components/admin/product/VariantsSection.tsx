@@ -266,6 +266,11 @@ export default function VariantsSection({ productId }: { productId: string }) {
             })}
           </div>
           {data.accountingInternal && <p className="text-[11px] text-gray-400 mt-2">موجودی تنوعِ وصل به کالای حسابداری از انبار می‌آید و اینجا دستی نوشته نمی‌شود.</p>}
+          {data.accountingInternal && rows.some((r) => r.isActive && !r.accItem) && (
+            <p className="text-[11px] font-bold text-amber-700 bg-amber-50 dark:bg-amber-500/10 rounded-lg px-2.5 py-1.5 mt-2">
+              ⚠️ {rows.filter((r) => r.isActive && !r.accItem).length.toLocaleString("fa-IR")} تنوع کالای حسابداری ندارد — موجودی‌اش از کجا می‌آید؟ فروشش در انبار ثبت نمی‌شود؛ برای هر کدام کالا انتخاب کنید.
+            </p>
+          )}
         </div>
       )}
 

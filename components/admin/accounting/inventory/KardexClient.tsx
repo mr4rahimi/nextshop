@@ -44,7 +44,7 @@ interface Row {
   balanceQty?: number;
 }
 interface Data {
-  product: { id: string; title: string; sku: string; unit: string; mainImage: string | null; isActive: boolean; hasProduct: boolean; stock: number | null; lowStockThreshold: number };
+  product: { id: string; title: string; sku: string; unit: string; mainImage: string | null; isActive: boolean; hasProduct: boolean; link: { productId: string; product: string; variant: string | null } | null; stock: number | null; lowStockThreshold: number };
   stocks: { warehouseId: string; qty: number }[];
   warehouses: { id: string; name: string; sellable: boolean }[];
   opening: number;
@@ -89,6 +89,13 @@ export default function KardexClient({ productId }: { productId: string }) {
               کد <span dir="ltr">{faNum(data.product.sku)}</span>
             </span>
             {!data.product.hasProduct && <Badge tone="amber">بی‌محصول در سایت</Badge>}
+            {data.product.link?.variant && (
+              <a href={`/admin/products/${data.product.link.productId}`} className="hover:underline">
+                <Badge tone="green">
+                  تنوع «{data.product.link.variant}» در {data.product.link.product}
+                </Badge>
+              </a>
+            )}
             {!data.product.isActive && <Badge tone="red">غیرفعال</Badge>}
           </span>
         }

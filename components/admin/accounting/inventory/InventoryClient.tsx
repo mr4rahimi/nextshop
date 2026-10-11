@@ -27,6 +27,8 @@ interface Item {
   sku: string;
   image: string | null;
   hasProduct: boolean;
+  link: { productId: string; product: string; variant: string | null } | null;
+  sellOnline: boolean;
   isActive: boolean;
   siteStock: number | null;
   lowStockThreshold: number;
@@ -155,7 +157,8 @@ export default function InventoryClient() {
                   <span>
                     کد <span dir="ltr">{faNum(i.sku)}</span>
                   </span>
-                  {!i.hasProduct && <span className="text-amber-600">بی‌محصول</span>}
+                  {i.link?.variant && <span className="text-emerald-600">تنوع «{i.link.variant}» در {i.link.product}</span>}
+                  {!i.hasProduct && (i.sellOnline ? <span className="text-amber-600">بی‌محصول</span> : <span>فروش آنلاین ندارد</span>)}
                   {multi &&
                     !wh &&
                     active

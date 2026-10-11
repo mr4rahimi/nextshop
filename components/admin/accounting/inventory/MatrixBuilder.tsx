@@ -156,6 +156,9 @@ export default function MatrixBuilder() {
           <Link href="/admin/accounting/purchases" className={btn.soft}>
             ثبت فاکتور خرید
           </Link>
+          <Link href="/admin/accounting/inventory/to-product" className={btn.soft}>
+            ساخت محصول سایت
+          </Link>
           <button
             onClick={() => {
               setDone(null);

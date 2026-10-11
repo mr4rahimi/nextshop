@@ -7,6 +7,7 @@ import { stockRows } from "@/lib/accounting/inventory/query";
 import { itemCards, itemSearchWhere } from "@/lib/accounting/inventory/items";
 import { listGroups } from "@/lib/accounting/inventory/catalog";
 import { ensureDefaultWarehouse } from "@/lib/accounting/inventory/docs";
+import { itemLinks } from "@/lib/accounting/inventory/to-product";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,7 +58,9 @@ export async function GET(req: Request) {
     where.groupId = { in: [...ids] };
   }
   if (filter === "noproduct") {
-    const bare = await prisma.$queryRaw<{ id: string }[]>`SELECT i.id FROM "AccItem" i WHERE NOT EXISTS (SELECT 1 FROM "Product" p WHERE p.id = i.id)`;
+    // نه محصول هم‌شناسه، نه تنوعی که به کالا وصل باشد (فاز ۵)
+    const bare = await prisma.$queryRaw<{ id: string }[]>`SELECT i.id FROM "AccItem" i WHERE NOT EXISTS (SELECT 1 FROM "Product" p WHERE p.id = i.id)
+      AND NOT EXISTS (SELECT 1 FROM "ProductVariant" v WHERE v."accItemId" = i.id)`;
     where.AND = [{ id: { in: bare.map((r) => r.id) } }];
   }
 
@@ -68,7 +71,13 @@ export async function GET(req: Request) {
     select: { id: true },
   });
   const ids = found.map((i) => i.id);
-  const [cards, rows] = await Promise.all([itemCards(ids), stockRows(ids, withCost)]);
+  const [cards, rows, links, flags] = await Promise.all([
+    itemCards(ids),
+    stockRows(ids, withCost),
+    itemLinks(ids),
+    prisma.accItem.findMany({ where: { id: { in: ids }, sellOnline: false }, select: { id: true } }),
+  ]);
+  const offline = new Set(flags.map((f) => f.id));
   let items = ids.map((id) => {
     const c = cards.get(id)!;
     return {
@@ -77,7 +86,10 @@ export async function GET(req: Request) {
       sku: c.code,
       code: c.code,
       image: c.image,
-      hasProduct: c.hasProduct,
+      hasProduct: c.hasProduct || links.has(id),
+      /** محصول/تنوع سایت — `variant` خالی یعنی کالای خود محصول */
+      link: links.get(id) ?? null,
+      sellOnline: !offline.has(id),
       isActive: c.isActive,
       siteStock: c.siteStock,
       lowStockThreshold: c.lowStockThreshold,
