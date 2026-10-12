@@ -1,3 +1,4 @@
+import { sanitizeDownloadUrl } from "@/lib/download-link";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { NextResponse } from "next/server";
@@ -132,7 +133,7 @@ export async function PUT(
           warranty:      str("warranty"),
           condition:     pick("condition", (v) => (["NEW", "STOCK", "USED", "REFURBISHED"].includes(v) ? v : "NEW")),
           downloadTitle: str("downloadTitle"),
-          downloadUrl:   str("downloadUrl"),
+          downloadUrl:   pick("downloadUrl", sanitizeDownloadUrl),
 
           stock:             int("stock", 0),
           trackStock:        pick("trackStock", (v) => v ?? false),

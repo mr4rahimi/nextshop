@@ -8,6 +8,7 @@ import AiTextStudio from "@/components/admin/product/AiTextStudio";
 import TextMeter from "@/components/admin/tools/TextMeter";
 import LinkTextarea from "@/components/admin/LinkTextarea";
 import VariantsSection from "./VariantsSection";
+import { isExternalDownload, sanitizeDownloadUrl } from "@/lib/download-link";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Category { id: string; title: string }
@@ -358,6 +359,8 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
   const [saving, setSaving]         = useState(false);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [uploadError, setUploadError]   = useState<string | null>(null);
+  const [downloadMode, setDownloadMode] = useState<"file" | "link">(
+    isExternalDownload((initialForm ?? EMPTY_FORM).downloadUrl) ? "link" : "file");
   const [aiStudioOpen, setAiStudioOpen] = useState(false);
   const [aiTextOpen, setAiTextOpen]     = useState(false);
   const [error, setError]           = useState<string | null>(null);
@@ -777,6 +780,8 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
         <Section title="پیوست فایل دانلودی" icon="📎" defaultOpen={false}>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
             اگر فایلی (کاتالوگ، درایور، راهنما، ...) همراه این محصول قرار می‌گیرد اینجا آپلود کنید.
+            برای فایل‌های حجیم (مثل درایور) می‌توانید به‌جای آپلود، لینک دانلود از سایت سازنده را بگذارید؛
+            لینک خارجی با تگ nofollow و در تب تازه باز می‌شود تا به سئوی صفحه آسیبی نزند.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="عنوان دکمه دانلود">
@@ -786,6 +791,32 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
                 placeholder="مثلاً: دانلود کاتالوگ، دانلود درایور، دانلود راهنما" />
             </Field>
             <Field label="فایل دانلودی">
+              <div className="flex gap-1 mb-2 p-1 rounded-xl bg-gray-100 dark:bg-white/5 w-fit">
+                {([["file", "آپلود فایل"], ["link", "لینک خارجی"]] as const).map(([mode, label]) => (
+                  <button key={mode} type="button"
+                    onClick={() => {
+                      if (mode === downloadMode) return;
+                      setDownloadMode(mode);
+                      // نشانی حالت قبلی به حالت تازه نمی‌آید
+                      if (form.downloadUrl && isExternalDownload(form.downloadUrl) !== (mode === "link")) set("downloadUrl", "");
+                    }}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${downloadMode === mode ? "bg-white dark:bg-white/10 text-blue-600 dark:text-blue-300 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {downloadMode === "link" ? (
+                <div>
+                  <input dir="ltr" type="url" value={form.downloadUrl} className={inp}
+                    onChange={e => set("downloadUrl", e.target.value)}
+                    placeholder="https://example.com/driver.zip" />
+                  {form.downloadUrl.trim() && !isExternalDownload(sanitizeDownloadUrl(form.downloadUrl) ?? "") ? (
+                    <p className="text-[11px] text-red-500 mt-1">نشانی باید با http:// یا https:// شروع شود؛ وگرنه ذخیره نمی‌شود.</p>
+                  ) : (
+                    <p className="text-[11px] text-gray-400 mt-1">در سایت با rel=&quot;nofollow&quot; و در تب تازه باز می‌شود.</p>
+                  )}
+                </div>
+              ) : (
               <div className="flex items-center gap-3">
                 {form.downloadUrl ? (
                   <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -848,6 +879,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
                   </label>
                 )}
               </div>
+              )}
             </Field>
           </div>
         </Section>

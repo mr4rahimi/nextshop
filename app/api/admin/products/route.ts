@@ -1,3 +1,4 @@
+import { sanitizeDownloadUrl } from "@/lib/download-link";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { NextResponse } from "next/server";
@@ -138,7 +139,7 @@ export async function POST(req: Request) {
       warranty:      body.warranty,
       condition:     ["NEW", "STOCK", "USED", "REFURBISHED"].includes(body.condition) ? body.condition : "NEW",
       downloadTitle: body.downloadTitle || null,
-      downloadUrl:   body.downloadUrl   || null,
+      downloadUrl:   sanitizeDownloadUrl(body.downloadUrl),
       stock:      body.stock      ? parseInt(body.stock) : 0,
       trackStock: body.trackStock ?? false,
       lowStockThreshold: body.lowStockThreshold ? parseInt(body.lowStockThreshold) : 3,

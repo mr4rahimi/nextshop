@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { downloadExt, isExternalDownload } from "@/lib/download-link";
 import Image from "next/image";
 import Link from "next/link";
 import LinkedText from "@/components/store/LinkedText";
@@ -480,7 +481,9 @@ export default function ProductDetailClient({ product: base, variants, reviewSta
                       {product.downloadTitle && product.downloadUrl && (
                         <a
                           href={product.downloadUrl}
-                          download
+                          {...(isExternalDownload(product.downloadUrl)
+                            ? { target: "_blank", rel: "nofollow noopener noreferrer" }
+                            : { download: true })}
                           className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl border-2 border-dashed border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/5 hover:border-blue-400 dark:hover:border-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/10 transition-all group"
                         >
                           <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 dark:group-hover:bg-blue-500/30 transition-all">
@@ -491,7 +494,7 @@ export default function ProductDetailClient({ product: base, variants, reviewSta
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-black text-blue-700 dark:text-blue-300">{product.downloadTitle}</p>
                             <p className="text-[10px] text-blue-500 dark:text-blue-400/70 font-bold mt-0.5">
-                              {product.downloadUrl.split(".").pop()?.toUpperCase()} · دانلود رایگان
+                              {[downloadExt(product.downloadUrl), isExternalDownload(product.downloadUrl) ? "لینک خارجی" : null, "دانلود رایگان"].filter(Boolean).join(" · ")}
                             </p>
                           </div>
                           <svg className="w-4 h-4 text-blue-500 flex-shrink-0 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
