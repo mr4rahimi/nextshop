@@ -14,6 +14,7 @@
 | `bartarjanebi` | bartar-janebi.com | 185.164.73.224 | `/var/www/bartarjanebi` | `bartarjanebi` | 3001 | production |
 | `mymonta` | mymonta.ir | 5.159.49.243 | `/var/www/mymonta` | `mymonta-shop` | 3000 | production |
 | `uniqquestar` | uniqquestar.com | 109.122.246.96 | `/var/www/uniqquestar` | `uniqquestar` | 3000 | production |
+| `sezavar` | sezavar.shop | 94.184.32.197 | `/var/www/sezavar` | `sezavar` (+ `sezavar-worker`) | 3000 | production |
 
 > سه سایت اول روی یک سرور مشترک‌اند — هرگز `pm2 restart all` نزنید و به دیتابیس
 > سایت‌های دیگر دست نزنید.
@@ -313,7 +314,7 @@ npx tsx scripts/seed-staff-roles.ts --grant-new   # CREDIT_VIEW_OWN / VIEW_ALL /
 | سرور | کار |
 |---|---|
 | `185.164.73.224` (9dm، mahamprint، bartarjanebi) | Umami از قبل هست (`127.0.0.1:3043`) — هیچ |
-| `5.159.49.243` (mymonta) و `109.122.246.96` (uniqquestar) | **اول Umami نصب شود** — راهنما در همان بخش ۱۳.۲ |
+| `5.159.49.243` (mymonta)، `109.122.246.96` (uniqquestar) و `94.184.32.197` (sezavar) | **اول Umami نصب شود** — راهنما در همان بخش ۱۳.۲ |
 
 اگر Umami روی پورتی جز ۳۰۴۳ است، `UMAMI_BASE_URL=http://127.0.0.1:<پورت>` به
 `.env` همان سایت اضافه شود و `pm2 restart <name> --update-env`.
@@ -492,6 +493,38 @@ ssh root@<IP> "sha256sum /var/www/<name>/pnpm-lock.yaml | cut -c1-16 > /var/www/
 ### ۹) ثبت سایت در اسکریپت
 یک رکورد به `scripts/deploy/targets.json` اضافه کنید (`name`, `host`, `user`,
 `path`, `pm2`, `port`, `url`, `tier`). از این به بعد `deploy.mjs` کار می‌کند.
+
+> `targets.json` در `.gitignore` است و فقط روی سیستم توسعه وجود دارد. با عوض
+> کردن سیستم، آن را از روی جدول «سایت‌های مستقر» بالا دوباره بسازید.
+
+### نمونه‌ی دوم: sezavar.shop (۱۴۰۵/۰۷/۲۰، نسخه‌ی ۲.۸۱.۰)
+
+سرور `94.184.32.197`، Ubuntu 26.04، ۲ گیگ رم، تک‌سایته. پیش از نصب فقط nginx
+و یک صفحه‌ی ایستای «به‌زودی» در `/var/www/sezavar.shop` داشت (هنوز همان‌جاست و
+nginx دیگر به آن اشاره نمی‌کند).
+
+- **وابستگی‌ها روی خود سرور نصب شد** (`CI=true pnpm install --frozen-lockfile`)،
+  نه انتقال `node_modules` از لوکال، چون این سرور به `registry.npmjs.org`
+  دسترسی مستقیم و سریع دارد. pnpm هم‌نسخه‌ی لوکال (`11.25.0`) با
+  `npm i -g pnpm@11.25.0` نصب شد. خطای پایانی
+  `ERR_PNPM_IGNORED_BUILDS ... msgpackr-extract` بی‌خطر است: پکیج‌ها نصب
+  شده‌اند و msgpackr بدون افزونه‌ی بومی با نسخه‌ی JS کار می‌کند (لوکال هم همین
+  است). بعدش `.deps-hash` نوشته شد تا `deploy.mjs` بی‌دلیل `node_modules` را
+  جابه‌جا نکند.
+- Node 22 از NodeSource، PostgreSQL 18، Redis، pm2 7. منطقه‌ی زمانی تهران و
+  swap چهارگیگی. ufw از قبل OpenSSH و `Nginx Full` را باز داشت.
+- **دو پروسه‌ی pm2:** `sezavar` (وب، پورت ۳۰۰۰) و `sezavar-worker` (صف پیامک
+  باشگاه، Redis). `deploy.mjs` فقط `sezavar` را ری‌استارت می‌کند؛ اگر نسخه‌ای
+  به `workers/` یا `lib/club` دست زد، بعد از استقرار
+  `pm2 restart sezavar-worker` هم لازم است.
+- nginx در `/etc/nginx/sites-available/sezavar` است (نسخه‌ی ۱.۲۸، پس
+  `http2 on;` کار می‌کند). گواهی Let's Encrypt همان گواهی قبلی
+  `sezavar.shop` است و مسیر چالش از `/var/www/letsencrypt` سرو می‌شود.
+- **بیلد روی ۲ گیگ رم کند است.** مرحله‌ی `Running TypeScript ...` با swap
+  بیش از ۲۰ دقیقه طول کشید. بیلد اول با `nohup` جدا از SSH اجرا شد. برای
+  منتظر ماندن فقط `.next/BUILD_ID` را چک کنید، نه `ps | grep "next build"`،
+  چون خودِ دستور SSH هم با آن الگو جور می‌شود.
+- دیتابیس تازه کاربر ندارد. اولین ادمین را خود مدیر می‌سازد.
 
 ## `.env` هر سایت — حداقل لازم
 
