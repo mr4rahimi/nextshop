@@ -15,9 +15,9 @@ import {
 } from "@/lib/tools/stock-velocity";
 import { downloadCsv } from "../accounting/reports/kit";
 import { Card, Chips, ErrorText, Field, PageHeader, SectionTitle, Stat, btn, inputCls } from "../accounting/ui";
-import { DecimalInput, MoneyInput, fa, toman } from "./calc-inputs";
+import { DecimalInput, MoneyInput, fa, toman, useStored } from "./calc-inputs";
 import {
-  CLASS_BADGE, CLASS_TONE, NoAccountingNotice, StockFilters, daysText, lastSaleText, matchQuery, useStockData, useStored,
+  CLASS_BADGE, CLASS_TONE, NoAccountingNotice, StockFilters, daysText, lastSaleText, matchQuery, useStockData,
   type WindowDays,
 } from "./stock-shared";
 

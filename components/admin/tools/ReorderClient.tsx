@@ -11,8 +11,8 @@ import { Download, Search } from "lucide-react";
 import { DEFAULT_REORDER, dailySales, reorder, type ReorderResult, type ReorderSettings, type VelocityRow } from "@/lib/tools/stock-velocity";
 import { downloadCsv } from "../accounting/reports/kit";
 import { api, Card, Chips, ErrorText, Field, PageHeader, SectionTitle, Segmented, Stat, btn, inputCls } from "../accounting/ui";
-import { DecimalInput, Metric, MoneyInput, fa } from "./calc-inputs";
-import { NoAccountingNotice, StockFilters, daysText, lastSaleText, matchQuery, useStockData, useStored, type WindowDays } from "./stock-shared";
+import { DecimalInput, Metric, MoneyInput, fa, useStored } from "./calc-inputs";
+import { NoAccountingNotice, StockFilters, daysText, lastSaleText, matchQuery, useStockData, type WindowDays } from "./stock-shared";
 
 interface Settings extends ReorderSettings {
   days: WindowDays;

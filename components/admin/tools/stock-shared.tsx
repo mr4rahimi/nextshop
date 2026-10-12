@@ -2,8 +2,7 @@
 
 /**
  * اجزای مشترک «موجودی و نقطه‌ی سفارش» و «سرمایه‌ی درگیر در موجودی» —
- * خواندن `/api/admin/tools/stock`، فیلتر بازه و انبار، پیام «حسابداری داخلی فعال نیست»،
- * و نگه داشتن تنظیمات در `localStorage`. docs/features/tools.md بخش ۱۴ و ۱۵
+ * خواندن `/api/admin/tools/stock`، فیلتر بازه و انبار، پیام «حسابداری داخلی فعال نیست». docs/features/tools.md بخش ۱۴ و ۱۵
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -41,30 +40,6 @@ export function useStockData(days: WindowDays, warehouseId: string) {
   }, [days, warehouseId, key, tick]);
 
   return { data: state.data, error: state.error, loading: state.key !== key, reload: useCallback(() => setTick((t) => t + 1), []) };
-}
-
-/** تنظیمات هر ابزار در مرورگر؛ تا خواندن نشده `loaded` خاموش است */
-export function useStored<T extends object>(storeKey: string, initial: T) {
-  const [value, setValue] = useState<T>(initial);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storeKey);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage فقط بعد از mount در دسترس است
-      if (raw) setValue((v) => ({ ...v, ...(JSON.parse(raw) as Partial<T>) }));
-    } catch {}
-    setLoaded(true);
-  }, [storeKey]);
-
-  useEffect(() => {
-    if (!loaded) return;
-    try {
-      localStorage.setItem(storeKey, JSON.stringify(value));
-    } catch {}
-  }, [storeKey, value, loaded]);
-
-  return [value, setValue, loaded] as const;
 }
 
 export function StockFilters({

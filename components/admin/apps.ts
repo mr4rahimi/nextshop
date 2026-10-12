@@ -14,7 +14,7 @@ import {
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
-  CalendarDays, Lock, QrCode, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop, Scale, Megaphone, Funnel, BadgePercent, PackageSearch, PiggyBank,
+  CalendarDays, Lock, QrCode, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop, Scale, Megaphone, Funnel, BadgePercent, PackageSearch, PiggyBank, HeartHandshake, UserRound, GitCompareArrows,
 } from "lucide-react";
 
 /** رنگ کاشی — کلاس‌ها کامل نوشته شده‌اند تا Tailwind پیدایشان کند */
@@ -146,9 +146,15 @@ export const TOOLS_APPS: AppItem[] = [
   { href: "/admin/tools/ad-roi", label: "ROI تبلیغات", icon: Megaphone, tone: "emerald", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
   { href: "/admin/tools/funnel", label: "قیف فروش", icon: Funnel, tone: "cyan", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
   { href: "/admin/tools/discount", label: "تخفیف و حراج", icon: BadgePercent, tone: "red", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
-  // این دو انبار را می‌خوانند: علاوه بر بخش ابزارها، دسترسی انبار حسابداری (docs/plans/store-tools-3.md تصمیم ۲)
+  { href: "/admin/tools/inflation", label: "قیمت با تورم", icon: TrendingUp, tone: "amber", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
+  { href: "/admin/tools/free-shipping", label: "ارسال رایگان", icon: Truck, tone: "sky", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
+  { href: "/admin/tools/installment", label: "فروش اقساطی", icon: CalendarClock, tone: "violet", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
+  { href: "/admin/tools/ltv", label: "ارزش مشتری", icon: HeartHandshake, tone: "fuchsia", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
+  { href: "/admin/tools/employee-cost", label: "هزینه‌ی کارمند", icon: UserRound, tone: "slate", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
+  // این سه داده‌ی انبار و فروش می‌خوانند: علاوه بر بخش ابزارها، دسترسی حسابداری (docs/plans/store-tools-3.md تصمیم ۲)
   { href: "/admin/tools/reorder", label: "نقطه‌ی سفارش", icon: PackageSearch, tone: "teal", perm: ["ACC_VIEW", "ACC_INVENTORY", "ACC_COST_VIEW"], group: TOOLS_GROUP_BUSINESS },
   { href: "/admin/tools/stock-capital", label: "سرمایه‌ی انبار", icon: PiggyBank, tone: "rose", perm: ["ACC_COST_VIEW"], group: TOOLS_GROUP_BUSINESS },
+  { href: "/admin/tools/compare", label: "مقایسه‌ی محصولات", icon: GitCompareArrows, tone: "blue", perm: ["ACC_COST_VIEW"], group: TOOLS_GROUP_BUSINESS },
 ];
 
 // ── تطبیق مسیر ────────────────────────────────────────────────────────────

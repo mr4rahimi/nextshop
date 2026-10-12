@@ -5,7 +5,7 @@
  * ورودی‌ها ارقام فارسی و جداکننده‌ی هزارگان را می‌پذیرند. docs/features/tools.md بخش ۸ و ۱۰ تا ۱۳
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { inputCls } from "../accounting/ui";
 
 export const fa = (n: number, digits = 0) => n.toLocaleString("fa-IR", { maximumFractionDigits: digits });
@@ -64,4 +64,28 @@ export function Metric({ label, value, hint }: { label: string; value: string; h
       <dd className="mt-0.5 font-black tabular-nums">{value}</dd>
     </div>
   );
+}
+
+/** تنظیمات هر ابزار در مرورگر؛ تا خواندن نشده `loaded` خاموش است */
+export function useStored<T extends object>(storeKey: string, initial: T) {
+  const [value, setValue] = useState<T>(initial);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(storeKey);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage فقط بعد از mount در دسترس است
+      if (raw) setValue((v) => ({ ...v, ...(JSON.parse(raw) as Partial<T>) }));
+    } catch {}
+    setLoaded(true);
+  }, [storeKey]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      localStorage.setItem(storeKey, JSON.stringify(value));
+    } catch {}
+  }, [storeKey, value, loaded]);
+
+  return [value, setValue, loaded] as const;
 }
