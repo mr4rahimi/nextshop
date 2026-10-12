@@ -579,4 +579,5 @@ ssh root@<IP> "sha256sum /var/www/<name>/pnpm-lock.yaml | cut -c1-16 > /var/www/
 | build وسط کار kill می‌شود (کد ۱۳۷) | رم کم — swap اضافه کنید |
 | health check رد می‌شود | `pm2 logs <name> --err` روی سرور؛ اسکریپت خودش به بکاپ برگردانده |
 | بعد از تمدید گواهی، مرورگر گواهی قدیمی می‌بیند | hook ری‌لود nginx نصب نشده |
+| مرورگر `ERR_CONNECTION_CLOSED` ولی `curl` همان آدرس ۲۰۰ می‌دهد (sezavar، ۱۴۰۵/۰۷/۲۰) | Chrome و Firefox جدید ClientHello بزرگ‌تر از یک بسته می‌فرستند (کلید post-quantum). در مسیر شبکه‌ی این سرور، پاسخ سرور به چنین دست دادنی حدود نیمی از مواقع به کاربر نمی‌رسد؛ tcpdump: ClientHello کامل می‌رسد ولی بسته‌های گواهی هیچ‌وقت ACK نمی‌شوند. MTU نیست (با MTU ۱۴۰۰ هم همان شد). آزمون: `openssl s_client` با `-alpn` طولانی (بیش از ۱۵۰۰ بایت). راه: دامنه پشت CDN داخلی (مثل 9dm) یا تیکت به دیتاسنتر |
 | ACME تمدید نمی‌شود | CDN مسیر `/.well-known/acme-challenge/` را پاس نمی‌دهد یا nginx ریدایرکتش می‌کند |
