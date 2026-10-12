@@ -266,6 +266,9 @@ export default function ProductsListPage() {
             { value: "active", label: "فعال" },
             { value: "inactive", label: "غیرفعال" },
             { value: "outofstock", label: "ناموجود" },
+            { value: "noprice", label: "بدون قیمت" },
+            { value: "noseotitle", label: "بدون عنوان سئو" },
+            { value: "nometa", label: "بدون توضیحات متا" },
           ].map(f => (
             <button key={f.value} onClick={() => setFilterStatus(f.value)}
               className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${

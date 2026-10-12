@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { slugify, slugifyDraft } from "@/lib/slug";
 import FaqEditor from "@/components/admin/FaqEditor";
+import LinkTextarea from "@/components/admin/LinkTextarea";
 import { normalizeFaq } from "@/lib/faq";
 import TextMeter from "@/components/admin/tools/TextMeter";
 
@@ -306,8 +307,9 @@ export default function CategoriesPage() {
     setEditing(cat);
     setForm({
       ...cat,
+      // فیلدهای متنی خالی در دیتابیس null هستند؛ فرم همیشه رشته می‌خواهد
+      ...Object.fromEntries(Object.keys(EMPTY_FORM).map(k => [k, cat[k] ?? (EMPTY_FORM as any)[k]])),
       parentId: cat.parentId || "",
-      descriptionTop: cat.descriptionTop ?? "",
       // ستون Json می‌تواند null باشد؛ ادیتور همیشه آرایه می‌خواهد
       faq: normalizeFaq(cat.faq),
     });
@@ -430,9 +432,9 @@ export default function CategoriesPage() {
               <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">
                 توضیحات بالای گرید
               </label>
-              <textarea
+              <LinkTextarea
                 value={form.descriptionTop}
-                onChange={e => handleChange("descriptionTop", e.target.value)}
+                onChange={v => handleChange("descriptionTop", v)}
                 rows={3}
                 placeholder="۱۵۰ تا ۲۰۰ کلمه: این دسته چیست و برای چه کسی است. بالای فهرست محصولات دیده می‌شود."
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all resize-none"
@@ -446,10 +448,10 @@ export default function CategoriesPage() {
               <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-1.5">
                 توضیحات پایین گرید
               </label>
-              <textarea
+              <LinkTextarea
                 value={form.description}
-                onChange={e => handleChange("description", e.target.value)}
-                rows={3}
+                onChange={v => handleChange("description", v)}
+                rows={6}
                 placeholder="۳۰۰ تا ۴۰۰ کلمه: راهنمای انتخاب. بعد از فهرست محصولات دیده می‌شود."
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all resize-none"
               />
@@ -533,7 +535,7 @@ export default function CategoriesPage() {
                     <input  value={form.seoTitle} onChange={e => handleChange("seoTitle", e.target.value)}
                       placeholder="SEO Title" dir="ltr"
                       className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all text-right" />
-                    <TextMeter text={form.seoTitle} profile="seoTitle" keyword={form.seoKeywords.split(",")[0]?.trim()} className="mt-1" />
+                    <TextMeter text={form.seoTitle} profile="seoTitle" keyword={(form.seoKeywords ?? "").split(",")[0]?.trim()} className="mt-1" />
                   </div>
                   <div>
                     <label className="block text-xs font-black text-gray-600 dark:text-gray-400 mb-1">کلمات کلیدی</label>
@@ -546,7 +548,7 @@ export default function CategoriesPage() {
                     <textarea value={form.seoDescription} onChange={e => handleChange("seoDescription", e.target.value)}
                       rows={2} dir="ltr"
                       className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all resize-none text-right" />
-                    <TextMeter text={form.seoDescription} profile="metaDesc" keyword={form.seoKeywords.split(",")[0]?.trim()} className="mt-1" />
+                    <TextMeter text={form.seoDescription} profile="metaDesc" keyword={(form.seoKeywords ?? "").split(",")[0]?.trim()} className="mt-1" />
                   </div>
                 </div>
               )}

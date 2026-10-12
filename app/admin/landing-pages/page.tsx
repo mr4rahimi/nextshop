@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import LinkTextarea from "@/components/admin/LinkTextarea";
 
 type Cat = { id: string; title: string; slug: string };
 type AttrOpt = { title: string; slug: string; values: { value: string; slug: string }[] };
@@ -195,8 +196,15 @@ export default function LandingPagesAdmin() {
 
         <div>
           <label className={labelCls}>متن معرفی (بالای لیست)</label>
-          <textarea className={inputCls} rows={3} value={form.intro}
-            onChange={e => setForm(f => ({ ...f, intro: e.target.value }))} />
+          <LinkTextarea className={inputCls} rows={3} value={form.intro}
+            onChange={v => setForm(f => ({ ...f, intro: v }))} />
+        </div>
+
+        <div>
+          <label className={labelCls}>متن پایین صفحه (بعد از محصولات)</label>
+          <LinkTextarea className={inputCls} rows={6} value={form.bodyHtml}
+            placeholder="راهنمای انتخاب همین گروه محصول. اگر خالی بماند، توضیحات پایین دسته‌ی مادر نمایش داده می‌شود."
+            onChange={v => setForm(f => ({ ...f, bodyHtml: v }))} />
         </div>
 
         <div className="flex flex-wrap items-center gap-6">

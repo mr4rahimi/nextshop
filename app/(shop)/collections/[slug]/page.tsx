@@ -77,6 +77,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
           initialData={initialData}
           landingH1={lp.h1}
           landingIntro={lp.intro}
+          landingBody={lp.bodyHtml}
           lockedFilters={lp.filters}
           basePath={`/collections/${slug}`}
         />

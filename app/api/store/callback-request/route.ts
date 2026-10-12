@@ -20,6 +20,13 @@ export async function POST(req: NextRequest) {
 
   const user = await getAuthUser();
 
+  // درخواست از کادر «تماس بگیرید» محصول بی‌قیمت — نام محصول از دیتابیس خوانده
+  // می‌شود تا متن یادداشت دست کاربر نباشد
+  const productId: string = typeof body.productId === "string" ? body.productId.slice(0, 40) : "";
+  const product = productId
+    ? await prisma.product.findUnique({ where: { id: productId }, select: { title: true, slug: true } })
+    : null;
+
   await prisma.callbackRequest.create({
     data: {
       phone,
@@ -27,6 +34,7 @@ export async function POST(req: NextRequest) {
       conversationId: conversationId || null,
       userId: user?.id ?? null,
       status: "pending",
+      note: product ? `استعلام قیمت: ${product.title} — /products/${product.slug}` : null,
     },
   });
 

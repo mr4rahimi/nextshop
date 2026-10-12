@@ -48,6 +48,12 @@ export async function GET(req: Request) {
     where.stock = 0;
   }
 
+  // فیلترهای سئو — فقط محصولات فعال، چون غیرفعال‌ها در گوگل نیستند
+  const blank = (f: "seoTitle" | "seoDescription") => ({ OR: [{ [f]: null }, { [f]: "" }] });
+  if (status === "noseotitle") { where.isActive = true; where.AND = [blank("seoTitle")]; }
+  if (status === "nometa")     { where.isActive = true; where.AND = [blank("seoDescription")]; }
+  if (status === "noprice")    { where.isActive = true; where.price = 0; }
+
   if (attrValues.length > 0) {
     where.attributes = { some: { attributeValueId: { in: attrValues } } };
   }

@@ -156,6 +156,9 @@ export default function ShowcaseProductCard({
           <div className="mt-auto flex items-end justify-between gap-2">
             {isOutOfStock ? (
               <span className="text-[11px] font-black text-gray-400">فعلاً موجود نیست</span>
+            ) : !(Number(displayPrice) > 0) ? (
+              // قیمت صفر یعنی «قیمت ثبت نشده» — ۰ تومان و دکمه‌ی سبد نشان داده نمی‌شود
+              <span className="text-[12px] font-black text-primary-600 dark:text-primary-400">برای قیمت تماس بگیرید</span>
             ) : (
               <>
                 <div className="flex min-w-0 flex-col">

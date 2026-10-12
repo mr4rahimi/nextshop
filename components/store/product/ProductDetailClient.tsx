@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import LinkedText from "@/components/store/LinkedText";
+import CallForPriceBox from "@/components/store/product/CallForPriceBox";
 import AddToCartButton from "@/components/store/cart/AddToCartButton";
 import VariantPicker, { useVariantSelection } from "@/components/store/product/VariantPicker";
 import type { VariantView } from "@/lib/variants";
@@ -90,6 +92,8 @@ interface Props {
   categoryRelated?: RelatedProduct[];
   brandRelated?: RelatedProduct[];
   manualRelated?: RelatedProduct[];
+  /** تلفن تنظیمات سایت برای کادر «تماس بگیرید» محصول بی‌قیمت */
+  sitePhone?: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -197,6 +201,8 @@ function RelatedSection({ title, products }: { title: string; products: RelatedP
                 <div className="mt-auto">
                   {outOfStock ? (
                     <span className="text-xs font-black text-gray-400">ناموجود</span>
+                  ) : !(price > 0) ? (
+                    <span className="text-xs font-black text-primary-600 dark:text-primary-400">تماس بگیرید</span>
                   ) : (
                     <span className="text-sm font-black text-primary-600 dark:text-primary-400 tabular-nums">
                       {p.priceFrom ? "از " : ""}{price.toLocaleString("fa-IR")} <span className="text-[10px] font-bold text-gray-400">تومان</span>
@@ -213,7 +219,7 @@ function RelatedSection({ title, products }: { title: string; products: RelatedP
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function ProductDetailClient({ product: base, variants, reviewStats, categoryRelated = [], brandRelated = [], manualRelated = [] }: Props) {
+export default function ProductDetailClient({ product: base, variants, reviewStats, categoryRelated = [], brandRelated = [], manualRelated = [], sitePhone = null }: Props) {
   // تنوع انتخاب‌شده قیمت، موجودی و عکس‌ها را عوض می‌کند؛ بی‌تنوع `product` همان `base` است
   const { current: variant, choose } = useVariantSelection(variants);
   const product = useMemo(() => {
@@ -264,6 +270,8 @@ export default function ProductDetailClient({ product: base, variants, reviewSta
       : null;
 
   const displayPrice = product.salePrice || product.price;
+  // قیمت صفر یعنی «قیمت ثبت نشده»، نه رایگان — جای قیمت و سبد، کادر تماس می‌آید
+  const hasPrice = Number(displayPrice) > 0;
 
   // Group specs by group title
   const specGroups: Record<string, { title: string; value: string }[]> = {};
@@ -536,6 +544,7 @@ export default function ProductDetailClient({ product: base, variants, reviewSta
                     )}
 
                     {/* Price */}
+                    {hasPrice && (
                     <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-white/5">
                       {discountPercent && (
                         <div className="flex items-center justify-between">
@@ -554,6 +563,7 @@ export default function ProductDetailClient({ product: base, variants, reviewSta
                         <span className="text-[11px] font-bold text-gray-500">تومان</span>
                       </div>
                     </div>
+                    )}
 
                     {/* Add to cart */}
                     
@@ -570,6 +580,8 @@ export default function ProductDetailClient({ product: base, variants, reviewSta
                           </div>
                         }
                       />
+                    ) : !hasPrice ? (
+                      <CallForPriceBox productId={product.id} sitePhone={sitePhone} />
                     ) : (
                       <AddToCartButton variant="full" variantId={variant?.id ?? null} product={{
                         id: product.id,
@@ -766,7 +778,7 @@ export default function ProductDetailClient({ product: base, variants, reviewSta
                         )}
                         {product.expertDescription && (
                           <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300 leading-9 text-justify whitespace-pre-line">
-                            {product.expertDescription}
+                            <LinkedText text={product.expertDescription} />
                           </p>
                         )}
                       </div>

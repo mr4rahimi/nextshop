@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import AiImageStudio from "@/components/admin/product/AiImageStudio";
 import AiTextStudio from "@/components/admin/product/AiTextStudio";
 import TextMeter from "@/components/admin/tools/TextMeter";
+import LinkTextarea from "@/components/admin/LinkTextarea";
 import VariantsSection from "./VariantsSection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -900,7 +901,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
             <input value={form.expertTitle} className={inp} onChange={e => set("expertTitle", e.target.value)} />
           </Field>
           <Field label="متن کامل">
-            <textarea rows={5} value={form.expertDescription} className={ta} onChange={e => set("expertDescription", e.target.value)} />
+            <LinkTextarea rows={5} value={form.expertDescription} className={ta} onChange={v => set("expertDescription", v)} />
           </Field>
           <UploadField label="تصویر" fieldKey="expertImage" value={form.expertImage} />
         </Section>

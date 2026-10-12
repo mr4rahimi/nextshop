@@ -7,6 +7,7 @@ import Link from "next/link";
 import { type ProductCardItem } from "@/components/store/product/ManaProductCard";
 import { ProductCardAuto, useProductGridClass } from "@/components/store/product/ProductLayoutContext";
 import FaqSection from "@/components/store/FaqSection";
+import LinkedText from "@/components/store/LinkedText";
 import { normalizeFaq } from "@/lib/faq";
 import { CONDITION_LABELS, type ConditionType } from "@/lib/product-condition";
 
@@ -426,6 +427,7 @@ export default function CategoryPageClient({
   initialData,
   landingH1,
   landingIntro,
+  landingBody,
   lockedFilters,
   basePath,
 }: {
@@ -434,6 +436,8 @@ export default function CategoryPageClient({
   initialData?: ProductsResponse;
   landingH1?: string | null;
   landingIntro?: string | null;
+  /** متن پایین صفحه‌ی فرود؛ اگر خالی باشد توضیحات پایین دسته‌ی مادر می‌آید */
+  landingBody?: string | null;
   lockedFilters?: Record<string, string>;
   basePath?: string;
 }) {
@@ -761,8 +765,8 @@ export default function CategoryPageClient({
                 </p>
               </div>
                {landingIntro && (
-                <p className="mt-4 max-w-3xl text-sm leading-7 text-gray-600 dark:text-gray-300">
-                  {landingIntro}
+                <p className="mt-4 max-w-3xl text-sm leading-7 text-gray-600 dark:text-gray-300 whitespace-pre-line">
+                  <LinkedText text={landingIntro} />
                 </p>
               )}
 
@@ -770,7 +774,7 @@ export default function CategoryPageClient({
                   چون landingIntro خودش همان نقش را دارد */}
               {!landingIntro && category.descriptionTop && (
                 <div className="mt-4 max-w-3xl text-sm leading-8 text-gray-600 dark:text-gray-300 text-justify whitespace-pre-line">
-                  {category.descriptionTop}
+                  <LinkedText text={category.descriptionTop} />
                 </div>
               )}
 
@@ -1120,16 +1124,16 @@ export default function CategoryPageClient({
           </div>
 
           {/* Category Description */}
-          {category.description && (
+          {(landingBody?.trim() || category.description) && (
             <div className="mt-16 bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[3rem] p-10 shadow-xl">
               <div className="flex items-center gap-3 mb-6">
                 <span className="w-2 h-8 bg-primary-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.6)]" />
                 <h2 className="text-2xl font-black text-gray-900 dark:text-white">
-                  درباره دسته‌بندی {category.title}
+                  {landingBody?.trim() ? `درباره ${landingH1 ?? category.title}` : `درباره دسته‌بندی ${category.title}`}
                 </h2>
               </div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400 leading-9 text-justify whitespace-pre-line">
-                {category.description}
+                <LinkedText text={landingBody?.trim() || category.description || ""} />
               </p>
             </div>
           )}

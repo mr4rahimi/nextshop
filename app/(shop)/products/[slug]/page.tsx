@@ -432,6 +432,11 @@ export default async function ProductDetailPage({
     notFound();
   }
 
+  // تلفن کادر «تماس بگیرید» محصول بی‌قیمت
+  const sitePhone = (await prisma.storeSettings
+    .findUnique({ where: { id: "singleton" }, select: { sitePhone: true } })
+    .catch(() => null))?.sitePhone ?? null;
+
   // Schema.org
   const productUrl = canonicalUrl(
     `/products/${encodeSlug(slug)}`
@@ -664,6 +669,7 @@ export default async function ProductDetailPage({
         manualRelated={
           product.manualRelated
         }
+        sitePhone={sitePhone}
       />
     </>
   );

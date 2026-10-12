@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { stripTextLinks } from "@/lib/text-links";
 import { Metadata } from "next";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
@@ -71,7 +72,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   return buildBaseMetadata({
     title:       (category.seoTitle || `خرید ${category.title}`) + pageSuffix,
-    description: category.seoDescription || category.description || `بهترین محصولات در دسته ${category.title}`,
+    description: category.seoDescription || stripTextLinks(category.description) || `بهترین محصولات در دسته ${category.title}`,
     image:       category.imageUrl || settings?.storeLogo || null,
     siteName:    settings?.storeName || undefined,
     path:        policy.canonicalPath,

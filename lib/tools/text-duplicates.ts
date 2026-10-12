@@ -10,13 +10,14 @@
  * مستندات: docs/features/tools.md بخش «کاراکترشمار»
  */
 
+import { stripTextLinks } from "@/lib/text-links";
 import { prisma } from "@/lib/prisma";
 import { createDuplicateScanner, jsonText, stripHtml, type DupResult, type DupSource } from "./text-similarity";
 
 const BATCH = 300;
 
 const join = (...parts: (string | null | undefined)[]) =>
-  parts.filter(Boolean).map((p) => stripHtml(p!)).join("\n");
+  parts.filter(Boolean).map((p) => stripHtml(stripTextLinks(p))).join("\n");
 
 /** خواندن دسته‌ای با cursor روی id */
 async function each<T extends { id: string }>(
