@@ -1,14 +1,14 @@
 "use client";
 
 /**
- * خانه‌ی ابزارها — کاشی‌ها از `TOOLS_APPS` و چند عدد خلاصه.
+ * خانه‌ی ابزارها — کاشی‌ها از `TOOLS_APPS` به تفکیک `group` و چند عدد خلاصه.
  * docs/features/tools.md
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Card, PageHeader, Stat } from "../accounting/ui";
+import { Card, PageHeader, SectionTitle, Stat } from "../accounting/ui";
 import { useAccess } from "../accounting/access";
-import { TOOLS_APPS } from "../apps";
+import { TOOLS_APPS, TOOLS_GROUP_BUSINESS, TOOLS_GROUP_MARKETING } from "../apps";
 import { AppGrid } from "../AppGrid";
 
 interface Summary {
@@ -31,6 +31,13 @@ export default function ToolsHomeClient() {
   const [s, setS] = useState<Summary | null>(null);
   const { ready, can } = useAccess();
   const apps = useMemo(() => TOOLS_APPS.filter((a) => !ready || !a.perm || can(a.perm)), [ready, can]);
+  const groups = useMemo(
+    () =>
+      [TOOLS_GROUP_MARKETING, TOOLS_GROUP_BUSINESS]
+        .map((g) => ({ title: g, apps: apps.filter((a) => (a.group ?? TOOLS_GROUP_MARKETING) === g) }))
+        .filter((g) => g.apps.length),
+    [apps],
+  );
 
   useEffect(() => {
     fetch("/api/admin/tools/summary").then((r) => (r.ok ? r.json() : null)).then(setS).catch(() => {});
@@ -41,12 +48,17 @@ export default function ToolsHomeClient() {
       <PageHeader
         title="ابزارها"
         help="tools"
-        desc="کیوآر کد، لینک کوتاه، لندینگ، درخواست ثبت نظر، یادآوری سبد رهاشده و «موجود شد خبرم کن» روی دامنه‌ی خود فروشگاه با آمار — و ابزارهای سریع متن مثل کاراکترشمار."
+        desc="کیوآر کد، لینک کوتاه، لندینگ، درخواست ثبت نظر، یادآوری سبد رهاشده و «موجود شد خبرم کن» روی دامنه‌ی خود فروشگاه با آمار — و ابزارهای سریع مثل کاراکترشمار، ماشین‌حساب قیمت و نقطه‌ی سربه‌سر."
       />
 
-      <Card className="px-2 py-3 sm:px-4">
-        <AppGrid apps={apps} />
-      </Card>
+      {groups.map((g) => (
+        <Card key={g.title} className="px-2 py-3 sm:px-4">
+          <div className="px-2 pt-1">
+            <SectionTitle title={g.title} />
+          </div>
+          <AppGrid apps={g.apps} />
+        </Card>
+      ))}
 
       {s && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

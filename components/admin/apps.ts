@@ -14,7 +14,7 @@ import {
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
-  CalendarDays, Lock, QrCode, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop,
+  CalendarDays, Lock, QrCode, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop, Scale,
 } from "lucide-react";
 
 /** رنگ کاشی — کلاس‌ها کامل نوشته شده‌اند تا Tailwind پیدایشان کند */
@@ -73,6 +73,8 @@ export interface AppItem {
    * lucide را می‌گیرد؛ `icon` و `tone` برای جاهای بی‌تصویر می‌مانند.
    */
   img?: string;
+  /** دسته‌ی کاشی در خانه‌ی ماژول (فعلاً فقط ابزارها) — بی‌دسته یعنی دسته‌ی اول */
+  group?: string;
 }
 
 // ── کارتابل — docs/features/staff-worklist.md ─────────────────────────────
@@ -127,6 +129,9 @@ export const ACCOUNTING_APPS: AppItem[] = [
 // ابزار تازه = یک ردیف اینجا + صفحه‌ی خودش زیر /admin/tools. صفحه‌ی خانه‌ی
 // ابزارها و زیرمنوی سایدبار هر دو از همین فهرست ساخته می‌شوند.
 
+export const TOOLS_GROUP_MARKETING = "بازاریابی و فروش";
+export const TOOLS_GROUP_BUSINESS = "مدیریت کسب‌وکار";
+
 export const TOOLS_APPS: AppItem[] = [
   { href: "/admin/tools/qr", label: "کیوآر کد", icon: QrCode, tone: "violet", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
   { href: "/admin/tools/links", label: "لینک کوتاه", icon: Link2, tone: "blue", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
@@ -135,8 +140,9 @@ export const TOOLS_APPS: AppItem[] = [
   { href: "/admin/tools/text-counter", label: "کاراکترشمار", icon: Type, tone: "teal", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
   { href: "/admin/tools/cart-recovery", label: "سبد رهاشده", icon: ShoppingCart, tone: "rose", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
   { href: "/admin/tools/stock-alerts", label: "موجود شد خبرم کن", icon: BellRing, tone: "sky", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
-  { href: "/admin/tools/price-calc", label: "ماشین‌حساب قیمت", icon: Calculator, tone: "indigo", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
   { href: "/admin/tools/popups", label: "پاپ‌آپ", icon: PanelTop, tone: "fuchsia", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
+  { href: "/admin/tools/price-calc", label: "ماشین‌حساب قیمت", icon: Calculator, tone: "indigo", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
+  { href: "/admin/tools/break-even", label: "نقطه‌ی سربه‌سر", icon: Scale, tone: "orange", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
 ];
 
 // ── تطبیق مسیر ────────────────────────────────────────────────────────────
