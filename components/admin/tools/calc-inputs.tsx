@@ -31,13 +31,14 @@ export function MoneyInput({ value, onChange, placeholder }: { value: number; on
   );
 }
 
-export function PctInput({ value, onChange, max = 100 }: { value: number; onChange: (n: number) => void; max?: number }) {
+/** عدد اعشاری با پسوند (٪، روز، …) */
+export function DecimalInput({ value, onChange, max = Infinity, suffix }: { value: number; onChange: (n: number) => void; max?: number; suffix?: string }) {
   // متن جدا از عدد نگه داشته می‌شود تا «۱۲.» وسط تایپ پاک نشود؛ تغییر بیرونی با `key` تازه می‌آید
   const [text, setText] = useState(String(value));
   return (
     <div className="relative">
       <input
-        className={`${inputCls} pl-7 tabular-nums`}
+        className={`${inputCls} ${suffix ? (suffix.length > 1 ? "pl-10" : "pl-7") : ""} tabular-nums`}
         dir="ltr"
         inputMode="decimal"
         value={text}
@@ -46,9 +47,13 @@ export function PctInput({ value, onChange, max = 100 }: { value: number; onChan
           onChange(Math.min(max, parseNum(e.target.value)));
         }}
       />
-      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">٪</span>
+      {suffix && <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">{suffix}</span>}
     </div>
   );
+}
+
+export function PctInput({ value, onChange, max = 100 }: { value: number; onChange: (n: number) => void; max?: number }) {
+  return <DecimalInput value={value} onChange={onChange} max={max} suffix="٪" />;
 }
 
 /** کاشی کوچک عدد زیر نتیجه‌ی ماشین‌حساب‌ها؛ `hint` با نگه داشتن نشانگر دیده می‌شود */

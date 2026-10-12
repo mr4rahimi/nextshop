@@ -3,6 +3,7 @@
 /**
  * تخفیف و حراج — با X٪ تخفیف چقدر باید بیشتر بفروشید تا سود کل همان بماند. ابزار سریع بدون
  * جدول؛ ورودی‌ها در `localStorage` (`tools.discount`). منطق: `lib/tools/discount.ts`.
+ * `?price=&cost=` (از «سرمایه‌ی درگیر») قیمت و هزینه را پر می‌کند.
  * docs/features/tools.md بخش ۱۳
  */
 
@@ -17,11 +18,20 @@ import { Metric, MoneyInput, PctInput, fa, toman } from "./calc-inputs";
 const STORE_KEY = "tools.discount";
 
 function load(): DiscountInput {
+  let x = DEFAULT_DISCOUNT;
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { ...DEFAULT_DISCOUNT, ...(JSON.parse(raw) as Partial<DiscountInput>) };
+    if (raw) x = { ...DEFAULT_DISCOUNT, ...(JSON.parse(raw) as Partial<DiscountInput>) };
   } catch {}
-  return DEFAULT_DISCOUNT;
+  // پیوند «تخفیف» از سرمایه‌ی درگیر: ?price=&cost= — یک بار اعمال و از آدرس پاک می‌شود
+  const qs = new URLSearchParams(window.location.search);
+  const price = Number(qs.get("price"));
+  const cost = Number(qs.get("cost"));
+  if (price > 0 && cost >= 0 && qs.has("cost")) {
+    x = { ...x, price: Math.round(price), costMode: "AMOUNT", unitCost: Math.round(cost), variablePct: 0 };
+    window.history.replaceState(null, "", window.location.pathname);
+  }
+  return x;
 }
 
 export default function DiscountClient() {
