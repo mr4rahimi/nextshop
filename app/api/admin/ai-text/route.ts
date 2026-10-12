@@ -7,6 +7,9 @@ import { AI_TEXT_SECTIONS, type AiTextSection } from "@/lib/ai/text-presets";
 
 export const runtime = "nodejs";
 
+/** CDN بدنه‌ی پاسخ‌های ۴xx را با صفحه‌ی خودش عوض می‌کند؛ خطای کاربر با ۲۰۰ و ok:false */
+const fail = (error: string) => NextResponse.json({ ok: false, error });
+
 /**
  * نوشتن متن محصول با هوش مصنوعی — docs/features/ai-product-text.md
  *
@@ -30,14 +33,12 @@ export async function POST(req: Request) {
 
   const s = await getAiSettings();
   if (!s.apiKey) {
-    return NextResponse.json({
-      error: "کلید GapGPT تنظیم نشده. از «تنظیمات ← تنظیمات هوش مصنوعی» کلید را وارد کنید.",
-    }, { status: 400 });
+    return fail("کلید GapGPT تنظیم نشده. از «تنظیمات ← تنظیمات هوش مصنوعی» کلید را وارد کنید.");
   }
 
   let data: FormData;
   try { data = await req.formData(); } catch {
-    return NextResponse.json({ error: "درخواست نامعتبر است." }, { status: 400 });
+    return fail("درخواست نامعتبر است.");
   }
   const text = (k: string, max: number) => String(data.get(k) ?? "").trim().slice(0, max);
 
@@ -45,8 +46,8 @@ export async function POST(req: Request) {
   let image: string | null = null;
   const file = data.get("image");
   if (file instanceof Blob && file.size) {
-    if (!INPUT_TYPES.has(file.type)) return NextResponse.json({ error: "فرمت تصویر باید JPG، PNG یا WebP باشد." }, { status: 400 });
-    if (file.size > MAX_INPUT_BYTES) return NextResponse.json({ error: "حجم تصویر بیش از ۸ مگابایت است." }, { status: 400 });
+    if (!INPUT_TYPES.has(file.type)) return fail("فرمت تصویر باید JPG، PNG یا WebP باشد.");
+    if (file.size > MAX_INPUT_BYTES) return fail("حجم تصویر بیش از ۸ مگابایت است.");
     image = `data:${file.type};base64,${Buffer.from(await file.arrayBuffer()).toString("base64")}`;
   } else if (text("imageUrl", 1000)) {
     image = await imageToDataUrl(text("imageUrl", 1000));
@@ -59,18 +60,18 @@ export async function POST(req: Request) {
     specItems = (JSON.parse(text("specItems", 20000) || "[]") as { id: string; title: string; value?: string }[])
       .filter(x => x && typeof x.id === "string" && typeof x.title === "string").slice(0, 80);
   } catch {
-    return NextResponse.json({ error: "درخواست نامعتبر است." }, { status: 400 });
+    return fail("درخواست نامعتبر است.");
   }
-  if (!sections.length) return NextResponse.json({ error: "دست‌کم یک بخش را انتخاب کنید." }, { status: 400 });
+  if (!sections.length) return fail("دست‌کم یک بخش را انتخاب کنید.");
 
   const notes = text("notes", 3000);
   const title = text("title", 200);
   if (!image && !notes && !title) {
-    return NextResponse.json({ error: "عکس یا چند مشخصه از محصول بدهید تا هوش مصنوعی چیزی برای نوشتن داشته باشد." }, { status: 400 });
+    return fail("عکس یا چند مشخصه از محصول بدهید تا هوش مصنوعی چیزی برای نوشتن داشته باشد.");
   }
 
   if (runningTextJobs(user.id, "single") >= 2) {
-    return NextResponse.json({ error: "هنوز نوشتن متن قبلی تمام نشده. کمی صبر کنید." }, { status: 429 });
+    return fail("هنوز نوشتن متن قبلی تمام نشده. کمی صبر کنید.");
   }
 
   const job = startTextJob({

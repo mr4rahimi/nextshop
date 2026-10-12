@@ -79,8 +79,8 @@ export default function AiTextBulkPage() {
   async function poll(id: string) {
     try {
       const r = await fetch(`/api/admin/ai-text/${id}`, { cache: "no-store" });
-      if (!r.ok) { try { sessionStorage.removeItem(JOB_KEY); } catch {} ; return; }
-      const j = (await r.json()) as Job;
+      const j = (await r.json().catch(() => null)) as (Job & { ok?: boolean }) | null;
+      if (!r.ok || !j || j.ok === false) { try { sessionStorage.removeItem(JOB_KEY); } catch {} ; return; }
       setJob(j);
       if (j.status === "running") timer.current = setTimeout(() => poll(id), 3000);
       else { try { sessionStorage.removeItem(JOB_KEY); } catch {} ; load(); }
@@ -98,7 +98,7 @@ export default function AiTextBulkPage() {
       body: JSON.stringify({ productIds: ids, sections: retitle ? [...sections, "title"] : sections, retitle }),
     });
     const b = await r.json().catch(() => ({}));
-    if (!r.ok) { setError(b?.error || `کد ${r.status}`); return; }
+    if (!r.ok || !b?.jobId) { setError(b?.error || `کد ${r.status}`); return; }
     try { sessionStorage.setItem(JOB_KEY, b.jobId); } catch {}
     setSelected(new Set());
     poll(b.jobId);

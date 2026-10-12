@@ -8,6 +8,9 @@ import { AI_TEXT_SECTIONS, type AiTextSection } from "@/lib/ai/text-presets";
 
 export const runtime = "nodejs";
 
+/** CDN بدنه‌ی پاسخ‌های ۴xx را با صفحه‌ی خودش عوض می‌کند؛ خطای کاربر با ۲۰۰ و ok:false */
+const fail = (error: string) => NextResponse.json({ ok: false, error });
+
 /**
  * تولید گروهی متن محصول — docs/features/ai-product-text.md
  *
@@ -70,21 +73,21 @@ export async function POST(req: Request) {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "دسترسی غیرمجاز" }, { status: 401 });
   const s = await getAiSettings();
-  if (!s.apiKey) return NextResponse.json({ error: "کلید GapGPT تنظیم نشده. از «تنظیمات هوش مصنوعی» کلید را وارد کنید." }, { status: 400 });
+  if (!s.apiKey) return fail("کلید GapGPT تنظیم نشده. از «تنظیمات هوش مصنوعی» کلید را وارد کنید.");
 
   let body: { productIds?: unknown; sections?: unknown; retitle?: unknown };
   try { body = await req.json(); } catch {
-    return NextResponse.json({ error: "درخواست نامعتبر است." }, { status: 400 });
+    return fail("درخواست نامعتبر است.");
   }
   const ids = [...new Set(Array.isArray(body.productIds) ? body.productIds.filter((x): x is string => typeof x === "string") : [])];
-  if (!ids.length) return NextResponse.json({ error: "محصولی انتخاب نشده." }, { status: 400 });
-  if (ids.length > MAX_BULK) return NextResponse.json({ error: `هر بار حداکثر ${MAX_BULK} محصول.` }, { status: 400 });
+  if (!ids.length) return fail("محصولی انتخاب نشده.");
+  if (ids.length > MAX_BULK) return fail(`هر بار حداکثر ${MAX_BULK} محصول.`);
   const sections = (Array.isArray(body.sections) ? body.sections : []).filter((x): x is AiTextSection => SECTION_VALUES.has(x as AiTextSection));
-  if (!sections.length) return NextResponse.json({ error: "دست‌کم یک بخش را انتخاب کنید." }, { status: 400 });
+  if (!sections.length) return fail("دست‌کم یک بخش را انتخاب کنید.");
 
   // چند تا هم‌زمان: ساخت پشت‌سرهم چند محصول از انبار هر کدام یک کار تک‌محصولی می‌سازد
   if (runningTextJobs(user.id, "bulk") >= 3) {
-    return NextResponse.json({ error: "چند تولید گروهی در جریان است. صبر کنید تمام شوند یا لغوشان کنید." }, { status: 429 });
+    return fail("چند تولید گروهی در جریان است. صبر کنید تمام شوند یا لغوشان کنید.");
   }
   const job = startBulkTextJob({
     userId: user.id,

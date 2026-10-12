@@ -378,8 +378,8 @@ function CreateSheet({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ productIds: [r.product.id], sections: ["title", "short", "expert", "features", "faq", "seo"], retitle: true }),
-        }).catch(() => null);
-        note += ai?.ok ? " عنوان استاندارد و متن محصول تا چند ثانیه‌ی دیگر با هوش مصنوعی نوشته می‌شود." : " نوشتن متن با هوش مصنوعی شروع نشد؛ از فرم محصول بنویسید.";
+        }).then((x) => x.json()).catch(() => null);
+        note += ai?.jobId ? " عنوان استاندارد و متن محصول تا چند ثانیه‌ی دیگر با هوش مصنوعی نوشته می‌شود." : " نوشتن متن با هوش مصنوعی شروع نشد؛ از فرم محصول بنویسید.";
       }
       onDone(r.product, note);
     } catch (e) {

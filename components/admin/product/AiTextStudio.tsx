@@ -118,14 +118,14 @@ export default function AiTextStudio({
 
       const r = await fetch("/api/admin/ai-text", { method: "POST", body: fd });
       const body = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(body?.error || `کد ${r.status}`);
+      if (!r.ok || !body?.jobId) throw new Error(body?.error || `کد ${r.status}`);
 
       for (;;) {
         await new Promise(x => setTimeout(x, POLL_MS));
         if (cancelled.current) return;
         const st = await fetch(`/api/admin/ai-text/${body.jobId}`, { cache: "no-store" });
         const sb = await st.json().catch(() => ({}));
-        if (!st.ok) throw new Error(sb?.error || `کد ${st.status}`);
+        if (!st.ok || sb.ok === false) throw new Error(sb?.error || `کد ${st.status}`);
         if (sb.status === "error") throw new Error(sb.error);
         if (sb.status === "done") {
           const result = sb.result as AiTextResult;
