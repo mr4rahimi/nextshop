@@ -13,6 +13,10 @@ import {
   DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_PRESETS,
   type AiImagePreset, type AiImageQuality,
 } from "@/lib/ai/image-presets";
+import {
+  DEFAULT_TEXT_MODEL, DEFAULT_TITLE_PATTERN, DEFAULT_TITLE_EXAMPLES, DEFAULT_BANNED_WORDS,
+  type AiTextTone, type AiTitleTemplate,
+} from "@/lib/ai/text-presets";
 
 export const GAPGPT_BASE_URL = "https://api.gapgpt.app/v1";
 
@@ -21,6 +25,15 @@ export interface AiSettings {
   imageModel: string;
   imageQuality: AiImageQuality;
   imagePresets: AiImagePreset[];
+  /** متن محصول — docs/features/ai-product-text.md */
+  textModel: string;
+  textTone: AiTextTone;
+  textBannedWords: string;
+  /** قاعده‌های آزاد فروشگاه، مثلاً «گارانتی را ذکر نکن» */
+  textRules: string;
+  titlePattern: string;
+  titleExamples: string;
+  titleTemplates: AiTitleTemplate[];
 }
 
 const QUALITIES: AiImageQuality[] = ["low", "medium", "high"];
@@ -45,6 +58,18 @@ function normalize(ai: Partial<AiSettings>): Omit<AiSettings, "apiKey"> {
     imageQuality: QUALITIES.includes(ai.imageQuality as AiImageQuality)
       ? (ai.imageQuality as AiImageQuality) : "medium",
     imagePresets: presets.length ? presets : DEFAULT_IMAGE_PRESETS,
+    textModel: ai.textModel?.trim() || DEFAULT_TEXT_MODEL,
+    textTone: ai.textTone === "friendly" ? "friendly" : "formal",
+    // undefined یعنی هنوز ذخیره نشده → پیش‌فرض؛ رشته‌ی خالی یعنی کاربر عمداً پاکش کرده
+    textBannedWords: typeof ai.textBannedWords === "string" ? ai.textBannedWords.slice(0, 1000) : DEFAULT_BANNED_WORDS,
+    textRules: typeof ai.textRules === "string" ? ai.textRules.slice(0, 2000) : "",
+    titlePattern: ai.titlePattern?.trim().slice(0, 200) || DEFAULT_TITLE_PATTERN,
+    titleExamples: typeof ai.titleExamples === "string" ? ai.titleExamples.slice(0, 1000) : DEFAULT_TITLE_EXAMPLES,
+    titleTemplates: Array.isArray(ai.titleTemplates)
+      ? ai.titleTemplates
+          .filter(t => t && typeof t.categoryId === "string" && t.categoryId && typeof t.pattern === "string" && t.pattern.trim())
+          .map(t => ({ categoryId: t.categoryId, pattern: t.pattern.trim().slice(0, 200), example: String(t.example ?? "").slice(0, 500) }))
+      : [],
   };
 }
 
@@ -87,7 +112,8 @@ export async function saveAiSettings(input: Partial<AiSettings> & { clearKey?: b
   const incomingKey = input.apiKey?.trim() ?? "";
   const keyChanged = incomingKey && !incomingKey.includes("…") && !incomingKey.includes("•");
   const next = {
-    ...normalize({ ...ai, ...input }),
+    // فیلدی که نیامده (undefined) مقدار ذخیره‌شده را پاک نکند
+    ...normalize({ ...ai, ...Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)) }),
     apiKey: input.clearKey ? "" : keyChanged ? incomingKey : ai.apiKey?.trim() ?? "",
   };
   await prisma.storeSettings.upsert({

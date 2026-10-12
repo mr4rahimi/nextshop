@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { logActivityAsync } from "@/lib/activity";
 import type { AiImagePreset, AiImageQuality } from "@/lib/ai/image-presets";
+import type { AiTextTone, AiTitleTemplate } from "@/lib/ai/text-presets";
 import { getAiSettings, getAiSettingsForClient, saveAiSettings, GAPGPT_BASE_URL } from "@/lib/ai/settings";
 
 export const runtime = "nodejs";
@@ -11,6 +12,8 @@ export const runtime = "nodejs";
  * کلید فقط پوشیده برمی‌گردد؛ PUT کلید را فقط با مقدار تازه عوض می‌کند.
  * POST یعنی «تست اتصال»: فهرست مدل‌ها را می‌گیرد و هزینه‌ای ندارد.
  */
+
+const str = (v: unknown) => (typeof v === "string" ? v : undefined);
 
 export async function GET() {
   return NextResponse.json(await getAiSettingsForClient(), { headers: { "Cache-Control": "no-store" } });
@@ -31,6 +34,13 @@ export async function PUT(req: Request) {
     imageModel: typeof body.imageModel === "string" ? body.imageModel : undefined,
     imageQuality: body.imageQuality as AiImageQuality | undefined,
     imagePresets: Array.isArray(body.imagePresets) ? (body.imagePresets as AiImagePreset[]) : undefined,
+    textModel: str(body.textModel),
+    textTone: body.textTone as AiTextTone | undefined,
+    textBannedWords: str(body.textBannedWords),
+    textRules: str(body.textRules),
+    titlePattern: str(body.titlePattern),
+    titleExamples: str(body.titleExamples),
+    titleTemplates: Array.isArray(body.titleTemplates) ? (body.titleTemplates as AiTitleTemplate[]) : undefined,
   });
   logActivityAsync({
     action: "UPDATE",
@@ -53,7 +63,11 @@ export async function POST() {
     if (res.status === 401) return NextResponse.json({ ok: false, error: "کلید نامعتبر است." });
     if (!res.ok) return NextResponse.json({ ok: false, error: `پاسخ GapGPT: کد ${res.status}` });
     const ids: string[] = ((await res.json())?.data ?? []).map((m: { id: string }) => m.id);
-    return NextResponse.json({ ok: true, imageModelAvailable: ids.includes(s.imageModel) });
+    return NextResponse.json({
+      ok: true,
+      imageModelAvailable: ids.includes(s.imageModel),
+      textModelAvailable: ids.includes(s.textModel),
+    });
   } catch (e) {
     return NextResponse.json({ ok: false, error: `اتصال به GapGPT برقرار نشد (${e instanceof Error ? e.message : "خطا"})` });
   }

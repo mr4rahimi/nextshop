@@ -59,6 +59,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     permissions: ["PANEL_CATALOG"],
     prefixes: [
       "/admin/products", "/api/admin/products",
+      // نوشتن متن محصول با هوش مصنوعی — docs/features/ai-product-text.md
+      "/api/admin/ai-text",
       "/admin/categories", "/api/admin/categories",
       "/admin/brands", "/api/admin/brands",
       "/admin/spec-groups", "/api/admin/spec-groups",

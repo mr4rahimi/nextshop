@@ -337,6 +337,13 @@ function CreateSheet({
   const [plan, setPlan] = useState<ModelPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // نوشتن متن با هوش مصنوعی بعد از ساخت — docs/features/ai-product-text.md
+  // فقط وقتی کلید هست و کاربر به کاتالوگ دسترسی دارد (وگرنه این مسیر ۴۰۳ می‌دهد)
+  const [aiReady, setAiReady] = useState(false);
+  const [aiText, setAiText] = useState(true);
+  useEffect(() => {
+    fetch("/api/admin/ai-text").then((r) => (r.ok ? r.json() : null)).then((c) => setAiReady(!!c?.ready)).catch(() => {});
+  }, []);
 
   const body = useMemo(
     () => (isModel ? { modelId: target.row.id, title, categoryId, brandId, price: price || null, axisMap, exclude } : { itemId: target.item.id, title, categoryId, brandId, price: price || null }),
@@ -364,7 +371,17 @@ function CreateSheet({
     setError(null);
     try {
       const r = await api<{ product: { id: string; title: string }; variants?: number; skipped?: Skipped[] }>(URL_, { method: "POST", json: { action: isModel ? "create-model" : "simple", ...body } });
-      onDone(r.product, isModel ? `با ${faNum(r.variants ?? 0)} تنوع به‌صورت پیش‌نویس ساخته شد.` : "به‌صورت پیش‌نویس ساخته شد.");
+      let note = isModel ? `با ${faNum(r.variants ?? 0)} تنوع به‌صورت پیش‌نویس ساخته شد.` : "به‌صورت پیش‌نویس ساخته شد.";
+      if (aiReady && aiText) {
+        // در پس‌زمینه‌ی سرور؛ نتیجه در گزارش فعالیت‌ها و خود محصول دیده می‌شود
+        const ai = await fetch("/api/admin/ai-text/bulk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productIds: [r.product.id], sections: ["title", "short", "expert", "features", "faq", "seo"], retitle: true }),
+        }).catch(() => null);
+        note += ai?.ok ? " عنوان استاندارد و متن محصول تا چند ثانیه‌ی دیگر با هوش مصنوعی نوشته می‌شود." : " نوشتن متن با هوش مصنوعی شروع نشد؛ از فرم محصول بنویسید.";
+      }
+      onDone(r.product, note);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -476,6 +493,15 @@ function CreateSheet({
               {!data.internal && <p className="text-[11px] text-gray-400">موجودی هر تنوع را بعداً در ویرایش محصول بنویسید.</p>}
             </div>
           </>
+        )}
+        {aiReady && (
+          <label className="flex items-start gap-2 text-xs cursor-pointer rounded-xl bg-violet-50 dark:bg-violet-500/10 px-3 py-2">
+            <input type="checkbox" checked={aiText} onChange={(e) => setAiText(e.target.checked)} className="mt-0.5" />
+            <span>
+              ✨ عنوان استاندارد و متن محصول با هوش مصنوعی نوشته شود
+              <span className="block text-[11px] text-gray-500">توضیحات، ویژگی‌ها، سوالات متداول و سئو — بعد از ساخت، در پس‌زمینه.</span>
+            </span>
+          </label>
         )}
         <p className="text-[11px] text-gray-400 leading-5">محصول غیرفعال ساخته می‌شود؛ عکس، توضیح و سئو را در ویرایش محصول کامل کنید و بعد فعالش کنید.</p>
         <ErrorText>{error}</ErrorText>

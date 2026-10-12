@@ -136,6 +136,7 @@ export const MENU_GROUPS: NavGroup[] = [
           { href: "/admin/landing-pages", label: "صفحات فرود سئو" },
           { href: "/admin/products/bulk-price", label: "ویرایش گروهی قیمت", icon: "🏷️" },
           { href: "/admin/products/bulk-stock", label: "ویرایش گروهی موجودی", icon: "📦" },
+          { href: "/admin/products/ai-text", label: "متن گروهی با هوش مصنوعی", icon: "✨" },
 
         ],
         
@@ -342,7 +343,7 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   seo: "سئو", redirects: "ریدایرکت‌ها", "not-found": "گزارش ۴۰۴",
   "landing-pages": "صفحات فرود", pages: "برگه‌ها", admins: "مدیریت ادمین‌ها",
   "attribute-groups": "گروه ویژگی‌ها", "bulk-price": "ویرایش گروهی قیمت",
-  "bulk-stock": "ویرایش گروهی موجودی", "bulk-edit": "ویرایش گروهی",
+  "bulk-stock": "ویرایش گروهی موجودی", "ai-text": "متن گروهی با هوش مصنوعی", "bulk-edit": "ویرایش گروهی",
   login: "ورود",
   // ابزارها — docs/features/tools.md
   tools: "ابزارها", qr: "کیوآر کد", landings: "لندینگ‌ساز",

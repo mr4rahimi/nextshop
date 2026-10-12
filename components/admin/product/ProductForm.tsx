@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { slugify, slugifyDraft } from "@/lib/slug";
 import { useRouter } from "next/navigation";
 import AiImageStudio from "@/components/admin/product/AiImageStudio";
+import AiTextStudio from "@/components/admin/product/AiTextStudio";
 import TextMeter from "@/components/admin/tools/TextMeter";
 import VariantsSection from "./VariantsSection";
 
@@ -357,6 +358,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [uploadError, setUploadError]   = useState<string | null>(null);
   const [aiStudioOpen, setAiStudioOpen] = useState(false);
+  const [aiTextOpen, setAiTextOpen]     = useState(false);
   const [error, setError]           = useState<string | null>(null);
   const [success, setSuccess]       = useState(false);
 
@@ -592,6 +594,26 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
 
         {}
         <Section title="اطلاعات پایه" icon="📋">
+          {/* نوشتن متن با هوش مصنوعی — docs/features/ai-product-text.md */}
+          <button type="button" onClick={() => setAiTextOpen(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-l from-violet-600 to-blue-600 text-white text-sm font-black shadow shadow-blue-500/20 hover:opacity-90 transition-all">
+            ✨ نوشتن عنوان و متن با هوش مصنوعی
+            <span className="text-[11px] font-normal opacity-80">— از عکس و چند مشخصه</span>
+          </button>
+          <AiTextStudio
+            open={aiTextOpen}
+            onClose={() => setAiTextOpen(false)}
+            form={form}
+            existingImages={[form.mainImage, ...form.images].filter(Boolean)}
+            specGroups={specGroups}
+            brands={brands}
+            onApply={patch => setForm(prev => ({
+              ...prev,
+              ...patch,
+              // نشانی محصول منتشرشده با عنوان تازه عوض نمی‌شود (لینک‌های ایندکس‌شده)
+              ...(patch.title && (mode === "create" || !prev.slug) ? { slug: slugify(patch.title) } : {}),
+            }))}
+          />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="عنوان محصول *">
               <input required value={form.title} className={inp}
