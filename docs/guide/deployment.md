@@ -35,6 +35,21 @@ node scripts/deploy/deploy.mjs uniqquestar
 `node_modules` را منتقل می‌کند → `prisma generate` + `migrate deploy` + `next build`
 → `pm2 restart` → health check؛ و اگر سایت بالا نیامد خودکار به بکاپ برمی‌گردد.
 
+### دستور همه‌ی سایت‌های اصلی (بعد از تأیید روی 9dm)
+
+```bash
+node scripts/deploy/deploy.mjs mahamprint
+node scripts/deploy/deploy.mjs bartarjanebi
+node scripts/deploy/deploy.mjs mymonta
+node scripts/deploy/deploy.mjs uniqquestar
+node scripts/deploy/deploy.mjs sezavar
+# فقط اگر workers/ یا lib/club تغییر کرده:
+ssh root@94.184.32.197 'pm2 restart sezavar-worker'
+```
+
+> بیلد sezavar روی ۲ گیگ رم کند است (بار اول حدود ۴۰ دقیقه). اگر وسط کار
+> اتصال افتاد، همان راه «تله: قطع اتصال SSH» پایین را بروید.
+
 برای سایت‌های `production` دو تأیید دستی می‌خواهد (`yes` و `backup-ok`).
 با `--yes` رد می‌شود و با `--tier demo` می‌توان گروهی اجرا کرد.
 
@@ -500,8 +515,17 @@ ssh root@<IP> "sha256sum /var/www/<name>/pnpm-lock.yaml | cut -c1-16 > /var/www/
 ### نمونه‌ی دوم: sezavar.shop (۱۴۰۵/۰۷/۲۰، نسخه‌ی ۲.۸۱.۰)
 
 سرور `94.184.32.197`، Ubuntu 26.04، ۲ گیگ رم، تک‌سایته. پیش از نصب فقط nginx
-و یک صفحه‌ی ایستای «به‌زودی» در `/var/www/sezavar.shop` داشت (هنوز همان‌جاست و
-nginx دیگر به آن اشاره نمی‌کند).
+و یک صفحه‌ی ایستای «به‌زودی» در `/var/www/sezavar.shop` داشت. فایل‌هایش هنوز
+همان‌جاست و پیکربندی nginx قبلی‌اش در
+`/root/nginx-backup/sezavar.shop.coming-soon`؛ nginx حالا از
+`sites-enabled/sezavar` به فروشگاه پراکسی می‌کند.
+
+> **بعد از تعویض nginx، مرورگر ممکن است همچنان «به‌زودی» نشان دهد.** صفحه‌ی
+> قبلی کش طولانی داشت. سایت را در پنجره‌ی ناشناس یا با Ctrl+Shift+R باز کنید.
+> سنجش واقعی: `curl -s https://sezavar.shop/ | grep -o '<title>[^<]*'`.
+>
+> دامنه‌ی `sezavar.ir` هنوز DNS ندارد. وقتی به همین سرور وصل شد، گواهی بگیرید
+> و با یک `server` جدا به `https://sezavar.shop` ریدایرکت ۳۰۱ کنید.
 
 - **وابستگی‌ها روی خود سرور نصب شد** (`CI=true pnpm install --frozen-lockfile`)،
   نه انتقال `node_modules` از لوکال، چون این سرور به `registry.npmjs.org`

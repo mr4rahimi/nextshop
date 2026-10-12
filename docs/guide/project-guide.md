@@ -1,7 +1,7 @@
 # PROJECT_GUIDE — راهنمای مرجع پروژه (برای Claude و توسعه‌دهنده)
 
 ## معرفی
-فروشگاه اینترنتی Next.js (App Router) — نمونه مستقر: mahamprint.com
+فروشگاه اینترنتی Next.js (App Router) — سایت‌های مستقر: mahamprint.com، bartar-janebi.com، mymonta.ir، uniqquestar.com، sezavar.shop (دمو: 9dm.ir)
 مولتی‌دیپلوی: یک کدبیس، چند سایت روی سرور با env متفاوت.
 
 ## استک
