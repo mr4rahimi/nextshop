@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * ورودی‌های مشترک ماشین‌حساب‌های ابزارها (قیمت و سود، سربه‌سر) — ارقام فارسی و
- * جداکننده‌ی هزارگان را می‌پذیرند. docs/features/tools.md بخش ۸ و ۱۰
+ * ورودی‌ها و کاشی عدد مشترک ماشین‌حساب‌های ابزارها (قیمت و سود، سربه‌سر، ROI، قیف، تخفیف) —
+ * ورودی‌ها ارقام فارسی و جداکننده‌ی هزارگان را می‌پذیرند. docs/features/tools.md بخش ۸ و ۱۰ تا ۱۳
  */
 
 import { useState } from "react";
@@ -47,6 +47,16 @@ export function PctInput({ value, onChange, max = 100 }: { value: number; onChan
         }}
       />
       <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">٪</span>
+    </div>
+  );
+}
+
+/** کاشی کوچک عدد زیر نتیجه‌ی ماشین‌حساب‌ها؛ `hint` با نگه داشتن نشانگر دیده می‌شود */
+export function Metric({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="rounded-xl bg-gray-50 p-2.5 dark:bg-white/5" title={hint}>
+      <dt className="text-[10px] font-bold text-gray-400">{label}</dt>
+      <dd className="mt-0.5 font-black tabular-nums">{value}</dd>
     </div>
   );
 }

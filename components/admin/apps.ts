@@ -14,7 +14,7 @@ import {
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
-  CalendarDays, Lock, QrCode, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop, Scale,
+  CalendarDays, Lock, QrCode, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop, Scale, Megaphone, Funnel, BadgePercent,
 } from "lucide-react";
 
 /** رنگ کاشی — کلاس‌ها کامل نوشته شده‌اند تا Tailwind پیدایشان کند */
@@ -143,6 +143,9 @@ export const TOOLS_APPS: AppItem[] = [
   { href: "/admin/tools/popups", label: "پاپ‌آپ", icon: PanelTop, tone: "fuchsia", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"] },
   { href: "/admin/tools/price-calc", label: "ماشین‌حساب قیمت", icon: Calculator, tone: "indigo", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
   { href: "/admin/tools/break-even", label: "نقطه‌ی سربه‌سر", icon: Scale, tone: "orange", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
+  { href: "/admin/tools/ad-roi", label: "ROI تبلیغات", icon: Megaphone, tone: "emerald", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
+  { href: "/admin/tools/funnel", label: "قیف فروش", icon: Funnel, tone: "cyan", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
+  { href: "/admin/tools/discount", label: "تخفیف و حراج", icon: BadgePercent, tone: "red", perm: ["TOOLS_VIEW", "TOOLS_MANAGE"], group: TOOLS_GROUP_BUSINESS },
 ];
 
 // ── تطبیق مسیر ────────────────────────────────────────────────────────────

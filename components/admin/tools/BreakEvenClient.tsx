@@ -13,7 +13,7 @@ import {
   type BreakEvenInput, type BreakEvenResult, type FixedCost,
 } from "@/lib/tools/break-even";
 import { Card, Field, PageHeader, SectionTitle, Segmented, btn, inputCls } from "../accounting/ui";
-import { MoneyInput, PctInput, fa, toman } from "./calc-inputs";
+import { Metric, MoneyInput, PctInput, fa, toman } from "./calc-inputs";
 
 const STORE_KEY = "tools.breakEven";
 
@@ -246,14 +246,5 @@ function ResultCard({ r, input, per }: { r: BreakEvenResult; input: BreakEvenInp
         </div>
       )}
     </Card>
-  );
-}
-
-function Metric({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return (
-    <div className="rounded-xl bg-gray-50 p-2.5 dark:bg-white/5" title={hint}>
-      <dt className="text-[10px] font-bold text-gray-400">{label}</dt>
-      <dd className="mt-0.5 font-black tabular-nums">{value}</dd>
-    </div>
   );
 }
