@@ -49,12 +49,17 @@ const admin = staff([], true);
 const names = (a: StaffAccess) => toolsFor(a).map((t) => t.name).sort();
 
 check(
-  "کارمند بی‌مجوز فقط ابزار راهنما دارد",
-  JSON.stringify(names(nobody)) === JSON.stringify(["explain_current_page", "read_help_article", "search_help"]),
+  "کارمند بی‌مجوز فقط ابزار راهنما و واژه‌نامه دارد",
+  JSON.stringify(names(nobody)) === JSON.stringify(["explain_current_page", "read_help_article", "search_help", "seo_glossary"]),
   names(nobody).join(","),
 );
 check("محتوانویس ابزار کارهای مارکتینگ دارد", names(writer).includes("get_my_marketing_tasks"));
 check("محتوانویس ابزار سفارش ندارد", !names(writer).includes("get_my_orders"));
+check("محتوانویس مربی کار دارد", ["explain_task", "analyze_content_draft", "inspect_page"].every((n) => names(writer).includes(n)));
+check("محتوانویس پورسانت و حضور ندارد", !names(writer).includes("get_my_commission") && !names(writer).includes("get_my_attendance"));
+check("فروشنده بررسی متن محتوا ندارد", !names(seller).includes("analyze_content_draft") && !names(seller).includes("explain_task"));
+const seoOnly = staff(["SEO_TASK_WORK"]);
+check("کارمند سئو بررسی متن محتوا ندارد", !names(seoOnly).includes("analyze_content_draft") && names(seoOnly).includes("explain_task"));
 check("فروشنده ابزار سفارش‌های خودش را دارد", names(seller).includes("get_my_orders"));
 check("فروشنده ابزار مارکتینگ ندارد", !names(seller).includes("get_my_marketing_tasks"));
 check("مدیر کل همه‌ی ابزارها را دارد", names(admin).length === ALL_TOOLS.length);

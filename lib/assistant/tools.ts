@@ -17,6 +17,7 @@ import { ANCHOR_KIND_LABELS, NODE_STATUS_LABELS } from "@/lib/marketing/link-con
 import { articleForPage, readArticle, searchHelp } from "./help";
 import { pageLabel } from "./pages";
 import { faDate, startOfTehranDay } from "./dates";
+import { COACH_TOOLS } from "./coach-tools";
 
 export interface ToolContext {
   access: StaffAccess;
@@ -314,7 +315,7 @@ const SELF_TOOLS: AssistantTool[] = [
   },
 ];
 
-export const ALL_TOOLS: AssistantTool[] = [...HELP_TOOLS, ...SELF_TOOLS];
+export const ALL_TOOLS: AssistantTool[] = [...HELP_TOOLS, ...SELF_TOOLS, ...COACH_TOOLS];
 
 /** فقط ابزارهایی که این کاربر مجاز است — همین فهرست به مدل معرفی می‌شود */
 export function toolsFor(access: StaffAccess): AssistantTool[] {

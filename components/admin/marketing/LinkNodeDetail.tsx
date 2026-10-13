@@ -10,6 +10,7 @@
  */
 
 import { ExternalLink, Pencil, Trash2 } from "lucide-react";
+import AskAssistantButton from "@/components/admin/assistant/AskAssistantButton";
 import {
   ANCHOR_KIND_LABELS,
   CONTENT_KIND_LABELS,
@@ -102,6 +103,11 @@ export default function LinkNodeDetail({
                 <Trash2 className="h-4 w-4" />
               </button>
             )}
+          </div>
+
+          {/* مربی کار — docs/plans/admin-assistant.md فاز ۲ */}
+          <div className="flex justify-end">
+            <AskAssistantButton message={`گره ${node.code} را برایم توضیح بده: کجا و چطور لینک بسازم، انکر و rel چه باشد و بعد چه ثبت کنم؟`} />
           </div>
 
           {node.type.isRisky && (

@@ -19,6 +19,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import AskAssistantButton from "@/components/admin/assistant/AskAssistantButton";
 import { useRouter, useSearchParams } from "next/navigation";
 import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import SeoRecurringPanel from "./SeoRecurringPanel";
@@ -722,12 +723,16 @@ function DetailDrawer({
               {task.dueAt && ` · مهلت: ${dueLabel(task.dueAt)}`}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="shrink-0 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-white/5 text-xs font-bold text-gray-600 dark:text-gray-300"
-          >
-            بستن
-          </button>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <button
+              onClick={onClose}
+              className="shrink-0 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-white/5 text-xs font-bold text-gray-600 dark:text-gray-300"
+            >
+              بستن
+            </button>
+            {/* مربی کار — docs/plans/admin-assistant.md فاز ۲ */}
+            <AskAssistantButton message={`کار سئو ${task.code} را برایم توضیح بده: یعنی چه، قدم‌به‌قدم در پنل چه کنم و در گزارش چه بنویسم؟`} />
+          </div>
         </div>
 
         {err && <p className="text-xs font-bold text-red-600 dark:text-red-400">{err}</p>}

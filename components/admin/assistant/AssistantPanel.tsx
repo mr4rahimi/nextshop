@@ -116,7 +116,7 @@ export default function AssistantPanel({
 
   return (
     <div
-      className="adm-pop-in fixed inset-0 z-[70] flex flex-col bg-[var(--adm-surface)] md:inset-y-3 md:left-3 md:right-auto md:w-[26rem] md:rounded-[1.25rem] md:border md:border-[var(--adm-border)] md:shadow-[var(--adm-shadow-lg)]"
+      className="adm-pop-in fixed inset-x-0 top-0 z-[70] flex h-dvh flex-col bg-white text-gray-900 dark:bg-[#111620] dark:text-gray-100 md:inset-y-3 md:left-3 md:right-auto md:h-auto md:w-[26rem] md:rounded-[1.25rem] md:border md:border-[var(--adm-border)] md:shadow-[var(--adm-shadow-lg)]"
       dir="rtl"
       role="dialog"
       aria-label="راهنمای هوشمند"
@@ -175,7 +175,7 @@ export default function AssistantPanel({
       )}
 
       <footer className="flex-shrink-0 border-t border-[var(--adm-border)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="flex items-end gap-2 rounded-2xl border border-[var(--adm-border-strong)] bg-[var(--adm-surface)] p-1.5 focus-within:border-blue-500">
+        <div className="flex items-end gap-2 rounded-2xl border border-[var(--adm-border-strong)] bg-gray-50 p-1.5 focus-within:border-blue-500 dark:bg-white/[0.04]">
           <textarea
             ref={inputRef}
             value={draft}
