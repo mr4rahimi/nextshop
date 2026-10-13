@@ -39,6 +39,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
       "/api/admin/auth",
       "/api/admin/me",
       "/admin/changelog",
+      // راهنمای هوشمند — هر کارمند می‌پرسد؛ مرز داده در ابزارهاست (docs/plans/admin-assistant.md)
+      "/api/admin/assistant",
     ],
   },
   {

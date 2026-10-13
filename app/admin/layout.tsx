@@ -23,6 +23,7 @@ import { initialOf, useAdminMe } from "@/components/admin/useAdminMe";
 import WorklistNotifier from "@/components/admin/worklist/WorklistNotifier";
 import HeartbeatPing from "@/components/admin/worklist/HeartbeatPing";
 import OnlineOrderSound from "@/components/admin/orders/OnlineOrderSound";
+import AssistantButton from "@/components/admin/assistant/AssistantButton";
 
 /**
  * پیام «به این بخش دسترسی ندارید» وقتی proxy صفحه‌ی بسته را به کارتابل برگرداند.
@@ -121,6 +122,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Search className="h-[18px] w-[18px]" aria-hidden />
               </button>
 
+              {/* راهنمای هوشمند — docs/plans/admin-assistant.md؛ خاموش باشد چیزی رندر نمی‌کند */}
+              <AssistantButton className={ICON_BTN} />
               <OnlineOrderSound />
               <ThemeToggle />
               <Link href="/" target="_blank" aria-label="مشاهده سایت" title="مشاهده سایت" className={`${ICON_BTN} hidden sm:flex`}>

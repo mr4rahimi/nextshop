@@ -3779,6 +3779,81 @@ model StaffNotification {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// راهنمای هوشمند پنل — docs/plans/admin-assistant.md
+//
+// ⚠️ مرز امنیتی در ابزارهاست (`lib/assistant/tools`)، نه در این جدول‌ها.
+// `userId` عمداً رابطه نیست: نام اسنپ‌شات است، مثل `StaffTask.ownerName`.
+// ═══════════════════════════════════════════════════════════════════
+
+enum AssistantRole {
+  USER
+  ASSISTANT
+}
+
+/// تنظیمات تک‌ردیفی (`id = "default"`). جدا از `StoreSettings.aiSettings` است چون
+/// `saveAiSettings` فیلدهای ناشناس را هنگام ذخیره دور می‌ریزد.
+model AssistantSetting {
+  id            String   @id @default("default")
+  /// پیش‌فرض خاموش — هر سایت جدا روشن می‌شود (تصمیم ۵)
+  enabled       Boolean  @default(false)
+  model         String   @default("gpt-4.1-mini")
+  maxTokens     Int      @default(3000)
+  /// سقف پاسخ موفق روزانه‌ی هر کارمند (روز تهران)
+  dailyLimit    Int      @default(30)
+  /// قاعده‌های داخلی که مدیر می‌نویسد و در پرامپت می‌نشیند
+  extraGuide    String?
+  updatedByName String?
+  updatedAt     DateTime @updatedAt
+}
+
+/// سقف اختصاصی یک کارمند. نبودن ردیف = پیش‌فرض؛ **صفر = خاموش برای همان کارمند**.
+model AssistantUserLimit {
+  userId     String   @id
+  dailyLimit Int
+  updatedAt  DateTime @updatedAt
+}
+
+model AssistantConversation {
+  id        String             @id @default(cuid())
+  userId    String
+  userName  String
+  title     String
+  /// حذف نرم — کاربر گفتگوی خودش را از فهرست برمی‌دارد ولی شمارش مصرف می‌ماند
+  deletedAt DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  messages  AssistantMessage[]
+
+  @@index([userId, deletedAt, updatedAt])
+}
+
+model AssistantMessage {
+  id               String                @id @default(cuid())
+  conversationId   String
+  /// تکرار صاحب گفتگو — شمارش سهمیه بی join
+  userId           String
+  role             AssistantRole
+  content          String                @db.Text
+  /// ابزارهای صدازده‌شده `[{name, args, ok}]` — خروجی ابزار ذخیره نمی‌شود
+  toolCalls        Json?
+  pagePath         String?
+  model            String?
+  promptTokens     Int                   @default(0)
+  completionTokens Int                   @default(0)
+  costUsd          Float?
+  durationMs       Int?
+  /// پاسخ ناموفق: سهمیه از آن کم نمی‌شود
+  error            String?
+  /// ۱ = مفید، ۱- = مفید نبود
+  feedback         Int?
+  createdAt        DateTime              @default(now())
+  conversation     AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([userId, role, createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // حسابداری — داخلی یا حسابان وب، پشت یک درگاه
 // مستندات: docs/plans/accounting.md
 //

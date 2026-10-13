@@ -6,6 +6,7 @@
  */
 import { useEffect, useState } from "react";
 import HelpButton from "@/components/admin/worklist/HelpButton";
+import AssistantSettingsCard from "@/components/admin/assistant/AssistantSettingsCard";
 import {
   AI_IMAGE_MODELS, AI_IMAGE_QUALITIES, DEFAULT_IMAGE_PRESETS,
   type AiImagePreset, type AiImageQuality,
@@ -176,6 +177,9 @@ export default function AiSettingsPage() {
           )}
         </div>
       </div>
+
+      {/* راهنمای هوشمند پنل — ذخیره‌ی جدا، docs/plans/admin-assistant.md */}
+      <AssistantSettingsCard />
 
       {/* مدل و کیفیت */}
       <div className={card + " grid grid-cols-1 sm:grid-cols-2 gap-4"}>
