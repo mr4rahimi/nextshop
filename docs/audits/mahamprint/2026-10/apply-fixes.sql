@@ -6,7 +6,8 @@
 -- مقدار قبلی توضیحات دسته‌ها (بند ۴) برای برگشت دقیق، روی خود سرور نوشته می‌شود
 \t on
 \a
-\o /root/backups/mahamprint-seo-20261013/category-desc-rollback.sql
+-- (psql با کاربر postgres اجرا می‌شود و به /root دسترسی ندارد؛ بعد از اجرا به /root/backups/mahamprint-seo-20261013/ منتقل شود)
+\o /tmp/maham-category-desc-rollback.sql
 SELECT format('UPDATE "Category" SET "seoDescription" = %L WHERE slug = %L;', "seoDescription", slug)
 FROM "Category" WHERE "seoDescription" ~ '^\s*\.';
 \o
@@ -76,7 +77,7 @@ SELECT 'seo1013e' || substr(md5(id), 1, 12), id, 'cmp72zxxi00014y9sk7q1u5nz', '�
   'سئو ۱۴۰۵/۰۷/۲۱ — مقاله‌ی /mag/' || slug || ' مستقیم در مجله منتشر شده بود؛ به این کار وصل شد تا مراحل ارسال، انتشار و تأیید از پنل ثبت شود', now()
 FROM linked;
 
--- بررسی: باید ۲ | ۵ | ۳ | ۲ | ۰ | ۵ باشد
+-- بررسی: باید ۲ | ۵ | ۴ | ۲ | ۰ | ۵ باشد
 SELECT
   (SELECT count(*) FROM "Redirect" WHERE note LIKE 'سئو ۱۴۰۵/۰۷/۲۱%' AND source LIKE '/mag/%') AS mag_redirects,
   (SELECT count(*) FROM "Redirect" WHERE id LIKE 'seo1013r%') AS new_redirects,
