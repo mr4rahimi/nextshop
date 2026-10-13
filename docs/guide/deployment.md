@@ -12,12 +12,21 @@
 | `9dm` | 9dm.ir | 185.164.73.224 | `/var/www/9dm` | `9dm` | 3003 | demo |
 | `mahamprint` | mahamprint.com | 185.164.73.224 | `/var/www/mahamprinter` | `mahamprinter` | 3002 | production |
 | `bartarjanebi` | bartar-janebi.com | 185.164.73.224 | `/var/www/bartarjanebi` | `bartarjanebi` | 3001 | production |
-| `mymonta` | mymonta.ir | 5.159.49.243 | `/var/www/mymonta` | `mymonta-shop` | 3000 | production |
+| `mymonta` | mymonta.ir | 188.212.97.138 | `/var/www/mymonta` | `mymonta-shop` | 3000 | production |
 | `uniqquestar` | uniqquestar.com | 109.122.246.96 | `/var/www/uniqquestar` | `uniqquestar` | 3000 | production |
 | `sezavar` | sezavar.shop | 94.184.32.197 | `/var/www/sezavar` | `sezavar` (+ `sezavar-worker`) | 3000 | production |
 
 > سه سایت اول روی یک سرور مشترک‌اند — هرگز `pm2 restart all` نزنید و به دیتابیس
 > سایت‌های دیگر دست نزنید.
+
+> **mymonta از ۱۴۰۵/۰۷/۲۱ روی سرور جدید است** (`188.212.97.138`، ۴ هسته، ۸ گیگ
+> رم + ۲ گیگ swap، میزبان `mymonta` در `~/.ssh/config`). سایت استاتیک
+> gardanos.ir هم روی همین سرور است (`/var/www/gardanos`). بیلد بدون ترفند کم‌رم
+> حدود سه دقیقه طول می‌کشد. ufw فقط پورت‌های ۲۲، ۸۰ و ۴۴۳ را باز گذاشته و
+> Postgres فقط روی localhost است. گواهی‌ها با certbot webroot
+> (`/var/www/letsencrypt`) تمدید می‌شوند. سرور قدیم (`5.159.49.243`، میزبان
+> `mymonta-old`) کنار گذاشته شده؛ بکاپ ربات‌های تلگرام و بله‌ی آن در
+> `~/Projects/telegram-bot/backup` روی لپ‌تاپ است.
 
 ## روند آپدیت روزمره
 
@@ -329,7 +338,7 @@ npx tsx scripts/seed-staff-roles.ts --grant-new   # CREDIT_VIEW_OWN / VIEW_ALL /
 | سرور | کار |
 |---|---|
 | `185.164.73.224` (9dm، mahamprint، bartarjanebi) | Umami از قبل هست (`127.0.0.1:3043`) — هیچ |
-| `5.159.49.243` (mymonta)، `109.122.246.96` (uniqquestar) و `94.184.32.197` (sezavar) | **اول Umami نصب شود** — راهنما در همان بخش ۱۳.۲ |
+| `188.212.97.138` (mymonta)، `109.122.246.96` (uniqquestar) و `94.184.32.197` (sezavar) | **اول Umami نصب شود** — راهنما در همان بخش ۱۳.۲ |
 
 اگر Umami روی پورتی جز ۳۰۴۳ است، `UMAMI_BASE_URL=http://127.0.0.1:<پورت>` به
 `.env` همان سایت اضافه شود و `pm2 restart <name> --update-env`.
