@@ -7,7 +7,7 @@ import { normalizeFaq } from "@/lib/faq";
 import { approvedCommentCount, approvedCommentsQuery } from "@/lib/blog-comments";
 import { publicAuthorName } from "@/lib/moderation";
 import type { SchemaComment } from "@/lib/seo";
-import { MAG_LIST_SELECT } from "@/lib/mag-list";
+import { MAG_LIST_SELECT, incrementPostView } from "@/lib/mag-list";
 import { countWords, htmlToText } from "@/lib/blog-seo";
 
 interface Props { params: Promise<{ slug: string }> }
@@ -90,7 +90,7 @@ export default async function MagPostPage({ params }: Props) {
     });
   } catch {}
 
-  await prisma.blogPost.update({ where: { slug }, data: { viewCount: { increment: 1 } } }).catch(() => {});
+  await incrementPostView(slug).catch(() => {});
 
   /**
    * شمارنده جدا حساب می‌شود چون `_count` پریزما نظرهای در انتظار تأیید و

@@ -4,6 +4,7 @@
  * جاافتاده می‌آورد.
  */
 import type { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export const MAG_PAGE_SIZE = 12;
 
@@ -36,3 +37,15 @@ export const MAG_LIST_SELECT = {
   tags: { take: 3, select: { tag: { select: { title: true, slug: true } } } },
   _count: { select: { comments: { where: { status: "APPROVED" as const } } } },
 } satisfies Prisma.BlogPostSelect;
+
+/**
+ * یک بازدید به مقاله اضافه می‌کند **بدون دست‌زدن به `updatedAt`**.
+ *
+ * ⚠️ `prisma.blogPost.update` ستون `@updatedAt` را هم جلو می‌برد، و `updatedAt`
+ * همان `lastmod` سایت‌مپ است؛ آن‌وقت هر بازدید (حتی خزیدن خود گوگل) مقاله را
+ * «تازه ویرایش‌شده» نشان می‌داد و گوگل lastmod کل سایت‌مپ را بی‌اعتبار می‌دانست.
+ * SQL خام از `@updatedAt` پریزما رد نمی‌شود.
+ */
+export async function incrementPostView(slug: string): Promise<void> {
+  await prisma.$executeRaw`UPDATE "BlogPost" SET "viewCount" = "viewCount" + 1 WHERE slug = ${slug}`;
+}

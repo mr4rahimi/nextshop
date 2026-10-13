@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
+import { incrementPostView } from "@/lib/mag-list";
 import { getAuthUser } from "@/lib/auth";
 import { clean, cleanMultiline, clientIp, isValidEmail } from "@/lib/moderation";
 import {
@@ -34,7 +35,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ slug: string }> }
 
   if (!post || post.status !== "PUBLISHED") return NextResponse.json({ error: "یافت نشد" }, { status: 404 });
 
-  await prisma.blogPost.update({ where: { slug }, data: { viewCount: { increment: 1 } } });
+  await incrementPostView(slug);
 
   const related = await prisma.blogPost.findMany({
     where: {
