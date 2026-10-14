@@ -23,7 +23,13 @@ const STORED_CONVERSATION = "assistant-conversation";
 /** پیشنهاد شروع بسته به مجوز — فقط متن آماده است، دسترسی را سرور می‌سنجد */
 function suggestionsFor(permissions: string[], unrestricted: boolean): string[] {
   const has = (p: string) => unrestricted || permissions.includes(p);
-  const list: string[] = ["این صفحه چه کار می‌کند؟"];
+  const list: string[] = [];
+  // گزارش‌های مدیر (فاز ۳) اول — برای مدیر سؤال اصلی همین‌هاست
+  if (has("PANEL_REPORTS") || has("PANEL_ORDERS")) list.push("فروش این ماه نسبت به دوره‌ی قبل چطور بوده؟");
+  if (has("PANEL_ORDERS")) list.push("کدام سفارش‌ها معطل مانده‌اند؟");
+  if (has("SEO_ANALYTICS_VIEW")) list.push("کدام منبع ورود این ماه بیشترین فروش را آورد؟");
+  if (has("PANEL_CATALOG")) list.push("کدام محصولات قیمت، عکس یا متا ندارند؟");
+  list.push("این صفحه چه کار می‌کند؟");
   if (has("SEO_TASK_WORK") || has("CONTENT_TASK_WORK") || has("LINK_WORK")) {
     list.push("کارهای سئو و محتوای من چیست و کدام عقب افتاده؟");
   }

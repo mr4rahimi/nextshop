@@ -26,20 +26,24 @@ export type Totals = {
   totaltime: number;
 };
 
-function resolveRange(key: string | null) {
+/** بازه‌ی دقیق — دستیار با مرز روز تهران می‌فرستد (lib/assistant/period.ts) */
+export type ReportWindow = { start: Date; end: Date };
+
+function resolveRange(key: string | null, exact?: ReportWindow) {
   const r = rangeOf(key);
-  const endAt = Date.now();
-  const span = r.days * DAY;
+  const endAt = exact ? exact.end.getTime() : Date.now();
+  const span = exact ? endAt - exact.start.getTime() : r.days * DAY;
   const startAt = endAt - span;
+  const days = span / DAY;
   return {
-    key: r.key,
+    key: exact ? "custom" : r.key,
     startAt,
     endAt,
     // دوره‌ی قبل دقیقاً هم‌طول، وگرنه درصد تغییر بی‌معنی است
     previousStartAt: startAt - span,
     previousEndAt: startAt,
     // ۹۰ ستون ساعتی روی موبایل خوانده نمی‌شود
-    unit: (r.days <= 1 ? "hour" : "day") as "hour" | "day",
+    unit: (days <= 1 ? "hour" : "day") as "hour" | "day",
   };
 }
 
@@ -107,12 +111,12 @@ export type TrafficReport =
     };
 
 /** همه‌ی سنجه‌های بازدید در یک رفت‌وبرگشت از دید کلاینت */
-export async function getTrafficReport(rangeKey: string | null): Promise<TrafficReport> {
+export async function getTrafficReport(rangeKey: string | null, exact?: ReportWindow): Promise<TrafficReport> {
   const settings = await getAnalyticsSettings();
   const slug = settings.umamiShareSlug;
   if (!slug) return { connected: false, reason: "not-configured" };
 
-  const { key, startAt, endAt, previousStartAt, previousEndAt, unit } = resolveRange(rangeKey);
+  const { key, startAt, endAt, previousStartAt, previousEndAt, unit } = resolveRange(rangeKey, exact);
   const window = { startAt, endAt };
   const metric = (type: string, limit = 12) => umamiRead(slug, "metrics", { ...window, type, limit });
 
@@ -189,8 +193,8 @@ type GroupRaw = { key: string | null; orders: bigint; paid: bigint; revenue: big
  * «نامعلوم» شمردنش سهم نامعلوم را دروغ بالا می‌برد. لغو و برگشت‌خورده فروش
  * نیستند؛ «در انتظار پرداخت» شمرده می‌شود ولی در مبلغ نمی‌آید.
  */
-export async function getSalesReport(rangeKey: string | null): Promise<SalesReport> {
-  const { key, startAt, endAt } = resolveRange(rangeKey);
+export async function getSalesReport(rangeKey: string | null, exact?: ReportWindow): Promise<SalesReport> {
+  const { key, startAt, endAt } = resolveRange(rangeKey, exact);
   const from = new Date(startAt);
   const to = new Date(endAt);
 

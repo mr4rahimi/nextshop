@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   JALALI_MONTH_OPTIONS,
   JALALI_WEEKDAYS,
@@ -23,7 +24,14 @@ import {
  *   - mode="datetime" →  "YYYY-MM-DDTHH:mm"  (ساعت به وقت تهران)
  *
  * عمداً بدون کتابخانه‌ی خارجی نوشته شده تا حجم باندل ادمین بالا نرود.
+ *
+ * ⚠️ تقویم با `createPortal` روی `.admin-shell` (مثل پنل دستیار) و `position: fixed` باز می‌شود، نه داخل
+ * والد. کارت‌ها و جدول‌ها `overflow-hidden` دارند و تقویم نصفه بریده می‌شد
+ * (تخفیف بازارگاه‌ها). اگر زیر دکمه جا نباشد رو به بالا باز می‌شود.
  */
+
+const POPUP_WIDTH = 304; // w-[19rem]
+const GAP = 8;
 
 const inputClass =
   "w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all disabled:opacity-50";
@@ -50,6 +58,8 @@ export default function JalaliDatePicker({
   const withTime = mode === "datetime";
   const [open, setOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   const selected = useMemo(() => parseDateValue(value), [value]);
   const time = useMemo(() => {
@@ -63,11 +73,46 @@ export default function JalaliDatePicker({
     if (selected) setView({ ...selected });
   }, [selected?.year, selected?.month]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // جای تقویم نسبت به دکمه — با اسکرول و تغییر اندازه دوباره حساب می‌شود
+  useLayoutEffect(() => {
+    if (!open) {
+      setPos(null);
+      return;
+    }
+    function place() {
+      const btn = boxRef.current?.getBoundingClientRect();
+      if (!btn) return;
+      const h = popRef.current?.offsetHeight ?? 360;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      // هم‌راستا با لبه‌ی راست دکمه (RTL)، ولی بیرون از صفحه نرود
+      const left = Math.min(Math.max(GAP, btn.right - POPUP_WIDTH), vw - POPUP_WIDTH - GAP);
+      const below = btn.bottom + GAP;
+      const top =
+        below + h <= vh - GAP || btn.top - GAP - h < GAP
+          ? Math.min(below, Math.max(GAP, vh - h - GAP))
+          : btn.top - GAP - h;
+      setPos({ top, left });
+    }
+    place();
+    // ارتفاع واقعی بعد از اولین رندر معلوم می‌شود
+    const raf = requestAnimationFrame(place);
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open, view.year, view.month]);
+
   // بستن با کلیک بیرون یا Escape
   useEffect(() => {
     if (!open) return;
     function onDown(e: MouseEvent) {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (boxRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -137,8 +182,13 @@ export default function JalaliDatePicker({
         </span>
       </button>
 
-      {open && (
-        <div className="absolute z-50 mt-2 w-[19rem] rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-2xl p-3 right-0">
+      {open && createPortal(
+        <div
+          ref={popRef}
+          dir="rtl"
+          style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999 }}
+          className="fixed z-[300] w-[19rem] rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 shadow-2xl p-3"
+        >
           {/* سر تقویم: ماه و سال */}
           <div className="flex items-center gap-2 mb-3">
             <button
@@ -282,7 +332,8 @@ export default function JalaliDatePicker({
               بستن
             </button>
           </div>
-        </div>
+        </div>,
+        document.querySelector(".admin-shell") ?? document.body,
       )}
     </div>
   );
