@@ -134,6 +134,8 @@ export interface OrderItemInfo {
   unitPrice?: number;      // تومان
   customerName?: string;
   customerPhone?: string;
+  /** زمان ثبت سفارش در پلتفرم — برای تشخیص سفارشی که دیر به دست ما رسیده */
+  orderedAt?: Date;
 }
 
 export interface FetchOrdersResult {
@@ -192,4 +194,22 @@ export interface FetchMessagesResult {
 export interface SendMessageResult {
   externalId: string;
   sentAt:     Date;
+}
+
+// ── دریافت سفارش‌ها ──────────────────────────────────────────────
+// هر دور polling سفارش‌های این چند روز اخیر را از پلتفرم می‌خواند، صرف‌نظر از
+// وضعیتشان. قبلاً فقط وضعیت «جدید» خوانده می‌شد و سفارشی که پیش از دور بعدی
+// ارسال شده بود هرگز به پنل نمی‌رسید. تکرار با کلید یکتای قلم بی‌اثر است.
+export const ORDERS_LOOKBACK_DAYS = 30;
+
+// سفارشی که دیرتر از این به دست ما برسد احتمالاً ارسال شده و شاید دستی در
+// حسابداری ثبت شده — نه خودکار فاکتور می‌شود، نه دوباره از موجودی کم می‌شود.
+export const LATE_ORDER_MS = 48 * 3_600_000;
+
+/** زمان بدون منطقه‌ی زمانی پلتفرم‌های ایرانی (مثل «2026-10-14 23:58:00») به وقت تهران است. */
+export function parseTehranTime(raw: string | null | undefined): Date | undefined {
+  if (!raw) return undefined;
+  const s = raw.trim().replace(" ", "T");
+  const d = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : `${s}+03:30`);
+  return Number.isNaN(d.getTime()) ? undefined : d;
 }

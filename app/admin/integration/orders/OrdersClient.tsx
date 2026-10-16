@@ -19,6 +19,8 @@ interface OrderRow {
   status: "PENDING" | "NEEDS_MAPPING" | "INVOICED" | "CANCELLED";
   blockedReason: string | null;
   invoicedAt: string | null;
+  orderedAt: string | null;
+  autoInvoice: boolean;
   createdAt: string;
   mapping: { id: string; links: MappingLink[] } | null;
 }
@@ -279,7 +281,13 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
                             </Link>
                           </div>
                         )}
-                        {isOutsideAutoWindow(r, settings) && (
+                        {!r.autoInvoice && (r.status === "PENDING" || r.status === "NEEDS_MAPPING") && (
+                          <div className="text-[11px] text-orange-600 dark:text-orange-400 mt-1">
+                            دیر دریافت شد (بیش از ۴۸ ساعت بعد از ثبت) — خودکار فاکتور نمی‌شود و از موجودی کم نشد.
+                            اگر در حسابداری ثبت نشده، «ثبت فاکتور» بزنید.
+                          </div>
+                        )}
+                        {r.autoInvoice && isOutsideAutoWindow(r, settings) && (
                           <div className="text-[11px] text-orange-600 dark:text-orange-400 mt-1">
                             قدیمی‌تر از تاریخ فعال‌سازی فاکتور — خودکار فاکتور نمی‌شود.
                             برای ثبت، انتخابش کنید و «ثبت فاکتور» بزنید.
@@ -304,7 +312,12 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
                           {cfg.label}
                         </span>
                       </td>
-                      <td className="p-3 whitespace-nowrap text-xs text-gray-400">{shortDate(r.createdAt)}</td>
+                      <td className="p-3 whitespace-nowrap text-xs text-gray-400">
+                        {shortDate(r.orderedAt ?? r.createdAt)}
+                        {r.orderedAt && Math.abs(new Date(r.createdAt).getTime() - new Date(r.orderedAt).getTime()) > 3_600_000 && (
+                          <div className="text-[10px] text-gray-300 dark:text-gray-500">دریافت: {shortDate(r.createdAt)}</div>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

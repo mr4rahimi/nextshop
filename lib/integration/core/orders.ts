@@ -4,6 +4,44 @@ import { decrementMappingStockForOrder, restoreMappingStockForCancel } from "./i
 import { writeLog } from "./log";
 import { enrollMarketplaceCustomer } from "@/lib/club/marketplace";
 import { emitAccEventSafe } from "@/lib/accounting/events";
+import { LATE_ORDER_MS, type OrderItemInfo } from "@/lib/integration/types";
+
+// تپسی‌شاپ هر سفارش را از دو راه می‌دهد: وب‌هوک با کلید `${orderId}:${orderItemId}` و
+// polling با کلید `${orderId}:${sku}`. کلید یکتا این دو را یکی نمی‌بیند و هر سفارش دو بار
+// ثبت می‌شد، پس اینجا دنبال ردیف وب‌هوکِ همان سفارش و همان محصول می‌گردیم.
+// شماره‌ی سفارش (platformOrderNo) ملاک اصلی است: وب‌هوک‌های پیش از ۲.۹۲.۰ orderId را
+// با گرد شدن عدد بزرگ JSON خراب ذخیره کرده‌اند. هم‌خوانی با mappingId امن است چون هر
+// نگاشت در هر پلتفرم فقط یک شناسه دارد؛ ردیف بی‌نگاشت وب‌هوک، sku را به‌جای عنوان دارد.
+async function findTapsiWebhookRow(
+  platformCode: string,
+  item: OrderItemInfo,
+  mappingId: string | null,
+) {
+  if (platformCode !== "tapsi_shop") return null;
+  const orderId = item.platformOrderId.split(":")[0];
+  const sku     = item.platformOrderItemId ?? "";
+  const sameProduct = [
+    ...(mappingId ? [{ mappingId }] : []),
+    ...(sku && !sku.startsWith("__noSku") ? [{ productTitle: sku }] : []),
+  ];
+  if (!sameProduct.length) return null;
+
+  return prisma.integOrder.findFirst({
+    where: {
+      platformCode,
+      AND: [
+        {
+          OR: [
+            { platformOrderId: { startsWith: `${orderId}:` } },
+            ...(item.platformOrderNo ? [{ platformOrderNo: item.platformOrderNo }] : []),
+          ],
+        },
+        { OR: sameProduct },
+      ],
+    },
+    select: { id: true, productTitle: true },
+  });
+}
 
 export async function fetchAndProcessOrders(
   jobId: string,
@@ -61,7 +99,21 @@ export async function fetchAndProcessOrders(
         : null;
       if (!link) unmatched.push(item.platformProductId || "(بدون شناسه)");
 
-      if (hasProductId) {
+      const webhookRow = await findTapsiWebhookRow(platformCode, item, link?.mappingId ?? null);
+      if (webhookRow) {
+        // وب‌هوک تپسی عنوان ندارد و شناسه‌ی محصول را جای عنوان می‌گذارد — عنوان واقعی را برسان
+        if (item.title && webhookRow.productTitle === item.platformOrderItemId) {
+          await prisma.integOrder.update({ where: { id: webhookRow.id }, data: { productTitle: item.title } }).catch(() => {});
+        }
+        skipped++;
+        continue;
+      }
+
+      // سفارش دیررسیده (مثلاً بار اولی که سفارش‌های چند روز اخیر خوانده می‌شود)
+      // احتمالاً ارسال شده و موجودی‌اش از حسابداری به‌روز شده است
+      const late = !!item.orderedAt && Date.now() - item.orderedAt.getTime() > LATE_ORDER_MS;
+
+      if (hasProductId && !late) {
         await decrementMappingStockForOrder(platformCode, item.platformProductId, item.qty).catch(() => {});
       }
 
@@ -81,6 +133,8 @@ export async function fetchAndProcessOrders(
           unitPrice:           item.unitPrice ?? null,
           customerName:        item.customerName ?? null,
           customerPhone:       item.customerPhone ?? null,
+          orderedAt:           item.orderedAt ?? null,
+          autoInvoice:         !late,
           status:              needsMapping ? "NEEDS_MAPPING" : "PENDING",
           blockedReason:       !needsMapping
             ? null

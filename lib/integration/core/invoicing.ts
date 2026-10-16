@@ -162,7 +162,8 @@ export async function processPendingInvoices(
     where: manualRun
       // اجرای دستی: دقیقاً همان ردیف‌های انتخاب‌شده، بدون فیلتر تاریخ
       ? { id: { in: onlyIds }, status: { in: ["PENDING", "NEEDS_MAPPING"] } }
-      : { status: "PENDING", platformCode: { not: ACCOUNTING_CODE }, createdAt: { gte: since } },
+      // autoInvoice=false: سفارش دیررسیده که شاید دستی در حسابان ثبت شده باشد
+      : { status: "PENDING", autoInvoice: true, platformCode: { not: ACCOUNTING_CODE }, createdAt: { gte: since } },
     orderBy: { createdAt: "asc" },
     take:    200,
   });

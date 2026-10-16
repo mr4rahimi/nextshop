@@ -76,6 +76,14 @@ async function resolveExternalId(skuOrId: string): Promise<string> {
   return row?.platformProductId ?? skuOrId;
 }
 
+// شناسه‌های تپسی (orderId، orderItemId) عدد ۱۹ رقمی‌اند و در JSON بدون کوتیشن می‌آیند؛
+// JSON.parse آن‌ها را به نزدیک‌ترین double گرد می‌کند (…233 ← …200). نتیجه: شناسه‌ی
+// ذخیره‌شده با شناسه‌ی واقعی سفارش نمی‌خواند. هر عدد صحیح بیش از ۱۵ رقم پیش از parse
+// به رشته تبدیل می‌شود. (قیمت‌ها ریالی‌اند و هرگز این‌قدر رقم ندارند.)
+function parseKeepingBigIds(text: string): TapsiWebhookBody {
+  return JSON.parse(text.replace(/([:\[,]\s*)(-?\d{16,})(?=\s*[,\]}])/g, '$1"$2"'));
+}
+
 export async function POST(req: NextRequest) {
   // ── اعتبارسنجی توکن ────────────────────────────────────────────
   // headers.get خودش case-insensitive است؛ فراخوانی دوم با املای دیگر بی‌اثر بود.
@@ -131,7 +139,7 @@ export async function POST(req: NextRequest) {
 
   // ── پردازش payload ─────────────────────────────────────────────
   let body: TapsiWebhookBody;
-  try { body = await req.json(); }
+  try { body = parseKeepingBigIds(await req.text()); }
   catch { return NextResponse.json({ succeed: false, message: "bad json" }, { status: 200 }); }
 
   const orderId = String(body.orderDetail?.orderId ?? "");
@@ -165,7 +173,18 @@ export async function POST(req: NextRequest) {
     // ردیف‌های قدیمی با کلید ایندکس ثبت شده‌اند، پس هر دو جست‌وجو می‌شوند.
     const itemKey   = `${orderId}:${item.orderItemId ?? idx}`;
     const legacyKey = `${orderId}:${idx}`;
-    const bothKeys  = itemKey === legacyKey ? [itemKey] : [itemKey, legacyKey];
+    // polling همین سفارش را با کلید `${orderId}:${sku}` ثبت می‌کند. بدون این کلید،
+    // سفارشی که هم وب‌هوک و هم polling می‌آوردش دو بار در پنل و حسابداری می‌نشست.
+    const pollKey   = sku.trim() ? `${orderId}:${sku.trim()}` : null;
+    const bothKeys  = [...new Set([itemKey, legacyKey, ...(pollKey ? [pollKey] : [])])];
+    // ردیف polling همان قلم: کلید دقیقش، یا همان شماره سفارش با همان sku
+    const orderNumber = body.orderDetail?.orderNumber;
+    const sameItem = {
+      OR: [
+        { platformOrderId: { in: bothKeys } },
+        ...(orderNumber && sku.trim() ? [{ platformOrderNo: orderNumber, platformOrderItemId: sku.trim() }] : []),
+      ],
+    };
 
     try {
       if (changeType === 2) {
@@ -177,7 +196,7 @@ export async function POST(req: NextRequest) {
         const toCancel = await prisma.integOrder.findMany({
           where: {
             platformCode: PLATFORM,
-            platformOrderId: { in: bothKeys },
+            ...sameItem,
             status: { in: ["PENDING", "NEEDS_MAPPING"] },
           },
           select: { id: true },
@@ -199,10 +218,20 @@ export async function POST(req: NextRequest) {
       } else {
         // ── خرید: dedup، کسر موجودی، ساخت IntegOrder (فاکتور خودکار توسط worker) ──
         const existing = await prisma.integOrder.findFirst({
-          where:  { platformCode: PLATFORM, platformOrderId: { in: bothKeys } },
-          select: { id: true },
+          where:  { platformCode: PLATFORM, ...sameItem },
+          select: { id: true, customerName: true },
         });
-        if (existing) { skipped++; continue; }
+        if (existing) {
+          // polling تپسی نام مشتری ندارد — اگر ردیف از آن راه آمده، نام را از وب‌هوک تکمیل کن
+          if (!existing.customerName && (customerName || customerPhone)) {
+            await prisma.integOrder.update({
+              where: { id: existing.id },
+              data:  { customerName, customerPhone },
+            }).catch(() => {});
+          }
+          skipped++;
+          continue;
+        }
 
         const link = externalId
           ? await prisma.integMappingLink.findUnique({
@@ -227,6 +256,7 @@ export async function POST(req: NextRequest) {
             unitPrice:           typeof item.finalPrice === "number" ? Math.round(item.finalPrice / 10) : null, // ریال→تومان
             customerName,
             customerPhone,
+            orderedAt:           new Date(),
             status:              link ? "PENDING" : "NEEDS_MAPPING",
             blockedReason:       link
               ? null

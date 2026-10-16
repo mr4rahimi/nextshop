@@ -1627,6 +1627,10 @@ model IntegOrder {
   customerPhone       String?
   status              IntegOrderStatus @default(PENDING)
   blockedReason       String? // چرا فاکتور نخورد — برای نمایش در ادمین
+  orderedAt           DateTime? // زمان ثبت سفارش در خود پلتفرم (createdAt = زمان دریافت)
+  // false = دیر دریافت شد (بیش از ۴۸ ساعت بعد از ثبت) — شاید دستی در حسابداری ثبت
+  // شده باشد، پس worker خودکار فاکتورش نمی‌کند؛ فقط دکمه‌ی «ثبت فاکتور»
+  autoInvoice         Boolean          @default(true)
   invoicedAt          DateTime?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt

@@ -42,7 +42,8 @@ Content-Type:  application/json
 | `GET /vendors` | فهرست فروشندگان — برای تست اتصال هم استفاده می‌شود |
 | `GET /vendors/{vendorId}/products` | فهرست محصولات (صفحه‌بندی با `?page=`) |
 | `PATCH /vendors/{vendorId}/products` | به‌روزرسانی گروهی قیمت و موجودی |
-| `GET /vendors/{vendorId}/orders/events` | رویدادهای سفارش (پشتیبانی از cursor) |
+| `GET /vendors/{vendorId}/orders/events` | رویدادهای سفارش — از ۲.۹۲.۰ استفاده نمی‌شود (روی داده‌ی زنده خالی می‌ماند) |
+| `GET /vendors/{vendorId}/orders?start_date=` | تاریخچه‌ی سفارش‌ها با مشتری و اقلام — منبع `fetchOrders` |
 | `GET /vendors/{vendorId}/orders/{orderNo}` | جزئیات یک سفارش |
 
 ## فیلدهای محصول

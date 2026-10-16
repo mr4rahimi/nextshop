@@ -11,7 +11,7 @@ import type {
   OrderItemInfo,
   PriceDiscount,
 } from "@/lib/integration/types";
-import { applyDiscount } from "@/lib/integration/types";
+import { applyDiscount, ORDERS_LOOKBACK_DAYS, parseTehranTime } from "@/lib/integration/types";
 import type { ResolvedDiscount } from "@/lib/integration/core/discount";
 import { resolveDiscountsForPush, toTehranDate } from "@/lib/integration/core/discount";
 
@@ -42,19 +42,10 @@ interface SnappPagination {
   total?: number; current_page?: number; total_pages?: number; per_page?: number;
   has_more?: boolean; next_cursor?: string;
 }
-interface SnappEventItem {
-  sku: string | null;
-  vendor_product_info_id?: string;
-  product_number?: number;
-  canceled_quantity?: number;
-  total_canceled_quantity?: number;
-  deliverable_quantity?: number;
-  final_price?: number;
-  item_status?: string;
-}
 interface SnappOrderDetail {
   order_number?: number | string;
   order_status?: string;
+  created_at?: string;
   customer?: { first_name?: string; last_name?: string; phone?: string | null };
   items?: {
     sku?: string | null;
@@ -66,13 +57,6 @@ interface SnappOrderDetail {
     discount_amount?: number;
     final_price?: number;
   }[];
-}
-interface SnappEvent {
-  event_type: "NEW_ORDER" | "CANCELLATION" | "CHANGE_STATUS";
-  order_number: number | string;
-  event_at?: string;
-  new_status?: string;
-  items?: SnappEventItem[];
 }
 
 export class SnappShopAdapter extends BaseAdapter {
@@ -364,7 +348,11 @@ export class SnappShopAdapter extends BaseAdapter {
     return { success, failed };
   }
 
-  // ── سفارش‌ها: فید رویدادی با cursor ذخیره‌شونده ──────────────────
+  // ── سفارش‌ها: تاریخچه‌ی سفارش‌های چند روز اخیر ─────────────────
+  // قبلاً از فید رویدادها (orders/events) با مکان‌نمای ذخیره‌شده خوانده می‌شد. آن فید
+  // روی داده‌ی زنده تقریباً هیچ رویدادی نمی‌داد، در حالی که تاریخچه‌ی سفارش‌ها ده‌ها
+  // سفارش تأییدشده داشت. تاریخچه هر بار آخرین وضعیت هر سفارش را با مشتری و اقلام
+  // می‌دهد؛ تکرار با کلید یکتای قلم بی‌اثر است و لغو از order_status خوانده می‌شود.
   async fetchOrders(
     credentials: Record<string, string>,
     cursor?: string,
@@ -372,35 +360,22 @@ export class SnappShopAdapter extends BaseAdapter {
     const { token, uniqueCode, vendorId } = this.creds(credentials);
     if (!vendorId) throw new Error("شناسه فروشگاه (vendorId) تنظیم نشده است");
 
-    // اولین فراخوانی در هر چرخه: cursor ذخیره‌شده در اتصال
-    let useCursor = cursor;
-    if (!useCursor) {
-      const conn = await prisma.integConnection.findFirst({
-        where:  { platformCode: this.platformCode },
-        select: { config: true },
-      });
-      const cfg = (conn?.config ?? {}) as { ordersCursor?: string };
-      useCursor = cfg.ordersCursor;
-    }
-
-    const url = `${BASE}/vendors/${vendorId}/orders/events${useCursor ? `?cursor=${encodeURIComponent(useCursor)}` : ""}`;
-    const res = await fetch(url, { headers: baseHeaders(token, uniqueCode) });
+    const from = toTehranDate(new Date(Date.now() - ORDERS_LOOKBACK_DAYS * 86_400_000));
+    const qs = cursor ? `cursor=${encodeURIComponent(cursor)}` : `start_date=${from}`;
+    const res = await fetch(`${BASE}/vendors/${vendorId}/orders?${qs}`, { headers: baseHeaders(token, uniqueCode) });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       throw new Error(`HTTP ${res.status}: ${body.slice(0, 300)}`);
     }
 
-    const json = await res.json() as { data?: SnappEvent[]; meta?: { pagination?: SnappPagination } };
-    const events = json.data ?? [];
+    const json = await res.json() as { data?: SnappOrderDetail[]; meta?: { pagination?: SnappPagination } };
+    const orders = json.data ?? [];
     const pg     = json.meta?.pagination ?? {};
 
-    const items: OrderItemInfo[] = [];
-    const cancelledOrderIds: string[] = [];
-
-    // عنوان محصول در فید رویدادها نیست — از snapshot محصولات پلتفرم برمی‌داریم
+    // عنوان محصول در سفارش نیست — از snapshot محصولات پلتفرم برمی‌داریم
     const productIds = new Set<string>();
-    for (const ev of events) {
-      for (const it of ev.items ?? []) {
+    for (const o of orders) {
+      for (const it of o.items ?? []) {
         const pid = it.vendor_product_info_id ?? it.sku;
         if (pid) productIds.add(pid);
       }
@@ -414,100 +389,47 @@ export class SnappShopAdapter extends BaseAdapter {
       for (const r of rows) titleMap.set(r.platformProductId, r.title);
     }
 
-    for (const ev of events) {
-      const orderNo = String(ev.order_number);
+    const items: OrderItemInfo[] = [];
+    const cancelledOrderIds: string[] = [];
 
-      if (ev.event_type === "CANCELLATION") {
+    for (const o of orders) {
+      const orderNo = String(o.order_number);
+      if (o.order_status === "CANCELED") {
         cancelledOrderIds.push(orderNo);
         continue;
       }
-      if (ev.event_type !== "NEW_ORDER") continue;
 
-      // جزئیات سفارش: مشخصات خریدار + تعداد و قیمت واقعی هر قلم.
-      // فید رویدادها فقط final_price کل را می‌دهد و تعداد را ناقص.
-      let detail: SnappOrderDetail | null = null;
-      try {
-        await this.rateLimit(150);
-        const dRes = await fetch(`${BASE}/vendors/${vendorId}/orders/${orderNo}`, {
-          headers: baseHeaders(token, uniqueCode),
-        });
-        if (dRes.ok) detail = (await dRes.json() as { data?: SnappOrderDetail }).data ?? null;
-      } catch { /* بدون جزئیات، از خود رویداد استفاده می‌کنیم */ }
-
-      const c = detail?.customer;
+      const c = o.customer;
       const custName  = [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim() || undefined;
       const custPhone = c?.phone ?? undefined;
+      const orderedAt = parseTehranTime(o.created_at);
 
-      // ترجیح با اقلام جزئیات سفارش؛ اگر در دسترس نبود، اقلام رویداد
       // اقلام بدون شناسه‌ی محصول حذف نمی‌شوند — با کلید مصنوعی ثبت می‌شوند تا
       // فروش نامرئی نماند و در «سفارش‌های بازارگاه» قابل رسیدگی دستی باشد.
-      const detailItems = detail?.items ?? [];
-      const source: { pid: string; key: string; qty: number; unitPrice?: number }[] = detailItems.length
-        ? detailItems
-            .filter((it) => it.item_status !== "CANCELED")
-            .map((it, idx) => {
-              const pid = it.vendor_product_info_id ?? it.sku ?? "";
-              const qty = Math.max(0, (it.quantity ?? 0) - (it.canceled_quantity ?? 0)) || (it.quantity ?? 1);
-              // final_price مجموع اقلام باقیمانده است — تقسیم بر تعداد
-              const total = typeof it.final_price === "number" ? it.final_price : undefined;
-              return {
-                pid,
-                key: pid || `__noId:${idx}`,
-                qty,
-                unitPrice: total != null && qty > 0 ? Math.round(total / qty) : undefined,
-              };
-            })
-        : (ev.items ?? [])
-            .filter((it) => it.item_status !== "CANCELED")
-            .map((it, idx) => {
-              const pid = it.vendor_product_info_id ?? it.sku ?? "";
-              const qty = it.deliverable_quantity ?? 1;
-              const total = typeof it.final_price === "number" ? it.final_price : undefined;
-              return {
-                pid,
-                key: pid || `__noId:${idx}`,
-                qty: qty > 0 ? qty : 1,
-                unitPrice: total != null && qty > 0 ? Math.round(total / qty) : undefined,
-              };
-            });
-
-      for (const row of source) {
-        items.push({
-          platformOrderId:     `${orderNo}:${row.key}`,
-          platformOrderNo:     orderNo,
-          platformOrderItemId: row.key,
-          platformProductId:   row.pid,
-          qty:                 row.qty,
-          title:               titleMap.get(row.pid),
-          unitPrice:           row.unitPrice,   // تومان
-          customerName:        custName,
-          customerPhone:       custPhone,
+      (o.items ?? [])
+        .filter((it) => it.item_status !== "CANCELED")
+        .forEach((it, idx) => {
+          const pid = it.vendor_product_info_id ?? it.sku ?? "";
+          const key = pid || `__noId:${idx}`;
+          const qty = Math.max(0, (it.quantity ?? 0) - (it.canceled_quantity ?? 0)) || (it.quantity ?? 1);
+          // final_price مجموع اقلام باقیمانده است — تقسیم بر تعداد
+          const total = typeof it.final_price === "number" ? it.final_price : undefined;
+          items.push({
+            platformOrderId:     `${orderNo}:${key}`,
+            platformOrderNo:     orderNo,
+            platformOrderItemId: key,
+            platformProductId:   pid,
+            qty,
+            title:               titleMap.get(pid),
+            unitPrice:           total != null && qty > 0 ? Math.round(total / qty) : undefined, // تومان
+            customerName:        custName,
+            customerPhone:       custPhone,
+            orderedAt,
+          });
         });
-      }
     }
 
-    // مکان‌نما اینجا ذخیره نمی‌شود — فید یک‌طرفه است و اگر پیش از ذخیره‌ی
-    // سفارش‌ها جلو برود، هر شکستی وسط پردازش یعنی گم شدن دائمی آن سفارش‌ها.
-    // هسته بعد از ثبت موفق ردیف‌ها commitOrdersCursor را صدا می‌زند.
-    return { items, hasMore: pg.has_more === true, cursor: pg.next_cursor, cancelledOrderIds };
-  }
-
-  /** تثبیت مکان‌نمای فید — بعد از ذخیره‌ی موفق سفارش‌های همان صفحه. */
-  async commitOrdersCursor(
-    _credentials: Record<string, string>,
-    cursor: string,
-  ): Promise<void> {
-    if (!cursor) return;
-    const conn = await prisma.integConnection.findFirst({
-      where:  { platformCode: this.platformCode },
-      select: { id: true, config: true },
-    });
-    if (!conn) return;
-
-    const cfg = (conn.config ?? {}) as Record<string, unknown>;
-    await prisma.integConnection.update({
-      where: { id: conn.id },
-      data:  { config: { ...cfg, ordersCursor: cursor } as never },
-    }).catch(() => {});
+    const hasMore = pg.has_more === true && !!pg.next_cursor;
+    return { items, hasMore, cursor: hasMore ? pg.next_cursor : undefined, cancelledOrderIds };
   }
 }

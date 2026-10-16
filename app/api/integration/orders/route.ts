@@ -83,7 +83,13 @@ export async function PATCH(req: NextRequest) {
   if (action === "retry") {
     // فقط ردیف‌هایی که هنوز فاکتور نخورده‌اند؛ ردیف INVOICED نباید دوباره ارسال شود
     const rows = await prisma.integOrder.findMany({
-      where:  { id: { in: ids }, status: { in: ["NEEDS_MAPPING", "CANCELLED"] } },
+      where:  {
+        id: { in: ids },
+        OR: [
+          { status: { in: ["NEEDS_MAPPING", "CANCELLED"] } },
+          { status: "PENDING", autoInvoice: false },
+        ],
+      },
       select: { id: true, mappingId: true, platformCode: true },
     });
 
@@ -103,7 +109,8 @@ export async function PATCH(req: NextRequest) {
     if (ready.length) {
       await prisma.integOrder.updateMany({
         where: { id: { in: ready } },
-        data:  { status: "PENDING", blockedReason: null },
+        // بازگرداندن صریح به صف یعنی ادمین فاکتور خودکار را می‌خواهد، حتی برای سفارش دیررسیده
+        data:  { status: "PENDING", blockedReason: null, autoInvoice: true },
       });
     }
 

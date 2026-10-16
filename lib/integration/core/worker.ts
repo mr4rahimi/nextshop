@@ -27,6 +27,9 @@ const PRODUCT_REFRESH_MS = 6 * 60 * 60_000;
 /** فاصله دو دور کشیدن گفت‌وگوها. */
 const CHAT_POLL_MS = 5 * 60_000;
 
+/** بیشترین فاصله دو دور دریافت سفارش (دقیقه) — مستقل از syncIntervalMin اتصال. */
+const ORDERS_POLL_MAX_MIN = 30;
+
 async function ensureScheduledJobs(): Promise<void> {
   const connections = await prisma.integConnection.findMany({
     where:   { status: { in: ["CONNECTED", "SYNCING"] } },
@@ -308,12 +311,14 @@ async function dispatchJob(job: IntegJob): Promise<void> {
 
      case "FETCH_ORDERS": {
       await fetchAndProcessOrders(job.id, job.platformCode, adapter, credentials);
+      // بازه‌ی همگام‌سازی اتصال (معمولاً یک روز) برای موجودی است؛ سفارش باید زودتر
+      // در پنل دیده شود، پس دریافتش سقف ثابت دارد
       await enqueue({
         type:         "FETCH_ORDERS",
         platformCode: job.platformCode,
         payload:      {},
         priority:     3,
-        delayMs:      connection.syncIntervalMin * 60_000,
+        delayMs:      Math.min(connection.syncIntervalMin, ORDERS_POLL_MAX_MIN) * 60_000,
       });
       break;
     }

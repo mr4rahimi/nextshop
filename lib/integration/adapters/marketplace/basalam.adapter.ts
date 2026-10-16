@@ -1,7 +1,7 @@
 import { BaseAdapter } from "../base.adapter";
 import { prisma } from "@/lib/prisma";
 import type { FetchOrdersResult, OrderItemInfo } from "@/lib/integration/types";
-import { applyDiscount } from "@/lib/integration/types";
+import { applyDiscount, ORDERS_LOOKBACK_DAYS, parseTehranTime } from "@/lib/integration/types";
 import { toTehranDate } from "@/lib/integration/core/discount";
 import { patchConnectionCredentials } from "@/lib/integration/core/credentials";
 
@@ -23,6 +23,10 @@ import type {
 const OPENAPI_BASE = "https://openapi.basalam.com";
 const CORE_BASE    = "https://core.basalam.com";
 const AUTH_BASE    = "https://auth.basalam.com";
+
+// وضعیت مرسوله‌های باسلام (دیده‌شده روی داده‌ی زنده): 3739 جدید، 3238 ارسال شده،
+// 3195 رضایت مشتری، 3067 لغو شده، 3233 بازگشت کامل وجه
+const BASALAM_CANCELLED_STATUSES = new Set([3067, 3233]);
 
 // ── Basalam API response shapes ──────────────────────────────────────
 
@@ -474,8 +478,9 @@ export class BasalamAdapter extends BaseAdapter {
   credentials: Record<string, string>,
   cursor?: string,
 ): Promise<FetchOrdersResult> {
+  // همه‌ی وضعیت‌ها خوانده می‌شوند. قبلاً فقط «جدید» (3739) خوانده می‌شد و چون
+  // مرسوله تا دور بعدی polling به «ارسال شده» می‌رفت، تقریباً هیچ سفارشی نمی‌رسید.
   const params = new URLSearchParams({
-    statuses: "3739", // فقط سفارش‌های جدید
     per_page: "30",
     // نکته: پارامتر sort توسط باسلام پذیرفته نمی‌شود (422: مرتب سازی معتبر نمی باشد)
   });
@@ -493,6 +498,8 @@ export class BasalamAdapter extends BaseAdapter {
   const data = await res.json() as {
     data: {
       id: number;
+      created_at?: string;
+      status?: { id?: number; title?: string } | null;
       // ساختار واقعی (تأییدشده روی داده‌ی زنده): گیرنده زیر order.customer است،
       // نه روی خود parcel — خواندن از parcel.recipient همیشه undefined می‌داد و
       // نام مشتری در فاکتور حسابداری به «مشتری باسلام» سقوط می‌کرد.
@@ -511,7 +518,22 @@ export class BasalamAdapter extends BaseAdapter {
     next_cursor?: string;
   };
 
+  const cutoff = Date.now() - ORDERS_LOOKBACK_DAYS * 86_400_000;
+  const cancelledOrderIds: string[] = [];
+  // فهرست تقریباً از جدید به قدیم است ولی کاملاً مرتب نیست — وقتی کل صفحه
+  // قدیمی‌تر از بازه بود، صفحه‌های بعدی لازم نیستند
+  let anyRecent = false;
+
   const items: OrderItemInfo[] = data.data.flatMap((parcel) => {
+    const orderedAt = parseTehranTime(parcel.created_at);
+    if (orderedAt && orderedAt.getTime() < cutoff) return [];
+    anyRecent = true;
+    // لغو شده / بازگشت کامل وجه — ردیف ثبت‌شده‌ی فاکتورنخورده لغو می‌شود (کلید با parcel.id شروع می‌شود)
+    if (parcel.status?.id != null && BASALAM_CANCELLED_STATUSES.has(parcel.status.id)) {
+      cancelledOrderIds.push(String(parcel.id));
+      return [];
+    }
+
     const cust      = parcel.order?.customer ?? null;
     const recipient = cust?.recipient ?? parcel.recipient ?? parcel.customer ?? null;
     const account   = cust?.user ?? null;
@@ -538,11 +560,13 @@ export class BasalamAdapter extends BaseAdapter {
         unitPrice:           typeof rawPrice === "number" ? Math.round(rawPrice / 10) : undefined,
         customerName:        name,
         customerPhone:       mobile,
+        orderedAt,
       };
     });
   });
 
-  return { items, hasMore: !!data.next_cursor, cursor: data.next_cursor };
+  const hasMore = !!data.next_cursor && anyRecent;
+  return { items, hasMore, cursor: hasMore ? data.next_cursor : undefined, cancelledOrderIds };
 }
 
   // ── bulk update به core.basalam.com ──────────────────────────────

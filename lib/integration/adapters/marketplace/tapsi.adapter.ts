@@ -256,7 +256,8 @@ export class TapsiAdapter extends BaseAdapter {
   }
 
   // ── دریافت سفارش‌ها (polling — پشتیبان وب‌هوک) ───────────────────
-  // فقط سفارش‌های «تأیید شده» (orderStatusId=4)
+  // سفارش‌های «تأیید شده» (4) و «تحویل کامل» (9). قبلاً فقط 4
+  // خوانده می‌شد و سفارشی که پیش از دور بعدی تحویل شده بود فقط با وب‌هوک می‌رسید.
   async fetchOrders(
     credentials: Record<string, string>,
     cursor?: string,
@@ -267,7 +268,9 @@ export class TapsiAdapter extends BaseAdapter {
     const listRes = await fetch(`${BASE}/orders`, {
       method:  "POST",
       headers: baseHeaders(token),
-      body:    JSON.stringify({ pageNumber, pageSize: 20, orderStatusId: ["4"] }),
+      // fromDate بدون «نوع فیلتر تاریخ» (که مستندات نامش را نمی‌گوید) ۴۰۰ می‌گیرد؛
+      // فهرست تپسی خودش فقط سفارش‌های روزهای اخیر را برمی‌گرداند
+      body:    JSON.stringify({ pageNumber, pageSize: 20, orderStatusId: ["4", "9"] }),
     });
     if (!listRes.ok) throw new Error(`HTTP ${listRes.status}`);
 
@@ -324,6 +327,7 @@ export class TapsiAdapter extends BaseAdapter {
           qty:                 row.qty,
           title:               row.title,
           unitPrice:           row.unitPriceToman,
+          orderedAt:           o.createdOn ? new Date(o.createdOn) : undefined,
         });
       }
       await this.rateLimit(150);

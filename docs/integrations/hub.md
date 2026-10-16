@@ -986,7 +986,7 @@ update_bulk_products(vendor_id, {
 - **تست اتصال:** `GET /vendor-information` (نام فروشگاه + vendorId).
 - **دریافت محصولات:** `GET /products/{page}/{pageSize}` — تپسی **عنوان نمی‌فرستد**؛ فقط `id`, `sku`, `hsin`. نمایش با sku/hsin. نگاشت دستی بر اساس عنوان (auto-match ضعیف چون عنوان نیست).
 - **push موجودی/قیمت:** `PUT /products` با `{products:[{id, stock, price, specialPrice, referenceCode}]}` — قیمت تومان×۱۰ = ریال.
-- **دریافت سفارش (polling، پشتیبان):** `POST /orders` با `orderStatusId:["4"]` سپس `GET /orders/{id}` برای اقلام.
+- **دریافت سفارش (polling، پشتیبان):** `POST /orders` با `orderStatusId:["4","9"]` سپس `GET /orders/{id}` برای اقلام. (یکی‌کردن با ردیف وب‌هوک: orders-and-invoicing.md)
 - **اتصال در ادمین:** `app/admin/integration/connections/tapsi_shop/` (page + TapsiForm).
 
 ## وب‌هوک لحظه‌ای تپسی
@@ -1124,6 +1124,9 @@ HTTP 401: {"errors":[{"code":0,"fields":[],"message":"authentication error"}],
 > `failed` باعث throw و retry با backoff می‌شود.
 
 ## ۷. مکان‌نمای فید سفارش اسنپ‌شاپ زودتر از موعد جلو می‌رفت
+
+> از ۲.۹۲.۰ اسنپ‌شاپ از تاریخچه‌ی سفارش‌ها می‌خواند و این فید دیگر استفاده نمی‌شود —
+> orders-and-invoicing.md بخش «دریافت».
 `fetchOrders` مکان‌نما (`ordersCursor`) را **داخل خودش** و پیش از ذخیره‌ی
 سفارش‌ها روی اتصال می‌نوشت. فید اسنپ‌شاپ یک‌طرفه است: اگر پردازش وسط کار
 می‌شکست، job دوباره تلاش می‌کرد ولی مکان‌نما از آن رویدادها گذشته بود و آن

@@ -42,7 +42,7 @@
 1. اتصال‌ها در admin/integration/connections (تست + ذخیره؛ credentials رمز می‌شود)
 2. FETCH_PRODUCTS → job در IntegJob → worker → آداپتر → IntegPlatformProduct + auto-match (IntegMappingSuggestion)
 3. نگاشت‌ها: IntegMapping + IntegMappingLink (یک گروه = shop + hesaban + basalam با externalId)
-4. سفارش باسلام (FETCH_ORDERS، status=3739) → کم‌کردن موجودی همه پلتفرم‌ها به‌جز حسابداری → پس از ثبت فاکتور در حسابداری، SYNC_ALL_STOCK موجودی را از حسابداری باز-همگام می‌کند
+4. سفارش بازارگاه (FETCH_ORDERS، ۳۰ روز اخیر در هر وضعیت — docs/integrations/orders-and-invoicing.md) → کم‌کردن موجودی همه پلتفرم‌ها به‌جز حسابداری → پس از ثبت فاکتور در حسابداری، SYNC_ALL_STOCK موجودی را از حسابداری باز-همگام می‌کند
 5. SYNC_ALL_PRICE: purchasePrice از حسابداری → فرمول قوانین قیمت → push به پلتفرم‌ها (باسلام قیمت×۱۰ = ریال)
 
 ### Worker
