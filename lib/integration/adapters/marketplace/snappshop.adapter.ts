@@ -34,6 +34,7 @@ interface SnappDiscount {
 }
 interface SnappProduct {
   id: string; sku: string | null; product_number?: number; active?: boolean;
+  vendor_product_info_id?: string;
   stock: number | null; warehouse_stock?: number | null;
   title?: string; price: number | null;
   discount?: SnappDiscount | null;
@@ -58,6 +59,12 @@ interface SnappOrderDetail {
     final_price?: number;
   }[];
 }
+
+// سفارش‌ها قلم را با vendor_product_info_id می‌دهند، ولی فهرست محصولات (و در نتیجه
+// IntegPlatformProduct و نگاشت) با `id` محصول کار می‌کند — دو شناسه‌ی متفاوت برای یک
+// محصول. نقشه‌ی تبدیل از فهرست محصولات ساخته و یک ساعت نگه داشته می‌شود.
+const VPI_TTL_MS = 60 * 60_000;
+let vpiCache: { at: number; map: Map<string, string> } | null = null;
 
 export class SnappShopAdapter extends BaseAdapter {
   readonly platformCode = "snappshop";
@@ -372,11 +379,18 @@ export class SnappShopAdapter extends BaseAdapter {
     const orders = json.data ?? [];
     const pg     = json.meta?.pagination ?? {};
 
+    // شناسه‌ی قلم سفارش → شناسه‌ی محصول (کلید نگاشت). sku فروشنده در صورت وجود، خودش
+    // در فهرست محصولات قابل جستجو نیست، پس فقط vendor_product_info_id تبدیل می‌شود
+    const vpis = orders.flatMap((o) => (o.items ?? []).map((it) => it.vendor_product_info_id).filter(Boolean) as string[]);
+    const vpiMap = vpis.length ? await this.vendorInfoIdMap(token, uniqueCode, vendorId, vpis) : new Map<string, string>();
+    const productIdOf = (it: { vendor_product_info_id?: string; sku?: string | null }) =>
+      (it.vendor_product_info_id && vpiMap.get(it.vendor_product_info_id)) ?? it.vendor_product_info_id ?? it.sku ?? "";
+
     // عنوان محصول در سفارش نیست — از snapshot محصولات پلتفرم برمی‌داریم
     const productIds = new Set<string>();
     for (const o of orders) {
       for (const it of o.items ?? []) {
-        const pid = it.vendor_product_info_id ?? it.sku;
+        const pid = productIdOf(it);
         if (pid) productIds.add(pid);
       }
     }
@@ -409,8 +423,10 @@ export class SnappShopAdapter extends BaseAdapter {
       (o.items ?? [])
         .filter((it) => it.item_status !== "CANCELED")
         .forEach((it, idx) => {
-          const pid = it.vendor_product_info_id ?? it.sku ?? "";
-          const key = pid || `__noId:${idx}`;
+          // کلید ردیف همان شناسه‌ی قلم سفارش می‌ماند تا با ردیف‌های قبلی یکی بماند
+          const ref = it.vendor_product_info_id ?? it.sku ?? "";
+          const pid = productIdOf(it);
+          const key = ref || `__noId:${idx}`;
           const qty = Math.max(0, (it.quantity ?? 0) - (it.canceled_quantity ?? 0)) || (it.quantity ?? 1);
           // final_price مجموع اقلام باقیمانده است — تقسیم بر تعداد
           const total = typeof it.final_price === "number" ? it.final_price : undefined;
@@ -431,5 +447,33 @@ export class SnappShopAdapter extends BaseAdapter {
 
     const hasMore = pg.has_more === true && !!pg.next_cursor;
     return { items, hasMore, cursor: hasMore ? pg.next_cursor : undefined, cancelledOrderIds };
+  }
+
+  /** نقشه‌ی vendor_product_info_id → id محصول؛ فقط وقتی شناسه‌ی ناشناخته‌ای برسد دوباره ساخته می‌شود. */
+  private async vendorInfoIdMap(
+    token: string,
+    uniqueCode: string,
+    vendorId: string,
+    needed: string[],
+  ): Promise<Map<string, string>> {
+    const fresh = vpiCache && Date.now() - vpiCache.at < VPI_TTL_MS;
+    if (fresh && needed.every((v) => vpiCache!.map.has(v))) return vpiCache!.map;
+    // محصول حذف‌شده هرگز در فهرست پیدا نمی‌شود — در بازه‌ی TTL دوباره نمی‌خوانیم
+    if (fresh) return vpiCache!.map;
+
+    const map = new Map<string, string>();
+    for (let page = 1; page <= 100; page++) {
+      const res = await fetch(`${BASE}/vendors/${vendorId}/products?page=${page}`, { headers: baseHeaders(token, uniqueCode) });
+      if (!res.ok) break;
+      const json = await res.json() as { data?: SnappProduct[]; meta?: { pagination?: SnappPagination } };
+      for (const p of json.data ?? []) {
+        if (p.vendor_product_info_id) map.set(p.vendor_product_info_id, p.id);
+      }
+      const pg = json.meta?.pagination ?? {};
+      if (!(pg.current_page != null && pg.total_pages != null && pg.current_page < pg.total_pages)) break;
+      await this.rateLimit(150);
+    }
+    if (map.size) vpiCache = { at: Date.now(), map };
+    return map;
   }
 }

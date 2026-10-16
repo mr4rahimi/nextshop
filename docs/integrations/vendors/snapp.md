@@ -44,6 +44,9 @@ Content-Type:  application/json
 | `PATCH /vendors/{vendorId}/products` | به‌روزرسانی گروهی قیمت و موجودی |
 | `GET /vendors/{vendorId}/orders/events` | رویدادهای سفارش — از ۲.۹۲.۰ استفاده نمی‌شود (روی داده‌ی زنده خالی می‌ماند) |
 | `GET /vendors/{vendorId}/orders?start_date=` | تاریخچه‌ی سفارش‌ها با مشتری و اقلام — منبع `fetchOrders` |
+
+> ⚠ قلم سفارش `vendor_product_info_id` دارد که **با `id` محصول فرق می‌کند**؛ هر دو در
+> پاسخ `GET /products` هستند و نگاشت با `id` است. ر.ک. orders-and-invoicing.md.
 | `GET /vendors/{vendorId}/orders/{orderNo}` | جزئیات یک سفارش |
 
 ## فیلدهای محصول

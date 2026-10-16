@@ -77,10 +77,17 @@ async function ensureScheduledJobs(): Promise<void> {
 
       const existing = await prisma.integJob.findFirst({
         where:  { platformCode: conn.platformCode, type: "FETCH_ORDERS", status: { in: ["PENDING", "PROCESSING"] } },
-        select: { id: true },
+        select: { id: true, status: true, scheduledAt: true },
       });
       if (!existing) {
         await enqueue({ type: "FETCH_ORDERS", platformCode: conn.platformCode, payload: {}, priority: 3 });
+      } else if (
+        existing.status === "PENDING" &&
+        existing.scheduledAt.getTime() > Date.now() + ORDERS_POLL_MAX_MIN * 60_000
+      ) {
+        // jobی که پیش از سقف نیم‌ساعته با بازه‌ی روزانه زمان‌بندی شده، تا یک روز سفارش
+        // تازه نمی‌آورد — جلو کشیده می‌شود
+        await prisma.integJob.update({ where: { id: existing.id }, data: { scheduledAt: new Date() } });
       }
     }
 

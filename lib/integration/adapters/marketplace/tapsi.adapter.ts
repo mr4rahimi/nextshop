@@ -282,7 +282,12 @@ export class TapsiAdapter extends BaseAdapter {
 
     for (const o of orders) {
       // جزئیات هر سفارش برای گرفتن اقلام و sku
-      const detRes = await fetch(`${BASE}/orders/${o.id}`, { headers: baseHeaders(token) });
+      // تپسی درخواست‌های پشت‌سرهم جزئیات را با ۴۲۹ رد می‌کند — با مکث بیشتر دوباره
+      let detRes = await fetch(`${BASE}/orders/${o.id}`, { headers: baseHeaders(token) });
+      for (let retry = 1; detRes.status === 429 && retry <= 3; retry++) {
+        await this.rateLimit(2000 * retry);
+        detRes = await fetch(`${BASE}/orders/${o.id}`, { headers: baseHeaders(token) });
+      }
       if (!detRes.ok) {
         // سکوت اینجا یعنی سفارش هرگز در پنل دیده نمی‌شود — پس ثبت می‌شود و بالادست لاگ می‌کند
         failedDetails.push(`${o.orderNumber || o.id} (HTTP ${detRes.status})`);
@@ -330,7 +335,7 @@ export class TapsiAdapter extends BaseAdapter {
           orderedAt:           o.createdOn ? new Date(o.createdOn) : undefined,
         });
       }
-      await this.rateLimit(150);
+      await this.rateLimit(500);
     }
 
     if (failedDetails.length) {

@@ -19,6 +19,17 @@ export interface ReleaseNote {
 
 export const VERSIONS: ReleaseNote[] = [
   {
+    version: "2.92.1",
+    date: "1405/07/24",
+    tag: "patch",
+    title: "سفارش‌های اسنپ‌شاپ با نام محصول",
+    changes: [
+      { type: "improvement", text: "سفارش‌های اسنپ‌شاپ در «سفارش‌های بازارگاه» با نام محصول می‌آیند و به محصول نگاشت‌شده وصل می‌شوند" },
+      { type: "improvement", text: "بعد از به‌روزرسانی، دریافت سفارش‌ها بی‌درنگ شروع می‌شود" },
+      { type: "improvement", text: "دریافت جزئیات سفارش‌های تپسی‌شاپ در ساعات شلوغ پایدارتر شد" },
+    ],
+  },
+  {
     version: "2.92.0",
     date: "1405/07/24",
     tag: "minor",
