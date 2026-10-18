@@ -66,7 +66,7 @@ const PLATFORM_ORDER: PlatformCode[] = ["shop", "basalam", "snappshop", "tapsi_s
 const PLACEHOLDER_HINT: Record<PlatformCode, string> = {
   shop: "",
   basalam: "{id} شناسه‌ی محصول در باسلام",
-  snappshop: "{number} شماره‌ی محصول، {parent} شماره‌ی محصول مادر، {id} شناسه",
+  snappshop: "{parent} شماره‌ی صفحه‌ی محصول، {number} شماره‌ی تنوع، {id} شناسه",
   tapsi_shop: "{hsin} کد HSIN، {sku} کد فروشنده، {id} شناسه",
 };
 
@@ -116,10 +116,14 @@ export default function BaleBotClient() {
         setMessage({ text: d?.error ?? "خطایی رخ داد", ok: false });
         return;
       }
-      setMessage({
-        text: action === "test" ? `اتصال برقرار است — ${d.bot?.first_name ?? ""}` : okText,
-        ok: true,
-      });
+      setMessage(
+        d.webhookError
+          ? { text: `ذخیره شد، ولی ${d.webhookError}`, ok: false }
+          : {
+              text: action === "test" ? `اتصال برقرار است — ${d.bot?.first_name ?? ""}` : okText,
+              ok: true,
+            },
+      );
       if (action === "save-connection") setToken("");
       await load();
       if (action === "save-catalog") setProductsKey((k) => k + 1);
@@ -185,6 +189,20 @@ export default function BaleBotClient() {
         />
       </div>
 
+      {status.hasToken && status.bot && !status.webhookSet && (
+        <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-4 flex flex-wrap items-center gap-3">
+          <p className="text-xs font-black text-amber-700 dark:text-amber-400 flex-1 min-w-[220px] leading-relaxed">
+            وب‌هوک ثبت نشده است؛ تا ثبت نشود ربات به هیچ پیامی جواب نمی‌دهد و پیام‌ها در بله منتظر می‌مانند.
+          </p>
+          <Button
+            onClick={() => act("set-webhook", undefined, "وب‌هوک ثبت شد؛ ربات حالا پیام‌ها را جواب می‌دهد")}
+            busy={busy === "set-webhook"}
+          >
+            ثبت وب‌هوک
+          </Button>
+        </div>
+      )}
+
       {status.botError && (
         <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-4">
           <p className="text-xs font-black text-red-600 dark:text-red-400">{status.botError}</p>
@@ -210,7 +228,7 @@ export default function BaleBotClient() {
               className={inputCls}
             />
             <span className="block text-[10px] font-bold text-gray-400 mt-1.5 leading-relaxed">
-              {status.hasToken ? "خالی بگذارید تا همان توکن قبلی بماند." : "بعد از ذخیره، «ثبت وب‌هوک» را بزنید."}
+              {status.hasToken ? "خالی بگذارید تا همان توکن قبلی بماند." : "با ذخیره، وب‌هوک هم خودکار ثبت می‌شود."}
             </span>
           </label>
           <label className="block">

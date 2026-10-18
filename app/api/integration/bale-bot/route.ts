@@ -145,6 +145,9 @@ async function saveConnection(body: Record<string, unknown>) {
     })),
   });
 
+  // توکن تازه = وب‌هوک تازه؛ هر ربات فقط به یک آدرس وصل است
+  const webhookError = data.baleBotToken ? await registerWebhook() : null;
+
   // بعد از توکن تازه، اگر نام کاربری خالی است از خود ربات بخوان
   if (data.baleBotToken && !data.baleBotUsername) {
     const cfg = await loadBaleConfig();
@@ -157,12 +160,18 @@ async function saveConnection(body: Record<string, unknown>) {
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, webhookError });
 }
 
-async function setWebhook() {
+/**
+ * ثبت وب‌هوک — هم با دکمه، هم خودکار بعد از ذخیره‌ی توکن و روشن کردن کاتالوگ.
+ * بدون وب‌هوک، بله پیام‌ها را نگه می‌دارد و ربات هیچ جوابی نمی‌دهد؛ این قدم
+ * آن‌قدر راحت از قلم می‌افتاد که حالا خودکار است.
+ * خروجی: `null` یعنی موفق، رشته یعنی خطای قابل نمایش.
+ */
+async function registerWebhook(): Promise<string | null> {
   const cfg = await loadBaleConfig();
-  if (!cfg) return fail("توکن ربات ثبت نشده است");
+  if (!cfg) return "توکن ربات ثبت نشده است";
 
   let secret = cfg.webhookSecret;
   if (!secret) {
@@ -175,10 +184,26 @@ async function setWebhook() {
 
   const url = webhookUrlFor(secret)!;
   // ⚠️ بله فقط وب‌هوک HTTPS می‌پذیرد؛ روی لوکال کار نمی‌کند
-  if (!url.startsWith("https://")) return fail("آدرس سایت HTTPS نیست؛ بله فقط وب‌هوک HTTPS می‌پذیرد");
+  if (!url.startsWith("https://")) return "آدرس سایت HTTPS نیست؛ بله فقط وب‌هوک HTTPS می‌پذیرد";
 
-  await callBotApi(apiConfigFor(cfg), "setWebhook", { url });
-  return NextResponse.json({ ok: true, url });
+  try {
+    await callBotApi(apiConfigFor(cfg), "setWebhook", { url });
+    return null;
+  } catch (err) {
+    return err instanceof Error ? `ثبت وب‌هوک ناموفق: ${err.message}` : "ثبت وب‌هوک ناموفق";
+  }
+}
+
+async function setWebhook() {
+  const error = await registerWebhook();
+  return error ? fail(error) : NextResponse.json({ ok: true });
+}
+
+async function webhookIsSet(): Promise<boolean> {
+  const cfg = await loadBaleConfig();
+  if (!cfg?.webhookSecret) return false;
+  const info = await callBotApi<{ url?: string }>(apiConfigFor(cfg), "getWebhookInfo").catch(() => null);
+  return info?.url === webhookUrlFor(cfg.webhookSecret);
 }
 
 async function saveCatalog(body: Record<string, unknown>) {
@@ -194,6 +219,10 @@ async function saveCatalog(body: Record<string, unknown>) {
 
   await saveCatalogConfig(next);
 
+  // کاتالوگ روشن بدون وب‌هوک یعنی ربات ساکت — اگر ثبت نشده، همین حالا ثبت کن
+  let webhookError: string | null = null;
+  if (next.enabled && !(await webhookIsSet())) webhookError = await registerWebhook();
+
   logActivityAsync({
     action: "UPDATE",
     entity: "SETTINGS",
@@ -205,5 +234,5 @@ async function saveCatalog(body: Record<string, unknown>) {
         : [{ field: "baleCatalog", label: "تنظیمات کاتالوگ", before: null, after: "به‌روز شد" }],
   });
 
-  return NextResponse.json({ ok: true, catalog: next });
+  return NextResponse.json({ ok: true, catalog: next, webhookError });
 }

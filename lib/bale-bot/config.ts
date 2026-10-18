@@ -52,7 +52,8 @@ export const DEFAULT_CATALOG: BaleCatalogConfig = {
     snappshop: {
       enabled: true,
       label: "اسنپ‌شاپ",
-      urlTemplate: "https://snappshop.ir/product/snp-{number}",
+      // شماره‌ی صفحه‌ی عمومی اسنپ‌شاپ `parent_product_number` است، نه `product_number`
+      urlTemplate: "https://snappshop.ir/product/snp-{parent}",
     },
     tapsi_shop: {
       enabled: true,
@@ -61,6 +62,9 @@ export const DEFAULT_CATALOG: BaleCatalogConfig = {
     },
   },
 };
+
+/** پیش‌فرض‌های غلط نسخه‌های قبل — اگر دست‌نخورده ذخیره شده باشند، با پیش‌فرض تازه عوض می‌شوند */
+const OUTDATED_TEMPLATES = new Set(["https://snappshop.ir/product/snp-{number}"]);
 
 function bool(v: unknown, fallback: boolean): boolean {
   return typeof v === "boolean" ? v : fallback;
@@ -86,7 +90,9 @@ export function normalizeCatalogConfig(raw: unknown): BaleCatalogConfig {
       enabled: bool(p.enabled, d.enabled),
       // ⚠️ برچسب خالی دکمه‌ی بی‌نام می‌سازد — خالی یعنی پیش‌فرض
       label: str(p.label, d.label, 40).trim() || d.label,
-      urlTemplate: str(p.urlTemplate, d.urlTemplate).trim(),
+      urlTemplate: ((t) => (OUTDATED_TEMPLATES.has(t) ? d.urlTemplate : t))(
+        str(p.urlTemplate, d.urlTemplate).trim(),
+      ),
     };
   }
 

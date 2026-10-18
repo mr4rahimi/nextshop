@@ -19,6 +19,17 @@ export interface ReleaseNote {
 
 export const VERSIONS: ReleaseNote[] = [
   {
+    version: "2.93.1",
+    date: "1405/07/26",
+    tag: "patch",
+    title: "راه‌اندازی ساده‌تر ربات بله",
+    changes: [
+      { type: "improvement", text: "با ذخیره‌ی توکن ربات یا روشن کردن نمایش محصولات، وب‌هوک بله خودکار ثبت می‌شود" },
+      { type: "improvement", text: "اگر وب‌هوک ثبت نشده باشد، صفحه‌ی «ربات بله» هشدار و دکمه‌ی ثبت نشان می‌دهد" },
+      { type: "improvement", text: "لینک خرید اسنپ‌شاپ در ربات مستقیم به صفحه‌ی محصول می‌رود" },
+    ],
+  },
+  {
     version: "2.93.0",
     date: "1405/07/26",
     tag: "minor",
