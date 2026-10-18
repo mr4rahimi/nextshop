@@ -190,6 +190,11 @@ async function registerWebhook(): Promise<string | null> {
     await callBotApi(apiConfigFor(cfg), "setWebhook", { url });
     return null;
   } catch (err) {
+    // ⚠️ بله برای توکن نامعتبر ۴۰۳ می‌دهد که `callBotApi` آن را «کاربر خارج شده»
+    //    می‌فهمد — در ثبت وب‌هوک هیچ کاربری در کار نیست، پس یعنی توکن غلط است
+    if (err instanceof BotApiError && (err.code === "BLOCKED" || err.code === "UNAUTHORIZED")) {
+      return "ثبت وب‌هوک ناموفق: توکن ربات پذیرفته نشد؛ توکن را دوباره از @BotFather بگیرید";
+    }
     return err instanceof Error ? `ثبت وب‌هوک ناموفق: ${err.message}` : "ثبت وب‌هوک ناموفق";
   }
 }
