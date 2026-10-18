@@ -5,6 +5,13 @@ import { setClubConsent } from "../consent";
 import { loadPointRules } from "../points";
 import { loadBaleConfig, sendBaleMessage, type BaleConfig } from "./bale";
 import { contactKeyboard, type BotUpdate } from "./botapi";
+import { loadCatalogConfig } from "@/lib/bale-bot/config";
+import {
+  answerCallback,
+  handleCatalogCallback,
+  handleCatalogText,
+  sendMainMenu,
+} from "@/lib/bale-bot/handler";
 
 /**
  * پردازش آپدیت‌های ربات بله
@@ -14,11 +21,17 @@ import { contactKeyboard, type BotUpdate } from "./botapi";
  *    پس جریان اجباری این است: `/start` → دکمه‌ی «ارسال شماره» → ساخت
  *    `ClubChannelIdentity`. تا پیش از شماره، هیچ رکوردی ساخته نمی‌شود.
  *
+ * کاتالوگ محصولات (`lib/bale-bot`) روی همین ربات سوار است: وقتی روشن باشد
+ * `/start` منوی اصلی را نشان می‌دهد و عضویت باشگاه یکی از دکمه‌های آن است.
+ * `/start club` (لینک QR عضویت) همچنان مستقیم به عضویت می‌رود.
+ * مستندات: docs/features/bale-catalog.md
+ *
  * ⚠️ این تابع هرگز throw نمی‌کند. وب‌هوکی که خطا برگرداند باعث می‌شود بله
  *    همان آپدیت را بارها بفرستد.
  */
 
 const CMD_START = /^\/start\b/;
+const CMD_START_CLUB = /^\/start\s+club\b/;
 const CMD_STOP = /^\/stop\b|^لغو$/;
 const CMD_POINTS = /^\/points\b|^امتیاز$/;
 
@@ -26,6 +39,21 @@ export async function handleBaleUpdate(update: BotUpdate): Promise<void> {
   try {
     const cfg = await loadBaleConfig();
     if (!cfg) return;
+
+    const catalog = await loadCatalogConfig();
+
+    // ── دکمه‌های شیشه‌ای ──────────────────────────────────────────
+    const cb = update.callback_query;
+    if (cb) {
+      await answerCallback(cfg, cb.id);
+      const cbChat = cb.message?.chat.id ?? cb.from.id;
+      if (cb.data === "club") {
+        await handleStart(cfg, cbChat);
+        return;
+      }
+      if (catalog.enabled) await handleCatalogCallback(cfg, catalog, cb);
+      return;
+    }
 
     const msg = update.message;
     if (!msg) return;
@@ -41,6 +69,11 @@ export async function handleBaleUpdate(update: BotUpdate): Promise<void> {
     const text = (msg.text ?? "").trim();
 
     if (CMD_START.test(text)) {
+      // `/start club` همیشه عضویت؛ `/start` خالی با کاتالوگ روشن، منوی اصلی
+      if (catalog.enabled && !CMD_START_CLUB.test(text)) {
+        await sendMainMenu(cfg, catalog, chatId);
+        return;
+      }
       await handleStart(cfg, chatId);
       return;
     }
@@ -55,11 +88,16 @@ export async function handleBaleUpdate(update: BotUpdate): Promise<void> {
       return;
     }
 
+    // متن آزاد با کاتالوگ روشن = جستجوی محصول
+    if (catalog.enabled && (await handleCatalogText(cfg, catalog, chatId, text))) return;
+
     // پیام ناشناخته — راهنمای کوتاه، نه سکوت
     await sendBaleMessage(
       cfg,
       chatId,
-      "برای عضویت در باشگاه دستور /start را بزنید.\nبرای دیدن امتیاز، «امتیاز» را بفرستید."
+      catalog.enabled
+        ? "برای دیدن محصولات و منوی اصلی دستور /start را بزنید.\nبرای دیدن امتیاز، «امتیاز» را بفرستید."
+        : "برای عضویت در باشگاه دستور /start را بزنید.\nبرای دیدن امتیاز، «امتیاز» را بفرستید."
     ).catch(() => {});
   } catch (err) {
     console.error("[bale:webhook] پردازش آپدیت ناموفق:", err);

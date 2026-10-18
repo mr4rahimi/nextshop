@@ -47,6 +47,7 @@ const TOPIC_PAGES: Record<string, string> = {
   teamReport: "/admin/worklist/reports",
   aiTextBulk: "/admin/products/ai-text",
   aiSettings: "/admin/ai-settings",
+  baleBot: "/admin/integration/bale-bot",
   blogPost: "/admin/blog",
   tools: "/admin/tools",
   toolsEmployee: "/admin/tools/employee-cost",

@@ -33,7 +33,7 @@ interface SnappDiscount {
   percent?: number | null; start_at?: string | null; end_at?: string | null;
 }
 interface SnappProduct {
-  id: string; sku: string | null; product_number?: number; active?: boolean;
+  id: string; sku: string | null; product_number?: number; parent_product_number?: number | string; active?: boolean;
   vendor_product_info_id?: string;
   stock: number | null; warehouse_stock?: number | null;
   title?: string; price: number | null;
@@ -155,6 +155,10 @@ export class SnappShopAdapter extends BaseAdapter {
         discountStock:    hasDisc ? (p.discount?.stock ?? undefined) : undefined,
         stock:      p.stock ?? undefined,
         sku:        p.sku ?? undefined,
+        publicRefs: {
+          ...(p.product_number != null ? { number: String(p.product_number) } : {}),
+          ...(p.parent_product_number != null ? { parent: String(p.parent_product_number) } : {}),
+        },
       };
     });
 

@@ -940,6 +940,9 @@ model StoreSettings {
   ///    ارسال از آن هزینه‌دار است.
   baleSafirKey      String?
   baleSafirEnabled  Boolean @default(false)
+  /// کاتالوگ محصولات در همان ربات بله — شکلش `BaleCatalogConfig` در
+  /// `lib/bale-bot/config.ts`. خالی یعنی خاموش و رفتار قدیمی (فقط باشگاه).
+  baleCatalog       Json    @default("{}")
 
   /// کلمه/عدد کلیدی رضایت با پاسخ پیامکی — مشتری این را به خط خدماتی می‌فرستد
   smsOptInText String? @default("عضویت")

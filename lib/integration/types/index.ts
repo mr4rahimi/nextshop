@@ -20,6 +20,12 @@ export interface IntegProductInfo {
   weight?:        number;
   attributes?:    Record<string, string>;
   imageUrls?:     string[];
+  /**
+   * کدهای عمومی محصول روی خود بازارگاه (مثل HSIN تپسی یا شماره‌ی محصول
+   * اسنپ‌شاپ) — برای ساختن لینک صفحه‌ی محصول در ربات بله. در `rawData.refs`
+   * ذخیره می‌شود؛ docs/features/bale-catalog.md
+   */
+  publicRefs?:    Record<string, string>;
 }
 
 export interface PaginatedProducts {

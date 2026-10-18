@@ -467,6 +467,7 @@ async function fetchAndMatch(
           discountSynced:   true,
           purchasePrice: item.purchasePrice ?? null,
           unit:          item.unit ?? null,
+          ...(item.publicRefs ? { rawData: { refs: item.publicRefs } } : {}),
           isEnabled:     true,
           lastFetchedAt: now,
           updatedAt:     now,
@@ -487,6 +488,7 @@ async function fetchAndMatch(
           discountSynced:   true,
           purchasePrice: item.purchasePrice ?? null,
           unit:          item.unit ?? null,
+          ...(item.publicRefs ? { rawData: { refs: item.publicRefs } } : {}),
           lastFetchedAt: now,
         },
       });

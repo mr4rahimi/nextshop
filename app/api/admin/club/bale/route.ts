@@ -97,7 +97,8 @@ export async function GET() {
       ? `${SITE_URL}/api/club/bale/webhook/${settings.baleWebhookSecret}`
       : null,
     startLink: settings?.baleBotUsername
-      ? `https://ble.ir/${settings.baleBotUsername}`
+      ? // `?start=club` مستقیم به عضویت می‌رود، حتی وقتی کاتالوگ محصولات روشن است
+        `https://ble.ir/${settings.baleBotUsername}?start=club`
       : null,
     bot,
     botError,

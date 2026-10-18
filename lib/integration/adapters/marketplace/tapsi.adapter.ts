@@ -134,6 +134,7 @@ export class TapsiAdapter extends BaseAdapter {
         discountPercent: hasDiscount ? Math.round(((original! - final!) / original!) * 10000) / 100 : undefined,
         stock:      p.onHandQuantity ?? undefined,
         sku:        p.sku ?? undefined,
+        ...(p.hsin ? { publicRefs: { hsin: p.hsin } } : {}),
       };
     });
 
