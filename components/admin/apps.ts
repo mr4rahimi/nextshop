@@ -106,6 +106,7 @@ export const WORKLIST_APPS: AppItem[] = [
 export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting", label: "خانه", icon: House, tone: "blue", perm: ["ACC_VIEW", "ACC_SETTINGS"], exact: true, img: "acc-home" },
   { href: "/admin/accounting/sales", label: "فروش", icon: Receipt, tone: "emerald", perm: ["ACC_VIEW", "ACC_SALES"], img: "acc-sales" },
+  { href: "/admin/accounting/pos", label: "صندوق فروشگاه", icon: ShoppingCart, tone: "emerald", perm: ["ACC_POS", "ACC_POS_MANAGE", "ACC_SALES"], img: "quick-pos" },
   { href: "/admin/accounting/purchases", label: "خرید", icon: ShoppingBag, tone: "orange", perm: ["ACC_VIEW", "ACC_PURCHASE"], img: "acc-purchases" },
   { href: "/admin/accounting/money", label: "دریافت و پرداخت", icon: ArrowLeftRight, tone: "sky", perm: ["ACC_VIEW", "ACC_TREASURY"], img: "acc-money" },
   { href: "/admin/accounting/cheques", label: "چک‌ها", icon: Banknote, tone: "teal", perm: ["ACC_VIEW", "ACC_CHEQUE"], img: "acc-cheques" },

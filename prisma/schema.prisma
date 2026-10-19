@@ -120,39 +120,39 @@ model Brand {
 }
 
 model Product {
-  id                 String             @id @default(cuid())
+  id                 String               @id @default(cuid())
   title              String
-  slug               String             @unique
+  slug               String               @unique
   /// نو، استوک، دست‌دوم یا بازسازی‌شده — مبنای درصد پورسانت (بخش ۲۲.۵ کارتابل)
-  condition          ProductCondition   @default(NEW)
+  condition          ProductCondition     @default(NEW)
   categoryId         String
   brandId            String?
   // شناسه‌های محصول برای Product schema و Google Merchant Center
   sku                String?
   gtin13             String?
   mpn                String?
-  features           Json               @default("[]")
-  colors             Json               @default("[]")
-  price              BigInt             @default(0)
+  features           Json                 @default("[]")
+  colors             Json                 @default("[]")
+  price              BigInt               @default(0)
   salePrice          BigInt?
   warranty           String?
-  stock              Int                @default(0)
-  trackStock         Boolean            @default(false)
+  stock              Int                  @default(0)
+  trackStock         Boolean              @default(false)
   /// تنوع فعال دارد **و** کلید تنوع روشن است — کارت فهرست «انتخاب» نشان می‌دهد نه «افزودن» (فاز ۴)
-  hasVariants        Boolean            @default(false)
+  hasVariants        Boolean              @default(false)
   /// کمترین قیمت مؤثر تنوع‌های فعال وقتی قیمت‌ها یکی نیستند — «از X تومان»؛ فقط `recomputeProductStock`
   priceFrom          BigInt?
-  lowStockThreshold  Int                @default(3)
-  ratingAvg          Float              @default(0)
-  ratingCount        Int                @default(0)
-  isActive           Boolean            @default(true)
-  assembledProductId String?            @unique
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  lowStockThreshold  Int                  @default(3)
+  ratingAvg          Float                @default(0)
+  ratingCount        Int                  @default(0)
+  isActive           Boolean              @default(true)
+  assembledProductId String?              @unique
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
   expertDescription  String?
   expertImage        String?
   expertTitle        String?
-  faq                Json               @default("[]")
+  faq                Json                 @default("[]")
   mainImage          String?
   seoDescription     String?
   seoKeywords        String?
@@ -160,25 +160,25 @@ model Product {
   seoTitle           String?
   shortDescription   String?
   summaryDescription String?
-  summaryFeatures    Json               @default("[]")
+  summaryFeatures    Json                 @default("[]")
   summaryImage       String?
   summaryTitle       String?
   videoUrl           String?
-  relatedSettings    Json               @default("{}")
+  relatedSettings    Json                 @default("{}")
   downloadTitle      String?
   downloadUrl        String?
   blogPosts          BlogPostProduct[]
   cartItems          CartItem[]
   orderItems         OrderItem[]
-  assembledProduct   AssembledProduct?  @relation(fields: [assembledProductId], references: [id])
-  brand              Brand?             @relation(fields: [brandId], references: [id])
-  category           Category           @relation(fields: [categoryId], references: [id])
+  assembledProduct   AssembledProduct?    @relation(fields: [assembledProductId], references: [id])
+  brand              Brand?               @relation(fields: [brandId], references: [id])
+  category           Category             @relation(fields: [categoryId], references: [id])
   images             ProductImage[]
   specs              ProductSpecValue[]
   reviews            Review[]
   wishlist           WishlistItem[]
-  relatedProducts    ProductRelated[]   @relation("ProductRelations")
-  relatedTo          ProductRelated[]   @relation("RelatedToProducts")
+  relatedProducts    ProductRelated[]     @relation("ProductRelations")
+  relatedTo          ProductRelated[]     @relation("RelatedToProducts")
   attributes         ProductAttribute[]
   stockAlerts        StockAlert[]
   variants           ProductVariant[]
@@ -243,14 +243,14 @@ model ProductVariantOption {
 }
 
 model ProductImage {
-  id        String  @id @default(cuid())
-  productId String
-  url       String
-  alt       String?
-  sortOrder Int     @default(0)
+  id               String  @id @default(cuid())
+  productId        String
+  url              String
+  alt              String?
+  sortOrder        Int     @default(0)
   /// عکس یک رنگ (مقدار محور تنوع) — خالی = عکس عمومی همه‌ی تنوع‌ها (فاز ۴، تصمیم ۱۱)
   attributeValueId String?
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product          Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@index([sortOrder])
@@ -442,21 +442,21 @@ model OrderCreditInstallment {
 }
 
 model OrderItem {
-  id            String         @id @default(cuid())
-  orderId       String
-  productId     String
-  qty           Int            @default(1)
-  unitPrice     BigInt         @default(0)
-  unitSalePrice BigInt?
-  titleSnapshot String
-  skuSnapshot   String?
+  id                   String         @id @default(cuid())
+  orderId              String
+  productId            String
+  qty                  Int            @default(1)
+  unitPrice            BigInt         @default(0)
+  unitSalePrice        BigInt?
+  titleSnapshot        String
+  skuSnapshot          String?
   /// تنوع خریداری‌شده (فاز ۴) — عمداً بی کلید خارجی: حذف تنوع سفارش قدیمی را نمی‌شکند
   variantId            String?
   /// «آبی / L»
   variantTitleSnapshot String?
-  order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product       Product        @relation(fields: [productId], references: [id])
-  cost          OrderItemCost?
+  order                Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product              Product        @relation(fields: [productId], references: [id])
+  cost                 OrderItemCost?
 
   @@index([orderId])
   @@index([productId])
@@ -678,7 +678,7 @@ model CartItem {
   product            Product           @relation(fields: [productId], references: [id])
 
   /// شناسه‌ی تنوع، یا "" برای محصول بی‌تنوع — یکتایی ردیف سبد (فاز ۴)
-  variantKey         String            @default("")
+  variantKey String @default("")
 
   @@unique([cartId, productId, variantKey])
   @@unique([cartId, assembledProductId])
@@ -4095,6 +4095,7 @@ enum AccSource {
   WALLET // شارژ یا کسر دستی کیف پول مشتری (فاز ۶)
   INCOME // درآمد متفرقه (فاز ۱۰)
   INSTALLMENT // کارمزد فروش/خرید اقساطی (فاز ۱۰)
+  POS // صندوق فروشگاهی: پس دادن پول مرجوعی و مغایرت بستن صندوق (۲.۹۵.۰)
 }
 
 /// سند حسابداری. ⚠️ فقط از `lib/accounting/ledger/post.ts` نوشته می‌شود —
@@ -4255,21 +4256,21 @@ model AccItemGroup {
 
 /// مدل کالا — «پیراهن قاجاری»؛ کالاهایش ترکیب‌های رنگ و سایزند
 model AccItemModel {
-  id        String        @id @default(cuid())
-  title     String        @unique
-  groupId   String?
+  id          String          @id @default(cuid())
+  title       String          @unique
+  groupId     String?
   /// محصول سایتی که از این مدل ساخته شد (فاز ۵)
-  productId String?
+  productId   String?
   /// پیشوند کد تنوع‌ها وقتی الگو `{M}` دارد — «۱۱۰۰۲۳»
   code        String?         @unique
   /// شماره‌ی تنوع بعدی برای `{V}` — هرگز برنمی‌گردد
   nextVariant Int             @default(1)
   /// عنوان پایه‌ی کالاها (`base`) و مشخصه‌های توضیحی (`specs`: برند، تأمین‌کننده، …)
   specs       Json?
-  createdAt DateTime      @default(now())
-  group     AccItemGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  items     AccItem[]
-  legacy    AccLegacyItem[]
+  createdAt   DateTime        @default(now())
+  group       AccItemGroup?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  items       AccItem[]
+  legacy      AccLegacyItem[]
 }
 
 /// شمارنده‌های الگوی کد کالا — کلید «M» یا «M:<کد گروه>»
@@ -4672,6 +4673,145 @@ model AccInvoiceLine {
   @@index([invoiceId])
   @@index([productId])
   @@index([refLineId])
+}
+
+// ── صندوق فروشگاهی (۲.۹۵.۰، docs/plans/inventory-items.md بخش ۱۳) ──
+
+/// یک صندوق (پیشخوان) فروشگاه — انبار، صندوق نقد و کارتخوان خودش.
+model AccPosTerminal {
+  id             String   @id @default(cuid())
+  code           Int      @unique
+  name           String   @unique
+  warehouseId    String
+  /// صندوق نقد همین پیشخوان (`AccTreasury.kind = CASH`)
+  cashTreasuryId String
+  /// کارتخوان (`POS`) یا حساب بانکی؛ خالی = پرداخت کارتی ندارد
+  cardTreasuryId String?
+  /// گرد کردن جمع به پایین (تومان، مثلاً ۱۰۰۰) — اختلاف تخفیف می‌شود
+  roundTo        Int      @default(0)
+  receiptHeader  String?
+  receiptFooter  String?
+  /// عرض کاغذ رسید: 80 یا 58 میلی‌متر
+  paperMm        Int      @default(80)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  shifts  AccPosShift[]
+  tickets AccPosTicket[]
+}
+
+/// فروشنده‌ی پشت صندوق — حساب پنل لازم ندارد؛ با کد کوتاه یا دکمه انتخاب می‌شود.
+model AccPosSeller {
+  id           String   @id @default(cuid())
+  /// کد کوتاه (۱ تا ۹۹) برای انتخاب با کیبورد
+  code         Int      @unique
+  name         String
+  /// درصد پورسانت روی فروش خالص، صدم درصد — فقط برای گزارش (سندی نمی‌خورد)
+  commissionBp Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  tickets AccPosTicket[]
+}
+
+enum AccPosShiftStatus {
+  OPEN
+  CLOSED
+}
+
+/// شیفت صندوق: از «باز کردن» با پول خرد تا «بستن صندوق» (در وب حساب «صفر کردن صندوق»).
+/// هر صندوق حداکثر یک شیفت باز دارد.
+model AccPosShift {
+  id            String            @id @default(cuid())
+  terminalId    String
+  number        Int
+  status        AccPosShiftStatus @default(OPEN)
+  openedAt      DateTime          @default(now())
+  openedById    String?
+  openedByName  String
+  /// پول خرد شمرده‌شده‌ی اول شیفت
+  openingFloat  BigInt            @default(0)
+  /// مانده‌ی دفتری صندوق نقد در لحظه‌ی باز کردن
+  openingBook   BigInt            @default(0)
+  closedAt      DateTime?
+  closedById    String?
+  closedByName  String?
+  /// نقد مورد انتظار = مانده‌ی دفتری صندوق نقد هنگام بستن (فروش، مرجوعی و هر گردش دیگر)
+  expectedCash  BigInt?
+  countedCash   BigInt?
+  /// شمرده − مورد انتظار؛ با سند «کسری و اضافه‌ی صندوق» ثبت می‌شود
+  cashDiff      BigInt?
+  expectedCard  BigInt?
+  /// جمع رسید پایان روز کارتخوان (فقط مقایسه — سند نمی‌خورد)
+  countedCard   BigInt?
+  /// پول خردی که برای شیفت بعد در صندوق ماند
+  keptFloat     BigInt?
+  /// مبلغ منتقل‌شده به صندوق/بانک اصلی
+  transferred   BigInt?
+  transferToId  String?
+  transferDocId String?
+  diffVoucherId String?
+  note          String?
+
+  terminal AccPosTerminal @relation(fields: [terminalId], references: [id])
+  tickets  AccPosTicket[]
+
+  @@unique([terminalId, number])
+  @@index([terminalId, status])
+  @@index([openedAt])
+}
+
+enum AccPosTicketKind {
+  SALE
+  RETURN
+  EXCHANGE
+}
+
+/// یک رسید صندوق: فروش، مرجوعی یا تعویض (مرجوعی + خرید در یک رسید).
+/// ⚠️ مبالغ اسنپ‌شات لحظه‌ی ثبت‌اند — فاکتور و سند از `lib/accounting/pos/` ساخته می‌شوند.
+model AccPosTicket {
+  id              String           @id @default(cuid())
+  /// شماره‌ی رسید، پشت‌سرهم در هر سال مالی (بارکد رسید: `POS<number>`)
+  number          Int
+  yearId          String
+  kind            AccPosTicketKind
+  terminalId      String
+  shiftId         String
+  sellerId        String?
+  sellerName      String?
+  cashierId       String?
+  cashierName     String
+  partyId         String
+  partyName       String
+  saleInvoiceId   String?          @unique
+  returnInvoiceId String?          @unique
+  receiptDocId    String?
+  refundVoucherId String?
+  /// جمع فروش و جمع مرجوعی (پس از تخفیف)
+  saleTotal       BigInt           @default(0)
+  returnTotal     BigInt           @default(0)
+  saleQty         Int              @default(0)
+  returnQty       Int              @default(0)
+  discount        BigInt           @default(0)
+  /// آنچه مشتری داد (+) یا گرفت (−)، به تفکیک روش
+  cash            BigInt           @default(0)
+  card            BigInt           @default(0)
+  /// مانده‌ی نسیه روی حساب مشتری
+  credit          BigInt           @default(0)
+  /// پولی که مشتری داد و باقی‌اش (فقط برای چاپ رسید)
+  tendered        BigInt?
+  change          BigInt           @default(0)
+  createdAt       DateTime         @default(now())
+
+  terminal AccPosTerminal @relation(fields: [terminalId], references: [id])
+  shift    AccPosShift    @relation(fields: [shiftId], references: [id])
+  seller   AccPosSeller?  @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+
+  @@unique([yearId, number])
+  @@index([shiftId])
+  @@index([terminalId, createdAt])
+  @@index([sellerId, createdAt])
+  @@index([createdAt])
 }
 
 // ── حسابداری — دریافت، پرداخت، انتقال و چک (فاز ۵، docs/plans/accounting.md بخش ۶.۷، ۶.۸ و ۹) ──

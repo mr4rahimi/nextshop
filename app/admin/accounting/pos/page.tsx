@@ -1,8 +1,13 @@
-import PosClient from "@/components/admin/accounting/PosClient";
+import { Suspense } from "react";
+import PosHub from "@/components/admin/accounting/pos/PosHub";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "فروش سریع حضوری" };
+export const metadata = { title: "صندوق فروشگاه" };
 
 export default function Page() {
-  return <PosClient />;
+  return (
+    <Suspense>
+      <PosHub />
+    </Suspense>
+  );
 }

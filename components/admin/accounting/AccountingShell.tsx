@@ -27,7 +27,7 @@ import { ACCOUNTING_APPS, activeApp, type AppItem } from "../apps";
 import { AppLauncher, ModuleBar } from "../AppGrid";
 
 const QUICK: AppItem[] = [
-  { href: "/admin/accounting/pos", label: "فروش سریع حضوری", icon: ScanBarcode, tone: "emerald", perm: ["ACC_SALES"], img: "quick-pos" },
+  { href: "/admin/accounting/pos", label: "صندوق فروشگاه", icon: ScanBarcode, tone: "emerald", perm: ["ACC_SALES", "ACC_POS", "ACC_POS_MANAGE"], img: "quick-pos" },
   { href: "/admin/accounting/money/new?kind=RECEIPT", label: "دریافت", icon: ArrowDownToLine, tone: "emerald", perm: ["ACC_TREASURY"], img: "quick-receipt" },
   { href: "/admin/accounting/money/new?kind=PAYMENT", label: "پرداخت", icon: ArrowUpFromLine, tone: "rose", perm: ["ACC_TREASURY"], img: "quick-payment" },
   { href: "/admin/accounting/expenses/new", label: "ثبت هزینه", icon: Wallet, tone: "amber", perm: ["ACC_EXPENSE"], img: "quick-expense" },
@@ -67,7 +67,7 @@ export function useAccountingShell(): ShellApi | null {
 
 /** فاکتورها زیر «فروش» و «خرید» باز می‌شوند ولی مسیرشان جداست */
 function currentApp(pathname: string): AppItem | null {
-  if (pathname.startsWith("/admin/accounting/invoices") || pathname.startsWith("/admin/accounting/pos")) return ACCOUNTING_APPS.find((a) => a.href === "/admin/accounting/sales") ?? null;
+  if (pathname.startsWith("/admin/accounting/invoices")) return ACCOUNTING_APPS.find((a) => a.href === "/admin/accounting/sales") ?? null;
   if (pathname.startsWith("/admin/accounting/income")) return ACCOUNTING_APPS.find((a) => a.href === "/admin/accounting/expenses?kind=INCOME") ?? null;
   return activeApp(pathname, ACCOUNTING_APPS);
 }
@@ -87,6 +87,8 @@ export default function AccountingShell({ children }: { children: ReactNode }) {
 
   // چاپ فاکتور بی‌قاب است (قاب پنل هم در app/admin/layout.tsx کنار می‌رود)
   if (pathname.endsWith("/print")) return <>{children}</>;
+  // صفحه‌ی صندوق فروشگاه تمام‌صفحه و قاب‌خودش است
+  if (pathname.startsWith("/admin/accounting/pos/register/")) return <div className="acc-theme">{children}</div>;
   // صفحه‌ی راه‌اندازی قاب نمی‌خواهد — تمام‌صفحه است
   if (pathname.startsWith("/admin/accounting/setup")) return <div className="acc-theme p-4 lg:p-6 max-w-3xl mx-auto text-gray-900 dark:text-gray-100">{children}</div>;
 

@@ -95,6 +95,7 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["8205", "پیامک و سرویس‌های آنلاین", S, "EXPENSE", "DEBIT", "NONE", null],
   ["8206", "ملزومات مصرفی", S, "EXPENSE", "DEBIT", "NONE", null],
   ["8207", "هزینه‌های متفرقه", S, "EXPENSE", "DEBIT", "NONE", null],
+  ["8208", "کسری و اضافه‌ی صندوق", S, "EXPENSE", "BOTH", "NONE", "CASH_OVER_SHORT"],
   ["83", "هزینه‌های مالی", L, "EXPENSE", "DEBIT", "NONE", null],
   ["8301", "کارمزد بانکی", S, "EXPENSE", "DEBIT", "NONE", "BANK_FEE"],
   ["8302", "کارمزد خرید اقساطی", S, "EXPENSE", "DEBIT", "NONE", "INSTALLMENT_EXPENSE"],
