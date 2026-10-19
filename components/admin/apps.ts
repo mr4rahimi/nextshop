@@ -14,7 +14,7 @@ import {
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
-  CalendarDays, Lock, QrCode, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop, Scale, Megaphone, Funnel, BadgePercent, PackageSearch, PiggyBank, HeartHandshake, UserRound, GitCompareArrows,
+  CalendarDays, Lock, QrCode, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop, Scale, Megaphone, Funnel, BadgePercent, PackageSearch, PiggyBank, HeartHandshake, UserRound, GitCompareArrows, Trophy,
 } from "lucide-react";
 
 /** رنگ کاشی — کلاس‌ها کامل نوشته شده‌اند تا Tailwind پیدایشان کند */
@@ -96,6 +96,7 @@ export const WORKLIST_APPS: AppItem[] = [
   { href: "/admin/worklist/payouts", label: "پورسانت", icon: Coins, tone: "amber", img: "wl-payouts" },
   { href: "/admin/worklist/notes", label: "یادداشت‌های من", icon: StickyNote, tone: "orange", img: "wl-notes" },
   { href: "/admin/worklist/reports", label: "گزارش عملکرد تیم", icon: ChartColumn, tone: "blue", img: "wl-reports" },
+  { href: "/admin/worklist/score", label: "امتیاز عملکرد", icon: Trophy, tone: "amber", perm: ["SCORE_VIEW_OWN", "SCORE_VIEW_ALL", "SCORE_SETTINGS_MANAGE"] },
   { href: "/admin/worklist/suppliers", label: "تأمین‌کننده‌ها", icon: Truck, tone: "slate", img: "wl-suppliers" },
   { href: "/admin/worklist/settings", label: "تنظیمات کارتابل", icon: Settings, tone: "slate", img: "wl-settings" },
   { href: "/admin/worklist/roles", label: "نقش‌ها و دسترسی‌ها", icon: ShieldCheck, tone: "red", img: "wl-roles" },

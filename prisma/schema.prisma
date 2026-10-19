@@ -46,6 +46,10 @@ model User {
   staffDealsAsCustomer StaffDeal[]          @relation("StaffDealCustomer")
   staffPayouts         StaffPayout[]        @relation("StaffPayoutUser")
   ownedClubProfiles    ClubProfile[]        @relation("ClubProfileOwner")
+  /// گروه امتیاز عملکرد — خالی یعنی هنوز تعیین نشده (بخش ۱۵ مستندات کارتابل)
+  scoreGroup           StaffScoreGroup?
+  /// صراحتاً بیرون از رتبه‌بندی — با «تعیین‌نشده» یکی نیست
+  scoreExcluded        Boolean              @default(false)
 
   @@index([role])
   @@index([isActive])
@@ -962,6 +966,16 @@ model StoreSettings {
   /// بازارگاه‌های کارتابل: [{ key, label }] — خوراک فیلد `StaffTask.platform`.
   /// خالی یعنی هنوز تعریف نشده و انتخابگر پلتفرم چیزی نشان نمی‌دهد.
   worklistPlatforms      Json    @default("[]")
+
+  // ── امتیاز عملکرد کارکنان — docs/features/staff-worklist.md بخش ۱۵ ──
+  /// پیش‌فرض خاموش: نه منو، نه کارت امتیاز، تا مدیر عمداً روشن کند
+  scoreEnabled           Boolean @default(false)
+  /// کف واجد شرایط بودن: حجم کمتر از این درصدِ میانه‌ی گروه یعنی بیرون از رتبه‌بندی
+  scoreMinVolumePct      Int     @default(60)
+  /// پنجره‌ی تبدیل تماس فروش به سفارش، بر حسب روز
+  scoreConversionDays    Int     @default(7)
+  /// رتبه‌ی خودِ کارمند در کارت «امتیاز من» دیده شود؟ نام دیگران هرگز.
+  scoreShowRank          Boolean @default(false)
 }
 
 model MenuItem {
@@ -3096,6 +3110,57 @@ model StaffDealItem {
 
   @@index([dealId])
   @@index([categoryId])
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// کارتابل — امتیاز عملکرد ماهانه
+// مستندات: docs/features/staff-worklist.md بخش ۱۵
+// ═══════════════════════════════════════════════════════════════════
+
+/// گروهی که کارمند در آن رتبه می‌گیرد. ربطی به مجوز ندارد؛ مدیر صریح تعیین می‌کند.
+enum StaffScoreGroup {
+  SALES // فروش
+  OPERATIONS // تأمین، ارسال، مالی، پشتیبانی
+  CONTENT // محتوا، سئو، کاتالوگ
+}
+
+/// وزن و فعال‌بودن یک معیار در یک گروه.
+///
+/// ⚠️ تعریف معیار (فرمول، جهت، برچسب) در `lib/worklist/score-metrics.ts` است،
+/// نه اینجا. ردیفی که کدش در آن فایل نباشد نادیده گرفته می‌شود. نبودِ ردیف
+/// یعنی وزن پیش‌فرض کد.
+model StaffScoreMetric {
+  id        String          @id @default(cuid())
+  code      String
+  group     StaffScoreGroup
+  weight    Int
+  isActive  Boolean         @default(true)
+  updatedAt DateTime        @updatedAt
+
+  @@unique([code, group])
+}
+
+/// برنده‌ی اعلام‌شده‌ی یک ماه در یک گروه — از لحظه‌ی ثبت **قفل** است.
+///
+/// `snapshot` جدول کامل همان گروه با وزن‌های همان لحظه است، تا تغییر وزن در
+/// ماه‌های بعد برنده یا عدد این ماه را عوض نکند.
+model StaffScoreAward {
+  id            String          @id @default(cuid())
+  /// «1405-07» — ماه شمسی
+  monthKey      String
+  group         StaffScoreGroup
+  userId        String?
+  userName      String
+  score         Float
+  /// چرا او — برنده را آدم اعلام می‌کند، سیستم فقط نشان می‌دهد چرا
+  note          String?
+  snapshot      Json
+  createdById   String?
+  createdByName String
+  createdAt     DateTime        @default(now())
+
+  @@unique([monthKey, group])
+  @@index([userId])
 }
 
 model StaffCommissionPlan {
