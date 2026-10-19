@@ -90,7 +90,7 @@ export function LabelPages({ labels, c, preview = false }: { labels: LabelData[]
   const pageCss = preview
     ? ""
     : `@page { size: ${c.media === "a4" ? "A4" : `${pw}mm ${ph}mm`}; margin: 0; }
-       @media print { .lbl-page { box-shadow: none !important; margin: 0 !important; break-after: page; page-break-after: always; } .lbl-pages { gap: 0 !important; padding: 0 !important; } }`;
+       @media print { .lbl-page { box-shadow: none !important; margin: 0 !important; break-after: page; page-break-after: always; } .lbl-page:last-child { break-after: auto; page-break-after: auto; } .lbl-pages { gap: 0 !important; padding: 0 !important; } html, body { margin: 0 !important; padding: 0 !important; } }`;
   return (
     <>
       {pageCss && <style>{pageCss}</style>}

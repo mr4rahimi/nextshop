@@ -19,6 +19,13 @@ export interface ReleaseNote {
 
 export const VERSIONS: ReleaseNote[] = [
   {
+    version: "2.96.1",
+    date: "1405/07/27",
+    tag: "patch",
+    title: "چاپ برچسب بی صفحه‌ی خالی آخر",
+    changes: [{ type: "improvement", text: "چاپ برچسب دیگر یک برچسب خالی اضافه در آخر بیرون نمی‌دهد" }],
+  },
+  {
     version: "2.96.0",
     date: "1405/07/27",
     tag: "minor",
