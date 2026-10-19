@@ -8,6 +8,7 @@
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { applyOnlinePrices } from "./online-price";
 import { AccError } from "../errors";
 import { toLatinDigits } from "../money";
 import { allocItemCode } from "./codes";
@@ -119,6 +120,8 @@ export interface ItemInput {
   title?: string;
   unit?: string | null;
   salePrice?: bigint | null;
+  /** قیمت آنلاین دستی (۲.۹۶.۰) — null = از قاعده‌ی درصد */
+  onlinePrice?: bigint | null;
   reorderPoint?: number | null;
   sellOnline?: boolean;
   isActive?: boolean;
@@ -202,6 +205,7 @@ export async function updateItem(db: Prisma.TransactionClient, id: string, input
   }
   if (input.unit !== undefined) data.unit = input.unit?.trim() || "عدد";
   if (input.salePrice !== undefined) data.salePrice = input.salePrice;
+  if (input.onlinePrice !== undefined) data.onlinePrice = input.onlinePrice && input.onlinePrice > 0n ? input.onlinePrice : null;
   if (input.reorderPoint !== undefined) data.reorderPoint = input.reorderPoint;
   if (input.sellOnline !== undefined) data.sellOnline = input.sellOnline;
   if (input.isActive !== undefined) data.isActive = input.isActive;
@@ -211,6 +215,8 @@ export async function updateItem(db: Prisma.TransactionClient, id: string, input
   }
   const item = await db.accItem.update({ where: { id }, data });
   if (input.barcodes) await setBarcodes(db, id, input.barcodes);
+  // قیمت فروشگاه، قیمت آنلاین دستی یا گروه عوض شد ← قیمت سایت (اگر کلید روشن است)
+  if (input.salePrice !== undefined || input.onlinePrice !== undefined || input.groupId !== undefined) await applyOnlinePrices(db, [id]);
   return item;
 }
 

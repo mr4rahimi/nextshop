@@ -3909,6 +3909,14 @@ model AccSettings {
   itemCodePattern       String    @default("{N}")
   /// تنظیم چاپ برچسب بارکد — `LabelConfig` در `lib/accounting/inventory/label-config.ts`
   labelConfig           Json?
+  /// قیمت آنلاین از قیمت فروشگاه (۲.۹۶.۰، docs/plans/inventory-items.md بخش ۱۴) — خاموش = هیچ قیمتی دست نمی‌خورد
+  onlinePricing         Boolean   @default(false)
+  /// درصد پیش‌فرض نسبت به قیمت فروشگاه، صدم درصد (−۱۰۰۰ = ۱۰٪ ارزان‌تر)
+  onlinePctBp           Int       @default(0)
+  /// گرد کردن قیمت آنلاین (تومان)؛ ۰ = گرد نشود
+  onlineRoundTo         Int       @default(0)
+  /// down | nearest | up
+  onlineRoundMode       String    @default("nearest")
   updatedAt             DateTime  @updatedAt
 }
 
@@ -4212,6 +4220,8 @@ model AccItem {
   unit         String           @default("عدد")
   /// قیمت فروش پیش‌فرض فاکتور دستی — فقط برای کالایی که محصول ندارد (تصمیم ۱۰)
   salePrice    BigInt?
+  /// قیمت آنلاین دستی همین کالا — جای قاعده‌ی درصد را می‌گیرد (۲.۹۶.۰)
+  onlinePrice  BigInt?
   /// نقطه‌ی سفارش؛ خالی = `Product.lowStockThreshold` محصول هم‌شناسه
   reorderPoint Int?
   /// در فروش آنلاین؟ false = در پیشنهاد ساخت محصول (فاز ۵) نیاید
@@ -4239,17 +4249,19 @@ model AccItem {
 
 /// گروه کالا — درختی (پوشاک ← پیراهن)
 model AccItemGroup {
-  id        String         @id @default(cuid())
-  parentId  String?
-  name      String
+  id          String         @id @default(cuid())
+  parentId    String?
+  name        String
   /// کد عددی گروه برای `{G}` الگوی کد کالا
-  code      String?        @unique
-  sortOrder Int            @default(0)
-  createdAt DateTime       @default(now())
-  parent    AccItemGroup?  @relation("AccItemGroupTree", fields: [parentId], references: [id], onDelete: Restrict)
-  children  AccItemGroup[] @relation("AccItemGroupTree")
-  items     AccItem[]
-  models    AccItemModel[]
+  code        String?        @unique
+  sortOrder   Int            @default(0)
+  /// درصد قیمت آنلاین این گروه (و زیرگروه‌های بی‌درصد)؛ خالی = از گروه بالاتر یا پیش‌فرض
+  onlinePctBp Int?
+  createdAt   DateTime       @default(now())
+  parent      AccItemGroup?  @relation("AccItemGroupTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children    AccItemGroup[] @relation("AccItemGroupTree")
+  items       AccItem[]
+  models      AccItemModel[]
 
   @@unique([parentId, name])
 }

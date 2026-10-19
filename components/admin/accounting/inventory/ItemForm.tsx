@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { faNum } from "@/lib/accounting/money";
+import { faNum, formatAmount } from "@/lib/accounting/money";
 import AmountInput from "../AmountInput";
 import { api, Badge, btn, ErrorText, Field, inputCls, Sheet } from "../ui";
 
@@ -19,6 +19,7 @@ interface ItemData {
     title: string;
     unit: string;
     salePrice: string | null;
+    onlinePrice: string | null;
     reorderPoint: number | null;
     sellOnline: boolean;
     isActive: boolean;
@@ -29,6 +30,8 @@ interface ItemData {
     attrs: { axisId: string; axis: { name: string; sortOrder: number }; value: { value: string } }[];
   };
   product: { id: string; title: string; slug: string } | null;
+  /** قیمت آنلاین از قیمت فروشگاه (۲.۹۶.۰) */
+  online?: { enabled: boolean; price?: string | null; pctBp?: number; source?: string | null; manual?: boolean };
 }
 
 export interface ItemInitial {
@@ -72,6 +75,7 @@ export default function ItemForm({
     title: initial?.title ?? "",
     unit: initial?.unit ?? "عدد",
     salePrice: initial?.salePrice ?? "",
+    onlinePrice: "",
     reorderPoint: "",
     barcodes: initial?.barcode ?? "",
     sellOnline: initial?.sellOnline ?? true,
@@ -95,6 +99,7 @@ export default function ItemForm({
           title: i.title,
           unit: i.unit,
           salePrice: i.salePrice ?? "",
+          onlinePrice: i.onlinePrice ?? "",
           reorderPoint: i.reorderPoint == null ? "" : String(i.reorderPoint),
           barcodes: i.barcodes.map((b) => b.barcode).join("\n"),
           sellOnline: i.sellOnline,
@@ -114,6 +119,7 @@ export default function ItemForm({
         title: f.title,
         unit: f.unit,
         salePrice: f.salePrice || null,
+        ...(online?.enabled ? { onlinePrice: f.onlinePrice || null } : {}),
         reorderPoint: f.reorderPoint.trim() === "" ? null : f.reorderPoint,
         barcodes: f.barcodes.split(/[\s,،]+/).filter(Boolean),
         sellOnline: f.sellOnline,
@@ -135,6 +141,7 @@ export default function ItemForm({
   if (copyOf) return <ItemForm itemId={null} initial={copyOf} onClose={onClose} onSaved={onSaved} />;
 
   const product = data?.product ?? null;
+  const online = data?.online ?? null;
   const loading = itemId && !data;
   const attrs = [...(data?.item.attrs ?? [])].sort((a, b) => a.axis.sortOrder - b.axis.sortOrder);
 
@@ -221,9 +228,21 @@ export default function ItemForm({
             <textarea value={f.barcodes} onChange={(e) => setF({ ...f, barcodes: e.target.value })} className={`${inputCls} font-mono`} dir="ltr" rows={2} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            {!product && (
-              <Field label="قیمت فروش" hint="پیش‌فرض فاکتور فروش">
+            {(!product || online?.enabled) && (
+              <Field label={online?.enabled ? "قیمت فروشگاه" : "قیمت فروش"} hint={online?.enabled ? "صندوق و فاکتور؛ قیمت سایت از این ساخته می‌شود" : "پیش‌فرض فاکتور فروش"}>
                 <AmountInput value={f.salePrice} onChange={(v) => setF({ ...f, salePrice: v })} compact />
+              </Field>
+            )}
+            {online?.enabled && (
+              <Field
+                label="قیمت آنلاین دستی"
+                hint={
+                  online.price && !online.manual
+                    ? `خالی = از قاعده: ${formatAmount(online.price)} (${online.pctBp ? `${online.pctBp > 0 ? "+" : "−"}${faNum(Math.abs(online.pctBp) / 100)}٪` : "همان قیمت"}${online.source ? ` · ${online.source}` : ""})`
+                    : "خالی = از قاعده‌ی «قیمت آنلاین»"
+                }
+              >
+                <AmountInput value={f.onlinePrice} onChange={(v) => setF({ ...f, onlinePrice: v })} compact />
               </Field>
             )}
             <Field label="هشدار موجودی" hint={product ? "خالی = همان حد هشدار محصول" : "وقتی موجودی به این عدد برسد"}>

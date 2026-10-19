@@ -16,6 +16,7 @@ import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { optionKeyOf, variantsEnabled } from "@/lib/variants";
 import { addAttributeValue, saveVariants, type VariantInput } from "@/lib/variants-admin";
+import { applyOnlinePrices } from "./online-price";
 import { AccError } from "../errors";
 import { ensureAxisValues } from "./catalog";
 import { attrKeyOf } from "./items";
@@ -495,6 +496,8 @@ export async function createFromModel(tx: Tx, input: FromModelInput) {
     variants,
   });
   await tx.accItemModel.update({ where: { id: plan.model.id }, data: { productId: product.id } });
+  // کلید قیمت آنلاین روشن ← قیمت تنوع‌ها از قاعده (docs/plans/inventory-items.md بخش ۱۴)
+  if (input.price === undefined || input.price === null) await applyOnlinePrices(tx, plan.variants.map((v) => v.itemId));
   return { product, variants: variants.length, skipped: plan.skipped };
 }
 
@@ -667,5 +670,6 @@ export async function createSimpleFromItem(tx: Tx, itemId: string, input: { titl
     },
     select: { id: true, slug: true, title: true },
   });
+  if (input.price === undefined || input.price === null) await applyOnlinePrices(tx, [item.id]);
   return { product };
 }

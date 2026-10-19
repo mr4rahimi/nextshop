@@ -8,6 +8,7 @@ export function parseItemInput(b: Record<string, unknown>): ItemInput {
   if (b.title !== undefined) out.title = String(b.title ?? "");
   if (b.unit !== undefined) out.unit = b.unit === null ? null : String(b.unit);
   if (b.salePrice !== undefined) out.salePrice = b.salePrice === null || b.salePrice === "" ? null : toAmount(b.salePrice, "قیمت فروش");
+  if (b.onlinePrice !== undefined) out.onlinePrice = b.onlinePrice === null || b.onlinePrice === "" ? null : toAmount(b.onlinePrice, "قیمت آنلاین");
   if (b.reorderPoint !== undefined) {
     if (b.reorderPoint === null || b.reorderPoint === "") out.reorderPoint = null;
     else {

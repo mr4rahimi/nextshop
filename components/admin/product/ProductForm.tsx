@@ -357,6 +357,12 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
   const [specGroups, setSpecGroups] = useState<SpecGroup[]>([]);
   const [form, setForm]             = useState<FormState>(initialForm ?? EMPTY_FORM);
   const [saving, setSaving]         = useState(false);
+  // قیمت از «قیمت آنلاین» حسابداری می‌آید (docs/plans/inventory-items.md بخش ۱۴)
+  const [onlinePriced, setOnlinePriced] = useState(false);
+  useEffect(() => {
+    if (!productId) return;
+    fetch(`/api/admin/products/${productId}/online-price`).then((r) => (r.ok ? r.json() : null)).then((d) => setOnlinePriced(!!d?.managed)).catch(() => {});
+  }, [productId]);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [uploadError, setUploadError]   = useState<string | null>(null);
   const [downloadMode, setDownloadMode] = useState<"file" | "link">(
@@ -660,6 +666,11 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
 
         {}
         <Section title="قیمت‌گذاری و موجودی" icon="💰">
+          {onlinePriced && (
+            <p className="mb-4 rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold leading-6 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+              قیمت این محصول از «حسابداری ← کالا و انبار ← قیمت آنلاین» ساخته می‌شود و با هر تغییر قیمت فروشگاه دوباره نوشته می‌شود. قیمت دستی را در فرم کالا («قیمت آنلاین دستی») بدهید.
+            </p>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="قیمت اصلی (تومان) *">
               <input required type="number" min="0" dir="ltr" value={form.price} className={inp}
