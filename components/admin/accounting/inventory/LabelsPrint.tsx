@@ -1,16 +1,19 @@
 "use client";
 
 /**
- * چاپ برچسب بارکد کالا — docs/plans/inventory-items.md بخش ۴.
- * `/admin/accounting/inventory/labels/print?items=id:تعداد,…` (پایان «/print» = بی‌قاب پنل). رول برچسب (هر برچسب یک صفحه به اندازه‌ی خودش) یا برگه‌ی A4.
+ * چاپ برچسب بارکد کالا — docs/plans/inventory-items.md بخش ۴ و ۱۲.
+ * `/admin/accounting/inventory/labels/print?items=id:تعداد,…` (پایان «/print» = بی‌قاب پنل).
+ * اندازه و چیدمان از تنظیم مشترک (`AccSettings.labelConfig`)؛ تغییر اینجا برای
+ * همین چاپ است و «ذخیره برای همه» آن را پیش‌فرض می‌کند.
  * بارکد: اولین بارکد کالا، وگرنه کد کالا (اسکن کد هم کالا را پیدا می‌کند).
  */
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { canEncode, code128Bars } from "@/lib/barcode/code128";
-import { faNum, formatAmount } from "@/lib/accounting/money";
+import { faNum } from "@/lib/accounting/money";
+import { DEFAULT_LABEL, type LabelConfig } from "@/lib/accounting/inventory/label-config";
 import { api } from "../ui";
+import { LabelPages, LabelSettingsForm, type LabelData } from "./LabelSheet";
 
 interface L {
   id: string;
@@ -18,26 +21,6 @@ interface L {
   code: string;
   price: string | null;
   barcode: string;
-}
-
-const SIZES = {
-  "40x25": { w: 40, h: 25, label: "رول ۴۰×۲۵" },
-  "50x30": { w: 50, h: 30, label: "رول ۵۰×۳۰" },
-  "60x40": { w: 60, h: 40, label: "رول ۶۰×۴۰" },
-  a4: { w: 70, h: 37, label: "برگه A4 — ۲۴تایی" },
-} as const;
-type Size = keyof typeof SIZES;
-
-function Barcode({ value, height }: { value: string; height: number }) {
-  if (!canEncode(value)) return <p className="text-[8px] text-red-600">کد «{value}» حرف غیرلاتین دارد — یک بارکد لاتین برای کالا بنویسید</p>;
-  const { bars, width } = code128Bars(value);
-  return (
-    <svg viewBox={`0 0 ${width} 40`} preserveAspectRatio="none" style={{ width: "100%", height: `${height}mm` }} aria-label={value}>
-      {bars.map((b, i) => (
-        <rect key={i} x={b.x} y={0} width={b.w} height={40} fill="#000" />
-      ))}
-    </svg>
-  );
 }
 
 export default function LabelsPrint() {
@@ -53,74 +36,68 @@ export default function LabelsPrint() {
   );
   const [items, setItems] = useState<L[]>([]);
   const [qty, setQty] = useState<Record<string, number>>(() => Object.fromEntries(wanted.map((w) => [w.id, w.qty])));
-  const [size, setSize] = useState<Size>(() => {
-    try {
-      return (localStorage.getItem("acc-label-size") as Size) || "50x30";
-    } catch {
-      return "50x30";
-    }
-  });
-  const [showPrice, setShowPrice] = useState(true);
+  const [cfg, setCfg] = useState<LabelConfig>(DEFAULT_LABEL);
+  const [showCfg, setShowCfg] = useState(false);
+  const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!wanted.length) return;
-    api<{ items: L[] }>(`/api/admin/accounting/items/labels?ids=${wanted.map((w) => w.id).join(",")}`)
-      .then((d) => setItems(d.items))
+    api<{ items: L[]; config: LabelConfig }>(`/api/admin/accounting/items/labels?ids=${wanted.map((w) => w.id).join(",")}`)
+      .then((d) => {
+        setItems(d.items);
+        setCfg(d.config);
+      })
       .catch((e) => setError(e.message));
   }, [wanted]);
-  useEffect(() => {
+
+  async function saveDefault() {
+    setSaved(null);
     try {
-      localStorage.setItem("acc-label-size", size);
-    } catch {}
-  }, [size]);
+      await api("/api/admin/accounting/items/coding", { method: "PATCH", json: { labelConfig: cfg } });
+      setSaved("تنظیم برای همه ذخیره شد");
+    } catch (e) {
+      setSaved(e instanceof Error ? e.message : "ذخیره نشد");
+    }
+  }
 
-  const s = SIZES[size];
-  const labels = items.flatMap((i) => Array.from({ length: qty[i.id] ?? 1 }, (_, k) => ({ ...i, k })));
-  const roll = size !== "a4";
-  const pageCss = roll
-    ? `@page { size: ${s.w}mm ${s.h}mm; margin: 0; } .lbl { page-break-after: always; break-after: page; }`
-    : `@page { size: A4; margin: 8mm 0 0 0; } .sheet { display: grid; grid-template-columns: repeat(3, ${s.w}mm); }`;
-
-  const one = (l: (typeof labels)[number]) => (
-    <div key={`${l.id}-${l.k}`} className="lbl overflow-hidden flex flex-col justify-between text-black bg-white" style={{ width: `${s.w}mm`, height: `${s.h}mm`, padding: "1.5mm 2mm" }}>
-      <p className="font-bold leading-tight line-clamp-2" style={{ fontSize: s.h < 30 ? "7pt" : "8pt" }}>
-        {l.title}
-      </p>
-      <Barcode value={l.barcode} height={s.h * 0.38} />
-      <div className="flex items-center justify-between" style={{ fontSize: "7pt" }}>
-        <span dir="ltr" className="font-mono">
-          {l.barcode}
-        </span>
-        {showPrice && l.price && BigInt(l.price) > 0n && <b>{formatAmount(l.price)} ت</b>}
-      </div>
-    </div>
+  const labels: LabelData[] = items.flatMap((i) =>
+    Array.from({ length: qty[i.id] ?? 1 }, (_, k) => ({ key: `${i.id}-${k}`, title: i.title, barcode: i.barcode, price: i.price })),
   );
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white text-black [color-scheme:light]" dir="rtl">
-      <style>{`${pageCss} @media print { .sheet { gap: 0 !important; padding: 0 !important; } .lbl { box-shadow: none !important; } }`}</style>
       <div className="print:hidden sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-2.5 flex flex-wrap items-center gap-2">
-        {(Object.keys(SIZES) as Size[]).map((k) => (
-          <button key={k} onClick={() => setSize(k)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${size === k ? "bg-gray-900 text-white" : "bg-gray-100"}`}>
-            {SIZES[k].label}
-          </button>
-        ))}
-        <label className="flex items-center gap-1.5 text-xs">
-          <input type="checkbox" checked={showPrice} onChange={(e) => setShowPrice(e.target.checked)} />
-          قیمت
-        </label>
+        <button onClick={() => setShowCfg((v) => !v)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${showCfg ? "bg-gray-900 text-white" : "bg-gray-100"}`}>
+          ⚙️ تنظیم چاپ — {faNum(cfg.cols)}×{faNum(cfg.w)}×{faNum(cfg.h)}
+        </button>
         <span className="text-xs text-gray-500">{faNum(labels.length)} برچسب</span>
-        <button onClick={() => window.print()} className="mr-auto px-4 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-bold">
+        <button onClick={() => window.print()} disabled={!labels.length} className="mr-auto px-5 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-bold disabled:opacity-50">
           چاپ
         </button>
       </div>
+      {showCfg && (
+        <div className="print:hidden max-w-3xl mx-auto mt-4 px-4">
+          <div className="bg-white rounded-2xl p-4 space-y-3">
+            <LabelSettingsForm value={cfg} onChange={setCfg} />
+            <div className="flex items-center gap-2">
+              <button onClick={saveDefault} className="px-4 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-bold">
+                ذخیره برای همه‌ی چاپ‌ها
+              </button>
+              {saved && <span className="text-xs text-gray-600">{saved}</span>}
+            </div>
+          </div>
+        </div>
+      )}
       {error && <p className="p-4 text-sm text-red-600">{error}</p>}
       {items.length > 1 && (
         <div className="print:hidden max-w-3xl mx-auto mt-4 px-4 space-y-1">
           {items.map((i) => (
             <div key={i.id} className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 text-xs">
               <span className="flex-1 truncate">{i.title}</span>
+              <span dir="ltr" className="font-mono text-gray-500">
+                {i.code}
+              </span>
               <input
                 type="number"
                 min={0}
@@ -132,13 +109,7 @@ export default function LabelsPrint() {
           ))}
         </div>
       )}
-      {roll ? (
-        <div className="sheet flex flex-wrap gap-3 p-4 print:p-0 justify-center">{labels.map((l) => <div key={`${l.id}-${l.k}`} className="shadow print:shadow-none">{one(l)}</div>)}</div>
-      ) : (
-        <div className="sheet mx-auto my-4 print:my-0 bg-white shadow print:shadow-none gap-0" style={{ width: "210mm" }}>
-          {labels.map(one)}
-        </div>
-      )}
+      <LabelPages labels={labels} c={cfg} />
     </div>
   );
 }

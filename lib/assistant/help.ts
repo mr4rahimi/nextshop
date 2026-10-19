@@ -49,6 +49,8 @@ const TOPIC_PAGES: Record<string, string> = {
   aiSettings: "/admin/ai-settings",
   baleBot: "/admin/integration/bale-bot",
   blogPost: "/admin/blog",
+  accountingItemCoding: "/admin/accounting/inventory/coding",
+  accountingRelabel: "/admin/accounting/inventory/relabel",
   tools: "/admin/tools",
   toolsEmployee: "/admin/tools/employee-cost",
   toolsText: "/admin/tools/text-counter",

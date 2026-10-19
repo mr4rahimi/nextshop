@@ -8,8 +8,10 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/admin/accounting/inventory", label: "موجودی", exact: true },
   { href: "/admin/accounting/inventory/quick", label: "ورود سریع" },
+  { href: "/admin/accounting/inventory/relabel", label: "برچسب‌گذاری دوباره" },
   { href: "/admin/accounting/inventory/to-product", label: "ساخت محصول" },
   { href: "/admin/accounting/inventory/groups", label: "گروه‌ها" },
+  { href: "/admin/accounting/inventory/coding", label: "کدگذاری و برچسب" },
   { href: "/admin/accounting/inventory/transfers", label: "حواله‌ها" },
   { href: "/admin/accounting/inventory/counts", label: "انبارگردانی" },
   { href: "/admin/accounting/inventory/warehouses", label: "انبارها" },

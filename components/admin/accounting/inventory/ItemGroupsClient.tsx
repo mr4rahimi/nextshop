@@ -12,6 +12,7 @@ interface G {
   id: string;
   parentId: string | null;
   name: string;
+  code: string | null;
   path: string;
   items: number;
 }
@@ -57,7 +58,14 @@ export default function ItemGroupsClient() {
         {data?.items.map((g) => (
           <div key={g.id} className="flex items-center gap-2 px-4 py-3">
             <span className="flex-1 min-w-0">
-              <span className="block text-sm font-bold truncate">{g.path}</span>
+              <span className="block text-sm font-bold truncate">
+                {g.code && (
+                  <span dir="ltr" className="ml-1.5 font-mono text-[11px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-500">
+                    {g.code}
+                  </span>
+                )}
+                {g.path}
+              </span>
               <span className="text-[11px] text-gray-400">{faNum(g.items)} کالا</span>
             </span>
             {data.can.manage && (
@@ -98,13 +106,14 @@ export default function ItemGroupsClient() {
 function GroupForm({ item, parentId, groups, onClose, onSaved }: { item: G | null; parentId?: string; groups: G[]; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(item?.name ?? "");
   const [parent, setParent] = useState(item?.parentId ?? parentId ?? "");
+  const [code, setCode] = useState(item?.code ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function save() {
     setBusy(true);
     setError(null);
     try {
-      const json = { name, parentId: parent || null };
+      const json = { name, parentId: parent || null, code: code.trim() || null };
       if (item) await api(`/api/admin/accounting/items/groups/${item.id}`, { method: "PATCH", json });
       else await api("/api/admin/accounting/items/groups", { method: "POST", json });
       onSaved();
@@ -129,6 +138,9 @@ function GroupForm({ item, parentId, groups, onClose, onSaved }: { item: G | nul
       <div className="space-y-4">
         <Field label="نام گروه">
           <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} autoFocus placeholder="مثلاً: پیراهن" />
+        </Field>
+        <Field label="کد گروه" hint="برای الگوی کد کالای «گروه + مدل + تنوع» — مثلاً ۱۱. خالی = بی‌کد">
+          <input value={code} onChange={(e) => setCode(e.target.value)} className={`${inputCls} font-mono`} dir="ltr" placeholder="11" />
         </Field>
         <Field label="زیرمجموعه‌ی">
           <select value={parent} onChange={(e) => setParent(e.target.value)} className={inputCls}>

@@ -10,6 +10,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AccError } from "../errors";
 import { toLatinDigits } from "../money";
+import { allocItemCode } from "./codes";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -17,17 +18,6 @@ type Db = Prisma.TransactionClient | typeof prisma;
 export function normalizeItemCode(c: string | null | undefined): string | null {
   const v = toLatinDigits(c ?? "").trim().toUpperCase();
   return v || null;
-}
-
-/** کد خودکار بعدی، بی‌مصرف کردن شمارنده — برای جای خالی فرم */
-export async function peekItemCode(db: Db): Promise<string> {
-  const [r] = await db.$queryRaw<{ c: string }[]>`SELECT acc_peek_item_code() AS c`;
-  return r.c;
-}
-
-export async function nextItemCode(db: Db): Promise<string> {
-  const [r] = await db.$queryRaw<{ c: string }[]>`SELECT acc_next_item_code() AS c`;
-  return r.c;
 }
 
 /**
@@ -164,11 +154,11 @@ async function setBarcodes(db: Db, itemId: string, raw: string[]) {
   for (const barcode of codes) await db.accItemBarcode.upsert({ where: { barcode }, create: { barcode, itemId }, update: {} });
 }
 
-/** کالای تازه — بی‌محصول. کد خالی = خودکار */
+/** کالای تازه — بی‌محصول. کد خالی = خودکار طبق الگوی کد (`codes.ts`) */
 export async function createItem(db: Prisma.TransactionClient, input: ItemInput, place?: ItemPlacement) {
   const title = input.title?.trim();
   if (!title) throw new AccError("نام کالا را بنویسید");
-  const code = normalizeItemCode(input.code) ?? (await nextItemCode(db));
+  const code = normalizeItemCode(input.code) ?? (await allocItemCode(db, { groupId: input.groupId, modelId: place?.modelId }));
   await assertCodeFree(db, code, null);
   await assertGroup(db, input.groupId);
   const item = await db.accItem.create({

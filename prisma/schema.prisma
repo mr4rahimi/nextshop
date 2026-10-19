@@ -3905,6 +3905,10 @@ model AccSettings {
   installmentTreasuryId String?
   /// ثبت خودکار (فاز ۶): تسویه‌ی پورسانت از کدام صندوق/بانک پرداخت می‌شود
   payoutTreasuryId      String?
+  /// الگوی کد خودکار کالا — `{N}` شماره‌ی پشت‌سرهم، `{G}` کد گروه، `{M4}` شماره‌ی مدل، `{V2}` شماره‌ی تنوع (inventory-items.md بخش ۱۲)
+  itemCodePattern       String    @default("{N}")
+  /// تنظیم چاپ برچسب بارکد — `LabelConfig` در `lib/accounting/inventory/label-config.ts`
+  labelConfig           Json?
   updatedAt             DateTime  @updatedAt
 }
 
@@ -4237,6 +4241,8 @@ model AccItemGroup {
   id        String         @id @default(cuid())
   parentId  String?
   name      String
+  /// کد عددی گروه برای `{G}` الگوی کد کالا
+  code      String?        @unique
   sortOrder Int            @default(0)
   createdAt DateTime       @default(now())
   parent    AccItemGroup?  @relation("AccItemGroupTree", fields: [parentId], references: [id], onDelete: Restrict)
@@ -4254,9 +4260,58 @@ model AccItemModel {
   groupId   String?
   /// محصول سایتی که از این مدل ساخته شد (فاز ۵)
   productId String?
+  /// پیشوند کد تنوع‌ها وقتی الگو `{M}` دارد — «۱۱۰۰۲۳»
+  code        String?         @unique
+  /// شماره‌ی تنوع بعدی برای `{V}` — هرگز برنمی‌گردد
+  nextVariant Int             @default(1)
+  /// عنوان پایه‌ی کالاها (`base`) و مشخصه‌های توضیحی (`specs`: برند، تأمین‌کننده، …)
+  specs       Json?
   createdAt DateTime      @default(now())
   group     AccItemGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   items     AccItem[]
+  legacy    AccLegacyItem[]
+}
+
+/// شمارنده‌های الگوی کد کالا — کلید «M» یا «M:<کد گروه>»
+model AccCodeCounter {
+  key   String @id
+  value Int    @default(0)
+}
+
+/// کد نرم‌افزار قبلی — اغلب همه‌ی رنگ‌ها و سایزهای یک مدل زیر یک کد. صفحه‌ی
+/// «برچسب‌گذاری دوباره» آن را به تنوع‌های مدل می‌شکند (inventory-items.md بخش ۱۲)
+model AccLegacyItem {
+  /// کد قبلی نرمال‌شده
+  code      String          @id
+  source    String          @default("نرم‌افزار قبلی")
+  title     String
+  modelId   String
+  /// کالای همان کد وقتی کد قبلی خودش یک تنوع کامل بود
+  itemId    String?
+  /// ویژگی‌های معلوم کد قبلی — `[{axisId, valueId}]`
+  attrs     Json            @default("[]")
+  /// موجودی در نرم‌افزار قبلی هنگام انتقال — فقط برای نمایش پیشرفت کار
+  legacyQty Int             @default(0)
+  salePrice BigInt?
+  createdAt DateTime        @default(now())
+  model     AccItemModel    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  logs      AccRelabelLog[]
+
+  @@index([modelId])
+}
+
+/// هر بار چاپ برچسب تازه برای یک کد قبلی
+model AccRelabelLog {
+  id         String        @id @default(cuid())
+  legacyCode String
+  itemId     String
+  qty        Int
+  byName     String?
+  createdAt  DateTime      @default(now())
+  legacy     AccLegacyItem @relation(fields: [legacyCode], references: [code], onDelete: Cascade)
+
+  @@index([legacyCode])
+  @@index([itemId])
 }
 
 /// محور ویژگی کالا — رنگ، سایز. ⚠️ عمداً جدا از `Attribute` فروشگاه: مقدار تازه
