@@ -97,7 +97,64 @@ function MarkdownBubble({ text }: { text: string }) {
   return <>{nodes}</>;
 }
 
-type Bubble = { role: "user" | "assistant"; content: string };
+/** کارت محصول از خروجی ابزار — lib/shop-chat/search.ts `ProductCard` (فقط فیلدهای نمایشی) */
+type ChatProduct = {
+  slug: string;
+  title: string;
+  url: string;
+  image: string | null;
+  price: number;
+  oldPrice: number | null;
+  priceText: string;
+  availability: "available" | "low" | "out";
+  availabilityText: string;
+};
+
+type Bubble = { role: "user" | "assistant"; content: string; products?: ChatProduct[]; status?: string };
+
+function ProductCards({ products }: { products: ChatProduct[] }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
+      {products.map((p) => (
+        <a key={p.slug} href={p.url} style={{
+          display: "flex", gap: "10px", alignItems: "center", textDecoration: "none",
+          background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "8px",
+          color: "#1f2937",
+        }}>
+          <div style={{
+            width: "56px", height: "56px", flexShrink: 0, borderRadius: "8px", background: "#fff",
+            overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            {p.image
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={p.image} alt={p.title} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              : <span style={{ fontSize: "20px", color: "#d1d5db" }}>□</span>}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontSize: "12px", fontWeight: 700, lineHeight: "1.6",
+              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+            }}>{p.title}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "2px" }}>
+              <span style={{ fontSize: "12px", fontWeight: 800, color: p.price > 0 ? "#4f46e5" : "#6b7280" }}>
+                {p.price > 0 ? p.priceText : "قیمت استعلامی"}
+              </span>
+              {p.oldPrice && (
+                <span style={{ fontSize: "11px", color: "#9ca3af", textDecoration: "line-through" }}>
+                  {p.oldPrice.toLocaleString("fa-IR")}
+                </span>
+              )}
+              <span style={{
+                fontSize: "10.5px", fontWeight: 700,
+                color: p.availability === "out" ? "#dc2626" : p.availability === "low" ? "#d97706" : "#16a34a",
+              }}>{p.availabilityText}</span>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
 
 type ChatContext =
   | { kind: "category"; slug: string }
@@ -460,6 +517,7 @@ function AiChatWidget() {
           sessionId: sessionMode === "guest" ? getSessionId() : null,
           conversationId: conversationIdRef.current,
           siteId,
+          pagePath: typeof window !== "undefined" ? window.location.pathname : null,
         }),
       });
       if (!res.ok) throw new Error("server");
@@ -471,8 +529,19 @@ function AiChatWidget() {
       const decoder = new TextDecoder();
       let buffer = "";
       let assistantText = "";
+      let products: ChatProduct[] | undefined;
+      let status: string | undefined;
+      let failure: string | null = null;
 
-      while (true) {
+      const show = () =>
+        setBubbles((b) => {
+          const u = [...b];
+          u[u.length - 1] = { role: "assistant", content: assistantText, products, status: assistantText ? undefined : status };
+          return u;
+        });
+
+      // رویدادها: {status} برچسب ابزار، {text} تکه‌ی جریان، {final, products} متن پاک‌شده، {error} — app/api/chat/route.ts
+      read: while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
@@ -482,32 +551,38 @@ function AiChatWidget() {
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           const payload = line.slice(6);
-          if (payload === "[DONE]") break;
+          if (payload === "[DONE]") break read;
+          let event: { text?: string; status?: string; final?: string; products?: ChatProduct[]; error?: string };
           try {
-            const { text: chunk, error } = JSON.parse(payload);
-            if (error) throw new Error(error);
-            if (chunk) {
-              assistantText += chunk;
-              setBubbles((b) => {
-                const u = [...b];
-                u[u.length - 1] = { role: "assistant", content: assistantText };
-                return u;
-              });
-            }
+            event = JSON.parse(payload);
           } catch {
-            /* skip */
+            continue;
           }
+          if (event.error) failure = event.error;
+          if (event.status) status = event.status;
+          if (event.text) assistantText += event.text;
+          if (typeof event.final === "string") {
+            assistantText = event.final;
+            products = event.products?.length ? event.products : undefined;
+          }
+          show();
         }
       }
 
+      if (failure && !assistantText.trim()) throw new Error(failure);
+      if (failure) {
+        assistantText = `${assistantText.trim()}\n\n${failure}`;
+        show();
+      }
+
       setApiMessages((m) => [...m, { role: "assistant", content: assistantText }]);
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error && err.message !== "server" && err.message
+        ? err.message
+        : "متأسفم، مشکلی پیش آمد. دوباره امتحان کنید.";
       setBubbles((b) => {
         const u = [...b];
-        u[u.length - 1] = {
-          role: "assistant",
-          content: "متأسفم، مشکلی پیش آمد. دوباره امتحان کنید.",
-        };
+        u[u.length - 1] = { role: "assistant", content: message };
         return u;
       });
     } finally {
@@ -670,9 +745,11 @@ function AiChatWidget() {
                       : (
                         <span style={{ display: "flex", gap: "4px", alignItems: "center", padding: "2px 0" }}>
                           <span className="td" /><span className="td" /><span className="td" />
+                          {b.status && <span style={{ fontSize: "11px", color: "#6b7280", marginRight: "6px" }}>{b.status}</span>}
                         </span>
                       )
                     }
+                    {!isUser && b.products && b.products.length > 0 && <ProductCards products={b.products} />}
                   </div>
                 </div>
               );
