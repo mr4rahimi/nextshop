@@ -9,7 +9,7 @@
 import { useState } from "react";
 import { canEncode, code128Bars } from "@/lib/barcode/code128";
 import { faNum, formatAmount, toLatinDigits } from "@/lib/accounting/money";
-import { LABEL_PRESETS, normalizeLabelConfig, pageWidthOf, perPageOf, type LabelConfig } from "@/lib/accounting/inventory/label-config";
+import { LABEL_PRESETS, normalizeLabelConfig, pageHeightOf, pageWidthOf, perPageOf, slotOf, type LabelConfig } from "@/lib/accounting/inventory/label-config";
 
 export interface LabelData {
   key: string;
@@ -85,7 +85,8 @@ export function LabelPages({ labels, c, preview = false }: { labels: LabelData[]
   const pages: LabelData[][] = [];
   for (let i = 0; i < labels.length; i += per) pages.push(labels.slice(i, i + per));
   const pw = pageWidthOf(c);
-  const ph = c.media === "a4" ? 297 : c.h;
+  const ph = pageHeightOf(c);
+  const slot = slotOf(c);
   const pageCss = preview
     ? ""
     : `@page { size: ${c.media === "a4" ? "A4" : `${pw}mm ${ph}mm`}; margin: 0; }
@@ -104,8 +105,8 @@ export function LabelPages({ labels, c, preview = false }: { labels: LabelData[]
               boxSizing: "border-box",
               padding: `${c.marginTop}mm ${c.marginX}mm 0`,
               display: "grid",
-              gridTemplateColumns: `repeat(${c.cols}, ${c.w}mm)`,
-              gridAutoRows: `${c.h}mm`,
+              gridTemplateColumns: `repeat(${c.cols}, ${slot.w}mm)`,
+              gridAutoRows: `${slot.h}mm`,
               columnGap: `${c.gapX}mm`,
               rowGap: `${c.gapY}mm`,
               alignContent: "start",
@@ -113,7 +114,16 @@ export function LabelPages({ labels, c, preview = false }: { labels: LabelData[]
             }}
           >
             {p.map((l) => (
-              <LabelFace key={l.key} l={l} c={c} />
+              c.rotate ? (
+                // برچسب ایستاده: چهره‌ی افقی ۹۰ درجه چرخیده در جای h×w
+                <div key={l.key} style={{ position: "relative", width: `${slot.w}mm`, height: `${slot.h}mm`, overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: 0, left: 0, transformOrigin: "top left", transform: `translateX(${c.h}mm) rotate(90deg)` }}>
+                    <LabelFace l={l} c={c} />
+                  </div>
+                </div>
+              ) : (
+                <LabelFace key={l.key} l={l} c={c} />
+              )
             ))}
           </div>
         ))}
@@ -195,7 +205,7 @@ export function LabelSettingsForm({ value, onChange }: { value: LabelConfig; onC
         <Num label="جابه‌جایی به پایین (mm)" value={value.marginTop} onChange={(marginTop) => set({ marginTop })} />
       </div>
       <p className="text-[11px] text-gray-500">
-        اندازه‌ی هر صفحه‌ی چاپ: <b dir="ltr">{faNum(pageWidthOf(value))} × {faNum(value.media === "a4" ? 297 : value.h)} mm</b> — همین اندازه را در تنظیم کاغذ چاپگر بگذارید، حاشیه‌ی چاپ مرورگر «هیچ» و مقیاس ۱۰۰٪.
+        اندازه‌ی هر صفحه‌ی چاپ (عرض × ارتفاع): <b dir="ltr">{faNum(pageWidthOf(value))} × {faNum(pageHeightOf(value))} mm</b> — همین اندازه را در تنظیم کاغذ چاپگر بگذارید، حاشیه‌ی چاپ مرورگر «هیچ» و مقیاس ۱۰۰٪.
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <label className="block col-span-2">
@@ -209,6 +219,7 @@ export function LabelSettingsForm({ value, onChange }: { value: LabelConfig; onC
         <Toggle label="نام کالا" value={value.showTitle} onChange={(showTitle) => set({ showTitle })} />
         <Toggle label="قیمت" value={value.showPrice} onChange={(showPrice) => set({ showPrice })} />
         <Toggle label="کد زیر بارکد" value={value.showCode} onChange={(showCode) => set({ showCode })} />
+        <Toggle label="چرخش ۹۰ درجه (برچسب ایستاده)" value={value.rotate} onChange={(rotate) => set({ rotate })} />
         <label className="flex items-center gap-1.5 text-xs font-bold">
           قیمت به
           <select value={value.priceUnit} onChange={(e) => set({ priceUnit: e.target.value as LabelConfig["priceUnit"] })} className="px-2 py-1 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">

@@ -71,7 +71,7 @@ export default function LabelsPrint() {
   }
 
   const labels: LabelData[] = test
-    ? Array.from({ length: cfg.cols * 2 }, (_, k) => ({ ...SAMPLE_LABELS[k % SAMPLE_LABELS.length], key: `t${k}` }))
+    ? Array.from({ length: Math.max(4, cfg.cols * 2) }, (_, k) => ({ ...SAMPLE_LABELS[k % SAMPLE_LABELS.length], key: `t${k}` }))
     : items.flatMap((i) => Array.from({ length: qty[i.id] ?? 1 }, (_, k) => ({ key: `${i.id}-${k}`, title: i.title, barcode: i.barcode, price: i.price })));
 
   return (

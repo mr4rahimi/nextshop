@@ -32,6 +32,8 @@ export interface LabelConfig {
   titleSize: number;
   /** ارتفاع بارکد — درصد ارتفاع برچسب */
   barcodePct: number;
+  /** برچسب ایستاده در چاپگر: صفحه h×w و نوشته ۹۰ درجه چرخیده */
+  rotate: boolean;
 }
 
 export const DEFAULT_LABEL: LabelConfig = {
@@ -50,12 +52,15 @@ export const DEFAULT_LABEL: LabelConfig = {
   priceUnit: "toman",
   titleSize: 8,
   barcodePct: 38,
+  rotate: false,
 };
 
 export const LABEL_PRESETS: { key: string; label: string; cfg: Partial<LabelConfig> }[] = [
   { key: "50x30", label: "رول ۵۰×۳۰", cfg: { media: "roll", w: 50, h: 30, cols: 1, gapX: 0 } },
   { key: "2x50x30", label: "رول ۱۰۰ — دو تا ۵۰×۳۰", cfg: { media: "roll", w: 50, h: 30, cols: 2, gapX: 0 } },
-  { key: "2x48x31", label: "رول ۱۰۰ — دو تا ۴۸×۳۱", cfg: { media: "roll", w: 48, h: 31, cols: 2, gapX: 4 } },
+  { key: "1x48x31", label: "۴۸×۳۱ — هر برچسب یک صفحه", cfg: { media: "roll", w: 48, h: 31, cols: 1, gapX: 0, rotate: false } },
+  { key: "1x48x31r", label: "۴۸×۳۱ ایستاده — هر برچسب یک صفحه", cfg: { media: "roll", w: 48, h: 31, cols: 1, gapX: 0, rotate: true } },
+  { key: "2x48x31", label: "رول ۱۰۰ — دو تا ۴۸×۳۱ در یک صفحه", cfg: { media: "roll", w: 48, h: 31, cols: 2, gapX: 4, rotate: false } },
   { key: "40x25", label: "رول ۴۰×۲۵", cfg: { media: "roll", w: 40, h: 25, cols: 1, gapX: 0 } },
   { key: "60x40", label: "رول ۶۰×۴۰", cfg: { media: "roll", w: 60, h: 40, cols: 1, gapX: 0 } },
   { key: "a4", label: "برگه A4 — ۲۴تایی", cfg: { media: "a4", w: 70, h: 37, cols: 3, gapX: 0, gapY: 0, marginX: 0, marginTop: 0 } },
@@ -76,7 +81,9 @@ export function normalizeLabelConfig(raw: unknown): LabelConfig {
   const cols = Math.round(num(r.cols, 1, 6, d.cols));
   const gapX = num(r.gapX, 0, 50, d.gapX);
   const marginX = num(r.marginX, 0, 50, d.marginX);
-  const maxCols = Math.max(1, Math.floor(((media === "a4" ? 210 : 300) - 2 * marginX + gapX) / (w + gapX)));
+  const rotate = bool(r.rotate, d.rotate);
+  const slotW = rotate ? num(r.h, 10, 250, d.h) : w;
+  const maxCols = Math.max(1, Math.floor(((media === "a4" ? 210 : 300) - 2 * marginX + gapX) / (slotW + gapX)));
   return {
     media,
     w,
@@ -93,15 +100,20 @@ export function normalizeLabelConfig(raw: unknown): LabelConfig {
     priceUnit: r.priceUnit === "rial" ? "rial" : "toman",
     titleSize: num(r.titleSize, 5, 16, d.titleSize),
     barcodePct: num(r.barcodePct, 20, 70, d.barcodePct),
+    rotate,
   };
 }
 
+/** جای هر برچسب روی کاغذ — چرخیده: عرض و ارتفاع جابه‌جا */
+export const slotOf = (c: LabelConfig) => (c.rotate ? { w: c.h, h: c.w } : { w: c.w, h: c.h });
+
 /** عرض صفحه‌ی چاپ — رول: مجموع برچسب‌ها و فاصله‌ها و حاشیه */
-export const pageWidthOf = (c: LabelConfig) => (c.media === "a4" ? 210 : c.cols * c.w + (c.cols - 1) * c.gapX + 2 * c.marginX);
+export const pageWidthOf = (c: LabelConfig) => (c.media === "a4" ? 210 : c.cols * slotOf(c).w + (c.cols - 1) * c.gapX + 2 * c.marginX);
+export const pageHeightOf = (c: LabelConfig) => (c.media === "a4" ? 297 : slotOf(c).h);
 
 /** چند برچسب در هر صفحه */
 export function perPageOf(c: LabelConfig): number {
   if (c.media === "roll") return c.cols;
-  const rows = Math.max(1, Math.floor((297 - c.marginTop + c.gapY) / (c.h + c.gapY)));
+  const rows = Math.max(1, Math.floor((297 - c.marginTop + c.gapY) / (slotOf(c).h + c.gapY)));
   return rows * c.cols;
 }
