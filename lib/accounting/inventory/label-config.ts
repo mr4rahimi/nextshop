@@ -19,7 +19,7 @@ export interface LabelConfig {
   /** فاصله‌ی افقی و عمودی بین برچسب‌ها */
   gapX: number;
   gapY: number;
-  /** حاشیه‌ی راست/چپ و بالای صفحه */
+  /** حاشیه‌ی راست/چپ؛ بالا = جابه‌جایی برچسب‌ها به پایین (رول و A4) */
   marginX: number;
   marginTop: number;
   /** متن بالای برچسب، مثلاً نام فروشگاه */
@@ -55,6 +55,7 @@ export const DEFAULT_LABEL: LabelConfig = {
 export const LABEL_PRESETS: { key: string; label: string; cfg: Partial<LabelConfig> }[] = [
   { key: "50x30", label: "رول ۵۰×۳۰", cfg: { media: "roll", w: 50, h: 30, cols: 1, gapX: 0 } },
   { key: "2x50x30", label: "رول ۱۰۰ — دو تا ۵۰×۳۰", cfg: { media: "roll", w: 50, h: 30, cols: 2, gapX: 0 } },
+  { key: "2x48x31", label: "رول ۱۰۰ — دو تا ۴۸×۳۱", cfg: { media: "roll", w: 48, h: 31, cols: 2, gapX: 4 } },
   { key: "40x25", label: "رول ۴۰×۲۵", cfg: { media: "roll", w: 40, h: 25, cols: 1, gapX: 0 } },
   { key: "60x40", label: "رول ۶۰×۴۰", cfg: { media: "roll", w: 60, h: 40, cols: 1, gapX: 0 } },
   { key: "a4", label: "برگه A4 — ۲۴تایی", cfg: { media: "a4", w: 70, h: 37, cols: 3, gapX: 0, gapY: 0, marginX: 0, marginTop: 0 } },
@@ -71,20 +72,20 @@ export function normalizeLabelConfig(raw: unknown): LabelConfig {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const d = DEFAULT_LABEL;
   const media: LabelMedia = r.media === "a4" ? "a4" : "roll";
-  const w = num(r.w, 15, 150, d.w);
+  const w = num(r.w, 10, 250, d.w);
   const cols = Math.round(num(r.cols, 1, 6, d.cols));
-  const gapX = num(r.gapX, 0, 20, d.gapX);
-  const marginX = num(r.marginX, 0, 30, d.marginX);
+  const gapX = num(r.gapX, 0, 50, d.gapX);
+  const marginX = num(r.marginX, 0, 50, d.marginX);
   const maxCols = Math.max(1, Math.floor(((media === "a4" ? 210 : 300) - 2 * marginX + gapX) / (w + gapX)));
   return {
     media,
     w,
-    h: num(r.h, 10, 150, d.h),
+    h: num(r.h, 10, 250, d.h),
     cols: Math.min(cols, maxCols),
     gapX,
-    gapY: num(r.gapY, 0, 20, d.gapY),
+    gapY: num(r.gapY, 0, 50, d.gapY),
     marginX,
-    marginTop: num(r.marginTop, 0, 30, d.marginTop),
+    marginTop: num(r.marginTop, 0, 50, d.marginTop),
     header: String(r.header ?? "").slice(0, 40),
     showTitle: bool(r.showTitle, d.showTitle),
     showPrice: bool(r.showPrice, d.showPrice),

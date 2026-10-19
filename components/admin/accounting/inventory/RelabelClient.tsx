@@ -79,6 +79,21 @@ export default function RelabelClient() {
     }
   }, []);
 
+  async function reprint(code: string) {
+    setError(null);
+    const win = window.open("", "_blank");
+    try {
+      const d = await api<{ view: View }>(`/api/admin/accounting/items/relabel?code=${encodeURIComponent(code)}`);
+      const url = reprintUrl(d.view);
+      if (!url) throw new Error("برای این کد هنوز برچسبی ساخته نشده");
+      if (win) win.location.href = url;
+      else window.open(url, "_blank");
+    } catch (e) {
+      win?.close();
+      setError(e instanceof Error ? e.message : "پیدا نشد");
+    }
+  }
+
   const next = useCallback(() => {
     setView(null);
     setScan("");
@@ -185,6 +200,27 @@ export default function RelabelClient() {
                   {faNum(r.labeled)} / {faNum(r.legacyQty)}
                 </span>
                 <Badge tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Badge>
+                {r.labeled > 0 && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      reprint(r.code);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.stopPropagation();
+                        reprint(r.code);
+                      }
+                    }}
+                    className={btn.small}
+                    title="چاپ دوباره‌ی برچسب‌های این کد"
+                  >
+                    <Printer className="h-3.5 w-3.5" aria-hidden />
+                    چاپ مجدد
+                  </span>
+                )}
               </button>
             ))}
             {!progress.list.length && <p className="p-6 text-center text-sm text-gray-400">موردی نیست</p>}
@@ -442,6 +478,12 @@ function Worksheet({
         <button onClick={onClose} className={btn.soft}>
           کد بعدی <kbd className="text-[10px] opacity-70 font-mono">Esc</kbd>
         </button>
+        {reprintUrl(view) && (
+          <a href={reprintUrl(view)!} target="_blank" rel="noopener" className={btn.soft}>
+            <Printer className="h-4 w-4" aria-hidden />
+            چاپ مجدد {faNum(view.items.reduce((s, i) => s + i.labeled, 0))} برچسب قبلی
+          </a>
+        )}
         {L && left !== null && total > 0 && total !== left && left > 0 && (
           <span className="text-xs text-amber-600">جمع خانه‌ها {faNum(total)} است و مانده‌ی کد قبلی {faNum(left)}</span>
         )}
@@ -471,6 +513,12 @@ function Worksheet({
 }
 
 const cellKey = (vals: string[]) => vals.join("\u0001");
+
+/** چاپ دوباره‌ی برچسب‌های زده‌شده‌ی یک کد — همان تعداد هر کالا؛ تعداد در صفحه‌ی چاپ قابل تغییر است */
+const reprintUrl = (v: View) => {
+  const items = v.items.filter((i) => i.labeled > 0);
+  return items.length ? `/admin/accounting/inventory/labels/print?items=${items.map((i) => `${i.id}:${i.labeled}`).join(",")}` : null;
+};
 
 function Mini({ label, value, tone = "" }: { label: string; value: string; tone?: string }) {
   return (

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { faNum } from "@/lib/accounting/money";
 import { DEFAULT_LABEL, type LabelConfig } from "@/lib/accounting/inventory/label-config";
 import InventoryTabs from "./InventoryTabs";
-import { LabelPages, LabelSettingsForm } from "./LabelSheet";
+import { LabelPages, LabelSettingsForm, SAMPLE_LABELS, testPrintUrl } from "./LabelSheet";
 import { api, Badge, btn, Card, ErrorText, Field, inputCls, PageHeader, SectionTitle } from "../ui";
 
 interface Data {
@@ -22,10 +22,6 @@ interface Data {
   can: { manage: boolean };
 }
 
-const SAMPLE = [
-  { key: "a", title: "پیراهن اسپرت کرال مشکی L", barcode: "11002304", price: "1570000" },
-  { key: "b", title: "پیراهن اسپرت کرال سفید XL", barcode: "11002305", price: "1570000" },
-];
 
 export default function CodingClient() {
   const [data, setData] = useState<Data | null>(null);
@@ -130,13 +126,19 @@ export default function CodingClient() {
           <Card className="p-4 space-y-4">
             <SectionTitle title="چاپ برچسب بارکد" help="accountingItemCoding" />
             <LabelSettingsForm value={cfg} onChange={setCfg} />
-            {manage && (
-              <button onClick={() => save({ labelConfig: cfg }, "تنظیم برچسب ذخیره شد")} disabled={busy} className={`${btn.primary} w-full`}>
-                ذخیره‌ی تنظیم برچسب
+            <div className="flex gap-2">
+              {manage && (
+                <button onClick={() => save({ labelConfig: cfg }, "تنظیم برچسب ذخیره شد")} disabled={busy} className={`${btn.primary} flex-1`}>
+                  ذخیره‌ی تنظیم برچسب
+                </button>
+              )}
+              <button onClick={() => window.open(testPrintUrl(cfg), "_blank")} className={btn.soft}>
+                چاپ آزمایشی
               </button>
-            )}
+            </div>
+            <p className="text-[11px] text-gray-500 leading-5">چاپ آزمایشی با همین اعداد (حتی ذخیره‌نشده) دو ردیف نمونه چاپ می‌کند. اگر درست افتاد، ذخیره کنید.</p>
             <div className="rounded-xl bg-gray-100 dark:bg-white/5 overflow-x-auto [color-scheme:light]">
-              <LabelPages labels={SAMPLE} c={cfg} preview />
+              <LabelPages labels={SAMPLE_LABELS} c={cfg} preview />
             </div>
           </Card>
         </div>

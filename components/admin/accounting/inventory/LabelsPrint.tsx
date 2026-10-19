@@ -11,9 +11,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { faNum } from "@/lib/accounting/money";
-import { DEFAULT_LABEL, type LabelConfig } from "@/lib/accounting/inventory/label-config";
+import { DEFAULT_LABEL, normalizeLabelConfig, type LabelConfig } from "@/lib/accounting/inventory/label-config";
 import { api } from "../ui";
-import { LabelPages, LabelSettingsForm, type LabelData } from "./LabelSheet";
+import { LabelPages, LabelSettingsForm, SAMPLE_LABELS, type LabelData } from "./LabelSheet";
 
 interface L {
   id: string;
@@ -36,7 +36,16 @@ export default function LabelsPrint() {
   );
   const [items, setItems] = useState<L[]>([]);
   const [qty, setQty] = useState<Record<string, number>>(() => Object.fromEntries(wanted.map((w) => [w.id, w.qty])));
-  const [cfg, setCfg] = useState<LabelConfig>(DEFAULT_LABEL);
+  // چاپ آزمایشی از «کدگذاری و برچسب»: تنظیم در نشانی، برچسب نمونه
+  const test = sp.get("test") === "1";
+  const [cfg, setCfg] = useState<LabelConfig>(() => {
+    if (!test) return DEFAULT_LABEL;
+    try {
+      return normalizeLabelConfig(JSON.parse(sp.get("cfg") ?? "{}"));
+    } catch {
+      return DEFAULT_LABEL;
+    }
+  });
   const [showCfg, setShowCfg] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,9 +70,9 @@ export default function LabelsPrint() {
     }
   }
 
-  const labels: LabelData[] = items.flatMap((i) =>
-    Array.from({ length: qty[i.id] ?? 1 }, (_, k) => ({ key: `${i.id}-${k}`, title: i.title, barcode: i.barcode, price: i.price })),
-  );
+  const labels: LabelData[] = test
+    ? Array.from({ length: cfg.cols * 2 }, (_, k) => ({ ...SAMPLE_LABELS[k % SAMPLE_LABELS.length], key: `t${k}` }))
+    : items.flatMap((i) => Array.from({ length: qty[i.id] ?? 1 }, (_, k) => ({ key: `${i.id}-${k}`, title: i.title, barcode: i.barcode, price: i.price })));
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white text-black [color-scheme:light]" dir="rtl">

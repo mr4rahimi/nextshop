@@ -6,8 +6,9 @@
  * تنظیم: `lib/accounting/inventory/label-config.ts`.
  */
 
+import { useState } from "react";
 import { canEncode, code128Bars } from "@/lib/barcode/code128";
-import { faNum, formatAmount } from "@/lib/accounting/money";
+import { faNum, formatAmount, toLatinDigits } from "@/lib/accounting/money";
 import { LABEL_PRESETS, normalizeLabelConfig, pageWidthOf, perPageOf, type LabelConfig } from "@/lib/accounting/inventory/label-config";
 
 export interface LabelData {
@@ -16,6 +17,15 @@ export interface LabelData {
   barcode: string;
   price: string | null;
 }
+
+/** نمونه‌ی پیش‌نمایش و چاپ آزمایشی */
+export const SAMPLE_LABELS: LabelData[] = [
+  { key: "a", title: "پیراهن اسپرت کرال مشکی L", barcode: "11002304", price: "1570000" },
+  { key: "b", title: "پیراهن اسپرت کرال سفید XL", barcode: "11002305", price: "1570000" },
+];
+
+/** نشانی چاپ آزمایشی با تنظیم فعلی (ذخیره‌نشده هم) — دو ردیف کامل */
+export const testPrintUrl = (c: LabelConfig) => `/admin/accounting/inventory/labels/print?test=1&cfg=${encodeURIComponent(JSON.stringify(c))}`;
 
 function Barcode({ value, height }: { value: string; height: number }) {
   if (!canEncode(value)) return <p className="text-[8px] text-red-600">کد «{value}» حرف غیرلاتین دارد — یک بارکد لاتین برای کالا بنویسید</p>;
@@ -92,7 +102,7 @@ export function LabelPages({ labels, c, preview = false }: { labels: LabelData[]
               width: `${pw}mm`,
               height: `${ph}mm`,
               boxSizing: "border-box",
-              padding: c.media === "a4" ? `${c.marginTop}mm ${c.marginX}mm 0` : `0 ${c.marginX}mm`,
+              padding: `${c.marginTop}mm ${c.marginX}mm 0`,
               display: "grid",
               gridTemplateColumns: `repeat(${c.cols}, ${c.w}mm)`,
               gridAutoRows: `${c.h}mm`,
@@ -114,11 +124,29 @@ export function LabelPages({ labels, c, preview = false }: { labels: LabelData[]
 
 const fieldCls = "w-full px-2.5 py-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-sm outline-none focus:border-blue-400";
 
-function Num({ label, value, onChange, step = 1 }: { label: string; value: number; onChange: (v: number) => void; step?: number }) {
+/** عدد آزاد: تا وقتی تایپ می‌کنید دست نمی‌خورد؛ با خروج از کادر یا Enter اعمال می‌شود */
+function Num({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  // null = در حال تایپ نیست، مقدار تنظیم نشان داده می‌شود
+  const [text, setText] = useState<string | null>(null);
+  const commit = () => {
+    if (text === null) return;
+    const n = Number(toLatinDigits(text).replace(/[٫,]/g, ".").trim());
+    if (text.trim() !== "" && Number.isFinite(n)) onChange(n);
+    setText(null);
+  };
   return (
     <label className="block">
       <span className="block text-[11px] font-bold text-gray-500 mb-1">{label}</span>
-      <input type="number" step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className={`${fieldCls} text-center`} dir="ltr" />
+      <input
+        inputMode="decimal"
+        value={text ?? String(value)}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), commit())}
+        onFocus={(e) => e.target.select()}
+        className={`${fieldCls} text-center`}
+        dir="ltr"
+      />
     </label>
   );
 }
@@ -161,20 +189,20 @@ export function LabelSettingsForm({ value, onChange }: { value: LabelConfig; onC
         <Num label="عرض برچسب (mm)" value={value.w} onChange={(w) => set({ w })} />
         <Num label="ارتفاع (mm)" value={value.h} onChange={(h) => set({ h })} />
         <Num label="کنار هم" value={value.cols} onChange={(cols) => set({ cols })} />
-        <Num label="فاصله‌ی افقی (mm)" value={value.gapX} onChange={(gapX) => set({ gapX })} step={0.5} />
-        <Num label="فاصله‌ی عمودی (mm)" value={value.gapY} onChange={(gapY) => set({ gapY })} step={0.5} />
-        <Num label="حاشیه‌ی کناری (mm)" value={value.marginX} onChange={(marginX) => set({ marginX })} step={0.5} />
-        <Num label="حاشیه‌ی بالا (mm)" value={value.marginTop} onChange={(marginTop) => set({ marginTop })} step={0.5} />
+        <Num label="فاصله‌ی بین دو برچسب (mm)" value={value.gapX} onChange={(gapX) => set({ gapX })} />
+        <Num label="فاصله‌ی عمودی A4 (mm)" value={value.gapY} onChange={(gapY) => set({ gapY })} />
+        <Num label="حاشیه‌ی کناری (mm)" value={value.marginX} onChange={(marginX) => set({ marginX })} />
+        <Num label="جابه‌جایی به پایین (mm)" value={value.marginTop} onChange={(marginTop) => set({ marginTop })} />
       </div>
       <p className="text-[11px] text-gray-500">
-        عرض هر صفحه‌ی چاپ: <b dir="ltr">{faNum(pageWidthOf(value))}mm</b> — همین عدد را در تنظیم کاغذ چاپگر بگذارید.
+        اندازه‌ی هر صفحه‌ی چاپ: <b dir="ltr">{faNum(pageWidthOf(value))} × {faNum(value.media === "a4" ? 297 : value.h)} mm</b> — همین اندازه را در تنظیم کاغذ چاپگر بگذارید، حاشیه‌ی چاپ مرورگر «هیچ» و مقیاس ۱۰۰٪.
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <label className="block col-span-2">
           <span className="block text-[11px] font-bold text-gray-500 mb-1">متن بالای برچسب (نام فروشگاه)</span>
           <input value={value.header} onChange={(e) => set({ header: e.target.value })} className={fieldCls} placeholder="اختیاری" />
         </label>
-        <Num label="قلم عنوان (pt)" value={value.titleSize} onChange={(titleSize) => set({ titleSize })} step={0.5} />
+        <Num label="قلم عنوان (pt)" value={value.titleSize} onChange={(titleSize) => set({ titleSize })} />
         <Num label="ارتفاع بارکد (٪)" value={value.barcodePct} onChange={(barcodePct) => set({ barcodePct })} />
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
