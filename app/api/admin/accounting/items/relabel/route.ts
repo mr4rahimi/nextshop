@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
+import { logActivity } from "@/lib/activity";
 import { accErrorResponse } from "@/lib/accounting/errors";
 import { readJson } from "@/lib/accounting/api";
-import { commitRelabel, lookupRelabel, relabelProgress, type RelabelStatus } from "@/lib/accounting/inventory/relabel";
+import { commitRelabel, editRelabel, lookupRelabel, relabelProgress, type RelabelStatus } from "@/lib/accounting/inventory/relabel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
  * GET ?code=… — مدل کد اسکن‌شده با تنوع‌ها و شمار برچسب
  * GET ?status=todo|partial|done&q=… — پیشرفت کدهای قبلی
  * POST `{modelId, legacyCode?, rows:[{values:{axisId:نام}, qty}]}` — ساخت تنوع نبود + شمار برچسب
+ * PATCH `{legacyCode, rows:[{itemId, qty, remove?}]}` — اصلاح شمار ثبت‌شده یا پاک کردن رنگ/سایز اشتباه
  */
 export async function GET(req: Request) {
   const guard = await requirePermission(["ACC_VIEW", "ACC_INVENTORY"]);
@@ -42,6 +44,26 @@ export async function POST(req: Request) {
     const code = b.legacyCode ?? null;
     const view = code ? await lookupRelabel(code) : null;
     return NextResponse.json(serialize({ ok: true, items, view }));
+  } catch (e) {
+    return accErrorResponse(e, "[acc-relabel]");
+  }
+}
+
+export async function PATCH(req: Request) {
+  const guard = await requirePermission("ACC_INVENTORY");
+  if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
+  try {
+    const b = await readJson<{ legacyCode?: string; rows?: { itemId?: string; qty?: unknown; remove?: boolean }[] }>(req);
+    if (!b.legacyCode) return NextResponse.json({ error: "کد قبلی را مشخص کنید" }, { status: 400 });
+    const rows = (b.rows ?? []).map((r) => ({ itemId: String(r.itemId ?? ""), qty: Number(r.qty) || 0, remove: !!r.remove }));
+    const res = await prisma.$transaction((tx) => editRelabel(tx, { legacyCode: b.legacyCode!, rows, byName: guard.access.name }), { timeout: 30_000 });
+    await logActivity({
+      action: "UPDATE",
+      entity: "OTHER",
+      entityTitle: `برچسب‌گذاری دوباره ${b.legacyCode}`,
+      summary: `اصلاح شمار برچسب کد قبلی ${b.legacyCode}${res.removed ? ` — ${res.removed} کد اشتباه پاک شد` : ""}`,
+    });
+    return NextResponse.json(serialize({ ok: true, ...res, view: await lookupRelabel(b.legacyCode) }));
   } catch (e) {
     return accErrorResponse(e, "[acc-relabel]");
   }

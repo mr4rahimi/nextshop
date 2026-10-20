@@ -19,6 +19,16 @@ export interface ReleaseNote {
 
 export const VERSIONS: ReleaseNote[] = [
   {
+    version: "2.99.1",
+    date: "1405/07/28",
+    tag: "patch",
+    title: "ویرایش تعدادهای برچسب‌گذاری دوباره",
+    changes: [
+      { type: "improvement", text: "«برچسب‌گذاری دوباره»: دکمه‌ی «ویرایش ثبت‌شده‌ها» در کارت هر کد قبلی برای اصلاح تعداد هر رنگ و سایز" },
+      { type: "improvement", text: "رنگ یا سایزی که اشتباه ساخته شده و هنوز جایی به کار نرفته از همان‌جا پاک می‌شود" },
+    ],
+  },
+  {
     version: "2.99.0",
     date: "1405/07/28",
     tag: "minor",

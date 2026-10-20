@@ -53,7 +53,7 @@ export interface RelabelView {
   } | null;
   model: { id: string; title: string; base: string; code: string | null; specs: Record<string, string>; unit: string; groupName: string | null };
   axes: { id: string; name: string; values: { id: string; value: string }[] }[];
-  items: { id: string; code: string; title: string; salePrice: bigint | null; attrs: Record<string, string>; labeled: number }[];
+  items: { id: string; code: string; title: string; salePrice: bigint | null; attrs: Record<string, string>; labeled: number; removable: boolean }[];
   /** کالای دقیقِ اسکن‌شده (کد تازه یا کد قبلیِ یک‌به‌یک) */
   hitItemId: string | null;
 }
@@ -84,6 +84,7 @@ async function buildView(db: Db, modelId: string, legacyCode: string | null, hit
     include: { values: { orderBy: [{ sortOrder: "asc" }, { value: "asc" }] } },
   });
   const labeled = await labeledByItem(db, legacyCode, model.items.map((i) => i.id));
+  const removable = new Set(legacyCode ? await removableItems(db, legacyCode, model.items.map((i) => i.id)) : []);
   const legacyLabeled = legacyCode ? ((await db.accRelabelLog.aggregate({ where: { legacyCode }, _sum: { qty: true } }))._sum.qty ?? 0) : 0;
   const sp = specsOf(model.specs);
   return {
@@ -107,6 +108,7 @@ async function buildView(db: Db, modelId: string, legacyCode: string | null, hit
       salePrice: i.salePrice,
       attrs: Object.fromEntries(i.attrs.map((a) => [a.axisId, a.valueId])),
       labeled: labeled.get(i.id) ?? 0,
+      removable: removable.has(i.id),
     })),
     hitItemId,
   };
@@ -201,6 +203,65 @@ export async function commitRelabel(tx: Tx, input: RelabelInput) {
     const logs = out.filter((o) => o.qty > 0).map((o) => ({ legacyCode: legacy.code, itemId: o.itemId, qty: o.qty, byName: input.byName ?? null }));
     if (logs.length) await tx.accRelabelLog.createMany({ data: logs });
   }
+  return out;
+}
+
+/** کالا جای دیگری به کار نرفته؟ (فقط کالای ساخته‌شده‌ی اشتباه پاک می‌شود) */
+async function itemUnused(tx: Tx, itemId: string, legacyCode: string) {
+  const [moves, lines, counts, transfers, stock, cost, variant, product, legacy, otherLogs] = await Promise.all([
+    tx.accStockMove.count({ where: { productId: itemId } }),
+    tx.accInvoiceLine.count({ where: { productId: itemId } }),
+    tx.accStockCountLine.count({ where: { productId: itemId } }),
+    tx.accTransferLine.count({ where: { productId: itemId } }),
+    tx.accStock.count({ where: { productId: itemId, qty: { not: 0 } } }),
+    tx.accProductCost.count({ where: { productId: itemId, qtyOnHand: { not: 0 } } }),
+    tx.productVariant.count({ where: { accItemId: itemId } }),
+    tx.product.count({ where: { id: itemId } }),
+    tx.accLegacyItem.count({ where: { itemId } }),
+    tx.accRelabelLog.count({ where: { itemId, legacyCode: { not: legacyCode } } }),
+  ]);
+  return moves + lines + counts + transfers + stock + cost + variant + product + legacy + otherLogs === 0;
+}
+
+export interface RelabelEditInput {
+  legacyCode: string;
+  /** تعداد درست برچسب هر کالای این کد قبلی؛ ۰ = هیچ */
+  rows: { itemId: string; qty: number; remove?: boolean }[];
+  byName?: string | null;
+}
+
+/**
+ * اصلاح شمار ثبت‌شده‌ی یک کد قبلی — تعداد اشتباه یا رنگ/سایز اشتباه.
+ * شمار هر کالا جایگزین می‌شود (موجودی و کاردکس دست نمی‌خورد، مثل خود ثبت).
+ * `remove` کالایی را که با همین صفحه ساخته شده و هیچ جای دیگری به کار نرفته پاک می‌کند.
+ */
+export async function editRelabel(tx: Tx, input: RelabelEditInput) {
+  const legacy = await tx.accLegacyItem.findUnique({ where: { code: normalizeItemCode(input.legacyCode) ?? "" } });
+  if (!legacy) throw new AccError("کد قبلی پیدا نشد", 404);
+  const ids = [...new Set(input.rows.map((r) => r.itemId))];
+  const items = await tx.accItem.findMany({ where: { id: { in: ids } }, select: { id: true, modelId: true, code: true, title: true } });
+  if (items.length !== ids.length || items.some((i) => i.modelId !== legacy.modelId)) throw new AccError("کالا مال همین کد قبلی نیست");
+  let removed = 0;
+  for (const r of input.rows) {
+    const qty = Math.floor(Number(r.qty) || 0);
+    if (qty < 0 || qty > RELABEL_MAX_QTY) throw new AccError(`تعداد هر ردیف بین ۰ تا ${RELABEL_MAX_QTY}`);
+    await tx.accRelabelLog.deleteMany({ where: { legacyCode: legacy.code, itemId: r.itemId } });
+    if (r.remove) {
+      const it = items.find((i) => i.id === r.itemId)!;
+      if (!(await itemUnused(tx, r.itemId, legacy.code))) throw new AccError(`«${it.title}» (${it.code}) جای دیگری به کار رفته و پاک نمی‌شود — فقط تعدادش را صفر کنید`, 409);
+      await tx.accItem.delete({ where: { id: r.itemId } });
+      removed++;
+      continue;
+    }
+    if (qty > 0) await tx.accRelabelLog.create({ data: { legacyCode: legacy.code, itemId: r.itemId, qty, byName: input.byName ?? null } });
+  }
+  return { removed };
+}
+
+/** کدام کالاهای یک کد قبلی پاک‌شدنی‌اند (برای نمایش دکمه) */
+export async function removableItems(db: Db, legacyCode: string, itemIds: string[]) {
+  const out: string[] = [];
+  for (const id of itemIds) if (await itemUnused(db as Tx, id, legacyCode)) out.push(id);
   return out;
 }
 

@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Printer, ScanLine, X } from "lucide-react";
+import { Pencil, Printer, ScanLine, Trash2, X } from "lucide-react";
 import { faNum, formatAmount } from "@/lib/accounting/money";
 import InventoryTabs from "./InventoryTabs";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, PageHeader, SectionTitle, Stat, inputCls } from "../ui";
@@ -24,7 +24,7 @@ interface View {
   legacy: { code: string; source: string; title: string; legacyQty: number; labeled: number; salePrice: string | null; attrs: Record<string, string> } | null;
   model: { id: string; title: string; base: string; code: string | null; specs: Record<string, string>; unit: string; groupName: string | null };
   axes: Axis[];
-  items: { id: string; code: string; title: string; salePrice: string | null; attrs: Record<string, string>; labeled: number }[];
+  items: { id: string; code: string; title: string; salePrice: string | null; attrs: Record<string, string>; labeled: number; removable: boolean }[];
   hitItemId: string | null;
 }
 type Status = "todo" | "partial" | "done";
@@ -356,6 +356,7 @@ function Worksheet({
 
   const L = view.legacy;
   const left = L ? L.legacyQty - L.labeled : null;
+  const [editing, setEditing] = useState(false);
 
   return (
     <Card className="p-4 space-y-4 ring-2 ring-blue-500/30">
@@ -484,10 +485,31 @@ function Worksheet({
             چاپ مجدد {faNum(view.items.reduce((s, i) => s + i.labeled, 0))} برچسب قبلی
           </a>
         )}
+        {L && manage && view.items.some((i) => i.labeled > 0 || i.removable) && (
+          <button onClick={() => setEditing((x) => !x)} className={btn.soft}>
+            <Pencil className="h-4 w-4" aria-hidden />
+            ویرایش ثبت‌شده‌ها
+          </button>
+        )}
         {L && left !== null && total > 0 && total !== left && left > 0 && (
           <span className="text-xs text-amber-600">جمع خانه‌ها {faNum(total)} است و مانده‌ی کد قبلی {faNum(left)}</span>
         )}
       </div>
+
+      {editing && L && (
+        <EditLogged
+          view={view}
+          valueName={valueName}
+          busy={busy}
+          setBusy={setBusy}
+          onError={onError}
+          onSaved={(v, msg) => {
+            setEditing(false);
+            onDone(v, msg);
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      )}
 
       {view.items.length > 0 && (
         <div>
@@ -513,6 +535,110 @@ function Worksheet({
 }
 
 const cellKey = (vals: string[]) => vals.join("\u0001");
+
+/**
+ * اصلاح ثبت‌شده‌های یک کد قبلی: تعداد هر رنگ/سایز را درست کنید، یا رنگ/سایزی را که اشتباه
+ * ساخته شده (و جای دیگری به کار نرفته) پاک کنید. موجودی و کاردکس دست نمی‌خورد.
+ */
+function EditLogged({
+  view,
+  valueName,
+  busy,
+  setBusy,
+  onError,
+  onSaved,
+  onCancel,
+}: {
+  view: View;
+  valueName: Map<string, string>;
+  busy: boolean;
+  setBusy: (b: boolean) => void;
+  onError: (m: string | null) => void;
+  onSaved: (v: View | null, msg: string) => void;
+  onCancel: () => void;
+}) {
+  const rows = view.items.filter((i) => i.labeled > 0 || i.removable);
+  const [qty, setQty] = useState<Record<string, string>>(() => Object.fromEntries(rows.map((i) => [i.id, String(i.labeled)])));
+  const [remove, setRemove] = useState<Record<string, boolean>>({});
+  const label = (i: View["items"][number]) =>
+    Object.values(i.attrs)
+      .map((v) => valueName.get(v))
+      .filter(Boolean)
+      .join(" ") || i.title;
+  const changed = rows.filter((i) => remove[i.id] || (Number(qty[i.id]) || 0) !== i.labeled);
+  const total = rows.reduce((s, i) => s + (remove[i.id] ? 0 : Number(qty[i.id]) || 0), 0);
+
+  async function save() {
+    if (!changed.length || busy) return;
+    if (changed.some((i) => remove[i.id]) && !window.confirm("کدهای علامت‌خورده پاک می‌شوند. اگر برچسبشان چاپ شده، آن برچسب‌ها را دور بیندازید. ادامه؟")) return;
+    onError(null);
+    setBusy(true);
+    try {
+      const d = await api<{ view: View; removed: number }>("/api/admin/accounting/items/relabel", {
+        method: "PATCH",
+        json: { legacyCode: view.legacy!.code, rows: changed.map((i) => ({ itemId: i.id, qty: Number(qty[i.id]) || 0, remove: !!remove[i.id] })) },
+      });
+      onSaved(d.view, `اصلاح شد${d.removed ? ` — ${faNum(d.removed)} کد اشتباه پاک شد` : ""}`);
+    } catch (e) {
+      onError(e instanceof Error ? e.message : "ذخیره نشد");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-amber-300 bg-amber-50/60 p-3 space-y-2 dark:border-amber-500/30 dark:bg-amber-500/5">
+      <p className="text-sm font-black">ویرایش تعدادهای ثبت‌شده</p>
+      <p className="text-[11px] text-gray-500 leading-5">
+        تعداد درست هر رنگ/سایز را بنویسید (۰ = هیچ). رنگ/سایزی که اشتباه ساخته شده و جای دیگری به کار نرفته پاک‌شدنی است. موجودی و کاردکس با این کار عوض نمی‌شود.
+      </p>
+      <div className="divide-y divide-amber-200/60 dark:divide-white/5">
+        {rows.map((i) => (
+          <div key={i.id} className={`flex items-center gap-2 py-1.5 ${remove[i.id] ? "opacity-50 line-through" : ""}`}>
+            <span dir="ltr" className="font-mono text-[11px] text-gray-500 w-20 text-left">
+              {i.code}
+            </span>
+            <span className="flex-1 min-w-0 truncate text-sm font-bold">{label(i)}</span>
+            <span className="text-[11px] text-gray-400">قبلاً {faNum(i.labeled)}</span>
+            <input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              disabled={!!remove[i.id]}
+              value={qty[i.id] ?? ""}
+              onChange={(e) => setQty({ ...qty, [i.id]: e.target.value })}
+              onFocus={(e) => e.target.select()}
+              className="w-16 px-2 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-center font-bold"
+            />
+            {i.removable && (
+              <button
+                type="button"
+                onClick={() => setRemove({ ...remove, [i.id]: !remove[i.id] })}
+                className={`p-1.5 rounded-lg ${remove[i.id] ? "bg-red-600 text-white" : "text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"}`}
+                title={remove[i.id] ? "پاک نشود" : "پاک کردن این کد اشتباه"}
+                aria-label="پاک کردن"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={save} disabled={busy || !changed.length} className={btn.primary}>
+          {busy ? "…" : "ذخیره‌ی اصلاح"}
+        </button>
+        <button onClick={onCancel} className={btn.soft}>
+          انصراف
+        </button>
+        <span className="text-xs text-gray-500">
+          جمع: {faNum(total)}
+          {view.legacy && ` از ${faNum(view.legacy.legacyQty)} موجودی قبلی`}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 /** چاپ دوباره‌ی برچسب‌های زده‌شده‌ی یک کد — همان تعداد هر کالا؛ تعداد در صفحه‌ی چاپ قابل تغییر است */
 const reprintUrl = (v: View) => {
