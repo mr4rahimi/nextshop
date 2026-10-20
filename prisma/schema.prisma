@@ -2171,6 +2171,9 @@ model Coupon {
   clubOnly Boolean  @default(false)
 
   isActive  Boolean  @default(true)
+  /// دستیار خرید سایت این کد را به مشتری پیشنهاد می‌دهد — docs/plans/storefront-chat.md فاز ۲.
+  /// پیش‌فرض خاموش: کدهای خصوصی (همکار، اینفلوئنسر) نباید به هر بازدیدکننده‌ای گفته شوند
+  showInChat Boolean @default(false)
   note      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

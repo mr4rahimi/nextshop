@@ -23,6 +23,7 @@ const DEFAULT_CHAT_SETTINGS = {
   historyLimit: 4,
   gapgptApiKey: "",
   faq: [] as { question: string; answer: string }[],
+  buttonsMode: "auto",
 };
 
 export async function GET() {

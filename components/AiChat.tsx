@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { FlowNode } from "@/lib/chat-flow";
 import { track } from "@/lib/analytics/track";
 import { EVENTS } from "@/lib/analytics/events";
+import { cartBridgeReady, sendToCart, type CartAddDetail } from "@/lib/shop-chat/cart-bridge";
 
 // ── Markdown inline parser ─────────────────────────────────────────────────
 
@@ -108,11 +109,18 @@ type ChatProduct = {
   priceText: string;
   availability: "available" | "low" | "out";
   availabilityText: string;
+  /** خالی = آنلاین فروختنی نیست (تنوع‌دار، استعلامی، ناموجود) — lib/shop-chat/search.ts `widgetCards` */
+  cart?: CartAddDetail["product"] | null;
 };
 
 type Bubble = { role: "user" | "assistant"; content: string; products?: ChatProduct[]; status?: string };
 
-function ProductCards({ products }: { products: ChatProduct[] }) {
+function ProductCards({ products, added, onAdd }: {
+  products: ChatProduct[];
+  added: Set<string>;
+  onAdd: (p: ChatProduct) => void;
+}) {
+  const canAdd = cartBridgeReady();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
       {products.map((p) => (
@@ -150,6 +158,21 @@ function ProductCards({ products }: { products: ChatProduct[] }) {
               }}>{p.availabilityText}</span>
             </div>
           </div>
+          {canAdd && p.cart && (
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!added.has(p.slug)) onAdd(p); }}
+              aria-label={`افزودن ${p.title} به سبد خرید`}
+              style={{
+                flexShrink: 0, border: "none", borderRadius: "10px", padding: "7px 10px",
+                fontSize: "11px", fontWeight: 800, fontFamily: "inherit",
+                cursor: added.has(p.slug) ? "default" : "pointer",
+                background: added.has(p.slug) ? "#dcfce7" : "#6366f1",
+                color: added.has(p.slug) ? "#15803d" : "#fff",
+              }}
+            >
+              {added.has(p.slug) ? "✓ در سبد" : "+ سبد"}
+            </button>
+          )}
         </a>
       ))}
     </div>
@@ -168,13 +191,20 @@ type ButtonItem =
   | { type: "node"; node: FlowNode }
   | { type: "category"; cat: CategoryItem }
   | { type: "other" }
+  | { type: "suggest"; text: string }
   | { type: "home" };
 
 interface ChatConfig {
   isEnabled: boolean;
   welcomeMessage: string;
+  /** «auto» = دکمه‌های پیشنهادی همان صفحه (lib/shop-chat/suggestions.ts)؛ «custom» = منوی دستی */
+  buttonsMode?: "auto" | "custom";
+  suggestions?: string[];
   flow: FlowNode[];
 }
+
+const configUrl = () =>
+  `/api/store/chat-config?path=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/")}`;
 
 // ── Per-site localStorage helpers ──────────────────────────────────────────
 
@@ -236,6 +266,7 @@ export default function AiChat() {
 }
 
 function AiChatWidget() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [config, setConfig] = useState<ChatConfig | null>(null);
 
@@ -246,6 +277,8 @@ function AiChatWidget() {
   const [apiMessages, setApiMessages] = useState<Bubble[]>([]);
 
   const [input, setInput] = useState("");
+  /** نامک کالاهایی که در این گفتگو به سبد رفته‌اند — دکمه‌ی کارت «✓ در سبد» می‌شود */
+  const [added, setAdded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
 
   // "idle" = not determined yet, "guest" = no auth, "member" = logged in
@@ -273,7 +306,7 @@ function AiChatWidget() {
 
     const siteId = typeof window !== "undefined" ? window.location.host : "";
 
-    fetch("/api/store/chat-config")
+    fetch(configUrl())
       .then((r) => r.json())
       .then((cfg: ChatConfig) => {
         setConfig(cfg);
@@ -286,9 +319,15 @@ function AiChatWidget() {
           setBubbles(local.bubbles);
           setApiMessages(local.apiMessages);
           conversationIdRef.current = local.conversationId;
-          setButtons(flowToButtons(cfg.flow, false));
-          setInputMode(false);
-          setActiveContext(null);
+          if (cfg.buttonsMode === "custom") {
+            setButtons(flowToButtons(cfg.flow, false));
+            setInputMode(false);
+            setActiveContext(null);
+          } else {
+            setButtons(local.bubbles.length > 1 ? [{ type: "home" }] : suggestButtons(cfg));
+            setInputMode(true);
+            setActiveContext({ kind: "free" });
+          }
         } else {
           initRoot(cfg);
         }
@@ -324,6 +363,22 @@ function AiChatWidget() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // ── دکمه‌های پیشنهادی با عوض شدن صفحه (فقط پیش از اولین پیام مشتری) ─────────
+  useEffect(() => {
+    if (!open || !config || config.buttonsMode === "custom" || bubbles.length > 1) return;
+    let alive = true;
+    fetch(configUrl())
+      .then((r) => r.json())
+      .then((cfg: ChatConfig) => {
+        if (!alive) return;
+        setConfig(cfg);
+        setButtons(suggestButtons(cfg));
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, open]);
+
   // ── Persist guest state to site-namespaced localStorage ──────────────────
   useEffect(() => {
     if (sessionMode !== "guest") return;
@@ -338,8 +393,21 @@ function AiChatWidget() {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
+  function suggestButtons(cfg: ChatConfig): ButtonItem[] {
+    return (cfg.suggestions ?? []).map((text) => ({ type: "suggest" as const, text }));
+  }
+
   function initRoot(cfg: ChatConfig) {
     setBubbles([{ role: "assistant", content: cfg.welcomeMessage }]);
+    setAdded(new Set());
+    if (cfg.buttonsMode !== "custom") {
+      // حالت خودکار: گفتگوی آزاد از همان اول، با دکمه‌های پیشنهادی صفحه‌ی فعلی
+      setButtons(suggestButtons(cfg));
+      setInputMode(true);
+      setActiveContext({ kind: "free" });
+      setApiMessages([]);
+      return;
+    }
     setButtons(flowToButtons(cfg.flow, false));
     setInputMode(false);
     setActiveContext(null);
@@ -493,9 +561,15 @@ function AiChatWidget() {
 
   // ── Send message ──────────────────────────────────────────────────────────
 
-  const sendMessage = useCallback(async () => {
-    const text = input.trim();
+  const addToCart = useCallback((p: ChatProduct, qty = 1) => {
+    if (!p.cart || !sendToCart({ product: p.cart, qty })) return;
+    setAdded((s) => new Set(s).add(p.slug));
+  }, []);
+
+  const sendMessage = useCallback(async (override?: string) => {
+    const text = (override ?? input).trim();
     if (!text || loading) return;
+    if (config?.buttonsMode !== "custom") setButtons([{ type: "home" }]);
 
     const userBubble: Bubble = { role: "user", content: text };
     const nextApi = [...apiMessages, userBubble];
@@ -518,6 +592,7 @@ function AiChatWidget() {
           conversationId: conversationIdRef.current,
           siteId,
           pagePath: typeof window !== "undefined" ? window.location.pathname : null,
+          cartAvailable: cartBridgeReady(),
         }),
       });
       if (!res.ok) throw new Error("server");
@@ -552,13 +627,23 @@ function AiChatWidget() {
           if (!line.startsWith("data: ")) continue;
           const payload = line.slice(6);
           if (payload === "[DONE]") break read;
-          let event: { text?: string; status?: string; final?: string; products?: ChatProduct[]; error?: string };
+          let event: {
+            text?: string; status?: string; final?: string; products?: ChatProduct[]; error?: string;
+            action?: { type: "add_to_cart"; product: CartAddDetail["product"]; qty: number } | { type: "callback_done" };
+          };
           try {
             event = JSON.parse(payload);
           } catch {
             continue;
           }
           if (event.error) failure = event.error;
+          // دستور مرورگر از ابزار دستیار — lib/shop-chat/account.ts
+          if (event.action?.type === "add_to_cart") {
+            const a = event.action;
+            if (sendToCart({ product: a.product, qty: a.qty })) setAdded((s) => new Set(s).add(a.product.slug));
+          } else if (event.action?.type === "callback_done") {
+            setCallbackDone(true);
+          }
           if (event.status) status = event.status;
           if (event.text) assistantText += event.text;
           if (typeof event.final === "string") {
@@ -588,7 +673,7 @@ function AiChatWidget() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, apiMessages, activeContext, sessionMode]);
+  }, [input, loading, apiMessages, activeContext, sessionMode, config]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -749,7 +834,9 @@ function AiChatWidget() {
                         </span>
                       )
                     }
-                    {!isUser && b.products && b.products.length > 0 && <ProductCards products={b.products} />}
+                    {!isUser && b.products && b.products.length > 0 && (
+                      <ProductCards products={b.products} added={added} onAdd={(p) => addToCart(p)} />
+                    )}
                   </div>
                 </div>
               );
@@ -763,12 +850,14 @@ function AiChatWidget() {
                     item.type === "node" ? (item.node.label || "بدون عنوان") :
                     item.type === "category" ? item.cat.title :
                     item.type === "other" ? "سایر (سوال دیگری دارم)" :
-                    "↩ بازگشت به منوی اصلی";
+                    item.type === "suggest" ? item.text :
+                    config?.buttonsMode === "custom" ? "↩ بازگشت به منوی اصلی" : "↩ گفتگوی تازه";
 
                   const onClick = () => {
                     if (item.type === "node") handleNode(item.node);
                     else if (item.type === "category") handleCategory(item.cat);
                     else if (item.type === "other") handleOther();
+                    else if (item.type === "suggest") sendMessage(item.text);
                     else goHome();
                   };
 
@@ -946,7 +1035,7 @@ function AiChatWidget() {
                   maxHeight: "100px", overflowY: "auto",
                 }}
               />
-              <button onClick={sendMessage} disabled={!input.trim() || loading} style={{
+              <button onClick={() => sendMessage()} disabled={!input.trim() || loading} style={{
                 width: "40px", height: "40px", borderRadius: "10px",
                 background: !input.trim() || loading ? "#c7d2fe" : "#6366f1",
                 border: "none", cursor: !input.trim() || loading ? "default" : "pointer",

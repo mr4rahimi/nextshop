@@ -27,6 +27,8 @@ interface ChatSettings {
   isEnabled: boolean;
   historyLimit: number;
   faq: FaqItem[];
+  /** auto = دکمه‌های پیشنهادی همان صفحه؛ custom = منوی دستی پایین — docs/plans/storefront-chat.md فاز ۲ */
+  buttonsMode: "auto" | "custom";
   flow: FlowNode[];
 }
 
@@ -44,6 +46,7 @@ const DEFAULTS: ChatSettings = {
   isEnabled: true,
   historyLimit: 4,
   faq: [],
+  buttonsMode: "auto",
   flow: [],
 };
 
@@ -403,16 +406,42 @@ export default function ChatSettingsPage() {
               دکمه‌های هدایت‌گر چت
             </h2>
             <p className="text-[11px] text-gray-400 mt-0.5">
-              مسیری که کاربر بعد از باز کردن چت طی می‌کند. هر دکمه می‌تواند زیردکمه داشته باشد
-              یا مستقیم به یک موضوع وصل شود.
+              دکمه‌هایی که مشتری بعد از باز کردن چت می‌بیند.
             </p>
           </div>
-         
-          <ChatFlowEditor
-            value={settings.flow}
-            welcomeMessage={settings.welcomeMessage}
-            onChange={(flow) => setSettings((p) => ({ ...p, flow }))}
-          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            {([
+              { value: "auto", title: "خودکار (پیشنهادی)", desc: "دستیار از روی صفحه‌ای که مشتری در آن است دکمه می‌سازد؛ مثلاً در صفحه‌ی محصول «گارانتی این کالا» و «لوازم مکمل». نیازی به چیدن ندارد." },
+              { value: "custom", title: "منوی دستی", desc: "همان منویی که پایین همین بخش می‌چینید. اگر منو خالی باشد، دکمه‌های خودکار نشان داده می‌شوند." },
+            ] as const).map((o) => (
+              <label key={o.value} className={`flex gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                settings.buttonsMode === o.value
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10"
+                  : "border-gray-200 dark:border-white/[0.08]"
+              }`}>
+                <input
+                  type="radio"
+                  name="buttonsMode"
+                  checked={settings.buttonsMode === o.value}
+                  onChange={() => setSettings((p) => ({ ...p, buttonsMode: o.value }))}
+                  className="mt-1 accent-blue-600"
+                />
+                <span>
+                  <span className="block text-xs font-black text-gray-900 dark:text-white">{o.title}</span>
+                  <span className="block text-[11px] text-gray-500 leading-6 mt-0.5">{o.desc}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {settings.buttonsMode === "custom" && (
+            <ChatFlowEditor
+              value={settings.flow}
+              welcomeMessage={settings.welcomeMessage}
+              onChange={(flow) => setSettings((p) => ({ ...p, flow }))}
+            />
+          )}
         </div>
       </div>
     </div>

@@ -1,7 +1,8 @@
 /**
  * چت فروشگاه (مشتری) — docs/plans/storefront-chat.md
  *
- * جریان SSE با رویدادهای `{status}`، `{text}`، `{final, products}`، `{error}` و `[DONE]`.
+ * جریان SSE با رویدادهای `{status}`، `{text}`، `{action}` (افزودن به سبد، تماس ثبت شد)،
+ * `{final, products}`، `{error}` و `[DONE]`.
  * `{text}` همان قالب قدیمی است؛ `{final}` متن پاک‌شده را جایگزین می‌کند و کارت محصول می‌دهد.
  *
  * ⚠️ مسیر عمومی است و هر پیام هزینه‌ی مدل دارد: سقف طول پیام، سقف تاریخچه و محدودیت
@@ -147,12 +148,19 @@ export async function POST(req: NextRequest) {
           e.type === "delta" ? { text: e.text } :
           e.type === "status" ? { status: e.label } :
           e.type === "final" ? { final: e.text, products: e.products } :
+          e.type === "action" ? { action: e.action } :
           { error: e.message };
         send(`data: ${JSON.stringify(payload)}\n\n`);
       };
 
       try {
-        const answer = await runShopChatTurn({ history, message, pagePath, hint }, emit);
+        const answer = await runShopChatTurn(
+          {
+            history, message, pagePath, hint, conversationId, siteId, cartAvailable: body.cartAvailable === true,
+            user: user ? { id: user.id, phone: user.phone, firstName: user.firstName } : null,
+          },
+          emit,
+        );
         if (answer) await saveMessage({ conversationId, role: "assistant", content: answer, context: label }).catch(() => {});
       } finally {
         clearInterval(keepalive);

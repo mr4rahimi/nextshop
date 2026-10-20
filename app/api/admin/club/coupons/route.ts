@@ -141,6 +141,7 @@ function parse(body: unknown) {
     tierIds: Array.isArray(b.tierIds) ? b.tierIds.map(String).filter(Boolean) : [],
     clubOnly: b.clubOnly === true,
     isActive: b.isActive !== false,
+    showInChat: b.showInChat === true,
     note: typeof b.note === "string" && b.note.trim() ? b.note.trim() : null,
   };
 }

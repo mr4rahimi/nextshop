@@ -10,6 +10,7 @@
 import type { ToolSpec } from "@/lib/assistant/ai-stream";
 import { categoryTree, compareProducts, productDetail, searchProducts, type SearchInput } from "./search";
 import { readPage, storeInfo } from "./store-info";
+import { activeCoupons, addToCart, checkWarranty, myOrders, requestCallback, type ToolContext } from "./account";
 
 export type ShopTool = {
   name: string;
@@ -17,7 +18,7 @@ export type ShopTool = {
   label: string;
   description: string;
   parameters: Record<string, unknown>;
-  run: (args: Record<string, unknown>) => Promise<unknown>;
+  run: (args: Record<string, unknown>, ctx: ToolContext) => Promise<unknown>;
 };
 
 const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
@@ -39,7 +40,7 @@ export const SHOP_TOOLS: ShopTool[] = [
         brand: { type: "string", description: "برند (اختیاری)" },
         min_price: { type: "number", description: "کمترین قیمت به تومان" },
         max_price: { type: "number", description: "بیشترین قیمت به تومان (بودجه‌ی مشتری)" },
-        in_stock_only: { type: "boolean", description: "فقط کالاهای موجود" },
+        in_stock_only: { type: "boolean", description: "فقط کالاهای موجود — فقط وقتی مشتری خودش گفت؛ وگرنه کالای ناموجود هم بیاید تا بگویی «الان نداریم» و جایگزین بدهی" },
         sort: { type: "string", enum: ["relevance", "price_asc", "price_desc", "newest"], description: "ارزان‌ترین = price_asc" },
       },
     },
@@ -104,6 +105,66 @@ export const SHOP_TOOLS: ShopTool[] = [
       required: ["page"],
     },
     run: (a) => readPage(str(a.page)),
+  },
+  {
+    name: "active_coupons",
+    label: "در حال بررسی تخفیف‌ها…",
+    description: "کدهای تخفیف عمومی فعال فروشگاه. وقتی مشتری دنبال تخفیف است یا برای خریدش تصمیم نگرفته. اگر خالی بود تخفیف نساز.",
+    parameters: { type: "object", properties: {} },
+    run: () => activeCoupons(),
+  },
+  {
+    name: "my_orders",
+    label: "در حال بررسی سفارش‌ها…",
+    description: "وضعیت سفارش‌های همین مشتری (فقط اگر وارد حسابش شده باشد): وضعیت، تاریخ، مبلغ، کد رهگیری مرسوله، اقلام.",
+    parameters: {
+      type: "object",
+      properties: { order_number: { type: "string", description: "شماره‌ی سفارش اگر مشتری گفته (اختیاری)" } },
+    },
+    run: (a, ctx) => myOrders(ctx, str(a.order_number) || undefined),
+  },
+  {
+    name: "check_warranty",
+    label: "در حال استعلام گارانتی…",
+    description:
+      "استعلام گارانتی ثبت‌شده‌ی یک دستگاه با شماره‌ی سریال، یا فهرست گارانتی‌های مشتری واردشده. " +
+      "برای «گارانتی دستگاهم تا کی است؟». برای «این کالا چقدر گارانتی دارد» get_product کافی است.",
+    parameters: {
+      type: "object",
+      properties: { serial_number: { type: "string", description: "شماره‌ی سریال دقیق که مشتری نوشته" } },
+    },
+    run: (a, ctx) => checkWarranty(ctx, str(a.serial_number) || undefined),
+  },
+  {
+    name: "request_callback",
+    label: "در حال ثبت درخواست تماس…",
+    description:
+      "ثبت درخواست تماس کارشناس: قیمت استعلامی، خرید عمده یا تخفیف ویژه، مشکل ورود/پرداخت، یا هر چه از تو برنمی‌آید. " +
+      "فقط وقتی مشتری موافق است. شماره‌ی موبایل را خود مشتری باید در گفتگو نوشته باشد (یا وارد حسابش شده باشد)؛ شماره نساز.",
+    parameters: {
+      type: "object",
+      properties: {
+        phone: { type: "string", description: "موبایل مشتری همان‌طور که نوشته؛ برای مشتری واردشده خالی بگذار" },
+        summary: { type: "string", description: "یک جمله: مشتری چه می‌خواهد (برای کارشناس)" },
+        product_slug: { type: "string", description: "نامک کالای مورد نظر (اختیاری)" },
+      },
+      required: ["summary"],
+    },
+    run: (a, ctx) => requestCallback(ctx, { phone: str(a.phone) || undefined, summary: str(a.summary), productSlug: str(a.product_slug) || undefined }),
+  },
+  {
+    name: "add_to_cart",
+    label: "در حال افزودن به سبد…",
+    description: "افزودن یک کالا به سبد خرید مشتری. **فقط وقتی مشتری صریحاً خواست** («بذارش تو سبد»، «همینو می‌خوام»).",
+    parameters: {
+      type: "object",
+      properties: {
+        slug: { type: "string", description: "نامک کالا از نتیجه‌ی ابزار" },
+        qty: { type: "number", description: "تعداد (پیش‌فرض ۱)" },
+      },
+      required: ["slug"],
+    },
+    run: (a, ctx) => addToCart(ctx, str(a.slug), typeof a.qty === "number" ? a.qty : 1),
   },
 ];
 

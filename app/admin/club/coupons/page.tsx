@@ -36,6 +36,7 @@ interface Coupon {
   usedCount: number;
   clubOnly: boolean;
   isActive: boolean;
+  showInChat: boolean;
   note: string | null;
   _count: { redemptions: number };
 }
@@ -59,6 +60,7 @@ const BLANK = {
   perUserLimit: "1",
   clubOnly: false,
   isActive: true,
+  showInChat: false,
   note: "",
 };
 
@@ -89,6 +91,7 @@ export default function CouponsPage() {
       perUserLimit: Number(form.perUserLimit.replace(/\D/g, "")) || 0,
       clubOnly: form.clubOnly,
       isActive: form.isActive,
+      showInChat: form.showInChat,
       note: form.note,
     });
 
@@ -235,6 +238,17 @@ export default function CouponsPage() {
             />
             <span className="text-[11px] font-bold text-gray-600 dark:text-gray-300">فعال</span>
           </label>
+          <label className="flex items-center gap-2 cursor-pointer" title="دستیار خرید سایت این کد را به مشتری‌ای که دنبال تخفیف است معرفی می‌کند">
+            <input
+              type="checkbox"
+              checked={form.showInChat}
+              onChange={(e) => setForm((f) => ({ ...f, showInChat: e.target.checked }))}
+              className="w-4 h-4 accent-primary-600"
+            />
+            <span className="text-[11px] font-bold text-gray-600 dark:text-gray-300">
+              معرفی به مشتری در دستیار خرید
+            </span>
+          </label>
         </div>
 
         <div className="flex justify-end gap-2">
@@ -305,6 +319,7 @@ export default function CouponsPage() {
                         perUserLimit: String(c.perUserLimit),
                         clubOnly: c.clubOnly,
                         isActive: c.isActive,
+                        showInChat: c.showInChat,
                         note: c.note ?? "",
                       })
                     }

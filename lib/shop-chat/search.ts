@@ -133,6 +133,36 @@ export async function cardsBySlugs(slugs: string[]): Promise<ProductCard[]> {
   return slugs.map((s) => bySlug.get(s)).filter((c): c is ProductCard => !!c);
 }
 
+/**
+ * کارت نمایشی ویجت + دادهٔ دکمهٔ «افزودن به سبد» (همان شکل `CartProduct` سایت).
+ * `cart` خالی است وقتی کالا آنلاین فروختنی نیست: تنوع‌دار (باید رنگ/سایز انتخاب شود)،
+ * قیمت استعلامی یا ناموجود. به مدل نمی‌رود — فقط به مرورگر.
+ */
+export type WidgetCard = ProductCard & {
+  cart: { id: string; title: string; slug: string; price: string; salePrice: string | null; mainImage: string | null; images: { url: string }[] } | null;
+};
+
+export async function widgetCards(slugs: string[]): Promise<WidgetCard[]> {
+  if (!slugs.length) return [];
+  const rows = await prisma.product.findMany({ where: { slug: { in: slugs }, isActive: true }, select: { id: true, ...CARD_SELECT } });
+  const bySlug = new Map(
+    rows.map((r) => {
+      const card = toCard(r);
+      const sellable = !r.hasVariants && card.price > 0 && card.availability !== "out";
+      return [
+        r.slug,
+        {
+          ...card,
+          cart: sellable
+            ? { id: r.id, title: r.title, slug: r.slug, price: String(r.price), salePrice: r.salePrice !== null ? String(r.salePrice) : null, mainImage: r.mainImage, images: r.images }
+            : null,
+        },
+      ] as const;
+    }),
+  );
+  return slugs.map((s) => bySlug.get(s)).filter((c): c is WidgetCard => !!c);
+}
+
 // ─── جستجو ───────────────────────────────────────────────────────────────────
 
 /**

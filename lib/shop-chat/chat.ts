@@ -12,7 +12,8 @@ import { getAiSettings, GAPGPT_BASE_URL } from "@/lib/ai/settings";
 import { getAssistantSetting } from "@/lib/assistant/store";
 import { AiRequestError, isDroppedConnection, streamChatCompletion, type ChatMessage } from "@/lib/assistant/ai-stream";
 import { prisma } from "@/lib/prisma";
-import { allCategories, cardsBySlugs, type ProductCard } from "./search";
+import { allCategories, widgetCards, type WidgetCard } from "./search";
+import type { ShopAction, ShopUser, ToolContext } from "./account";
 import { loadStoreBasics } from "./store-info";
 import { compact } from "./text";
 import { buildShopPrompt, type PromptInput } from "./prompt";
@@ -27,7 +28,8 @@ const MAX_CARDS = 4;
 export type ShopChatEvent =
   | { type: "status"; label: string }
   | { type: "delta"; text: string }
-  | { type: "final"; text: string; products: ProductCard[] }
+  | { type: "final"; text: string; products: WidgetCard[] }
+  | { type: "action"; action: ShopAction }
   | { type: "error"; message: string };
 
 export type ShopChatInput = {
@@ -36,6 +38,11 @@ export type ShopChatInput = {
   pagePath: string | null;
   /** دکمه‌ی هدایت‌گر قدیمی (دسته یا موضوع) — فقط راهنمای مدل است، نه فیلتر */
   hint: string | null;
+  /** مشتری واردشده (از سشن) — ابزارهای سفارش، گارانتی و تماس به آن تکیه دارند */
+  user: ShopUser | null;
+  conversationId: string;
+  siteId: string | null;
+  cartAvailable: boolean;
   /** برای آزمون و ثبت (فاز ۳): هر فراخوانی ابزار با ورودی و خروجی */
   trace?: (call: { name: string; args: string; output: string }) => void;
 };
@@ -62,6 +69,9 @@ async function resolvePage(pagePath: string | null): Promise<PromptInput["page"]
  * لینک‌ها و نشانی‌هایی که در خروجی ابزارها نبوده‌اند حذف می‌شوند (متن لینک می‌ماند).
  * `/products/x` فقط وقتی می‌ماند که ابزار همان نامک را داده باشد.
  */
+/** صفحه‌های ثابت سایت که پرامپت خودش به آن‌ها لینک می‌دهد */
+const SAFE_PATHS = new Set(["/cart", "/auth", "/warranty", "/user/orders"]);
+
 export function sanitizeAnswer(answer: string, toolText: string): string {
   const allowed = (href: string) => {
     let h = href.trim();
@@ -70,6 +80,7 @@ export function sanitizeAnswer(answer: string, toolText: string): string {
     } catch {
       /* نشانی نیمه‌کدشده — همان‌طور مقایسه شود */
     }
+    if (SAFE_PATHS.has(h.replace(/\/$/, "").split(/[?#]/)[0])) return true;
     if (h.startsWith("/")) return toolText.includes(`"${h}"`) || toolText.includes(`"${h.replace(/\/$/, "")}"`);
     return toolText.includes(h);
   };
@@ -146,7 +157,19 @@ export async function runShopChatTurn(input: ShopChatInput, emit: (e: ShopChatEv
     page,
     hint: input.hint,
     phone: s?.sitePhone?.trim() || chat.phone?.trim() || null,
+    customerName: input.user?.firstName?.trim() || null,
+    loggedIn: !!input.user,
+    phoneTail: input.user?.phone ? input.user.phone.replace(/\D/g, "").slice(-4) : null,
   });
+
+  const ctx: ToolContext = {
+    user: input.user,
+    conversationId: input.conversationId,
+    siteId: input.siteId,
+    userTexts: [...input.history.filter((m) => m.role === "user").map((m) => m.content), input.message],
+    actions: [],
+    cartAvailable: input.cartAvailable,
+  };
 
   const messages: ChatMessage[] = [
     { role: "system", content: system },
@@ -197,7 +220,7 @@ export async function runShopChatTurn(input: ShopChatInput, emit: (e: ShopChatEv
           if (!tool) return JSON.stringify({ error: "این ابزار وجود ندارد" });
           try {
             const args = call.function.arguments.trim() ? (JSON.parse(call.function.arguments) as Record<string, unknown>) : {};
-            const text = JSON.stringify(await tool.run(args), jsonSafe);
+            const text = JSON.stringify(await tool.run(args, ctx), jsonSafe);
             return text.length > TOOL_RESULT_MAX_CHARS ? `${text.slice(0, TOOL_RESULT_MAX_CHARS)}…` : text;
           } catch (error) {
             console.error(`[shop-chat] خطای ابزار ${call.function.name}`, error);
@@ -205,6 +228,8 @@ export async function runShopChatTurn(input: ShopChatInput, emit: (e: ShopChatEv
           }
         }),
       );
+      // دستورهای مرورگر (افزودن به سبد، تماس ثبت شد) همان لحظه می‌روند
+      for (const action of ctx.actions.splice(0)) emit({ type: "action", action });
       result.toolCalls.forEach((call, i) => {
         toolOutputs.push(outputs[i]);
         input.trace?.({ name: call.function.name, args: call.function.arguments, output: outputs[i] });
@@ -216,7 +241,7 @@ export async function runShopChatTurn(input: ShopChatInput, emit: (e: ShopChatEv
     const final = sanitizeAnswer(answer, toolText);
     if (!final) throw new AiRequestError("empty");
 
-    const products = await cardsBySlugs(answerSlugs(final, toolProducts(toolOutputs)).slice(0, MAX_CARDS));
+    const products = await widgetCards(answerSlugs(final, toolProducts(toolOutputs)).slice(0, MAX_CARDS));
     emit({ type: "final", text: final, products });
     return final;
   } catch (error) {

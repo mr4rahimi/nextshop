@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { track } from "@/lib/analytics/track";
 import { EVENTS } from "@/lib/analytics/events";
+import { CART_ADD_EVENT, setCartBridgeReady, type CartAddDetail } from "@/lib/shop-chat/cart-bridge";
 
 export interface CartProduct {
   id: string;
@@ -169,6 +170,21 @@ export function CartProvider({ children, isLoggedIn }: { children: ReactNode; is
     if (!isLoggedIn) localStorage.removeItem(LS_KEY);
     else fetch("/api/cart", { method: "DELETE" });
   }, [isLoggedIn]);
+
+  // دستیار خرید (چت) کالا را با رویداد مرورگر به همین سبد می‌فرستد — lib/shop-chat/cart-bridge.ts
+  useEffect(() => {
+    if (!ready) return;
+    const onAdd = (e: Event) => {
+      const d = (e as CustomEvent<CartAddDetail>).detail;
+      if (d?.product?.id) addItem(d.product, Math.max(1, d.qty || 1));
+    };
+    window.addEventListener(CART_ADD_EVENT, onAdd);
+    setCartBridgeReady(true);
+    return () => {
+      window.removeEventListener(CART_ADD_EVENT, onAdd);
+      setCartBridgeReady(false);
+    };
+  }, [ready, addItem]);
 
   if (!ready) return <>{children}</>;
 
