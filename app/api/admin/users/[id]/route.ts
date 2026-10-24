@@ -5,6 +5,7 @@ import { hashPassword } from "@/lib/auth";
 import type { Prisma } from "@prisma/client";
 import { requirePermission } from "@/lib/permissions";
 import { clearAdminGateCache } from "@/lib/admin-gate";
+import { seatError } from "@/lib/plan/license";
 
 export const runtime = "nodejs";
 
@@ -85,6 +86,16 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
     patch.staffRole = data.staffRoleId
       ? { connect: { id: data.staffRoleId } }
       : { disconnect: true };
+  }
+
+  // سقف کاربر پنل در بسته‌ی گردانوس — فقط وقتی کسی تازه ادمینِ فعال می‌شود
+  if (data.role === "ADMIN" || data.isActive === true) {
+    const before = await prisma.user.findUnique({ where: { id }, select: { role: true, isActive: true } });
+    const willBeActiveAdmin = (data.role ?? before?.role) === "ADMIN" && (has("isActive") ? data.isActive !== false : before?.isActive);
+    if (before && willBeActiveAdmin && !(before.role === "ADMIN" && before.isActive)) {
+      const err = await seatError();
+      if (err) return NextResponse.json({ error: err }, { status: 403 });
+    }
   }
 
   try {

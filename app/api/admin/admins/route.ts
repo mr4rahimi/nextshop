@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
+import { seatError } from "@/lib/plan/license";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,13 @@ export async function POST(req: Request) {
 
     if (password.length < 6) {
       return NextResponse.json({ error: "رمز عبور باید حداقل ۶ کاراکتر باشد" }, { status: 400 });
+    }
+
+    // سقف کاربر پنل در بسته‌ی گردانوس؛ ادمینِ فعالِ موجود (عوض کردن رمز) صندلی تازه نمی‌گیرد
+    const existing = await prisma.user.findUnique({ where: { phone }, select: { role: true, isActive: true } });
+    if (!(existing?.role === "ADMIN" && existing.isActive)) {
+      const err = await seatError();
+      if (err) return NextResponse.json({ error: err }, { status: 403 });
     }
 
     const passwordHash = await hashPassword(password);

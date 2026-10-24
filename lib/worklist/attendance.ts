@@ -23,6 +23,7 @@ import { prisma } from "@/lib/prisma";
 import type { StaffSessionEnd } from "@prisma/client";
 import { toJalali, fromJalali, jalaliMonthLength } from "@/lib/club/jalali";
 import { expectedMinutes, normalizeWorkHours, type DayHours } from "./work-hours";
+import { panelHas } from "@/lib/plan/license";
 
 // برچسب‌ها در `types.ts` می‌مانند تا کامپوننت کلاینت بتواند بدون کشیدنِ
 // prisma به بسته‌ی مرورگر از همان قالب‌بندی استفاده کند.
@@ -128,7 +129,8 @@ export async function attendanceGate(): Promise<{ enabled: boolean; capMin: numb
       where: { id: "singleton" },
       select: { worklistEnabled: true, worklistDailyCapMin: true },
     });
-    const enabled = s?.worklistEnabled ?? false;
+    // حضور کارکنان امکان «مدیریت تیم» بسته‌ی گردانوس است — lib/plan/license.ts
+    const enabled = (s?.worklistEnabled ?? false) && (await panelHas("team"));
     const capMin = s?.worklistDailyCapMin ?? DEFAULT_CAP_MIN;
     gateCache = { at: now, enabled, capMin };
     return { enabled, capMin };

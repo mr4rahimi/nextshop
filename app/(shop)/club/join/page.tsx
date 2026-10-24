@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { loadPointRules } from "@/lib/club/points";
 import ClubJoinClient from "@/components/club/ClubJoinClient";
+import { shopHas } from "@/lib/plan/license";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function ClubJoinPage() {
     // useSearchParams باید داخل Suspense باشد وگرنه بیلد خطا می‌دهد
     <Suspense fallback={null}>
       <ClubJoinClient
-        enabled={settings?.clubEnabled ?? false}
+        enabled={(settings?.clubEnabled ?? false) && (await shopHas("club"))}
         clubName={settings?.clubName ?? null}
         storeName={settings?.storeName ?? null}
         signupPoints={rules.onSignup}

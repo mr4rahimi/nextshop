@@ -4,6 +4,8 @@ import { matchPath, shouldSkip, normalizePath } from "@/lib/redirects";
 import { getRules, internalBase, INTERNAL_HEADER, internalToken } from "@/lib/redirectCache";
 import { canOpenPath } from "@/lib/admin-sections";
 import { getGateAccess } from "@/lib/admin-gate";
+import { featureForPath, FEATURE_LABELS } from "@/lib/plan/features";
+import { getLicenseState } from "@/lib/plan/license";
 import {
   ATTRIBUTION_COOKIE,
   ATTRIBUTION_MAX_AGE,
@@ -86,6 +88,24 @@ async function sectionAllowed(token: string | undefined, pathname: string): Prom
   }
 }
 
+/**
+ * قفل بسته‌ی گردانوس (lib/plan) — امکانی که در لایسنس نیست، بسته است.
+ * برخلاف دروازه‌ی بخش‌ها، خطای خواندن اینجا مسیر را باز می‌گذارد: getLicenseState
+ * بدون دیتابیس هم از کش و env جواب می‌دهد، و قطع پنل مشتری به‌خاطر خطای ما بدتر است.
+ * برمی‌گرداند: کلید امکانِ بسته، یا null یعنی باز.
+ */
+async function lockedFeature(pathname: string): Promise<string | null> {
+  const feature = featureForPath(pathname);
+  if (!feature) return null;
+  try {
+    const { panelFeatures } = await getLicenseState();
+    return panelFeatures === "*" || panelFeatures.includes(feature) ? null : feature;
+  } catch (e) {
+    console.error("[license] خواندن وضعیت شکست خورد:", e);
+    return null;
+  }
+}
+
 async function hasRole(token: string | undefined, roles: string[]): Promise<boolean> {
   if (!token) return false;
   const payload = await verifyToken(token);
@@ -106,6 +126,8 @@ export async function proxy(request: NextRequest) {
     if (!(await sectionAllowed(token, pathname))) {
       return NextResponse.json({ error: "به این بخش دسترسی ندارید" }, { status: 403 });
     }
+    const locked = await lockedFeature(pathname);
+    if (locked) return planLockedJson(locked);
     return NextResponse.next();
   }
 
@@ -127,6 +149,8 @@ export async function proxy(request: NextRequest) {
     if (!(await sectionAllowed(token, pathname))) {
       return NextResponse.json({ error: "به این بخش دسترسی ندارید" }, { status: 403 });
     }
+    const locked = await lockedFeature(pathname);
+    if (locked) return planLockedJson(locked);
     return NextResponse.next();
   }
 
@@ -139,6 +163,14 @@ export async function proxy(request: NextRequest) {
     }
     // صفحه‌ی بسته به کارتابل برمی‌گردد با پیام، نه به صفحه‌ی خطا —
     // کارتابل تنها جایی است که هر کارمند همیشه باز دارد
+    // امکانِ بیرون از بسته به «بسته‌ی من» می‌رود، نه به کارتابل — شاید خود
+    // کارتابل هم در بسته نباشد
+    const locked = await lockedFeature(pathname);
+    if (locked) {
+      const url = new URL("/admin/plan", request.url);
+      url.searchParams.set("locked", locked);
+      return NextResponse.redirect(url);
+    }
     if (!(await sectionAllowed(token, pathname))) {
       const url = new URL("/admin/worklist", request.url);
       url.searchParams.set("denied", pathname);
@@ -173,6 +205,14 @@ export async function proxy(request: NextRequest) {
   const response = await handleRedirects(request);
   stampAttribution(request, response);
   return response;
+}
+
+function planLockedJson(feature: string) {
+  const label = FEATURE_LABELS[feature as keyof typeof FEATURE_LABELS] ?? feature;
+  return NextResponse.json(
+    { error: `«${label}» در بسته‌ی فعلی شما نیست. برای استفاده، بسته را از panel.gardanos.ir ارتقا دهید.`, planLocked: feature },
+    { status: 403 },
+  );
 }
 
 /**

@@ -35,6 +35,7 @@ import { createPortal } from "react-dom";
 import { ChevronDown, LogOut, PanelRightClose, PanelRightOpen, Search, X } from "lucide-react";
 import { Icon, MENU_GROUPS, type NavChild, type NavGroup, type NavItem } from "./nav";
 import { canOpenPath, type GateAccess } from "@/lib/admin-sections";
+import { pathAllowedByPlan, type PanelFeatures } from "@/lib/plan/features";
 import { initialOf, useAdminMe } from "./useAdminMe";
 
 const STORAGE_KEY = "admin:sidebar";
@@ -116,9 +117,13 @@ function filterGroups(groups: NavGroup[], query: string): NavGroup[] {
  * ⚠️ فقط راحتی است، نه امنیت — مرز واقعی proxy.ts است. تا وقتی دسترسی
  * نیامده (`null`) همه‌چیز نشان داده می‌شود تا منو پرش نکند.
  */
-export function filterByAccess(groups: NavGroup[], access: GateAccess | null): NavGroup[] {
-  if (!access || access.isUnrestricted) return groups;
-  const open = (href: string) => canOpenPath(href.split("?")[0], access);
+export function filterByAccess(groups: NavGroup[], access: GateAccess | null, plan: PanelFeatures = "*"): NavGroup[] {
+  if ((!access || access.isUnrestricted) && plan === "*") return groups;
+  // امکانِ بیرون از بسته‌ی گردانوس هم پنهان می‌شود (lib/plan/features.ts)
+  const open = (href: string) => {
+    const path = href.split("?")[0];
+    return (!access || canOpenPath(path, access)) && pathAllowedByPlan(path, plan);
+  };
 
   return groups
     .map((g) => ({
@@ -468,7 +473,7 @@ export default function AdminSidebar({
 
   const access: GateAccess | null = me ? { isUnrestricted: me.isUnrestricted, permissions: me.permissions } : null;
   const groups = useMemo(
-    () => filterGroups(filterByAccess(MENU_GROUPS, access), query),
+    () => filterGroups(filterByAccess(MENU_GROUPS, access, me?.plan?.features), query),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `access` از `me` ساخته می‌شود
     [me, query],
   );

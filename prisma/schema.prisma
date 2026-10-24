@@ -891,6 +891,8 @@ model StoreSettings {
   chatSettings             Json?
   announcementBar          Json? // نوار اعلان بالای سایت — lib/announcementBar.ts
   aiSettings               Json? // تنظیمات هوش مصنوعی (کلید GapGPT، مدل، حالت‌های تصویر) — lib/ai/settings.ts
+  /// لایسنس امضاشده‌ی گردانوس — lib/plan/license.ts. خالی (و بدون GARDANOS_LICENSE) یعنی همه‌ی امکانات روشن
+  licenseToken             String?
   updatedAt                DateTime @updatedAt
 
   clubEnabled          Boolean @default(false)

@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOrCreateConversation, saveMessage } from "@/lib/chat-history";
 import { getAuthUser } from "@/lib/auth";
 import { runShopChatTurn, type ShopChatEvent } from "@/lib/shop-chat/chat";
+import { shopHas } from "@/lib/plan/license";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -115,6 +116,9 @@ export async function POST(req: NextRequest) {
   const siteId = typeof body.siteId === "string" ? body.siteId.slice(0, 120) : null;
   const pagePath = typeof body.pagePath === "string" ? body.pagePath.slice(0, 300) : null;
   const { hint, label } = flowHint((body.context as FlowContext) ?? null);
+
+  // دستیار چت امکان «هوش مصنوعی» بسته‌ی گردانوس است — lib/plan/license.ts
+  if (!(await shopHas("ai"))) return oneShot({ error: "دستیار گفتگو در حال حاضر فعال نیست." });
 
   const ip = clientIp(req);
   if (limited(`ip:${ip}`, LIMITS.ip) || limited(`s:${sessionId ?? incomingConvId ?? ip}`, LIMITS.session)) {

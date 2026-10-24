@@ -37,7 +37,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
     const access = me ? { isUnrestricted: me.isUnrestricted, permissions: me.permissions } : null;
     const out: Entry[] = [];
     const seen = new Set<string>();
-    for (const g of filterByAccess(MENU_GROUPS, access)) {
+    for (const g of filterByAccess(MENU_GROUPS, access, me?.plan?.features)) {
       for (const item of g.items) {
         const push = (e: Entry) => {
           const key = e.href + e.label;

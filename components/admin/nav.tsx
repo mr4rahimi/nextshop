@@ -311,6 +311,7 @@ export const MENU_GROUPS: NavGroup[] = [
           { href: "/admin/chat-settings", label: "تنظیمات چت", icon: "💬" },
           { href: "/admin/chat-history", label: "تاریخچه چت", icon: "💬" },
           { href: "/admin/callback-requests", label: "درخواست‌های تماس", icon: "💬" },
+          { href: "/admin/plan", label: "بسته‌ی من", icon: "📦" },
           { href: "/admin/changelog", label: "نسخه برنامه", icon: "🚀" }
         ],
       },
@@ -329,7 +330,7 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   reports: "گزارش عملکرد", create: "جدید", comments: "نظرات",
   media: "کتابخانه رسانه", guaranty: "گارانتی", requests: "درخواست‌ها",
   wallet: "کیف پول", appearance: "ظاهر سایت", "chat-settings": "تنظیمات چت", "ai-settings": "تنظیمات هوش مصنوعی",
-  changelog: "نسخه برنامه", "chat-history": "تاریخچه چت",
+  changelog: "نسخه برنامه", plan: "بسته‌ی من", "chat-history": "تاریخچه چت",
   "callback-requests": "درخواست‌های تماس", integration: "یکپارچه‌سازی",
   connections: "اتصالات", mapping: "نگاشت محصولات",
   "product-suggestions": "پیشنهادات محصول", "price-rules": "قوانین قیمت",

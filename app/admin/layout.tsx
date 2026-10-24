@@ -51,6 +51,39 @@ function DeniedBanner({ pathname }: { pathname: string }) {
   );
 }
 
+/**
+ * هشدار تمدید بسته‌ی گردانوس (lib/plan/license.ts) — ۷ روز مانده، در مهلت، یا
+ * بعد از مهلت. بدون لایسنس (سایت‌های فعلی) هیچ‌وقت دیده نمی‌شود.
+ */
+function PlanBanner({ pathname }: { pathname: string }) {
+  const plan = useAdminMe()?.plan;
+  if (!plan || pathname === "/admin/plan") return null;
+  const fa = (n: number) => n.toLocaleString("fa-IR");
+  let text: string | null = null;
+  let danger = false;
+  if (plan.status === "active" && plan.daysLeft !== null && plan.daysLeft <= 7) {
+    text = `بسته‌ی ${plan.name ?? ""} ${fa(plan.daysLeft)} روز دیگر تمدید می‌خواهد.`;
+  } else if (plan.status === "grace") {
+    text = `بسته‌ی شما منقضی شده؛ ${fa(plan.graceLeft ?? 0)} روز تا محدود شدن پنل مانده. فروشگاه باز می‌ماند.`;
+  } else if (plan.status === "expired" || plan.status === "invalid") {
+    text = "پنل به بخش‌های پایه محدود شده. فروشگاه باز است و داده‌ای پاک نشده؛ برای بازگشت همه‌ی بخش‌ها بسته را تمدید کنید.";
+    danger = true;
+  }
+  if (!text) return null;
+  return (
+    <Link
+      href="/admin/plan"
+      className={`mx-4 mt-4 lg:mx-6 block rounded-2xl border px-4 py-3 text-xs font-bold ${
+        danger
+          ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
+          : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+      }`}
+    >
+      {text} <span className="underline">بسته‌ی من</span>
+    </Link>
+  );
+}
+
 const ICON_BTN =
   "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-gray-500 transition-colors hover:bg-[var(--adm-hover)] hover:text-gray-900 dark:text-gray-400 dark:hover:text-white";
 
@@ -145,6 +178,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </header>
 
           <main className="flex-1 overflow-y-auto">
+            <PlanBanner pathname={pathname} />
             <DeniedBanner pathname={pathname} />
             {children}
           </main>

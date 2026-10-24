@@ -5,6 +5,7 @@ import { upsertClubCustomer } from "@/lib/club/profile";
 import { setClubConsent } from "@/lib/club/consent";
 import { loadPointRules } from "@/lib/club/points";
 import type { ClubSource } from "@prisma/client";
+import { shopHas } from "@/lib/plan/license";
 
 export const runtime = "nodejs";
 
@@ -32,7 +33,7 @@ export async function GET() {
   ]);
 
   return NextResponse.json({
-    enabled: settings?.clubEnabled ?? false,
+    enabled: (settings?.clubEnabled ?? false) && (await shopHas("club")),
     clubName: settings?.clubName ?? null,
     storeName: settings?.storeName ?? null,
     // امتیازی که همین حالا می‌گیرد — انگیزه‌ی اصلی عضویت است و باید دیده شود
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
     select: { clubEnabled: true },
   });
 
-  if (!settings?.clubEnabled) {
+  if (!settings?.clubEnabled || !(await shopHas("club"))) {
     return NextResponse.json({ error: "باشگاه مشتریان فعال نیست" }, { status: 400 });
   }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
 import { fromJalali, toJalali } from "@/lib/club/jalali";
+import { shopHas } from "@/lib/plan/license";
 import {
   ensureClubProfile,
   setBirthDate,
@@ -40,7 +41,7 @@ export async function GET() {
 
   return NextResponse.json({
     clubName: settings?.clubName ?? "باشگاه مشتریان",
-    clubEnabled: settings?.clubEnabled ?? false,
+    clubEnabled: (settings?.clubEnabled ?? false) && (await shopHas("club")),
     firstName: user.firstName,
     lastName: user.lastName,
     phone: user.phone,

@@ -13,12 +13,14 @@
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { shopHas } from "@/lib/plan/license";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
 export async function variantsEnabled(db: Db = prisma): Promise<boolean> {
   const s = await db.storeSettings.findUnique({ where: { id: "singleton" }, select: { variantsEnabled: true } });
-  return !!s?.variantsEnabled;
+  // بسته‌ی گردانوس هم باید تنوع را داشته باشد — lib/plan/license.ts
+  return !!s?.variantsEnabled && (await shopHas("variants"));
 }
 
 export const optionKeyOf = (opts: { attributeId: string; attributeValueId: string }[]) =>

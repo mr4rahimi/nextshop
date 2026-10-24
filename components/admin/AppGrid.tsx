@@ -16,6 +16,14 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ChevronDown, LayoutGrid, X, type LucideIcon } from "lucide-react";
 import { TONE_SOFT, TONE_TILE, type AppItem, type AppTone } from "./apps";
+import { pathAllowedByPlan } from "@/lib/plan/features";
+import { useAdminMe } from "./useAdminMe";
+
+/** کاشی‌هایی که امکانشان در بسته‌ی گردانوس نیست پنهان می‌شوند — lib/plan/features.ts */
+function usePlanApps(apps: AppItem[]): AppItem[] {
+  const plan = useAdminMe()?.plan?.features ?? "*";
+  return plan === "*" ? apps : apps.filter((a) => pathAllowedByPlan(a.href.split("?")[0], plan));
+}
 
 // ── یک کاشی ─────────────────────────────────────────────────────────────
 
@@ -116,7 +124,7 @@ function Tile({
  * پس بدون اندازه‌گیری و بدون پرش رندر می‌شود.
  */
 export function AppGrid({
-  apps,
+  apps: allApps,
   active,
   badges,
   mobileLimit = 7,
@@ -129,6 +137,7 @@ export function AppGrid({
   /** ۹ ستون در صفحه‌ی پهن — برای ماژول‌هایی که بخش زیاد دارند (۱۸ کاشی = دو ردیف) */
   wide?: boolean;
 }) {
+  const apps = usePlanApps(allApps);
   const [expanded, setExpanded] = useState(false);
   const clip = !expanded && apps.length > mobileLimit + 1;
 
@@ -169,7 +178,7 @@ export function AppLauncher({
   open,
   onClose,
   title,
-  apps,
+  apps: allApps,
   active,
   footer,
 }: {
@@ -180,6 +189,7 @@ export function AppLauncher({
   active?: string | null;
   footer?: ReactNode;
 }) {
+  const apps = usePlanApps(allApps);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();

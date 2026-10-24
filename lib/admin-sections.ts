@@ -39,6 +39,9 @@ export const ADMIN_SECTIONS: AdminSection[] = [
       "/api/admin/auth",
       "/api/admin/me",
       "/admin/changelog",
+      // «بسته‌ی من» — دیدنش برای همه؛ چسباندن لایسنس PANEL_SETTINGS می‌خواهد (docs/plans/licensing.md)
+      "/admin/plan",
+      "/api/admin/plan",
       // راهنمای هوشمند — هر کارمند می‌پرسد؛ مرز داده در ابزارهاست (docs/plans/admin-assistant.md)
       "/api/admin/assistant",
     ],

@@ -10,6 +10,8 @@
  */
 
 import { useEffect, useState } from "react";
+import type { PanelFeatures } from "@/lib/plan/features";
+import type { LicenseStatus } from "@/lib/plan/license";
 
 export interface AdminMe {
   userId: string;
@@ -17,6 +19,14 @@ export interface AdminMe {
   roleTitle: string | null;
   isUnrestricted: boolean;
   permissions: string[];
+  /** بسته‌ی گردانوس — lib/plan. نبودِ لایسنس: status "none" و features "*" */
+  plan?: {
+    status: LicenseStatus;
+    name: string | null;
+    features: PanelFeatures;
+    daysLeft: number | null;
+    graceLeft: number | null;
+  };
 }
 
 let cache: Promise<AdminMe | null> | null = null;

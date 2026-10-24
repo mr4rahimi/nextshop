@@ -23,6 +23,7 @@ import { EARNING_STATUSES } from "./deals";
 import { resolveWeights, scoreGroup, type GroupResult, type MemberInput, type RawValue } from "./score-calc";
 import { SCORE_GROUPS, type ScoreGroup } from "./score-metrics";
 import type { OrderStatus, Prisma } from "@prisma/client";
+import { panelHas } from "@/lib/plan/license";
 
 const DAY_MS = 86_400_000;
 
@@ -94,7 +95,7 @@ export async function getScoreSettings(): Promise<ScoreSettings> {
     select: { scoreEnabled: true, scoreMinVolumePct: true, scoreConversionDays: true, scoreShowRank: true },
   });
   return {
-    enabled: s?.scoreEnabled ?? false,
+    enabled: (s?.scoreEnabled ?? false) && (await panelHas("team")),
     minVolumePct: s?.scoreMinVolumePct ?? 60,
     conversionDays: s?.scoreConversionDays ?? 7,
     showRank: s?.scoreShowRank ?? false,
