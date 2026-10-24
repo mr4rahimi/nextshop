@@ -449,6 +449,11 @@ enum `StaffScoreGroup`، دو جدول تازه، دو ستون روی `User` و
 
 مرجع عملی: همان کاری که برای `uniqquestar` روی Ubuntu 24.04 انجام شد.
 
+> **بدون اینترنت جهانی؟** راهنمای کامل و آفلاین در
+> [`offline/install-guide.html`](offline/install-guide.html) است (بسته‌ی آفلاین با
+> `offline/prepare-kit.sh`). اولین ادمین و رکوردهای singleton را با
+> `npx tsx scripts/setup-new-site.ts <موبایل> '<رمز>'` بسازید، نه `create-admin.ts`.
+
 ### ۱) دسترسی SSH
 ```bash
 # اگر پسورد روت منقضی شده، اول با TTY تغییرش دهید، بعد کلید را نصب کنید
