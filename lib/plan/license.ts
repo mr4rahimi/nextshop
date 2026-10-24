@@ -188,10 +188,14 @@ export function pickToken(tokens: (string | null | undefined)[]): string | null 
 // ─── کش — proxy روی هر درخواست پنل این را می‌خواند ───────────────────────
 
 const TTL_MS = 60_000;
-let cache: { at: number; state: LicenseState } | null = null;
+
+// کش روی globalThis: proxy و routeها در یک پروسه‌اند ولی هر کدام نسخه‌ی جدای این ماژول را
+// bundle می‌کنند؛ متغیر ماژول یعنی ثبت لایسنس تازه تا یک دقیقه به proxy نمی‌رسید.
+const store = globalThis as unknown as { __gardanosLicense?: { at: number; state: LicenseState } | null };
 
 export async function getLicenseState(): Promise<LicenseState> {
   const now = Date.now();
+  const cache = store.__gardanosLicense;
   if (cache && now - cache.at < TTL_MS) return cache.state;
   let dbToken: string | null = null;
   try {
@@ -203,12 +207,12 @@ export async function getLicenseState(): Promise<LicenseState> {
     if (cache) return cache.state;
   }
   const state = stateFor(pickToken([dbToken, process.env.GARDANOS_LICENSE]), now);
-  cache = { at: now, state };
+  store.__gardanosLicense = { at: now, state };
   return state;
 }
 
 export function clearLicenseCache(): void {
-  cache = null;
+  store.__gardanosLicense = null;
 }
 
 /** امکان در پنل باز است؟ */
