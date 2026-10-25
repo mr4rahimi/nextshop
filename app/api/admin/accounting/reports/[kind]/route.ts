@@ -12,6 +12,7 @@ import { profitBy, type ProfitDim } from "@/lib/accounting/reports/profit";
 import { expenseReport, inventoryValue, treasuryFlow, vatReport } from "@/lib/accounting/reports/ops";
 import { monthlyTrend } from "@/lib/accounting/reports/trend";
 import { partyBalances, type PartyRole } from "@/lib/accounting/reports/parties";
+import { movers } from "@/lib/accounting/reports/movers";
 import { COL_DIMS, parseDim, salesAnalysis, salesDims, type ColDim } from "@/lib/accounting/reports/sales";
 
 export const runtime = "nodejs";
@@ -19,7 +20,7 @@ export const dynamic = "force-dynamic";
 
 /** گزارش‌هایی که بها یا سود نشان می‌دهند — `ACC_COST_VIEW` هم لازم است */
 const COST_REPORTS = ["pl", "balance", "trial", "profit", "inventory", "trend"];
-const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties", "sales"];
+const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties", "sales", "movers"];
 
 /**
  * GET /reports/<kind>?from&to&… — docs/plans/accounting.md بخش ۱۱.
@@ -34,6 +35,7 @@ const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties
  *   inventory ?by=category|product|warehouse&warehouseId
  *   trend     ?months=12                 روند ماهانه‌ی فروش، سود، هزینه و نقد (فاز ۱۰)
  *   parties   ?role&show=all|debtor|creditor|active&q   کل حساب اشخاص (فاز ۱۰)
+ *   movers    ?mode=slow|fast&groupBy=item|model&maxSold&maxRate&minSold&top&groupId&warehouseId&supplierId   راکد و پرفروش (بخش ۶)
  *   sales     ?by&col&groupId&warehouseId&supplierId[&row&cell]   تحلیل فروش کالا (row ← جزئیات سطر) — بها و سود فقط با ACC_COST_VIEW (webhesab-parity.md بخش ۵)
  */
 export async function GET(req: Request, { params }: { params: Promise<{ kind: string }> }) {
@@ -74,6 +76,32 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
       case "vat":
         data = await vatReport(prisma, range);
         break;
+      case "movers": {
+        const to = range.to ?? todayKey();
+        const from = range.from ?? new Date(to.getTime() - 89 * 86_400_000);
+        const num = (k: string) => (q(k) === null || q(k) === "" || !Number.isFinite(Number(q(k))) ? null : Number(q(k)));
+        const [report, groups, warehouses, suppliers] = await Promise.all([
+          movers(prisma, {
+            mode: q("mode") === "fast" ? "fast" : "slow",
+            groupBy: q("groupBy") === "model" ? "model" : "item",
+            from,
+            to,
+            groupId: q("groupId"),
+            warehouseId: q("warehouseId"),
+            supplierId: q("supplierId"),
+            maxSold: num("maxSold") ?? 0,
+            maxRatePct: num("maxRate"),
+            minSold: num("minSold") ?? 1,
+            topPct: num("top"),
+            costs: can(guard.access, "ACC_COST_VIEW"),
+          }),
+          prisma.accItemGroup.findMany({ select: { id: true, name: true, parentId: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+          prisma.accWarehouse.findMany({ where: { isActive: true }, orderBy: { code: "asc" }, select: { id: true, name: true } }),
+          prisma.accParty.findMany({ where: { isSupplier: true, isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true }, take: 500 }),
+        ]);
+        data = { ...report, from, to, groups, warehouses, suppliers };
+        break;
+      }
       case "sales": {
         const col = (COL_DIMS as readonly string[]).includes(q("col") ?? "") ? (q("col") as ColDim) : null;
         const base = {

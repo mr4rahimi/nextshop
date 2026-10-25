@@ -171,17 +171,7 @@ export async function salesAnalysis(
   const supplierOf = new Map<string, string>();
   const partyName = new Map<string, string>();
   if (needSupplier) {
-    for (const i of items) if (i.supplierId) supplierOf.set(i.id, i.supplierId);
-    const missing = items.filter((i) => !i.supplierId).map((i) => i.id);
-    if (missing.length) {
-      const last = await db.accInvoiceLine.findMany({
-        where: { productId: { in: missing }, invoice: { type: "PURCHASE", status: "ISSUED" } },
-        orderBy: [{ invoice: { date: "desc" } }, { invoice: { number: "desc" } }],
-        distinct: ["productId"],
-        select: { productId: true, invoice: { select: { partyId: true } } },
-      });
-      for (const l of last) if (l.productId) supplierOf.set(l.productId, l.invoice.partyId);
-    }
+    for (const [k, v] of await suppliersOf(db, items)) supplierOf.set(k, v);
     const parties = await db.accParty.findMany({ where: { id: { in: [...new Set(supplierOf.values())] } }, select: { id: true, name: true } });
     for (const p of parties) partyName.set(p.id, p.name);
   }
@@ -411,6 +401,23 @@ export async function salesAnalysis(
     { soldQty: 0, returnQty: 0, netQty: 0, revenue: 0n, cost: null as bigint | null, stock: null as number | null },
   );
   return { rows: list, columns: columns.map(({ key, label }) => ({ key, label })), totals, costs: opts.costs, stock: withStock };
+}
+
+/** عرضه‌کننده‌ی هر کالا: فیلد کالا، وگرنه طرف آخرین فاکتور خرید صادرشده */
+export async function suppliersOf(db: Db, items: { id: string; supplierId: string | null }[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  for (const i of items) if (i.supplierId) out.set(i.id, i.supplierId);
+  const missing = items.filter((i) => !i.supplierId).map((i) => i.id);
+  if (missing.length) {
+    const last = await db.accInvoiceLine.findMany({
+      where: { productId: { in: missing }, invoice: { type: "PURCHASE", status: "ISSUED" } },
+      orderBy: [{ invoice: { date: "desc" } }, { invoice: { number: "desc" } }],
+      distinct: ["productId"],
+      select: { productId: true, invoice: { select: { partyId: true } } },
+    });
+    for (const l of last) if (l.productId) out.set(l.productId, l.invoice.partyId);
+  }
+  return out;
 }
 
 const specsOf = (raw: unknown): Record<string, string> => {

@@ -1062,6 +1062,7 @@ model AccImportMap {                // idempotency انتقال
 | `/parties/[id]/print?mode=detail|summary` | چاپ صورت‌حساب ریز/کل | — |
 | `/reports/trend`، `/reports/parties` | روند ماهانه، حساب اشخاص | — |
 | `/reports/sales` | تحلیل فروش کالا (۲.۱۰۲.۰، webhesab-parity.md بخش ۵) | — |
+| `/reports/movers` | کالای راکد و پرفروش (۲.۱۰۳.۰، webhesab-parity.md بخش ۶) | — |
 | `/settings/years/[id]` | ویزارد بستن و بازگشایی سال | — |
 
 ### ۱۳.۲ اصول

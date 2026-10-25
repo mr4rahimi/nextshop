@@ -77,7 +77,7 @@ const FILTERABLE: Record<string, "groupId" | "warehouseId" | "supplierId"> = { g
 const pct = (bp: number | null) => (bp === null ? "—" : `${(bp / 100).toLocaleString("fa-IR", { maximumFractionDigits: 1 })}٪`);
 const NONE = "_none";
 
-function groupOptions(groups: Data["groups"]) {
+export function groupOptions(groups: { id: string; name: string; parentId: string | null }[]) {
   const out: { id: string; label: string }[] = [];
   const walk = (parent: string | null, depth: number) => {
     for (const g of groups.filter((x) => x.parentId === parent)) {
@@ -427,7 +427,8 @@ function RowLinks({ by, row }: { by: string; row: Row }) {
   );
 }
 
-function DetailSheet({
+/** پنجره‌ی جزئیات «تحلیل فروش» — کالاها و فاکتورهای پشت یک سطر؛ گزارش‌های دیگر هم استفاده می‌کنند */
+export function DetailSheet({
   params,
   title,
   onClose,
@@ -438,7 +439,7 @@ function DetailSheet({
   title: string;
   onClose: () => void;
   filterKey?: string;
-  onOnly: () => void;
+  onOnly?: () => void;
 }) {
   const [tab, setTab] = useState<"items" | "lines">("items");
   const { data, error, loading } = useReport<{ detail: Detail }>("sales", params);
@@ -451,7 +452,7 @@ function DetailSheet({
       onClose={onClose}
       title={d?.colLabel ? `${title} — ${d.colLabel}` : title}
       footer={
-        filterKey && (
+        filterKey && onOnly && (
           <button onClick={onOnly} className={`${btn.soft} w-full`}>
             کل گزارش فقط برای «{title}»، به تفکیک کالا
           </button>
@@ -460,7 +461,8 @@ function DetailSheet({
     >
       {error && <p className="text-xs font-bold text-red-600">{error}</p>}
       {loading && !d && <p className="text-xs text-gray-400">در حال بارگذاری…</p>}
-      {d && (
+      {d && !d.lineCount && <p className="py-6 text-center text-xs text-gray-400">در این بازه فروشی نداشته.</p>}
+      {d && !!d.lineCount && (
         <div className={`space-y-3 ${loading ? "opacity-60" : ""}`}>
           <Segmented
             value={tab}
