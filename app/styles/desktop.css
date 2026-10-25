@@ -1,0 +1,199 @@
+/*
+ * پیشخوان دسکتاپی پنل — والپیپر، پنجره‌های شیشه‌ای، آیکن‌ها، داک و رنگ نمودارها.
+ *
+ * فقط زیر `.dk-root` (ریشه‌ی DesktopClient) اثر دارد. رنگ سری‌ها همان پالت
+ * دسته‌ای اعتبارسنجی‌شده‌ی گزارش‌های حسابداری است (SERIES در reports/kit.tsx)؛
+ * حالت شب پله‌های جدای همان رنگ‌هاست، نه برعکس‌کردن خودکار.
+ *
+ * مستندات: docs/features/admin-desktop.md
+ */
+
+.dk-root {
+  --dk-glass: rgb(255 255 255 / 0.72);
+  --dk-glass-strong: rgb(255 255 255 / 0.9);
+  --dk-glass-border: rgb(255 255 255 / 0.7);
+  --dk-edge: rgb(15 23 42 / 0.08);
+  --dk-title: rgb(248 250 252 / 0.75);
+  --dk-ink: #0f172a;
+  --dk-ink-2: #475569;
+  --dk-ink-3: #94a3b8;
+  --dk-grid: rgb(15 23 42 / 0.07);
+  --dk-shadow: 0 1px 1px rgb(15 23 42 / 0.03), 0 10px 30px -12px rgb(30 41 80 / 0.22);
+
+  /* سری‌ها — پالت دسته‌ای مرجع، ترتیب ثابت */
+  --dk-s1: #2a78d6;
+  --dk-s2: #eb6834;
+  --dk-s3: #1baf7a;
+  --dk-s4: #eda100;
+  --dk-prev: #a3adbd;
+  /* ترتیبی (نقشه‌ی حرارتی) — یک رنگ، روشن به تیره */
+  --dk-seq-0: #eef4fc;
+  --dk-seq-1: #c6dbf5;
+  --dk-seq-2: #8fb8ec;
+  --dk-seq-3: #4f8fe0;
+  --dk-seq-4: #2a6bc4;
+  --dk-seq-5: #1a4a8f;
+
+  --dk-wall-1: #dfe9fb;
+  --dk-wall-2: #f3e8ff;
+  --dk-wall-3: #d6f5ec;
+  --dk-wall-base: #eef2f9;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100%;
+  color: var(--dk-ink);
+}
+
+.dark .dk-root {
+  --dk-glass: rgb(20 26 38 / 0.68);
+  --dk-glass-strong: rgb(22 28 42 / 0.92);
+  --dk-glass-border: rgb(255 255 255 / 0.08);
+  --dk-edge: rgb(255 255 255 / 0.06);
+  --dk-title: rgb(255 255 255 / 0.03);
+  --dk-ink: #eef1f6;
+  --dk-ink-2: #b4bdcc;
+  --dk-ink-3: #7a8598;
+  --dk-grid: rgb(255 255 255 / 0.07);
+  --dk-shadow: 0 1px 1px rgb(0 0 0 / 0.3), 0 18px 40px -16px rgb(0 0 0 / 0.7);
+
+  --dk-s1: #3987e5;
+  --dk-s2: #d95926;
+  --dk-s3: #199e70;
+  --dk-s4: #c98500;
+  --dk-prev: #5d6778;
+  --dk-seq-0: #1a2232;
+  --dk-seq-1: #1e3556;
+  --dk-seq-2: #22508a;
+  --dk-seq-3: #2f6fc0;
+  --dk-seq-4: #4f93e6;
+  --dk-seq-5: #8cbcf3;
+
+  --dk-wall-1: #10234a;
+  --dk-wall-2: #2a1848;
+  --dk-wall-3: #0b3238;
+  --dk-wall-base: #070a12;
+}
+
+/* ── والپیپر ───────────────────────────────────────────────────────────── */
+
+.dk-wallpaper {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background:
+    radial-gradient(60rem 40rem at 85% -10%, var(--dk-wall-1), transparent 60%),
+    radial-gradient(50rem 36rem at 0% 30%, var(--dk-wall-2), transparent 60%),
+    radial-gradient(56rem 40rem at 70% 100%, var(--dk-wall-3), transparent 60%),
+    var(--dk-wall-base);
+}
+/* دانه‌ی خیلی ریز تا شیب‌ها نوار نیندازند */
+.dk-wallpaper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image: radial-gradient(rgb(15 23 42 / 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.dark .dk-wallpaper::after { background-image: radial-gradient(rgb(255 255 255 / 0.04) 1px, transparent 1px); }
+
+/* ── پنجره ─────────────────────────────────────────────────────────────── */
+
+.dk-window {
+  background: var(--dk-glass);
+  border: 1px solid var(--dk-glass-border);
+  box-shadow: var(--dk-shadow), inset 0 1px 0 rgb(255 255 255 / 0.5);
+  backdrop-filter: blur(22px) saturate(1.5);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+}
+.dark .dk-window { box-shadow: var(--dk-shadow), inset 0 1px 0 rgb(255 255 255 / 0.05); }
+
+.dk-titlebar {
+  background: var(--dk-title);
+  border-bottom: 1px solid var(--dk-edge);
+}
+
+/* نوار رنگی باریک بالای هر پنجره — رنگ دسته */
+.dk-tone { position: relative; }
+.dk-tone::before {
+  content: "";
+  position: absolute;
+  inset-inline: 18px;
+  top: -1px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: var(--tone);
+  opacity: 0.85;
+}
+.dk-tone-blue { --tone: #2a78d6; }
+.dk-tone-emerald { --tone: #1baf7a; }
+.dk-tone-amber { --tone: #eda100; }
+.dk-tone-violet { --tone: #6250d6; }
+.dk-tone-rose { --tone: #e87ba4; }
+.dk-tone-cyan { --tone: #0ea5c6; }
+.dk-tone-orange { --tone: #eb6834; }
+.dk-tone-slate { --tone: #64748b; }
+.dk-tone-indigo { --tone: #4f46e5; }
+.dk-tone-teal { --tone: #0d9488; }
+.dk-tone-fuchsia { --tone: #c026d3; }
+.dk-tone-lime { --tone: #65a30d; }
+
+/* ── آیکن ──────────────────────────────────────────────────────────────── */
+
+.dk-app {
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.dk-app:hover { background: rgb(255 255 255 / 0.55); }
+.dark .dk-app:hover { background: rgb(255 255 255 / 0.06); }
+.dk-app:active { transform: scale(0.96); }
+
+.dk-app-img {
+  filter: drop-shadow(0 6px 8px rgb(15 23 42 / 0.16));
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.22s ease;
+}
+.dk-app:hover .dk-app-img,
+.dk-app:focus-visible .dk-app-img {
+  transform: translateY(-3px) scale(1.06);
+  filter: drop-shadow(0 10px 12px rgb(15 23 42 / 0.22));
+}
+.dark .dk-app-img { filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.45)); }
+
+/* نتیجه‌ی انتخاب‌شده با کیبورد در جستجو */
+.dk-app[data-selected="true"] { background: var(--adm-accent-soft); box-shadow: inset 0 0 0 1.5px var(--adm-accent); }
+
+/* ── داک ───────────────────────────────────────────────────────────────── */
+
+.dk-dock {
+  background: var(--dk-glass-strong);
+  border: 1px solid var(--dk-glass-border);
+  box-shadow: 0 20px 40px -18px rgb(15 23 42 / 0.35), 0 0 0 1px var(--dk-edge);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+}
+.dk-dock-item img { transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); transform-origin: bottom center; }
+.dk-dock-item:hover img,
+.dk-dock-item:focus-visible img { transform: translateY(-6px) scale(1.25); }
+.dk-dock-item:hover + .dk-dock-item img { transform: translateY(-2px) scale(1.1); }
+.dk-dock-item:has(+ .dk-dock-item:hover) img { transform: translateY(-2px) scale(1.1); }
+
+.dk-dock-tip {
+  opacity: 0;
+  transform: translate(50%, 4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  pointer-events: none;
+}
+.dk-dock-item:hover .dk-dock-tip,
+.dk-dock-item:focus-visible .dk-dock-tip { opacity: 1; transform: translate(50%, 0); }
+
+/* ── نمودار ────────────────────────────────────────────────────────────── */
+
+.dk-chart text { font-family: inherit; }
+.dk-heat-cell { transition: stroke 0.1s ease; stroke: transparent; }
+.dk-heat-cell:hover { stroke: var(--dk-ink); stroke-width: 1.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dk-app-img, .dk-dock-item img { transition: none !important; }
+}

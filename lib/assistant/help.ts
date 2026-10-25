@@ -22,6 +22,7 @@ import { canSeePage, visiblePages } from "./pages";
 const TOPIC_PAGES: Record<string, string> = {
   myWork: "/admin/worklist",
   plan: "/admin/plan",
+  desktop: "/admin",
   allTasks: "/admin/worklist/tasks",
   quickForm: "/admin/worklist",
   outcome: "/admin/worklist",

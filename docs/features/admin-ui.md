@@ -15,6 +15,7 @@
 | قاب کارتابل | [`components/admin/worklist/WorklistShell.tsx`](../../components/admin/worklist/WorklistShell.tsx) + `app/admin/worklist/layout.tsx` |
 | قاب حسابداری | [`components/admin/accounting/AccountingShell.tsx`](../../components/admin/accounting/AccountingShell.tsx) |
 | آیکن‌های رنگی کاشی‌ها | `public/panel-icons/*.svg` |
+| پیشخوان دسکتاپی `/admin` (آیکن‌های Fluent در `public/panel-icons/fluent`) | [`admin-desktop.md`](admin-desktop.md) |
 
 ---
 

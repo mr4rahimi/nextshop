@@ -58,6 +58,13 @@ export default function AdminOrdersPage() {
     setLoading(false);
   }, []);
 
+  // ?status= از نمودار وضعیت پیشخوان می‌آید (docs/features/admin-desktop.md)
+  useEffect(() => {
+    const s = new URLSearchParams(window.location.search).get("status");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- پارامتر آدرس فقط بعد از mount در دسترس است
+    if (s && STATUS_MAP[s]) setStatusFilter(s);
+  }, []);
+
   useEffect(() => { fetchOrders(q, statusFilter, page); }, [q, statusFilter, page, fetchOrders]);
 
   function handleSearch(e: React.FormEvent) {
