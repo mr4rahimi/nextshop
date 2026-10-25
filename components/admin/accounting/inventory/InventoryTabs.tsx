@@ -14,6 +14,7 @@ const TABS = [
   { href: "/admin/accounting/inventory/coding", label: "کدگذاری و برچسب" },
   { href: "/admin/accounting/inventory/online-prices", label: "قیمت آنلاین" },
   { href: "/admin/accounting/inventory/transfers", label: "حواله‌ها" },
+  { href: "/admin/accounting/inventory/adjustments", label: "ورود و خروج" },
   { href: "/admin/accounting/inventory/counts", label: "انبارگردانی" },
   { href: "/admin/accounting/inventory/warehouses", label: "انبارها" },
   { href: "/admin/accounting/inventory/opening", label: "اول دوره" },

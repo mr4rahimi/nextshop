@@ -22,9 +22,16 @@ const MOVE_LABELS: Record<string, string> = {
   ADJUST_OUT: "انبارگردانی — کسری",
 };
 
+/** ورود/خروج دستی جهتش از نوع حرکت و دلیلش از `note` حرکت (webhesab-parity.md بخش ۷) */
+function moveLabel(r: { type: string; sourceType: string; note?: string | null }): string {
+  if (r.sourceType === "AccStockAdjust") return `${r.type === "ADJUST_IN" ? "ورود دستی" : "خروج دستی"}${r.note ? ` — ${r.note}` : ""}`;
+  return MOVE_LABELS[r.type] ?? r.type;
+}
+
 function sourceHref(type: string, id: string): string | null {
   if (type === "AccTransfer") return `/admin/accounting/inventory/transfers#${id}`;
   if (type === "AccStockCount") return `/admin/accounting/inventory/counts/${id}`;
+  if (type === "AccStockAdjust") return `/admin/accounting/inventory/adjustments/${id}`;
   if (type === "OpeningInventory") return "/admin/accounting/inventory/opening";
   return null;
 }
@@ -42,6 +49,7 @@ interface Row {
   totalCost?: string;
   balanceValue?: string;
   balanceQty?: number;
+  note?: string | null;
 }
 interface Data {
   product: { id: string; title: string; sku: string; unit: string; mainImage: string | null; isActive: boolean; hasProduct: boolean; link: { productId: string; product: string; variant: string | null } | null; stock: number | null; lowStockThreshold: number };
@@ -160,10 +168,10 @@ export default function KardexClient({ productId }: { productId: string }) {
                 <span className="min-w-0">
                   {href ? (
                     <Link href={href} className="font-bold hover:text-blue-600">
-                      {MOVE_LABELS[r.type] ?? r.type}
+                      {moveLabel(r)}
                     </Link>
                   ) : (
-                    <span className="font-bold">{MOVE_LABELS[r.type] ?? r.type}</span>
+                    <span className="font-bold">{moveLabel(r)}</span>
                   )}
                   <span className="block text-[11px] text-gray-400">
                     <span className="md:hidden">{formatJalali(new Date(r.date))} · </span>

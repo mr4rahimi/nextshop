@@ -971,13 +971,13 @@ model StoreSettings {
 
   // ── امتیاز عملکرد کارکنان — docs/features/staff-worklist.md بخش ۱۵ ──
   /// پیش‌فرض خاموش: نه منو، نه کارت امتیاز، تا مدیر عمداً روشن کند
-  scoreEnabled           Boolean @default(false)
+  scoreEnabled        Boolean @default(false)
   /// کف واجد شرایط بودن: حجم کمتر از این درصدِ میانه‌ی گروه یعنی بیرون از رتبه‌بندی
-  scoreMinVolumePct      Int     @default(60)
+  scoreMinVolumePct   Int     @default(60)
   /// پنجره‌ی تبدیل تماس فروش به سفارش، بر حسب روز
-  scoreConversionDays    Int     @default(7)
+  scoreConversionDays Int     @default(7)
   /// رتبه‌ی خودِ کارمند در کارت «امتیاز من» دیده شود؟ نام دیگران هرگز.
-  scoreShowRank          Boolean @default(false)
+  scoreShowRank       Boolean @default(false)
 }
 
 model MenuItem {
@@ -2172,13 +2172,13 @@ model Coupon {
   /// فقط اعضایی که رضایت باشگاه دارند
   clubOnly Boolean  @default(false)
 
-  isActive  Boolean  @default(true)
+  isActive   Boolean  @default(true)
   /// دستیار خرید سایت این کد را به مشتری پیشنهاد می‌دهد — docs/plans/storefront-chat.md فاز ۲.
   /// پیش‌فرض خاموش: کدهای خصوصی (همکار، اینفلوئنسر) نباید به هر بازدیدکننده‌ای گفته شوند
-  showInChat Boolean @default(false)
-  note      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  showInChat Boolean  @default(false)
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   redemptions CouponRedemption[]
 
@@ -4570,6 +4570,62 @@ model AccTransfer {
   @@index([date])
 }
 
+/// دلیل ورود/خروج دستی کالا (= «انواع جابجایی کالا» وب حساب) — webhesab-parity.md بخش ۷
+model AccMoveReason {
+  id        String   @id @default(cuid())
+  name      String
+  /// IN | OUT
+  direction String
+  /// سرفصل طرف مقابل موجودی کالا (معین برگ، نه خزانه)
+  accountId String
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  adjusts AccStockAdjust[]
+
+  @@unique([direction, name])
+}
+
+/// ورود یا خروج دستی کالا با دلیل — ثبت مستقیم، اشتباه با ابطال
+model AccStockAdjust {
+  id            String       @id @default(cuid())
+  yearId        String
+  number        Int
+  date          DateTime     @db.Date
+  /// IN | OUT
+  direction     String
+  reasonId      String
+  warehouseId   String
+  partyId       String?
+  note          String?
+  status        AccDocStatus @default(POSTED)
+  voucherId     String?      @unique
+  voidReason    String?
+  createdByName String
+  createdAt     DateTime     @default(now())
+
+  reason AccMoveReason        @relation(fields: [reasonId], references: [id], onDelete: Restrict)
+  lines  AccStockAdjustLine[]
+
+  @@unique([yearId, number])
+  @@index([date])
+  @@index([reasonId])
+}
+
+model AccStockAdjustLine {
+  id        String  @id @default(cuid())
+  adjustId  String
+  productId String
+  qty       Int
+  note      String?
+
+  adjust AccStockAdjust @relation(fields: [adjustId], references: [id], onDelete: Cascade)
+
+  @@index([adjustId])
+  @@index([productId])
+}
+
 model AccTransferLine {
   id         String @id @default(cuid())
   transferId String
@@ -4614,9 +4670,9 @@ model AccStockCount {
 }
 
 model AccStockCountLine {
-  id         String @id @default(cuid())
-  countId    String
-  productId  String
+  id           String   @id @default(cuid())
+  countId      String
+  productId    String
   /// موجودی دفتری در تاریخ شمارش — در لحظه‌ی ثبت نوشته می‌شود
   systemQty    Int?
   countedQty   Int

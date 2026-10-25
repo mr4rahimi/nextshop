@@ -125,3 +125,4 @@ export async function voidTransfer(tx: Tx, id: string, reason: string, actor: Ac
 
 export { OPENING_INV_SOURCE, openingInvKey, saveOpeningInventory, type OpeningInvLine } from "./opening";
 export { createCount, postCount, voidCount } from "./counts";
+export { createAdjust, voidAdjust } from "./adjust";

@@ -1064,6 +1064,7 @@ model AccImportMap {                // idempotency انتقال
 | `/reports/trend`، `/reports/parties` | روند ماهانه، حساب اشخاص | — |
 | `/reports/sales` | تحلیل فروش کالا (۲.۱۰۲.۰، webhesab-parity.md بخش ۵) | — |
 | `/reports/movers` | کالای راکد و پرفروش (۲.۱۰۳.۰، webhesab-parity.md بخش ۶) | — |
+| `/inventory/adjustments`، `/inventory/adjustments/[id]` | ورود و خروج دستی کالا با دلیل (۲.۱۰۴.۰، webhesab-parity.md بخش ۷) | — |
 | `/settings/years/[id]` | ویزارد بستن و بازگشایی سال | — |
 
 ### ۱۳.۲ اصول

@@ -359,7 +359,14 @@ export async function qtyAt(tx: Tx, productId: string, warehouseId: string, day:
  * بررسی کافی بودن موجودی انبار برای خروج (حواله) — هم در تاریخ حواله، هم امروز.
  * `day = null` یعنی فقط موجودی فعلی (ابطال حواله).
  */
-export async function assertAvailable(tx: Tx, lines: { productId: string; qty: number; title?: string }[], warehouseId: string, day: Date | null) {
+export async function assertAvailable(
+  tx: Tx,
+  lines: { productId: string; qty: number; title?: string }[],
+  warehouseId: string,
+  day: Date | null,
+  /** متن پیام — پیش‌فرض حواله */
+  words: { where: string; verb: string } = { where: "انبار مبدأ", verb: "منتقل کرد" },
+) {
   const need = new Map<string, number>();
   for (const l of lines) need.set(l.productId, (need.get(l.productId) ?? 0) + l.qty);
   for (const [productId, qty] of need) {
@@ -367,7 +374,7 @@ export async function assertAvailable(tx: Tx, lines: { productId: string; qty: n
     const available = day ? Math.min(await qtyAt(tx, productId, warehouseId, day), now) : now;
     if (available < qty) {
       const title = lines.find((l) => l.productId === productId)?.title ?? "یک کالا";
-      throw new AccError(`موجودی «${title}» در انبار مبدأ ${faNum(Math.max(0, available))} است؛ ${faNum(qty)} نمی‌شود منتقل کرد`);
+      throw new AccError(`موجودی «${title}» در ${words.where} ${faNum(Math.max(0, available))} است؛ ${faNum(qty)} نمی‌شود ${words.verb}`);
     }
   }
 }

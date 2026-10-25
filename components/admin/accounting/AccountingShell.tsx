@@ -43,6 +43,7 @@ const QUICK: AppItem[] = [
   { href: "/admin/accounting/treasury?new=1", label: "صندوق یا بانک تازه", icon: Landmark, tone: "cyan", perm: ["ACC_SETTINGS"], img: "quick-new-treasury" },
   { href: "/admin/accounting/opening", label: "مانده‌های اول دوره", icon: Calculator, tone: "lime", perm: ["ACC_SETTINGS"], img: "quick-opening" },
   { href: "/admin/accounting/inventory/counts", label: "انبارگردانی", icon: ClipboardCheck, tone: "amber", perm: ["ACC_INVENTORY", "ACC_STOCK_COUNT"], img: "quick-count" },
+  { href: "/admin/accounting/inventory/adjustments", label: "ورود و خروج کالا", icon: ArrowUpFromLine, tone: "orange", perm: ["ACC_INVENTORY"], img: "quick-stock-adjust" },
   { href: "/admin/accounting/inventory/transfers", label: "حواله‌ی انتقال", icon: Truck, tone: "slate", perm: ["ACC_INVENTORY"], img: "quick-stock-transfer" },
   { href: "/admin/accounting/vouchers/new", label: "سند دستی", icon: FilePen, tone: "fuchsia", perm: ["ACC_VOUCHER"], img: "quick-voucher" },
 ];

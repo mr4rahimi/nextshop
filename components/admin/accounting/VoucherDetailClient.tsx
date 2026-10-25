@@ -113,6 +113,14 @@ export default function VoucherDetailClient({ id }: { id: string }) {
               دیدن فاکتور ←
             </Link>
           )}
+          {v.source === "INVENTORY" && v.sourceId && (
+            <Link
+              href={v.sourceId.startsWith("adjust:") ? `/admin/accounting/inventory/adjustments/${v.sourceId.slice(7)}` : `/admin/accounting/inventory/counts/${v.sourceId}`}
+              className="text-[10px] font-bold text-blue-600"
+            >
+              {v.sourceId.startsWith("adjust:") ? "دیدن سند ورود/خروج کالا ←" : "دیدن انبارگردانی ←"}
+            </Link>
+          )}
           <Badge>سال مالی {faNum(v.year.title)}</Badge>
           {v.status === "VOID" && <Badge tone="red">باطل شده</Badge>}
         </div>
