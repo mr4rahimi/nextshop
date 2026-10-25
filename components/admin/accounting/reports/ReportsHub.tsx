@@ -28,6 +28,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
   {
     title: "فروش و سود",
     items: [
+      { href: "/admin/accounting/reports/sales", icon: "🛍️", title: "تحلیل فروش کالا", desc: "فروش به تفکیک گروه، کالا، عرضه‌کننده، رنگ و سایز، انبار، صندوق و ماه — با جزئیات هر عدد", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/reports/profit", icon: "🏷️", title: "سود هر کالا، دسته و کانال", desc: "فروش، بهای تمام‌شده و درصد سود؛ سایت، تلفنی و بازارگاه‌ها", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
       { href: "/admin/accounting/reports/parties", icon: "👥", title: "حساب اشخاص (کل حساب)", desc: "مانده‌ی ابتدا، گردش و مانده‌ی پایان همه‌ی اشخاص؛ بدهکاران و بستانکاران", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/installments", icon: "🗓️", title: "اقساط", desc: "قسط‌های سررسیدگذشته، این هفته و این ماه — فروش و خرید", perm: ["ACC_VIEW"] },

@@ -12,13 +12,14 @@ import { profitBy, type ProfitDim } from "@/lib/accounting/reports/profit";
 import { expenseReport, inventoryValue, treasuryFlow, vatReport } from "@/lib/accounting/reports/ops";
 import { monthlyTrend } from "@/lib/accounting/reports/trend";
 import { partyBalances, type PartyRole } from "@/lib/accounting/reports/parties";
+import { COL_DIMS, parseDim, salesAnalysis, salesDims, type ColDim } from "@/lib/accounting/reports/sales";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** گزارش‌هایی که بها یا سود نشان می‌دهند — `ACC_COST_VIEW` هم لازم است */
 const COST_REPORTS = ["pl", "balance", "trial", "profit", "inventory", "trend"];
-const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties"];
+const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties", "sales"];
 
 /**
  * GET /reports/<kind>?from&to&… — docs/plans/accounting.md بخش ۱۱.
@@ -33,6 +34,7 @@ const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties
  *   inventory ?by=category|product|warehouse&warehouseId
  *   trend     ?months=12                 روند ماهانه‌ی فروش، سود، هزینه و نقد (فاز ۱۰)
  *   parties   ?role&show=all|debtor|creditor|active&q   کل حساب اشخاص (فاز ۱۰)
+ *   sales     ?by&col&groupId&warehouseId&supplierId[&row&cell]   تحلیل فروش کالا (row ← جزئیات سطر) — بها و سود فقط با ACC_COST_VIEW (webhesab-parity.md بخش ۵)
  */
 export async function GET(req: Request, { params }: { params: Promise<{ kind: string }> }) {
   const { kind } = await params;
@@ -72,6 +74,30 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
       case "vat":
         data = await vatReport(prisma, range);
         break;
+      case "sales": {
+        const col = (COL_DIMS as readonly string[]).includes(q("col") ?? "") ? (q("col") as ColDim) : null;
+        const base = {
+          range,
+          by: parseDim(q("by")),
+          col,
+          filters: { groupId: q("groupId"), warehouseId: q("warehouseId"), supplierId: q("supplierId") },
+          costs: can(guard.access, "ACC_COST_VIEW"),
+        };
+        // ?row=&cell= ← پنجره‌ی جزئیات همان سطر (و خانه)
+        if (q("row")) {
+          data = await salesAnalysis(prisma, { ...base, detail: { row: q("row")!, col: q("cell") } });
+          break;
+        }
+        const [report, dims, suppliers, groups, warehouses] = await Promise.all([
+          salesAnalysis(prisma, base),
+          salesDims(prisma),
+          prisma.accParty.findMany({ where: { isSupplier: true, isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true }, take: 500 }),
+          prisma.accItemGroup.findMany({ select: { id: true, name: true, parentId: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+          prisma.accWarehouse.findMany({ where: { isActive: true }, orderBy: { code: "asc" }, select: { id: true, name: true } }),
+        ]);
+        data = { ...report, dims, suppliers, groups, warehouses };
+        break;
+      }
       case "expenses":
         data = await expenseReport(prisma, range, compare);
         break;

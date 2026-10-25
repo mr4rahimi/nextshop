@@ -127,6 +127,8 @@ export interface ItemInput {
   isActive?: boolean;
   barcodes?: string[];
   groupId?: string | null;
+  /** عرضه‌کننده (شخص) — خالی = طرف آخرین فاکتور خرید */
+  supplierId?: string | null;
 }
 
 /** فقط ماتریس (`matrix.ts`) — مدل و ترکیب ویژگی کالا */
@@ -149,6 +151,10 @@ async function assertGroup(db: Db, groupId: string | null | undefined) {
   if (groupId && !(await db.accItemGroup.findUnique({ where: { id: groupId }, select: { id: true } }))) throw new AccError("گروه کالا پیدا نشد");
 }
 
+async function assertSupplier(db: Db, supplierId: string | null | undefined) {
+  if (supplierId && !(await db.accParty.findUnique({ where: { id: supplierId }, select: { id: true } }))) throw new AccError("عرضه‌کننده پیدا نشد");
+}
+
 async function setBarcodes(db: Db, itemId: string, raw: string[]) {
   const codes = [...new Set(raw.map(normalizeItemCode).filter((x): x is string => !!x))];
   const taken = await db.accItemBarcode.findMany({ where: { barcode: { in: codes }, itemId: { not: itemId } }, include: { item: { select: { title: true } } } });
@@ -164,9 +170,11 @@ export async function createItem(db: Prisma.TransactionClient, input: ItemInput,
   const code = normalizeItemCode(input.code) ?? (await allocItemCode(db, { groupId: input.groupId, modelId: place?.modelId }));
   await assertCodeFree(db, code, null);
   await assertGroup(db, input.groupId);
+  await assertSupplier(db, input.supplierId);
   const item = await db.accItem.create({
     data: {
       groupId: input.groupId || null,
+      supplierId: input.supplierId || null,
       ...(place
         ? { modelId: place.modelId, attrKey: attrKeyOf(place.attrs), attrs: { create: place.attrs.map((a) => ({ axisId: a.axisId, valueId: a.valueId })) } }
         : {}),
@@ -212,6 +220,10 @@ export async function updateItem(db: Prisma.TransactionClient, id: string, input
   if (input.groupId !== undefined) {
     await assertGroup(db, input.groupId);
     data.group = input.groupId ? { connect: { id: input.groupId } } : { disconnect: true };
+  }
+  if (input.supplierId !== undefined) {
+    await assertSupplier(db, input.supplierId);
+    data.supplier = input.supplierId ? { connect: { id: input.supplierId } } : { disconnect: true };
   }
   const item = await db.accItem.update({ where: { id }, data });
   if (input.barcodes) await setBarcodes(db, id, input.barcodes);

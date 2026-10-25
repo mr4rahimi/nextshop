@@ -24,6 +24,7 @@ interface ItemData {
     sellOnline: boolean;
     isActive: boolean;
     groupId: string | null;
+    supplierId: string | null;
     barcodes: { barcode: string }[];
     aliases: { id: string; code: string; source: string }[];
     model: { id: string; title: string } | null;
@@ -44,6 +45,17 @@ export interface ItemInitial {
 }
 
 type Group = { id: string; path: string };
+
+/** عرضه‌کننده‌ها برای فرم کالا — دیدن اشخاص مجوز جدا دارد؛ نبودش فقط فیلد را خالی می‌گذارد */
+function useSuppliers() {
+  const [list, setList] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    api<{ parties: { id: string; name: string }[] }>("/api/admin/accounting/parties?role=supplier&take=300")
+      .then((d) => setList(d.parties))
+      .catch(() => {});
+  }, []);
+  return list;
+}
 
 export function useItemGroups() {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -70,6 +82,7 @@ export default function ItemForm({
   const [auto, setAuto] = useState("");
   const [copyOf, setCopyOf] = useState<ItemInitial | null>(null);
   const groups = useItemGroups();
+  const suppliers = useSuppliers();
   const [f, setF] = useState({
     code: "",
     title: initial?.title ?? "",
@@ -81,6 +94,7 @@ export default function ItemForm({
     sellOnline: initial?.sellOnline ?? true,
     isActive: true,
     groupId: initial?.groupId ?? "",
+    supplierId: "",
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +119,7 @@ export default function ItemForm({
           sellOnline: i.sellOnline,
           isActive: i.isActive,
           groupId: i.groupId ?? "",
+          supplierId: i.supplierId ?? "",
         });
       })
       .catch((e) => setError(e.message));
@@ -124,6 +139,7 @@ export default function ItemForm({
         barcodes: f.barcodes.split(/[\s,،]+/).filter(Boolean),
         sellOnline: f.sellOnline,
         groupId: f.groupId || null,
+        ...(suppliers.length || f.supplierId ? { supplierId: f.supplierId || null } : {}),
         ...(itemId ? { isActive: f.isActive } : {}),
       };
       const r = itemId
@@ -224,6 +240,19 @@ export default function ItemForm({
               ))}
             </select>
           </Field>
+          {(suppliers.length > 0 || f.supplierId) && (
+            <Field label="عرضه‌کننده" hint="برای گزارش فروش به تفکیک عرضه‌کننده؛ خالی = طرف آخرین فاکتور خرید">
+              <select value={f.supplierId} onChange={(e) => setF({ ...f, supplierId: e.target.value })} className={inputCls}>
+                <option value="">از آخرین خرید</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+                {f.supplierId && !suppliers.some((s) => s.id === f.supplierId) && <option value={f.supplierId}>(عرضه‌کننده‌ی فعلی)</option>}
+              </select>
+            </Field>
+          )}
           <Field label="بارکد" hint="هر بارکد در یک خط؛ می‌توانید با بارکدخوان اسکن کنید.">
             <textarea value={f.barcodes} onChange={(e) => setF({ ...f, barcodes: e.target.value })} className={`${inputCls} font-mono`} dir="ltr" rows={2} />
           </Field>

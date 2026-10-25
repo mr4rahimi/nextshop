@@ -4115,6 +4115,7 @@ model AccParty {
   moneyDocs        AccMoneyDoc[]
   cheques          AccCheque[]
   installmentPlans AccInstallmentPlan[]
+  suppliedItems    AccItem[]
 
   @@index([mobile])
   @@index([name])
@@ -4302,6 +4303,8 @@ model AccItem {
   modelId      String?
   /// «axisId:valueId|…» مرتب — یک ترکیب ویژگی در هر مدل فقط یک کالا (فاز ۲)
   attrKey      String?
+  /// عرضه‌کننده‌ی کالا؛ خالی = طرف آخرین فاکتور خرید (webhesab-parity.md بخش ۵)
+  supplierId   String?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   barcodes     AccItemBarcode[]
@@ -4309,12 +4312,14 @@ model AccItem {
   attrs        AccItemAttr[]
   group        AccItemGroup?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
   model        AccItemModel?    @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  supplier     AccParty?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@unique([modelId, attrKey])
   @@index([title])
   @@index([isActive])
   @@index([groupId])
   @@index([modelId])
+  @@index([supplierId])
 }
 
 /// گروه کالا — درختی (پوشاک ← پیراهن)

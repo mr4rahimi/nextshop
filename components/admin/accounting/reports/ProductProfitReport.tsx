@@ -2,6 +2,7 @@
 
 /** سود هر کالا، دسته یا کانال — فروش و بها از فاکتور و کاردکس (بخش ۱۱) */
 
+import Link from "next/link";
 import { useState } from "react";
 import { faNum } from "@/lib/accounting/money";
 import { RangeBar, rangeFor, type Range } from "../Statement";
@@ -109,7 +110,15 @@ export default function ProductProfitReport() {
           >
             {data.rows.map((r) => (
               <tr key={r.key} className="hover:bg-gray-50 dark:hover:bg-white/5">
-                <td className={`${td} max-w-[18rem] truncate`}>{r.label}</td>
+                <td className={`${td} max-w-[18rem] truncate`}>
+                  {by === "product" && r.key !== "_service" ? (
+                    <Link href={`/admin/accounting/inventory/${r.key}`} className="font-bold text-blue-700 dark:text-blue-300 hover:underline" title="کاردکس کالا">
+                      {r.label}
+                    </Link>
+                  ) : (
+                    r.label
+                  )}
+                </td>
                 <td className={`${tdNum} tabular-nums`}>{faNum(r.qty)}</td>
                 <td className={tdNum}><Amt v={r.revenue} /></td>
                 <td className={tdNum}><Amt v={r.cost} muted /></td>
