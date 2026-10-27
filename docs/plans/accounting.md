@@ -1067,6 +1067,7 @@ model AccImportMap {                // idempotency انتقال
 | `/reports/movers` | کالای راکد و پرفروش (۲.۱۰۳.۰، webhesab-parity.md بخش ۶) | — |
 | `/inventory/adjustments`، `/inventory/adjustments/[id]` | ورود و خروج دستی کالا با دلیل (۲.۱۰۴.۰، webhesab-parity.md بخش ۷) | — |
 | `/inventory/transfers?view=transit` | حواله‌ی دو مرحله‌ای: در راه و تأیید دریافت (۲.۱۰۶.۰، webhesab-parity.md بخش ۸) | — |
+| `/price-check` | کیوسک چک کردن قیمت، تمام‌صفحه؛ `?w=` انبار (۲.۱۰۷.۰، webhesab-parity.md بخش ۹) | — |
 | `/settings/years/[id]` | ویزارد بستن و بازگشایی سال | — |
 
 ### ۱۳.۲ اصول

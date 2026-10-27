@@ -46,6 +46,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/orders", label: "سفارش‌ها", icon: fx("Shopping bags"), badge: "orders" },
       { href: "/admin/worklist/phone-order", label: "سفارش تلفنی", icon: fx("Telephone receiver") },
       { href: "/admin/accounting/pos", label: "صندوق فروشگاه", icon: fx("Convenience store"), keywords: "pos" },
+      { href: "/admin/accounting/price-check", label: "چک کردن قیمت", icon: fx("Magnifying glass tilted left"), keywords: "کیوسک قیمت بارکد" },
       { href: "/admin/accounting/sales", label: "فاکتور فروش", icon: fx("Receipt") },
       { href: "/admin/accounting/invoices/new", label: "فاکتور تازه", icon: fx("Page facing up") },
       { href: "/admin/shipping", label: "ارسال و پرداخت", icon: fx("Delivery truck") },

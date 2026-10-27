@@ -9,7 +9,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, Lock, Monitor, Pencil, Plus, Printer, Unlock, UserRound, Zap } from "lucide-react";
+import { ChevronLeft, Lock, Monitor, Pencil, Plus, Printer, ScanSearch, Unlock, UserRound, Zap } from "lucide-react";
 import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import { formatJalali } from "@/lib/club/jalali";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, Field, inputCls, PageHeader, Sheet, Stat } from "../ui";
@@ -70,11 +70,16 @@ export default function PosHub() {
         help="accountingPosHub"
         desc="هر پیشخوان یک صندوق با انبار، صندوق نقد و کارتخوان خودش. صندوق را باز کنید، بفروشید و آخر روز ببندید."
         actions={
-          can("ACC_SALES") ? (
-            <Link href="/admin/accounting/pos/quick" className={btn.soft}>
-              <Zap className="h-4 w-4" aria-hidden /> فروش سریع ساده
+          <>
+            <Link href="/admin/accounting/price-check" className={btn.soft}>
+              <ScanSearch className="h-4 w-4" aria-hidden /> چک کردن قیمت
             </Link>
-          ) : undefined
+            {can("ACC_SALES") && (
+              <Link href="/admin/accounting/pos/quick" className={btn.soft}>
+                <Zap className="h-4 w-4" aria-hidden /> فروش سریع ساده
+              </Link>
+            )}
+          </>
         }
       />
       {error && <ErrorText>{error}</ErrorText>}

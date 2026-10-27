@@ -123,8 +123,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <>{children}</>;
   }
 
-  // صفحه‌ی صندوق فروشگاه تمام‌صفحه است — نه سایدبار، نه هدر (فقط تم و رنگ‌های پنل)
-  if (pathname?.startsWith("/admin/accounting/pos/register/")) {
+  // صفحه‌ی صندوق فروشگاه و کیوسک قیمت تمام‌صفحه‌اند — نه سایدبار، نه هدر (فقط تم و رنگ‌های پنل)
+  if (pathname?.startsWith("/admin/accounting/pos/register/") || pathname === "/admin/accounting/price-check") {
     return (
       <ThemeProvider>
         <div className="admin-shell" dir="rtl">

@@ -88,8 +88,8 @@ export default function AccountingShell({ children }: { children: ReactNode }) {
 
   // چاپ فاکتور بی‌قاب است (قاب پنل هم در app/admin/layout.tsx کنار می‌رود)
   if (pathname.endsWith("/print")) return <>{children}</>;
-  // صفحه‌ی صندوق فروشگاه تمام‌صفحه و قاب‌خودش است
-  if (pathname.startsWith("/admin/accounting/pos/register/")) return <div className="acc-theme">{children}</div>;
+  // صفحه‌ی صندوق فروشگاه و کیوسک قیمت تمام‌صفحه و قاب‌خودشان‌اند
+  if (pathname.startsWith("/admin/accounting/pos/register/") || pathname === "/admin/accounting/price-check") return <div className="acc-theme">{children}</div>;
   // صفحه‌ی راه‌اندازی قاب نمی‌خواهد — تمام‌صفحه است
   if (pathname.startsWith("/admin/accounting/setup")) return <div className="acc-theme p-4 lg:p-6 max-w-3xl mx-auto text-gray-900 dark:text-gray-100">{children}</div>;
 

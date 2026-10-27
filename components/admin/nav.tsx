@@ -357,7 +357,7 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   events: "رویدادهای مالی", setup: "راه‌اندازی", new: "تازه",
   sales: "فروش", purchases: "خرید", money: "دریافت و پرداخت", cheques: "چک‌ها", expenses: "هزینه‌ها", pl: "سود و زیان", balance: "ترازنامه", trial: "تراز آزمایشی", aging: "سنی بدهی", profit: "سود کالا و کانال", vat: "ارزش افزوده", invoices: "فاکتورها", edit: "ویرایش", print: "چاپ",
   inventory: "کالا و انبار", warehouses: "انبارها", transfers: "حواله‌ها", counts: "انبارگردانی",
-  installments: "اقساط", calendar: "تقویم سررسیدها", pos: "صندوق فروشگاه", "pos/quick": "فروش سریع ساده", "pos/shifts": "شیفت‌ها", "pos/register": "صندوق", income: "درآمد", years: "سال مالی", batch: "صدور گروهی",
+  installments: "اقساط", calendar: "تقویم سررسیدها", pos: "صندوق فروشگاه", "pos/quick": "فروش سریع ساده", "pos/shifts": "شیفت‌ها", "pos/register": "صندوق", "price-check": "چک کردن قیمت", income: "درآمد", years: "سال مالی", batch: "صدور گروهی",
   trend: "روند ماهانه", "reports/parties": "حساب اشخاص",
   // کلید «پدر/بخش» بر کلید تک‌بخشی مقدم است — همان نام بخش در جای دیگر معنای دیگری دارد
   "accounting/reports": "گزارش‌ها", "reports/treasury": "گردش صندوق و بانک",

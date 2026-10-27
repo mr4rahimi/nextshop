@@ -35,6 +35,10 @@ export default async function AdminDashboardPage() {
   // داشبورد فروش و موجودی کل مجموعه را نشان می‌دهد؛ کارمندی که به گزارش یا
   // سفارش دسترسی ندارد مستقیم به کارتابلش می‌رود (lib/admin-sections.ts)
   const access = await getStaffAccess();
+  // کاربر فقط-کیوسک (تبلت کنار قفسه) مستقیم به چک کردن قیمت
+  if (access && !access.isUnrestricted && access.permissions.length > 0 && access.permissions.every((p) => p === "ACC_PRICE_CHECK")) {
+    redirect("/admin/accounting/price-check");
+  }
   if (access && !canAny(access, ["PANEL_REPORTS", "PANEL_ORDERS"])) {
     redirect("/admin/worklist");
   }
