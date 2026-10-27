@@ -16,12 +16,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const doc = await prisma.accStockAdjust.findUnique({ where: { id }, include: { reason: true, lines: true } });
   if (!doc) return NextResponse.json({ error: "سند پیدا نشد" }, { status: 404 });
   const costs = can(guard.access, "ACC_COST_VIEW");
-  const [items, warehouse, party, account, moves] = await Promise.all([
+  const [items, warehouse, party, account, moves, transfer] = await Promise.all([
     prisma.accItem.findMany({ where: { id: { in: doc.lines.map((l) => l.productId) } }, select: { id: true, title: true, code: true, unit: true } }),
     prisma.accWarehouse.findUnique({ where: { id: doc.warehouseId }, select: { id: true, name: true } }),
     doc.partyId ? prisma.accParty.findUnique({ where: { id: doc.partyId }, select: { id: true, name: true } }) : null,
     prisma.accAccount.findUnique({ where: { id: doc.reason.accountId }, select: { id: true, code: true, name: true } }),
     costs ? prisma.accStockMove.findMany({ where: { sourceType: "AccStockAdjust", sourceId: id }, select: { sourceLineId: true, totalCost: true } }) : [],
+    prisma.accTransfer.findFirst({ where: { shortageAdjustId: id }, select: { id: true, number: true } }),
   ]);
   const im = new Map(items.map((i) => [i.id, i]));
   const cost = new Map(moves.map((m) => [m.sourceLineId, m.totalCost]));
@@ -32,6 +33,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       warehouse,
       party,
       account,
+      transfer,
       can: { manage: can(guard.access, "ACC_INVENTORY"), costs },
     }),
   );

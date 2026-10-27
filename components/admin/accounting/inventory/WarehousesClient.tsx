@@ -3,6 +3,7 @@
 /** تعریف انبارها — قابل فروش بودن یعنی موجودی‌اش در سایت دیده می‌شود */
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { faNum } from "@/lib/accounting/money";
 import InventoryTabs from "./InventoryTabs";
 import { api, Badge, btn, Card, ErrorText, Field, inputCls, PageHeader, Sheet } from "../ui";
@@ -16,8 +17,11 @@ interface W {
   sellable: boolean;
   isDefault: boolean;
   isActive: boolean;
+  receiveConfirm: boolean;
   products: number;
   qty: number;
+  /** کالای در راه به این انبار (حواله‌ی دو مرحله‌ای) */
+  incoming: number;
 }
 
 export default function WarehousesClient() {
@@ -58,6 +62,7 @@ export default function WarehousesClient() {
                   <Badge>کد {faNum(w.code)}</Badge>
                   {w.isDefault && <Badge tone="blue">پیش‌فرض</Badge>}
                   {w.sellable ? <Badge tone="green">موجودی در سایت</Badge> : <Badge tone="amber">فقط انبار — در سایت نه</Badge>}
+                  {w.receiveConfirm && <Badge tone="blue">دریافت با تأیید</Badge>}
                   {!w.isActive && <Badge tone="red">غیرفعال</Badge>}
                 </div>
               </div>
@@ -70,6 +75,14 @@ export default function WarehousesClient() {
             {w.address && <p className="text-xs text-gray-500 mt-2">{w.address}</p>}
             <p className="text-xs text-gray-500 mt-3">
               {faNum(w.products)} کالا · {faNum(w.qty)} عدد
+              {w.incoming > 0 && (
+                <>
+                  {" · "}
+                  <Link href={`/admin/accounting/inventory/transfers?view=transit&dst=${w.id}`} className="font-bold text-amber-600 hover:underline">
+                    {faNum(w.incoming)} عدد در راه
+                  </Link>
+                </>
+              )}
             </p>
           </Card>
         ))}
@@ -89,7 +102,7 @@ export default function WarehousesClient() {
 }
 
 function WarehouseForm({ item, onClose, onSaved }: { item: W | null; onClose: () => void; onSaved: () => void }) {
-  const [f, setF] = useState({ name: item?.name ?? "", address: item?.address ?? "", sellable: item?.sellable ?? true, isDefault: item?.isDefault ?? false, isActive: item?.isActive ?? true });
+  const [f, setF] = useState({ name: item?.name ?? "", address: item?.address ?? "", sellable: item?.sellable ?? true, isDefault: item?.isDefault ?? false, isActive: item?.isActive ?? true, receiveConfirm: item?.receiveConfirm ?? false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function save() {
@@ -129,6 +142,15 @@ function WarehouseForm({ item, onClose, onSaved }: { item: W | null; onClose: ()
           <span>
             موجودی این انبار در سایت قابل فروش است
             <span className="block text-[11px] text-gray-400">برای انبار ضایعات، امانی یا رزرو خاموش کنید. فقط برای انبار خالی عوض می‌شود.</span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" className="mt-1" checked={f.receiveConfirm} onChange={(e) => setF({ ...f, receiveConfirm: e.target.checked })} />
+          <span>
+            دریافت با تأیید
+            <span className="block text-[11px] text-gray-400">
+              حواله به این انبار «در راه» می‌ماند تا کسی در این انبار رسیدن کالا را تأیید کند و تعداد رسیده را بزند. برای شعبه‌ای که کالا با پیک یا باربری می‌رسد.
+            </span>
           </span>
         </label>
         <label className="flex items-center gap-2 text-sm">

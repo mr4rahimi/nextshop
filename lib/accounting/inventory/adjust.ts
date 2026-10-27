@@ -14,6 +14,7 @@ import { nextNumber } from "../ledger/sequence";
 import { postVoucher, rebuildVoucher, voidVoucher, type Actor, type LineInput } from "../ledger/post";
 import { applyMoves, assertAvailable, registerCostRebuilder, removeMoves } from "./stock";
 import { exactItem, itemTitles, normalizeItemCode } from "./items";
+import { faNum } from "../money";
 
 type Tx = Prisma.TransactionClient;
 type Db = Tx | typeof prisma;
@@ -159,11 +160,16 @@ export async function createAdjust(tx: Tx, input: AdjustInput, actor: Actor) {
   return tx.accStockAdjust.findUniqueOrThrow({ where: { id: doc.id } });
 }
 
-export async function voidAdjust(tx: Tx, id: string, reason: string, actor: Actor) {
+export async function voidAdjust(tx: Tx, id: string, reason: string, actor: Actor, opts: { fromTransfer?: boolean } = {}) {
   const doc = await tx.accStockAdjust.findUnique({ where: { id }, include: { lines: true } });
   if (!doc) throw new AccError("سند پیدا نشد", 404);
   if (doc.status === "VOID") return doc;
   if (!reason.trim()) throw new AccError("دلیل ابطال را بنویسید");
+  // کسری دریافت حواله با خود حواله باطل می‌شود — جدا باطل شود، حواله کسری‌اش را گم می‌کند
+  if (!opts.fromTransfer) {
+    const t = await tx.accTransfer.findFirst({ where: { shortageAdjustId: id, status: "POSTED" }, select: { number: true } });
+    if (t) throw new AccError(`این سند کسری دریافت حواله‌ی ${faNum(t.number)} است؛ اگر اشتباه است، خود حواله را باطل کنید`);
+  }
   // برگرداندن ورود یعنی خروج — کالا باید هنوز در انبار باشد
   if (doc.direction === "IN") {
     const titles = await itemTitles(doc.lines.map((l) => l.productId), tx);

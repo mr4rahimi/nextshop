@@ -17,7 +17,7 @@ export const fx = (name: string) =>
   `/panel-icons/fluent/${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.webp`;
 
 /** شمارنده‌هایی که روی آیکن به شکل نشان قرمز می‌نشینند — `page.tsx` پرشان می‌کند */
-export type BadgeKey = "orders" | "comments" | "callbacks" | "guaranty";
+export type BadgeKey = "orders" | "comments" | "callbacks" | "guaranty" | "transfers";
 
 export interface DesktopApp {
   href: string;
@@ -80,7 +80,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/inventory", label: "کالا و انبار", icon: fx("File cabinet") },
       { href: "/admin/accounting/inventory/quick", label: "ورود سریع کالا", icon: fx("High voltage") },
       { href: "/admin/accounting/inventory/warehouses", label: "انبارها", icon: fx("Department store") },
-      { href: "/admin/accounting/inventory/transfers", label: "حواله‌ها", icon: fx("Left-right arrow") },
+      { href: "/admin/accounting/inventory/transfers", label: "حواله‌ها", icon: fx("Left-right arrow"), badge: "transfers", keywords: "در راه تأیید دریافت" },
       { href: "/admin/accounting/inventory/adjustments", label: "ورود و خروج دستی", icon: fx("Up-down arrow") },
       { href: "/admin/accounting/inventory/counts", label: "انبارگردانی", icon: fx("Abacus") },
       { href: "/admin/accounting/inventory/groups", label: "گروه کالا", icon: fx("Card index dividers") },

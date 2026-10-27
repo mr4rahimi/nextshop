@@ -27,6 +27,8 @@ interface Data {
   warehouse: { id: string; name: string } | null;
   party: { id: string; name: string } | null;
   account: { code: string; name: string } | null;
+  /** کسری دریافت این حواله — ابطال از خود حواله (webhesab-parity.md بخش ۸) */
+  transfer: { id: string; number: number } | null;
   can: { manage: boolean; costs: boolean };
 }
 
@@ -88,6 +90,11 @@ export default function AdjustmentDetail({ id }: { id: string }) {
           </Link>
         )}
         {doc.note && <span className="w-full text-xs text-gray-600 dark:text-gray-300">{doc.note}</span>}
+        {data.transfer && (
+          <Link href={`/admin/accounting/inventory/transfers?id=${data.transfer.id}`} className="w-full text-xs font-bold text-amber-600">
+            کسری دریافت حواله‌ی {faNum(data.transfer.number)} — ابطال فقط از خود حواله ←
+          </Link>
+        )}
         {doc.voidReason && <span className="w-full text-xs text-red-600">باطل: {doc.voidReason}</span>}
       </Card>
 
@@ -123,7 +130,7 @@ export default function AdjustmentDetail({ id }: { id: string }) {
       </Card>
 
       <ErrorText>{error}</ErrorText>
-      {data.can.manage && doc.status === "POSTED" && (
+      {data.can.manage && doc.status === "POSTED" && !data.transfer && (
         <button onClick={voidIt} disabled={busy} className={btn.danger}>
           ابطال
         </button>

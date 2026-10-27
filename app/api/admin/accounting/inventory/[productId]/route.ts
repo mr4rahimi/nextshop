@@ -6,6 +6,7 @@ import { can, requirePermission } from "@/lib/permissions";
 import { rangeFrom } from "@/lib/accounting/api";
 import { itemCards } from "@/lib/accounting/inventory/items";
 import { itemLinks } from "@/lib/accounting/inventory/to-product";
+import { IN_TRANSIT } from "@/lib/accounting/inventory/docs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ productI
 
   const where: Prisma.AccStockMoveWhereInput = { productId, ...(warehouseId ? { warehouseId } : {}) };
   const dateWhere = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
-  const [moves, stocks, cost, warehouses, openingQty] = await Promise.all([
+  const [moves, stocks, cost, warehouses, openingQty, transit] = await Promise.all([
     prisma.accStockMove.findMany({
       where: { ...where, ...(from || to ? { date: dateWhere } : {}) },
       orderBy: [{ date: "asc" }, { createdAt: "asc" }, { id: "asc" }],
@@ -48,6 +49,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ productI
     prisma.accProductCost.findUnique({ where: { productId } }),
     prisma.accWarehouse.findMany({ orderBy: [{ isDefault: "desc" }, { code: "asc" }] }),
     from ? prisma.accStockMove.aggregate({ where: { ...where, date: { lt: from } }, _sum: { qty: true } }) : null,
+    // در راه: از مبدأ خارج شده، هنوز در مقصد نیست — ارزشش جزو مقصد (webhesab-parity.md بخش ۸)
+    prisma.accTransferLine.findMany({
+      where: { productId, transfer: IN_TRANSIT },
+      select: { qty: true, transfer: { select: { id: true, number: true, toWarehouseId: true } } },
+    }),
   ]);
 
   // موجودی جاریِ همان انبار (یا کل) — کاردکس سراسری balanceQty دارد، ولی فیلتر انبار جمع جدا می‌خواهد
@@ -72,6 +78,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ productI
     serialize({
       product,
       stocks,
+      transit: transit.map((l) => ({ ...l.transfer, qty: l.qty })),
       warehouses,
       opening: openingQty?._sum.qty ?? 0,
       rows,

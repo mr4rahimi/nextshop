@@ -6,6 +6,7 @@ import { pathAllowedByPlan } from "@/lib/plan/features";
 import { getLicenseState } from "@/lib/plan/license";
 import { DESKTOP_CATEGORIES } from "@/components/admin/desktop/registry";
 import DesktopClient from "@/components/admin/desktop/DesktopClient";
+import { IN_TRANSIT } from "@/lib/accounting/inventory/docs";
 
 export const metadata = { title: "پیشخوان | پنل مدیریت" };
 
@@ -59,6 +60,7 @@ export default async function AdminDashboardPage() {
     pendingBlogComments,
     pendingCallbacks,
     pendingGuaranty,
+    transfersInTransit,
     dailySalesRaw,
     dailyOrdersRaw,
     dailyUsersRaw,
@@ -87,6 +89,7 @@ export default async function AdminDashboardPage() {
     prisma.blogComment.count({ where: { status: "PENDING" } }),
     prisma.callbackRequest.count({ where: { status: "pending" } }),
     prisma.guarantyRequest.count({ where: { status: "PENDING" } }),
+    prisma.accTransfer.count({ where: IN_TRANSIT }),
     prisma.$queryRaw<{ date: Date; total: bigint }[]>`
       SELECT DATE_TRUNC('day', "createdAt") AS date,
              COALESCE(SUM("grandTotal"), 0)::bigint AS total
@@ -157,6 +160,7 @@ export default async function AdminDashboardPage() {
         comments: pendingReviews + pendingBlogComments,
         callbacks: pendingCallbacks,
         guaranty: pendingGuaranty,
+        transfers: transfersInTransit,
       }}
       totals={{ users: totalUsers, products: totalProducts, outOfStock }}
       orderStats={orderStats.map((s) => ({

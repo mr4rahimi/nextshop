@@ -8,6 +8,7 @@
 import { accountIndex, dateWhere, natural, sumBig, sumsByAccount, type Db, type DateRange } from "./common";
 import { balanceOf, NOT_CARRY } from "../ledger/balances";
 import { itemTitles } from "../inventory/items";
+import { IN_TRANSIT } from "../inventory/docs";
 
 // ── ارزش افزوده ──
 
@@ -91,20 +92,47 @@ export async function treasuryFlow(db: Db, range: DateRange) {
  * تعداد هر انبار × میانگین موزون سراسری (تصمیم ۷). ارزش هر کالا در همه‌ی
  * انبارها = `AccProductCost.totalValue`؛ تقسیم بین انبارها به نسبت تعداد است.
  * کنارش مانده‌ی حساب «موجودی کالا» در دفتر برای تطبیق.
+ *
+ * کالای در راه (حواله‌ی دو مرحله‌ای) جزو **انبار مقصد** است (webhesab-parity.md بخش ۸) — وگرنه
+ * جمع انبارها از ارزش کاردکس کمتر می‌شد.
  */
 export async function inventoryValue(db: Db, opts: { warehouseId: string | null; by: "category" | "product" | "warehouse" }) {
-  const [stocks, costs, warehouses, ledger] = await Promise.all([
+  const [onHand, transit, costs, warehouses, ledger] = await Promise.all([
     db.accStock.findMany({ where: { qty: { not: 0 }, ...(opts.warehouseId ? { warehouseId: opts.warehouseId } : {}) } }),
+    db.accTransferLine.findMany({
+      where: { transfer: { ...IN_TRANSIT, ...(opts.warehouseId ? { toWarehouseId: opts.warehouseId } : {}) } },
+      select: { productId: true, qty: true, transfer: { select: { toWarehouseId: true } } },
+    }),
     db.accProductCost.findMany(),
     db.accWarehouse.findMany({ select: { id: true, name: true } }),
     balanceOf(db, { account: { systemKey: "INVENTORY" } }),
   ]);
+  // در راه با موجودی همان انبار یکی می‌شود، پیش از ارزش‌گذاری — وگرنه گرد کردن دو تکه ۱ ریال کم می‌آورد
+  const merged = new Map<string, { productId: string; warehouseId: string; qty: number; transit: number }>();
+  for (const s of [
+    ...onHand.map((s) => ({ productId: s.productId, warehouseId: s.warehouseId, qty: s.qty, transit: 0 })),
+    ...transit.map((l) => ({ productId: l.productId, warehouseId: l.transfer.toWarehouseId, qty: l.qty, transit: l.qty })),
+  ]) {
+    const k = `${s.productId}|${s.warehouseId}`;
+    const cur = merged.get(k);
+    if (cur) {
+      cur.qty += s.qty;
+      cur.transit += s.transit;
+    } else merged.set(k, { ...s });
+  }
+  const stocks = [...merged.values()];
   const cost = new Map(costs.map((c) => [c.productId, c]));
   // سهم ارزش به نسبت تعداد، نه «تعداد × میانگین گرد‌شده» — جمع انبارها همان ارزش کاردکس
+  // تقسیم تجمعی: سهم هر تکه = گرد(ارزش × تا اینجا) − گرد(ارزش × تا قبل) — جمع تکه‌های یک کالا دقیقاً ارزش کل است
+  const cum = new Map<string, number>();
   const valueOf = (productId: string, qty: number) => {
     const c = cost.get(productId);
     if (!c) return 0n;
-    return c.qtyOnHand > 0 ? (c.totalValue * BigInt(qty)) / BigInt(c.qtyOnHand) : BigInt(qty) * c.lastCost;
+    if (c.qtyOnHand <= 0) return BigInt(qty) * c.lastCost;
+    const before = cum.get(productId) ?? 0;
+    cum.set(productId, before + qty);
+    const at = (n: number) => (c.totalValue * BigInt(n)) / BigInt(c.qtyOnHand);
+    return at(before + qty) - at(before);
   };
   const products = await db.product.findMany({ where: { id: { in: [...new Set(stocks.map((s) => s.productId))] } }, select: { id: true, title: true, categoryId: true } });
   const pInfo = new Map(products.map((p) => [p.id, p]));
@@ -113,7 +141,7 @@ export async function inventoryValue(db: Db, opts: { warehouseId: string | null;
   const catName = new Map(cats.map((c) => [c.id, c.title]));
   const whName = new Map(warehouses.map((w) => [w.id, w.name]));
 
-  const rows = new Map<string, { key: string; label: string; qty: number; value: bigint; products: number }>();
+  const rows = new Map<string, { key: string; label: string; qty: number; inTransit: number; value: bigint; products: number }>();
   const seen = new Map<string, Set<string>>();
   for (const s of stocks) {
     const p = pInfo.get(s.productId);
@@ -123,8 +151,9 @@ export async function inventoryValue(db: Db, opts: { warehouseId: string | null;
         : opts.by === "warehouse"
           ? [s.warehouseId, whName.get(s.warehouseId) ?? "—"]
           : [p?.categoryId ?? "_none", (p && catName.get(p.categoryId)) || "بی‌دسته"];
-    const r = rows.get(key) ?? { key, label, qty: 0, value: 0n, products: 0 };
+    const r = rows.get(key) ?? { key, label, qty: 0, inTransit: 0, value: 0n, products: 0 };
     r.qty += s.qty;
+    r.inTransit += s.transit;
     r.value += valueOf(s.productId, s.qty);
     const set = seen.get(key) ?? new Set();
     set.add(s.productId);
@@ -135,7 +164,7 @@ export async function inventoryValue(db: Db, opts: { warehouseId: string | null;
   const list = [...rows.values()].sort((a, b) => (b.value > a.value ? 1 : b.value < a.value ? -1 : 0));
   return {
     rows: list,
-    totals: { qty: list.reduce((s, r) => s + r.qty, 0), value: sumBig(list, (r) => r.value) },
+    totals: { qty: list.reduce((s, r) => s + r.qty, 0), inTransit: list.reduce((s, r) => s + r.inTransit, 0), value: sumBig(list, (r) => r.value) },
     /** ارزش سراسری کاردکس و مانده‌ی حساب موجودی کالا — باید برابر باشند */
     kardexValue: sumBig(costs, (c) => c.totalValue),
     ledgerValue: ledger.balance,

@@ -4462,16 +4462,18 @@ model AccItemAlias {
 // ── حسابداری — کالا و انبار (فاز ۳، docs/plans/accounting.md بخش ۶.۵ و ۸) ──
 
 model AccWarehouse {
-  id        String   @id @default(cuid())
-  code      Int      @unique
-  name      String
-  address   String?
+  id             String   @id @default(cuid())
+  code           Int      @unique
+  name           String
+  address        String?
   /// موجودی این انبار در `Product.stock` (قابل فروش در سایت) حساب می‌شود؟
-  sellable  Boolean  @default(true)
-  isDefault Boolean  @default(false)
-  isActive  Boolean  @default(true)
-  hesabanId Int?
-  createdAt DateTime @default(now())
+  sellable       Boolean  @default(true)
+  isDefault      Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  /// حواله به این انبار تا «تأیید دریافت» در راه می‌ماند — webhesab-parity.md بخش ۸
+  receiveConfirm Boolean  @default(false)
+  hesabanId      Int?
+  createdAt      DateTime @default(now())
 }
 
 /// موجودی فعلی هر کالا در هر انبار — کشِ جمع کاردکس، فقط از `inventory/stock.ts`
@@ -4552,22 +4554,34 @@ enum AccDocStatus {
 
 /// حواله‌ی انتقال بین انبارها — سند حسابداری ندارد (موجودی کالا یک حساب است)
 model AccTransfer {
-  id              String       @id @default(cuid())
-  yearId          String
-  number          Int
-  date            DateTime     @db.Date
-  fromWarehouseId String
-  toWarehouseId   String
-  note            String?
-  status          AccDocStatus @default(POSTED)
-  voidReason      String?
-  createdByName   String
-  createdAt       DateTime     @default(now())
+  id               String       @id @default(cuid())
+  yearId           String
+  number           Int
+  date             DateTime     @db.Date
+  fromWarehouseId  String
+  toWarehouseId    String
+  note             String?
+  status           AccDocStatus @default(POSTED)
+  voidReason       String?
+  createdByName    String
+  createdAt        DateTime     @default(now())
+  /// دو مرحله‌ای (webhesab-parity.md بخش ۸): فقط خروج مبدأ ثبت شده تا مقصد دریافت را تأیید کند.
+  /// در راه = `needsReceipt && !receivedAt && status = POSTED`
+  needsReceipt     Boolean      @default(false)
+  receivedAt       DateTime?
+  receiveDate      DateTime?    @db.Date
+  receivedByName   String?
+  receiveNote      String?
+  /// کسری دریافت: LOSS (خروج دستی در مقصد) | RETURN (برگشت به مبدأ)
+  shortageMode     String?
+  /// سند خروج دستی کسری (`AccStockAdjust`) — با ابطال حواله باطل می‌شود
+  shortageAdjustId String?
 
   lines AccTransferLine[]
 
   @@unique([yearId, number])
   @@index([date])
+  @@index([needsReceipt, receivedAt])
 }
 
 /// دلیل ورود/خروج دستی کالا (= «انواع جابجایی کالا» وب حساب) — webhesab-parity.md بخش ۷
@@ -4627,10 +4641,12 @@ model AccStockAdjustLine {
 }
 
 model AccTransferLine {
-  id         String @id @default(cuid())
-  transferId String
-  productId  String
-  qty        Int
+  id          String @id @default(cuid())
+  transferId  String
+  productId   String
+  qty         Int
+  /// تعداد رسیده (حواله‌ی دو مرحله‌ای، بعد از تأیید)
+  receivedQty Int?
 
   transfer AccTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
 

@@ -28,6 +28,7 @@ import { todayKey, jalaliYearOf } from "../dates";
 import { ensureFiscalYear } from "./fiscal-year";
 import { postVoucher, voidVoucher, type Actor, type LineInput } from "./post";
 import { NOT_CARRY } from "./balances";
+import { IN_TRANSIT } from "../inventory/docs";
 
 type Tx = Prisma.TransactionClient;
 type Db = Tx | typeof prisma;
@@ -72,7 +73,7 @@ export async function closingPreview(db: Db, yearId: string) {
   if (!year) throw new AccError("سال مالی پیدا نشد", 404);
   const inYear = { gte: year.startDate, lte: year.endDate };
 
-  const [earlierOpen, events, draftInvoices, draftCounts, draftTransfers, negative, profitRows, next, laterClosed] = await Promise.all([
+  const [earlierOpen, events, draftInvoices, draftCounts, draftTransfers, negative, profitRows, next, laterClosed, transit] = await Promise.all([
     db.accFiscalYear.findMany({ where: { startDate: { lt: year.startDate }, status: "OPEN" }, select: { title: true } }),
     db.accEvent.count({ where: { status: { in: ["BLOCKED", "FAILED"] } } }),
     db.accInvoice.count({ where: { status: "DRAFT", date: inYear, type: { not: "PROFORMA" } } }),
@@ -86,6 +87,7 @@ export async function closingPreview(db: Db, yearId: string) {
     }),
     nextYearOf(db, year),
     db.accFiscalYear.count({ where: { startDate: { gt: year.startDate }, status: "CLOSED" } }),
+    db.accTransfer.count({ where: { ...IN_TRANSIT, date: { lte: year.endDate } } }),
   ]);
   const profit = profitRows.reduce((s, r) => s + (r._sum.credit ?? 0n) - (r._sum.debit ?? 0n), 0n);
   const ended = year.endDate.getTime() < todayKey().getTime();
@@ -143,6 +145,16 @@ export async function closingPreview(db: Db, yearId: string) {
             title: negative ? `${faNum(negative)} کالا موجودی منفی دارد` : "موجودی منفی نداریم",
             detail: negative ? "بهای این کالاها برآوردی است و بعد از بستن، جبرانش به این سال برنمی‌گردد. بهتر است اول خرید یا انبارگردانی‌اش ثبت شود." : undefined,
             href: negative ? "/admin/accounting/inventory?filter=negative" : undefined,
+          },
+          {
+            key: "transit",
+            ok: transit === 0,
+            level: "warning",
+            title: transit ? `${faNum(transit)} حواله هنوز در راه است` : "کالای در راه نداریم",
+            detail: transit
+              ? "ارزش کالای در راه جزو انبار مقصد است و دفتر درست است، ولی اگر کسری بیاورد، کسری‌اش در تاریخ دریافت (سال بعد) ثبت می‌شود."
+              : undefined,
+            href: transit ? "/admin/accounting/inventory/transfers?view=transit" : undefined,
           },
         ];
 

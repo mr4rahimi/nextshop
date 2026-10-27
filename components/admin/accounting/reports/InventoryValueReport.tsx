@@ -3,6 +3,7 @@
 /** ارزش موجودی کالا — تعداد × میانگین موزون، به تفکیک دسته/کالا/انبار (بخش ۱۱) */
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { formatJalali } from "@/lib/club/jalali";
 import { todayKey } from "@/lib/accounting/dates";
 import { faNum } from "@/lib/accounting/money";
@@ -11,8 +12,9 @@ import { Amt, downloadCsv, ReportFrame, Table, td, tdNum, th, thNum, useReport }
 
 type By = "category" | "product" | "warehouse";
 interface Data {
-  rows: { key: string; label: string; qty: number; value: string; products: number }[];
-  totals: { qty: number; value: string };
+  rows: { key: string; label: string; qty: number; inTransit: number; value: string; products: number }[];
+  /** `qty` کالای در راه را هم دارد — جزو انبار مقصد */
+  totals: { qty: number; inTransit: number; value: string };
   kardexValue: string;
   ledgerValue: string;
 }
@@ -35,12 +37,14 @@ export default function InventoryValueReport() {
     downloadCsv(`inventory-value-${by}`, [label, "تعداد", "ارزش"], [...data.rows.map((r) => [r.label, r.qty, r.value]), ["جمع", data.totals.qty, data.totals.value]]);
   }
   const matched = data && data.kardexValue === data.ledgerValue;
+  const transit = !!data?.totals.inTransit;
+  const transitHref = (key?: string) => `/admin/accounting/inventory/transfers?view=transit${key && by === "warehouse" ? `&dst=${key}` : warehouseId && by !== "warehouse" ? `&dst=${warehouseId}` : ""}`;
 
   return (
     <ReportFrame
       title="ارزش موجودی کالا"
       help="accountingInventoryValue"
-      desc="کالاهای در انبار با بهای میانگین خریدشان — پولی که به شکل کالا در انبار خوابیده."
+      desc="کالاهای در انبار با بهای میانگین خریدشان — پولی که به شکل کالا در انبار خوابیده. کالای در راه جزو انبار مقصد است."
       printSub={`${formatJalali(todayKey())} — به تفکیک ${label}`}
       onExport={exportCsv}
       error={error}
@@ -86,6 +90,7 @@ export default function InventoryValueReport() {
                 <th className={th}>{label}</th>
                 {by !== "product" && <th className={thNum}>تعداد کالا</th>}
                 <th className={thNum}>تعداد</th>
+                {transit && <th className={thNum}>از آن در راه</th>}
                 <th className={thNum}>ارزش</th>
               </tr>
             }
@@ -94,6 +99,13 @@ export default function InventoryValueReport() {
                 <td className={td}>جمع</td>
                 {by !== "product" && <td />}
                 <td className={tdNum}>{faNum(data.totals.qty)}</td>
+                {transit && (
+                  <td className={tdNum}>
+                    <Link href={transitHref()} className="text-amber-600 hover:underline">
+                      {faNum(data.totals.inTransit)}
+                    </Link>
+                  </td>
+                )}
                 <td className={tdNum}><Amt v={data.totals.value} strong /></td>
               </tr>
             }
@@ -103,12 +115,23 @@ export default function InventoryValueReport() {
                 <td className={`${td} max-w-[20rem] truncate`}>{r.label}</td>
                 {by !== "product" && <td className={`${tdNum} tabular-nums text-gray-500`}>{faNum(r.products)}</td>}
                 <td className={`${tdNum} tabular-nums ${r.qty < 0 ? "text-red-600" : ""}`}>{faNum(r.qty)}</td>
+                {transit && (
+                  <td className={`${tdNum} tabular-nums`}>
+                    {r.inTransit ? (
+                      <Link href={transitHref(r.key)} className="text-amber-600 hover:underline">
+                        {faNum(r.inTransit)}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                )}
                 <td className={tdNum}><Amt v={r.value} /></td>
               </tr>
             ))}
             {!data.rows.length && (
               <tr>
-                <td className={`${td} text-center text-xs text-gray-400 py-8`} colSpan={4}>
+                <td className={`${td} text-center text-xs text-gray-400 py-8`} colSpan={5}>
                   کالایی در انبار نیست.
                 </td>
               </tr>

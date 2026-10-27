@@ -29,7 +29,7 @@ function moveLabel(r: { type: string; sourceType: string; note?: string | null }
 }
 
 function sourceHref(type: string, id: string): string | null {
-  if (type === "AccTransfer") return `/admin/accounting/inventory/transfers#${id}`;
+  if (type === "AccTransfer") return `/admin/accounting/inventory/transfers?id=${id}`;
   if (type === "AccStockCount") return `/admin/accounting/inventory/counts/${id}`;
   if (type === "AccStockAdjust") return `/admin/accounting/inventory/adjustments/${id}`;
   if (type === "OpeningInventory") return "/admin/accounting/inventory/opening";
@@ -54,6 +54,7 @@ interface Row {
 interface Data {
   product: { id: string; title: string; sku: string; unit: string; mainImage: string | null; isActive: boolean; hasProduct: boolean; link: { productId: string; product: string; variant: string | null } | null; stock: number | null; lowStockThreshold: number };
   stocks: { warehouseId: string; qty: number }[];
+  transit: { id: string; number: number; toWarehouseId: string; qty: number }[];
   warehouses: { id: string; name: string; sellable: boolean }[];
   opening: number;
   rows: Row[];
@@ -83,6 +84,7 @@ export default function KardexClient({ productId }: { productId: string }) {
   if (!data) return error ? <ErrorText>{error}</ErrorText> : <p className="text-xs text-gray-400">در حال بارگذاری…</p>;
   const whName = new Map(data.warehouses.map((w) => [w.id, w.name]));
   const total = data.stocks.reduce((s, x) => s + x.qty, 0);
+  const transit = data.transit.reduce((s, x) => s + x.qty, 0);
   const sellable = data.stocks.filter((s) => data.warehouses.find((w) => w.id === s.warehouseId)?.sellable).reduce((s, x) => s + x.qty, 0);
 
   return (
@@ -127,7 +129,7 @@ export default function KardexClient({ productId }: { productId: string }) {
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Stat label="موجودی دفتری" value={faNum(total)} tone={total < 0 ? "red" : "gray"} />
+        <Stat label="موجودی دفتری" value={faNum(total)} sub={transit ? `+ ${faNum(transit)} در راه` : undefined} tone={total < 0 ? "red" : "gray"} />
         {data.product.stock !== null && (
           <Stat label="موجودی سایت" value={faNum(data.product.stock)} sub={sellable !== data.product.stock ? `انبارهای قابل فروش: ${faNum(sellable)}` : undefined} tone={sellable !== data.product.stock ? "amber" : "gray"} />
         )}
@@ -135,12 +137,19 @@ export default function KardexClient({ productId }: { productId: string }) {
         {data.cost && <Stat label="ارزش موجودی" value={<Money value={data.cost.totalValue} />} />}
       </div>
 
-      {data.stocks.length > 1 && (
+      {(data.stocks.length > 1 || data.transit.length > 0) && (
         <Card className="p-3 flex flex-wrap gap-2">
           {data.stocks.map((s) => (
             <Badge key={s.warehouseId} tone={s.qty < 0 ? "red" : "gray"}>
               {whName.get(s.warehouseId)}: {faNum(s.qty)}
             </Badge>
+          ))}
+          {data.transit.map((t) => (
+            <Link key={t.id} href={`/admin/accounting/inventory/transfers?id=${t.id}`} className="hover:opacity-80">
+              <Badge tone="amber">
+                در راه به {whName.get(t.toWarehouseId)}: {faNum(t.qty)} (حواله‌ی {faNum(t.number)})
+              </Badge>
+            </Link>
           ))}
         </Card>
       )}
