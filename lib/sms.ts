@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isDemo } from "@/lib/demo";
 
 /** اولین مقدار غیرتهی — رشته‌ی خالی و فاصله «تنظیم نشده» حساب می‌شود */
 function pick(...vals: (string | null | undefined)[]): string | undefined {
@@ -10,7 +11,9 @@ function pick(...vals: (string | null | undefined)[]): string | undefined {
 }
 
 async function getSmsConfig() {
-  const settings = await prisma.storeSettings.findUnique({ where: { id: "singleton" } });
+  // دمو (docs/plans/demo.md): فقط کلید env برای کد ورود؛ تنظیمات پنل که هر بازدیدکننده
+  // عوضش می‌کند نباید مسیر کد ورود را به جای دیگری ببرد
+  const settings = isDemo() ? null : await prisma.storeSettings.findUnique({ where: { id: "singleton" } });
   return {
     // ⚠️ `??` کافی نیست: فیلدی که ادمین پر و بعد خالی کرده `""` است نه null و
     //    جلوی fallback را می‌گیرد. مقدار تهی باید مثل «تنظیم نشده» رفتار کند.
@@ -49,7 +52,13 @@ export async function sendPatternSms(
   patternCode: string,
   attributes: Record<string, string>
 ) {
-  const { apiKey, lineNumber, enabled } = await getSmsConfig();
+  const { apiKey, lineNumber, enabled, patterns } = await getSmsConfig();
+
+  // دمو: فقط کد ورود واقعاً می‌رود؛ پیامک سفارش و باشگاه به شماره‌های نمایشی هزینه‌ی واقعی دارد
+  if (isDemo() && patternCode !== patterns.otp) {
+    console.log(`[SMS demo] to ${phone} pattern ${patternCode}`, attributes);
+    return;
+  }
 
   if (!enabled) {
     console.log(`[SMS disabled] to ${phone} pattern ${patternCode}`, attributes);

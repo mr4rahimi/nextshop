@@ -3,6 +3,7 @@ import { serialize } from "@/lib/serialize";
 import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { isDemo, demoUploadProblem } from "@/lib/demo";
 
 export const runtime = "nodejs";
 
@@ -86,6 +87,13 @@ export async function POST(req: Request) {
 
   if (!files.length) {
     return NextResponse.json({ error: "فایلی ارسال نشده" }, { status: 400 });
+  }
+
+  if (isDemo()) {
+    const problem = files.map(demoUploadProblem).find(Boolean);
+    if (problem) {
+      return NextResponse.json({ error: problem, demoBlocked: true }, { status: 403, headers: { "x-demo-blocked": "1" } });
+    }
   }
 
   const results = [];

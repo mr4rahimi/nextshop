@@ -24,6 +24,7 @@ import WorklistNotifier from "@/components/admin/worklist/WorklistNotifier";
 import HeartbeatPing from "@/components/admin/worklist/HeartbeatPing";
 import OnlineOrderSound from "@/components/admin/orders/OnlineOrderSound";
 import AssistantButton from "@/components/admin/assistant/AssistantButton";
+import DemoShell from "@/components/admin/DemoShell";
 
 /**
  * پیام «به این بخش دسترسی ندارید» وقتی proxy صفحه‌ی بسته را به کارتابل برگرداند.
@@ -178,6 +179,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </header>
 
           <main className="flex-1 overflow-y-auto">
+            {/* دموی عمومی — docs/plans/demo.md؛ بیرون از دمو چیزی رندر نمی‌کند */}
+            <DemoShell />
             <PlanBanner pathname={pathname} />
             <DeniedBanner pathname={pathname} />
             {children}

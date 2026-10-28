@@ -5682,3 +5682,19 @@ model PopupLead {
   @@unique([popupId, phone])
   @@index([createdAt])
 }
+
+/// ورود به دموی عمومی (demo.gardanos.ir — docs/plans/demo.md). فقط در `DEMO_MODE` پر می‌شود.
+/// ریست شبانه‌ی دمو این جدول را نگه می‌دارد؛ هیچ صفحه‌ای در پنل نشانش نمی‌دهد.
+model DemoLead {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  /// "admin" یا "shop" — اولین ورود از کدام صفحه بود
+  source    String   @default("admin")
+  visits    Int      @default(1)
+  ip        String?
+  userAgent String?
+  firstAt   DateTime @default(now())
+  lastAt    DateTime @default(now())
+
+  @@index([lastAt])
+}

@@ -27,6 +27,8 @@ export interface AdminMe {
     daysLeft: number | null;
     graceLeft: number | null;
   };
+  /** دموی عمومی — docs/plans/demo.md */
+  demo?: boolean;
 }
 
 let cache: Promise<AdminMe | null> | null = null;

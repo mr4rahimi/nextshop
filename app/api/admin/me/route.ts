@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStaffAccess } from "@/lib/permissions";
 import { getLicenseState } from "@/lib/plan/license";
+import { isDemo } from "@/lib/demo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export async function GET() {
     isUnrestricted: access.isUnrestricted,
     permissions: access.isUnrestricted ? [] : access.permissions,
     plan: await planSummary(),
+    demo: isDemo(),
   });
 }
 

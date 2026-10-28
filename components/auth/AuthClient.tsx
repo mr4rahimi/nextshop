@@ -129,7 +129,8 @@ export default function AuthClient() {
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, code }),
+        // source فقط در دمو خوانده می‌شود (lib/demo/login.ts)
+        body: JSON.stringify({ phone, code, source: "shop" }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error); return; }

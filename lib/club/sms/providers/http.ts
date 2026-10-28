@@ -1,4 +1,5 @@
 import { SmsApiError } from "../errors";
+import { isDemo, DEMO_BLOCKED } from "@/lib/demo";
 
 /**
  * لایه‌ی HTTP مشترک ایران‌پیامک
@@ -53,6 +54,12 @@ export class IranPayamakHttp {
     const url = path.startsWith("/ws/") || path.startsWith("/provinces") || path.startsWith("/cities")
       ? `${BASE}${path}`
       : `${BASE}/ws/v1${path.startsWith("/") ? path : `/${path}`}`;
+
+    // دمو (docs/plans/demo.md): پیامک باشگاه و پنل پیامک هیچ‌وقت بیرون نمی‌رود
+    if (isDemo()) {
+      console.log(`[SMS demo] ${method} ${url}`);
+      return { ok: false, error: DEMO_BLOCKED, apiError: new SmsApiError("UNREACHABLE", DEMO_BLOCKED) };
+    }
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);

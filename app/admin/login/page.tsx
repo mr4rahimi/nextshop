@@ -10,6 +10,7 @@
 
 import { prisma } from "@/lib/prisma";
 import AdminLoginForm from "@/components/admin/AdminLoginForm";
+import { isDemo } from "@/lib/demo";
 
 export const metadata = { title: "ورود به پنل مدیریت" };
 
@@ -27,5 +28,5 @@ export default async function AdminLoginPage() {
     storeLogo = s?.storeLogo ?? null;
   } catch {}
 
-  return <AdminLoginForm storeName={storeName} storeLogo={storeLogo} />;
+  return <AdminLoginForm storeName={storeName} storeLogo={storeLogo} demo={isDemo()} />;
 }

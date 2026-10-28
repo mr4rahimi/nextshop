@@ -7,6 +7,15 @@ import { getGateAccess } from "@/lib/admin-gate";
 import { featureForPath, FEATURE_LABELS } from "@/lib/plan/features";
 import { getLicenseState } from "@/lib/plan/license";
 import {
+  isDemo,
+  demoBlockReason,
+  demoBodyProblem,
+  demoRateOk,
+  clientIp,
+  isWriteMethod,
+  DEMO_MAX_BODY,
+} from "@/lib/demo";
+import {
   ATTRIBUTION_COOKIE,
   ATTRIBUTION_MAX_AGE,
   encodeTouch,
@@ -113,6 +122,63 @@ async function hasRole(token: string | undefined, roles: string[]): Promise<bool
 }
 
 export async function proxy(request: NextRequest) {
+  if (!isDemo()) return route(request);
+  const blocked = await demoGuard(request);
+  const response = blocked ?? (await route(request));
+  // دمو نباید در موتورهای جستجو بیاید
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+}
+
+/**
+ * مرز نسخه‌ی نمایشی (lib/demo، docs/plans/demo.md) — پیش از همه‌ی بررسی‌ها.
+ * در دمو هر بازدیدکننده مدیر کامل است؛ این تنها چیزی است که جلوی کلید واقعی،
+ * سرویس پولی و محتوای مخرب را می‌گیرد.
+ */
+async function demoGuard(request: NextRequest): Promise<NextResponse | null> {
+  const { pathname } = request.nextUrl;
+  if (!pathname.startsWith("/api/")) return null;
+  const method = request.method;
+  const ip = clientIp(request.headers);
+
+  if (pathname === "/api/auth/send-otp" && !demoRateOk(`otp:${ip}`, 5, 60 * 60_000)) {
+    return demoBlockedJson("درخواست کد ورود از این اینترنت زیاد شده؛ یک ساعت دیگر دوباره تلاش کنید.");
+  }
+
+  const token = request.cookies.get("auth_token")?.value;
+  const payload = token ? await verifyToken(token) : null;
+  const reason = demoBlockReason(method, pathname, payload?.userId);
+  if (reason) return demoBlockedJson(reason);
+  if (!isWriteMethod(method)) return null;
+
+  if (!demoRateOk(`w:${ip}`, 120, 10 * 60_000)) {
+    return demoBlockedJson("تعداد تغییرها از این اینترنت زیاد شده؛ چند دقیقه دیگر ادامه دهید.");
+  }
+  const length = Number(request.headers.get("content-length") ?? 0);
+  if (length > DEMO_MAX_BODY) {
+    return demoBlockedJson("در نسخه‌ی نمایشی فقط فایل تا ۱ مگابایت (عکس) پذیرفته می‌شود.");
+  }
+  if (!(request.headers.get("content-type") ?? "").includes("application/json")) return null;
+  try {
+    const text = await request.clone().text();
+    // content-length برای بدنه‌ی chunked نمی‌آید
+    if (text.length > DEMO_MAX_BODY) return demoBlockedJson("حجم داده بیش از حد نسخه‌ی نمایشی است.");
+    const problem = text ? demoBodyProblem(JSON.parse(text)) : null;
+    if (problem) return demoBlockedJson(problem);
+  } catch {
+    /* JSON نامعتبر را خود مسیر رد می‌کند */
+  }
+  return null;
+}
+
+function demoBlockedJson(error: string) {
+  return NextResponse.json(
+    { error, demoBlocked: true },
+    { status: 403, headers: { "x-demo-blocked": "1" } },
+  );
+}
+
+async function route(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("auth_token")?.value;
 

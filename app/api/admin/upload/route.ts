@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { logActivityAsync } from "@/lib/activity";
 import { writeFile } from "fs/promises";
 import path from "path";
+import { isDemo, demoUploadProblem } from "@/lib/demo";
 
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg", "image/png", "image/webp",
@@ -40,6 +41,11 @@ export async function POST(req: Request) {
 
   if (!file) {
     return NextResponse.json({ error: "فایلی انتخاب نشده است" }, { status: 400 });
+  }
+
+  const demoProblem = isDemo() ? demoUploadProblem(file) : null;
+  if (demoProblem) {
+    return NextResponse.json({ error: demoProblem, demoBlocked: true }, { status: 403, headers: { "x-demo-blocked": "1" } });
   }
 
   if (type === "download") {

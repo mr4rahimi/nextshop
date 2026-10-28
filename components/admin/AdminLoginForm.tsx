@@ -11,6 +11,9 @@
  * قبل از ورود هنوز هیچ ترجیحی از کاربر نمی‌دانیم.
  *
  * نام و لوگو از `StoreSettings` می‌آید و در `app/admin/login/page.tsx` خوانده می‌شود.
+ *
+ * در دموی عمومی (`demo`، docs/plans/demo.md) به جای رمز، کد پیامکی می‌آید و هر
+ * شماره‌ی تأییدشده با حساب مشترک مدیر وارد می‌شود.
  */
 
 import { useState } from "react";
@@ -20,13 +23,17 @@ import Link from "next/link";
 export default function AdminLoginForm({
   storeName,
   storeLogo,
+  demo = false,
 }: {
   storeName: string;
   storeLogo: string | null;
+  demo?: boolean;
 }) {
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,11 +44,32 @@ export default function AdminLoginForm({
     setLoading(true);
 
     try {
-      const res = await fetch("/api/admin/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, password }),
-      });
+      if (demo && !codeSent) {
+        const sent = await fetch("/api/auth/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: phone.trim() }),
+        });
+        const sentData = await sent.json();
+        if (!sent.ok) {
+          setError(sentData.error || "ارسال کد ناموفق بود");
+          return;
+        }
+        setCodeSent(true);
+        return;
+      }
+
+      const res = demo
+        ? await fetch("/api/auth/verify-otp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone: phone.trim(), code: code.trim(), source: "admin" }),
+          })
+        : await fetch("/api/admin/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone, password }),
+          });
 
       const data = await res.json();
 
@@ -136,9 +164,13 @@ export default function AdminLoginForm({
                   </svg>
                 </div>
               )}
-              <h1 className="text-2xl font-black tracking-tight text-white">ورود به پنل مدیریت</h1>
-              <p className="mt-2 text-xs font-bold text-gray-400">
-                این بخش فقط برای مدیران {storeName} است
+              <h1 className="text-2xl font-black tracking-tight text-white">
+                {demo ? "ورود به نسخه‌ی نمایشی" : "ورود به پنل مدیریت"}
+              </h1>
+              <p className="mt-2 text-xs font-bold leading-6 text-gray-400">
+                {demo
+                  ? "شماره موبایلتان را وارد کنید؛ با کد تأیید پیامکی، به‌عنوان مدیر کامل وارد می‌شوید."
+                  : `این بخش فقط برای مدیران ${storeName} است`}
               </p>
             </div>
 
@@ -172,7 +204,7 @@ export default function AdminLoginForm({
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
                     placeholder="09xxxxxxxxx"
-                    disabled={loading}
+                    disabled={loading || codeSent}
                     required
                     dir="ltr"
                     className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3.5 pr-11 pl-4 text-sm font-bold text-white placeholder:text-gray-600 transition-all focus:border-blue-500/60 focus:bg-white/[0.07] focus:outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-60"
@@ -180,47 +212,79 @@ export default function AdminLoginForm({
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="admin-password" className="mb-2 block text-[11px] font-black text-gray-300">
-                  رمز عبور
-                </label>
-                <div className="relative">
-                  <span className="pointer-events-none absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </span>
-                  <input
-                    id="admin-password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    disabled={loading}
-                    required
-                    dir="ltr"
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3.5 pr-11 pl-12 text-sm font-bold text-white placeholder:text-gray-600 transition-all focus:border-blue-500/60 focus:bg-white/[0.07] focus:outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-60"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(v => !v)}
-                    aria-label={showPassword ? "پنهان کردن رمز" : "نمایش رمز"}
-                    className="absolute inset-y-0 left-0 flex w-12 items-center justify-center text-gray-500 transition-colors hover:text-gray-300"
-                  >
-                    {showPassword ? (
+              {demo ? (
+                codeSent && (
+                  <div>
+                    <label htmlFor="admin-code" className="mb-2 flex items-center justify-between text-[11px] font-black text-gray-300">
+                      <span>کد تأیید پیامک‌شده</span>
+                      <button
+                        type="button"
+                        onClick={() => { setCodeSent(false); setCode(""); setError(""); }}
+                        className="text-blue-300 transition-colors hover:text-blue-200"
+                      >
+                        تغییر شماره
+                      </button>
+                    </label>
+                    <input
+                      id="admin-code"
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      autoFocus
+                      value={code}
+                      onChange={e => setCode(e.target.value)}
+                      placeholder="- - - -"
+                      maxLength={6}
+                      disabled={loading}
+                      required
+                      dir="ltr"
+                      className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 text-center text-lg font-black tracking-[0.5em] text-white placeholder:text-gray-600 transition-all focus:border-blue-500/60 focus:bg-white/[0.07] focus:outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-60"
+                    />
+                  </div>
+                )
+              ) : (
+                <div>
+                  <label htmlFor="admin-password" className="mb-2 block text-[11px] font-black text-gray-300">
+                    رمز عبور
+                  </label>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500">
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
-                    ) : (
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    )}
-                  </button>
+                    </span>
+                    <input
+                      id="admin-password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      disabled={loading}
+                      required
+                      dir="ltr"
+                      className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3.5 pr-11 pl-12 text-sm font-bold text-white placeholder:text-gray-600 transition-all focus:border-blue-500/60 focus:bg-white/[0.07] focus:outline-none focus:ring-4 focus:ring-blue-500/10 disabled:opacity-60"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      aria-label={showPassword ? "پنهان کردن رمز" : "نمایش رمز"}
+                      className="absolute inset-y-0 left-0 flex w-12 items-center justify-center text-gray-500 transition-colors hover:text-gray-300"
+                    >
+                      {showPassword ? (
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <button
                 type="submit"
@@ -240,7 +304,7 @@ export default function AdminLoginForm({
                     <svg className="h-5 w-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                     </svg>
-                    ورود به پنل
+                    {demo && !codeSent ? "دریافت کد تأیید" : "ورود به پنل"}
                   </>
                 )}
               </button>
