@@ -19,6 +19,15 @@ export interface ReleaseNote {
 
 export const VERSIONS: ReleaseNote[] = [
   {
+    version: "2.109.1",
+    date: "1405/08/06",
+    tag: "patch",
+    title: "بازگشت از درگاه پرداخت",
+    changes: [
+      { type: "improvement", text: "بازگشت از درگاه پرداخت همیشه به نشانی عمومی خود سایت است، حتی پشت پراکسی و CDN" },
+    ],
+  },
+  {
     version: "2.109.0",
     date: "1405/08/06",
     tag: "minor",

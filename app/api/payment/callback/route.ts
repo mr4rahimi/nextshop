@@ -40,8 +40,11 @@ export async function POST(req: Request) {
 }
 
 async function handleCallback(req: Request, p: CallbackParams) {
-  const url  = new URL(req.url);
-  const base = `${url.protocol}//${url.host}`;
+  // پشت nginx، `req.url` نشانی محلی Next است (localhost:پورت) — مقصد از هدرهای پراکسی ساخته می‌شود
+  const url   = new URL(req.url);
+  const host  = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? url.host;
+  const proto = req.headers.get("x-forwarded-proto")?.split(",")[0].trim() ?? url.protocol.replace(":", "");
+  const base  = `${proto}://${host}`;
   // 303: بعد از POST هم مرورگر با GET ری‌دایرکت می‌شود
   const redirect = (path: string) => NextResponse.redirect(`${base}${path}`, 303);
 
