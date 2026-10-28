@@ -103,7 +103,7 @@
 | ۲ | بازارگاه‌های نمایشی، سفارش آزمایشی، درگاه پرداخت آزمایشی | ✅ ۲.۱۰۹.۰ |
 | ۳ | سید لوازم جانبی موبایل + ریست شبانه | ✅ ۲.۱۰۹.۰ |
 | ۴ | چک‌لیست «چه چیزهایی را امتحان کنم؟»، نوار سایت، ثبت بخش‌های دیده‌شده، خروجی شماره‌ها | ✅ ۲.۱۰۹.۰ |
-| ۵ | فایل‌های استقرار (nginx، env، pm2، هدف `gardanos-demo` در `targets.json` محلی)؛ دکمه‌ی «دمو» در gardanos.ir | ✅ فایل‌ها آماده — **نصب روی سرور را کاربر انجام می‌دهد** (بخش «استقرار») |
+| ۵ | نصب روی مای‌مونتا، SSL، ریست شبانه؛ دکمه‌ی «دمو» در gardanos.ir | ✅ نصب‌شده ۱۴۰۵/۰۸/۰۶ — https://demo.gardanos.ir (گواهی تا ۲۰۲۷/۰۱/۲۶، تمدید خودکار). **مانده:** کلید پیامک کد ورود در `.env` (پایین) و انتشار gardanos.ir |
 
 همه با Postgres موقت محلی و `DEMO_MODE=1 next dev` آزموده شد (۱۴۰۵/۰۸/۰۶): ورود پیامکی،
 مسدودها، worker با بازارگاه‌های نمایشی (دریافت سفارش، گفت‌وگو، ارسال موجودی)، سفارش آزمایشی تا
@@ -158,7 +158,29 @@ pm2 متوقف، `DROP SCHEMA public CASCADE`، `migrate deploy`، پاک‌کر
 - سایت فروشگاه: نوار اعلان (`announcementBar` سید) «نسخه‌ی نمایشی… برای دیدن پنل اینجا را بزنید».
 - فهرست شماره‌ها: `npx tsx scripts/demo/leads.ts [--since=7] > leads.csv` (BOM برای اکسل).
 
-## استقرار (مرحله‌ی ۵) — کارهایی که کاربر انجام می‌دهد
+## استقرار (مرحله‌ی ۵)
+
+### وضعیت نصب (۱۴۰۵/۰۸/۰۶)
+| | |
+|---|---|
+| مسیر | `/var/www/gardanos-demo` (`node_modules` از `/var/www/mymonta` کپی شد — همان `.deps-hash`) |
+| دیتابیس | `gardanos_demo` با کاربر هم‌نام (مالک دیتابیس) روی Postgres محلی سرور |
+| `.env` | روی سرور ساخته شد با رازهای تازه (`openssl rand`)؛ هرگز از سرور بیرون نیامده |
+| pm2 | `gardanos-demo` روی ۳۰۵۰ (`scripts/demo/server/ecosystem.config.js`، `pm2 save` شده) |
+| nginx | `/etc/nginx/sites-available/gardanos-demo` — گواهی Let's Encrypt با hook تمدید موجود سرور |
+| ریست | cron روت: `0 1 * * *` (ساعت سرور **UTC** است؛ ۰۱:۰۰ = ۰۴:۳۰ تهران) → `/var/log/gardanos-demo-reset.log` |
+
+**کار مانده‌ی کاربر — کلید پیامک کد ورود.** تا این سه خط در `/var/www/gardanos-demo/.env` پر نشود
+هیچ‌کس نمی‌تواند وارد دمو شود (کد ورود فرستاده نمی‌شود):
+```bash
+IRANPAYAMAK_API_KEY=…
+IRANPAYAMAK_LINE_NUMBER=…
+IRANPAYAMAK_PATTERN_CODE=…      # پترنی با متغیر code و متن عمومی (نه نام یک فروشگاه)
+pm2 restart gardanos-demo --update-env
+```
+بعد gardanos.ir را منتشر کنید (`./scripts/deploy.sh` در مخزن gardanos) تا دکمه‌ی «دمو» بیاید.
+
+### دستورهای نصب از صفر (برای نصب دوباره یا سرور دیگر)
 
 سرور مای‌مونتا (`ssh mymonta`؛ از سیستم توسعه با `-o BindInterface=wlo1`). پورت ۳۰۵۰ آزاد است
 (۳۰۰۰ مای‌مونتا، ۳۰۴۰ پنل). فایل‌ها: `scripts/demo/server/`.
@@ -167,12 +189,13 @@ pm2 متوقف، `DROP SCHEMA public CASCADE`، `migrate deploy`، پاک‌کر
 # ۰) DNS: رکورد A برای demo.gardanos.ir → 188.212.97.138، بدون پروکسی CDN
 
 # ۱) دیتابیس (روی سرور)
-sudo -u postgres psql -c "CREATE USER gardanos_demo WITH PASSWORD '<رمز>';" \
-  -c "CREATE DATABASE gardanos_demo OWNER gardanos_demo;"
+sudo -u postgres psql -c "CREATE USER gardanos_demo WITH PASSWORD '<رمز>';"
+sudo -u postgres psql -c "CREATE DATABASE gardanos_demo OWNER gardanos_demo;"
 
 # ۲) کد و وابستگی‌ها (از سیستم توسعه، در ~/Projects/nextshop)
-rsync -az --exclude=.git --exclude=.env --exclude=node_modules --exclude=.next \
-      --exclude=docs --exclude='*.md' --exclude=public/uploads \
+# ⚠️ `.env.*` حتماً بیرون بماند: `.env.local` سیستم توسعه بر `.env` مقدم است
+rsync -az --exclude=.git --exclude=.env --exclude='.env.*' --exclude=node_modules --exclude=.next \
+      --exclude=docs --exclude='*.md' --exclude=public/uploads --exclude=scripts/deploy/targets.json \
       ./ mymonta:/var/www/gardanos-demo/
 rsync -az --partial node_modules/ mymonta:/var/www/gardanos-demo/node_modules/
 
@@ -193,8 +216,8 @@ certbot certonly --webroot -w /var/www/letsencrypt -d demo.gardanos.ir --agree-t
 cp scripts/demo/server/nginx.conf /etc/nginx/sites-available/gardanos-demo
 nginx -t && systemctl reload nginx          # فقط reload — هرگز restart (مای‌مونتا روی همین سرور است)
 
-# ۶) ریست شبانه (crontab -e)
-30 4 * * * /var/www/gardanos-demo/scripts/demo/reset.sh >> /var/log/gardanos-demo-reset.log 2>&1
+# ۶) ریست شبانه (crontab -e) — ساعت سرور UTC است
+0 1 * * * /var/www/gardanos-demo/scripts/demo/reset.sh >> /var/log/gardanos-demo-reset.log 2>&1
 ```
 
 بعد از آن استقرارهای بعدی با `node scripts/deploy/deploy.mjs gardanos-demo --yes` (هدف در

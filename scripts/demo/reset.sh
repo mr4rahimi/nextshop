@@ -2,7 +2,7 @@
 # ریست شبانه‌ی دموی عمومی — docs/plans/demo.md بخش «ریست شبانه»
 #
 #   /var/www/gardanos-demo/scripts/demo/reset.sh
-#   cron:  30 4 * * *  /var/www/gardanos-demo/scripts/demo/reset.sh >> /var/log/gardanos-demo-reset.log 2>&1
+#   cron (ساعت سرور UTC):  0 1 * * *  /var/www/gardanos-demo/scripts/demo/reset.sh >> /var/log/gardanos-demo-reset.log 2>&1
 #
 # دیتابیس از نو ساخته و سید دوباره اجرا می‌شود تا تاریخ سفارش‌ها و گزارش‌ها همیشه
 # نسبت به امروز باشند. جدول `DemoLead` (شماره‌های ورود) پیش از پاک‌شدن بیرون
