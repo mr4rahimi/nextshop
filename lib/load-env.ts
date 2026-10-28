@@ -7,5 +7,6 @@
  */
 import { config } from "dotenv";
 
-config({ path: ".env.local" });
-config({ path: ".env" });
+// quiet: پیام dotenv به stdout می‌رود و خروجی اسکریپت‌هایی مثل CSV را خراب می‌کند
+config({ path: ".env.local", quiet: true });
+config({ path: ".env", quiet: true });

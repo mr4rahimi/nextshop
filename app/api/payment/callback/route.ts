@@ -4,6 +4,7 @@ import { deductStockForOrderItems } from "@/lib/order-stock";
 import { emitPaymentsReceived } from "@/lib/accounting/events";
 import { processOrderForClub } from "@/lib/club/rewards";
 import { syncDealSafe } from "@/lib/worklist/deals";
+import { isDemo } from "@/lib/demo";
 
 export const runtime = "nodejs";
 
@@ -70,16 +71,18 @@ async function handleCallback(req: Request, p: CallbackParams) {
   const isSandbox = settings?.paymentGatewaySandbox ?? false;
   const pin = isSandbox ? "sandbox" : settings?.paymentGatewayMerchant;
 
-  if (!pin) return redirect(`/checkout/failed/${orderId}`);
+  // دمو: پرداخت از صفحه‌ی درگاه آزمایشی (`/demo/pay`) می‌آید و تأیید بیرونی ندارد
+  const demoPay = isDemo() && transid.startsWith("demo-");
+  if (!pin && !demoPay) return redirect(`/checkout/failed/${orderId}`);
 
   try {
-    const verifyRes = await fetch("https://panel.aqayepardakht.ir/api/v2/verify", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ pin, amount: Number(order.grandTotal), transid }),
-    });
-
-    const verifyData = await verifyRes.json();
+    const verifyData = demoPay
+      ? { status: "success", code: "1" }
+      : await (await fetch("https://panel.aqayepardakht.ir/api/v2/verify", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ pin, amount: Number(order.grandTotal), transid }),
+        })).json();
     const code = String(verifyData.code);
 
     if (verifyData.status === "success" && code === "1") {

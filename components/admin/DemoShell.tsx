@@ -7,12 +7,16 @@
  * - پاپ‌آپ خوش‌آمد بار اول (هوش مصنوعی خاموش است و چه چیزهایی بسته‌اند)
  * - پیام هر درخواستی که proxy در دمو بسته (`x-demo-blocked`)، حتی وقتی صفحه‌ی
  *   مربوط متن خطا را نشان نمی‌دهد
+ * - چک‌لیست «چه چیزهایی را امتحان کنید» با دکمه‌ی سفارش آزمایشی بازارگاه
+ * - ثبت بخش‌هایی که این شماره دیده (`/api/demo/visit`) برای تماس پیگیری
  *
  * بیرون از دمو هیچ چیزی رندر نمی‌کند و fetch را هم دست نمی‌زند.
  */
 
 import { useEffect, useState } from "react";
-import { Sparkles, X } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { ListChecks, Sparkles, X } from "lucide-react";
 import { useAdminMe } from "@/components/admin/useAdminMe";
 
 const WELCOME_KEY = "gardanos-demo-welcome-v1";
@@ -38,6 +42,15 @@ function patchFetch() {
   };
 }
 
+const TRIES: { title: string; hint: string; href?: string; simulate?: boolean }[] = [
+  { title: "سفارش تازه از باسلام، اسنپ‌شاپ یا تپسی‌شاپ", hint: "سفارش وارد می‌شود، موجودی همه‌جا کم و فاکتور فروش صادر می‌شود", simulate: true },
+  { title: "خرید از سایت با درگاه آزمایشی", hint: "بعد سفارش را در «سفارش‌ها» دنبال کنید", href: "/" },
+  { title: "نگاشت کالا و قیمت هر بازارگاه", hint: "یک کالا، سه بازارگاه، قیمت با کارمزد هرکدام", href: "/admin/integration/mapping" },
+  { title: "چک کردن قیمت (کیوسک)", hint: "بارکد یا کد کالا را بزنید", href: "/admin/accounting/price-check" },
+  { title: "حواله بین انبار مرکزی و شعبه‌ها", hint: "کالای در راه و تأیید دریافت", href: "/admin/accounting/inventory/transfers" },
+  { title: "گزارش فروش ۹۰ روز", hint: "روی هر عدد بزنید تا جزئیاتش باز شود", href: "/admin/reports" },
+];
+
 const AI_OFF = [
   "پاسخ‌گویی خودکار چت فروشگاه",
   "ساخت متن، عنوان و توضیح محصول",
@@ -51,6 +64,15 @@ export default function DemoShell() {
   const demo = !!me?.demo;
   const [welcome, setWelcome] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [tries, setTries] = useState(false);
+  const [simulating, setSimulating] = useState(false);
+  const pathname = usePathname();
+
+  // بخش دیده‌شده برای تماس پیگیری — شکستش هیچ اثری روی پنل ندارد
+  useEffect(() => {
+    if (!demo) return;
+    fetch("/api/demo/visit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: pathname }) }).catch(() => {});
+  }, [demo, pathname]);
 
   useEffect(() => {
     if (!demo) return;
@@ -61,7 +83,6 @@ export default function DemoShell() {
     } catch {
       /* حالت خصوصی */
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage فقط بعد از mount در دسترس است
     if (!seen) setWelcome(true);
 
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -79,6 +100,23 @@ export default function DemoShell() {
 
   if (!demo) return null;
 
+  const simulate = async () => {
+    setSimulating(true);
+    try {
+      const res = await fetch("/api/admin/demo/simulate-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const d = await res.json();
+      setNotice(
+        res.ok
+          ? `سفارش ${d.platformOrderNo} از ${d.platform} رسید: ${d.qty} × «${d.productTitle}» برای ${d.customerName}. در «یکپارچه‌سازی ← سفارش‌ها» ببینید.`
+          : d.error || "ساخت سفارش آزمایشی ناموفق بود",
+      );
+    } catch {
+      setNotice("ارتباط با سرور برقرار نشد");
+    } finally {
+      setSimulating(false);
+    }
+  };
+
   const closeWelcome = () => {
     setWelcome(false);
     try {
@@ -95,6 +133,10 @@ export default function DemoShell() {
           نسخه‌ی نمایشی گردانوس — داده‌ها نمایشی‌اند و هر شب به حالت اول برمی‌گردند. اطلاعات واقعی وارد نکنید.
         </span>
         <span className="flex items-center gap-3">
+          <button onClick={() => setTries((v) => !v)} className="flex items-center gap-1 underline">
+            <ListChecks className="h-3.5 w-3.5" aria-hidden />
+            چه چیزهایی را امتحان کنم؟
+          </button>
           <button onClick={() => setWelcome(true)} className="underline">
             راهنمای دمو
           </button>
@@ -103,6 +145,37 @@ export default function DemoShell() {
           </a>
         </span>
       </div>
+
+      {tries && (
+        <div className="adm-pop-in mx-4 mt-3 lg:mx-6 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {TRIES.map((t, i) => {
+            const body = (
+              <>
+                <span className="flex items-center gap-2 text-[13px] font-black text-gray-900 dark:text-white">
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[11px] text-white">
+                    {(i + 1).toLocaleString("fa-IR")}
+                  </span>
+                  {t.title}
+                </span>
+                <span className="mt-1 block pr-8 text-[11px] font-bold leading-5 text-gray-500 dark:text-gray-400">
+                  {t.simulate && simulating ? "در حال ساخت سفارش…" : t.hint}
+                </span>
+              </>
+            );
+            const cls =
+              "block rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] p-3 text-right shadow-[var(--adm-shadow)] transition-colors hover:border-indigo-300 disabled:opacity-60";
+            return t.simulate ? (
+              <button key={t.title} onClick={simulate} disabled={simulating} className={cls}>
+                {body}
+              </button>
+            ) : (
+              <Link key={t.title} href={t.href!} target={t.href === "/" ? "_blank" : undefined} className={cls}>
+                {body}
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
       {notice && (
         <div
@@ -153,10 +226,17 @@ export default function DemoShell() {
               <li>پیامک (جز کد ورود) و پنل پیامک فرستاده نمی‌شود.</li>
               <li>فقط عکس تا ۱ مگابایت آپلود می‌شود؛ ویدئو، فایل و کد HTML بسته است.</li>
               <li>همه با یک حساب مشترک وارد می‌شوند؛ آنچه شما می‌سازید را دیگران هم می‌بینند.</li>
+              <li>پرداخت سایت با درگاه آزمایشی است و هیچ پولی جابه‌جا نمی‌شود.</li>
             </ul>
+            <p className="mt-3 text-xs font-bold">
+              از دکمه‌ی «چه چیزهایی را امتحان کنم؟» در نوار بالا شروع کنید.
+            </p>
 
             <button
-              onClick={closeWelcome}
+              onClick={() => {
+                closeWelcome();
+                setTries(true);
+              }}
               className="mt-6 w-full rounded-2xl bg-gradient-to-l from-blue-600 to-indigo-600 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/30"
             >
               شروع کنیم

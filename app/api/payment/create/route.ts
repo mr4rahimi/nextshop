@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isDemo } from "@/lib/demo";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,9 @@ export async function POST(req: Request) {
   if (!order) return NextResponse.json({ error: "سفارش یافت نشد" }, { status: 404 });
   if (order.status !== "PENDING_PAYMENT")
     return NextResponse.json({ error: "این سفارش قابل پرداخت نیست" }, { status: 400 });
+
+  // دمو: درگاه آزمایشی داخلی — هیچ درخواستی به درگاه واقعی نمی‌رود (docs/plans/demo.md)
+  if (isDemo()) return NextResponse.json({ redirectUrl: `/demo/pay/${order.id}` });
 
   const settings = await prisma.storeSettings.findUnique({
     where: { id: "singleton" },

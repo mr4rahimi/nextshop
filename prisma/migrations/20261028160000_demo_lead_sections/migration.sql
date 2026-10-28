@@ -1,0 +1,1 @@
+ALTER TABLE "DemoLead" ADD COLUMN "sections" TEXT[] DEFAULT ARRAY[]::TEXT[];

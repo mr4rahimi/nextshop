@@ -5695,6 +5695,8 @@ model DemoLead {
   userAgent String?
   firstAt   DateTime @default(now())
   lastAt    DateTime @default(now())
+  /// بخش‌هایی از پنل که دیده (`/admin/integration`…) — برای تماس پیگیری
+  sections  String[] @default([])
 
   @@index([lastAt])
 }
