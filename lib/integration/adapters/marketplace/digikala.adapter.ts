@@ -18,11 +18,10 @@ import { applyDiscount, parseTehranTime } from "@/lib/integration/types";
 // docs/integrations/vendors/digikala/spec.yml
 const BASE = "https://seller.digikala.com/open-api/v1";
 
-// مسیرهای داده (نه /auth) با توکن سالم هم ممکن است ۴۰۱ «Invalid User-Agent!» بدهند
-// (پنل واقعی ۱۴۰۵/۰۸/۰۷). قاعده‌اش مستند نیست و فقط با توکن واقعی دیده می‌شود — دیجی‌کالا
-// اول توکن را می‌سنجد، پس با توکن جعلی هر User-Agentی «Invalid token!» می‌گیرد. نه «node»
-// پیش‌فرض fetch پذیرفته شد نه کد کلاینت؛ برای همین تست اتصال چند نامزد را امتحان می‌کند
-// (`probeUserAgents`) و پذیرفته‌شده را در `userAgent` ذخیره می‌کند.
+// هر درخواست Open API باید User-Agent با فرمت دیجی‌کالا داشته باشد، وگرنه ۴۰۱
+// «Invalid User-Agent!» — حتی با توکن سالم؛ پیش‌فرض‌هایی مثل curl/node هم رد می‌شوند.
+// توکن اختصاصی: `DigikalaTrustedBot/SelfToken/{کد فروشندگی}`
+// (docs/integrations/vendors/digikala/servicehub/01-getting-started.md بخش «هدر الزامی»)
 function baseHeaders(accessToken?: string, userAgent?: string): HeadersInit {
   return {
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
@@ -32,43 +31,20 @@ function baseHeaders(accessToken?: string, userAgent?: string): HeadersInit {
   };
 }
 
-/** User-Agent ارسالی: مقدار پذیرفته‌شده‌ی ذخیره‌شده، وگرنه کد کلاینت. */
-function userAgentOf(credentials: Record<string, string>): string | undefined {
-  return credentials.userAgent?.trim() || clientCodeOf(credentials);
-}
-
-export interface UserAgentProbe { label: string; userAgent: string; ok: boolean; message: string }
-
-/**
- * نامزدهای User-Agent به ترتیب. `browserUserAgent` مرورگر خود ادمینی است که تست را
- * زده — برای فرضیه‌ی «توکن به مرورگری که در پنل دیجی‌کالا فعالش کرده گره خورده».
- */
-function userAgentCandidates(credentials: Record<string, string>, browserUserAgent?: string): { label: string; userAgent: string }[] {
-  const list: { label: string; userAgent: string }[] = [];
-  const add = (label: string, ua?: string | null) => {
-    const v = ua?.trim();
-    if (v && !list.some((c) => c.userAgent === v)) list.push({ label, userAgent: v });
-  };
-  add("ذخیره‌شده", credentials.userAgent);
-  add("کد کلاینت فرم", credentials.clientCode);
-  add("کد کلاینت توکن", jwtClaims(credentials.accessToken ?? "").client_code);
-  for (const code of [credentials.clientCode, jwtClaims(credentials.accessToken ?? "").client_code]) {
-    try {
-      const decoded = code ? Buffer.from(code, "base64").toString("utf8") : "";
-      if (/^[\x21-\x7e]+$/.test(decoded)) add("کد کلاینت (Base64 بازشده)", decoded);
-    } catch { /* نامزد بعدی */ }
-  }
-  add("نام برنامه", "NextShop-Integration/1.0");
-  add("کتابخانه‌ی PHP (Guzzle)", "GuzzleHttp/7");
-  add("مرورگر شما", browserUserAgent);
-  return list;
-}
-
-/** کد کلاینت: مقدار واردشده در فرم، وگرنه claim `client_code` توکن. */
-export function clientCodeOf(credentials: Record<string, string>): string | undefined {
-  const manual = credentials.clientCode?.trim();
+/** کد فروشندگی: مقدار فرم، وگرنه claim `seller_id` توکن. */
+export function sellerCodeOf(credentials: Record<string, string>): string | undefined {
+  const manual = credentials.sellerCode?.trim();
   if (manual) return manual;
-  return jwtClaims(credentials.accessToken ?? "").client_code;
+  const id = jwtClaims(credentials.accessToken ?? "").seller_id;
+  return id != null ? String(id) : undefined;
+}
+
+/** User-Agent ارسالی: مقدار دستی فرم (اگر دیجی‌کالا فرمت را عوض کرد)، وگرنه فرمت توکن اختصاصی. */
+export function userAgentOf(credentials: Record<string, string>): string | undefined {
+  const custom = credentials.userAgent?.trim();
+  if (custom) return custom;
+  const seller = sellerCodeOf(credentials);
+  return seller ? `DigikalaTrustedBot/SelfToken/${seller}` : undefined;
 }
 
 interface DkPager { page?: number; item_per_page?: number; total_pages?: number; total_rows?: number }
@@ -192,10 +168,10 @@ async function errorText(res: Response): Promise<string> {
 }
 
 /** authorization_code → توکن‌ها (همان patch قابل ذخیره در credentials). */
-export async function exchangeAuthorizationCode(code: string): Promise<Record<string, string>> {
+export async function exchangeAuthorizationCode(code: string, userAgent?: string): Promise<Record<string, string>> {
   const res = await fetch(`${BASE}/auth/token`, {
     method:  "POST",
-    headers: baseHeaders(),
+    headers: baseHeaders(undefined, userAgent),
     body:    JSON.stringify({ authorization_code: code }),
   });
   if (!res.ok) throw new Error(await errorText(res));
@@ -225,7 +201,7 @@ export class DigikalaAdapter extends BaseAdapter {
 
         const res = await fetch(`${BASE}/auth/refresh-token`, {
           method:  "POST",
-          headers: baseHeaders(),
+          headers: baseHeaders(undefined, userAgentOf(credentials)),
           body:    JSON.stringify({ access_token: accessToken, refresh_token: refreshToken }),
         }).catch(() => null);
         if (!res?.ok) return null;
@@ -286,6 +262,9 @@ export class DigikalaAdapter extends BaseAdapter {
   }
 
   private static async retryAfterMs(res: Response): Promise<number | null> {
+    // servicehub/03-rate-limits.md: هدر Retry-After (ثانیه) روی ۴۲۹؛ وگرنه resetTime بدنه
+    const header = Number(res.headers.get("retry-after"));
+    if (header > 0) return header <= 60 ? header * 1000 + 500 : null;
     const json = await res.json().catch(() => null) as
       | { rate_limit?: { resetTime?: { date?: string } } }
       | null;
@@ -294,44 +273,13 @@ export class DigikalaAdapter extends BaseAdapter {
     return ms > 0 && ms <= 60_000 ? ms : null;
   }
 
-  /**
-   * روی «Invalid User-Agent» نامزدها را یکی‌یکی با /profile می‌سنجد. اولین پذیرفته‌شده
-   * برگردانده می‌شود تا فراخوان در credentials ذخیره‌اش کند.
-   */
-  async probeUserAgents(
-    credentials: Record<string, string>,
-    browserUserAgent?: string,
-  ): Promise<{ accepted?: string; results: UserAgentProbe[] }> {
-    const results: UserAgentProbe[] = [];
-    // روی همان شیء، نه کپی: اگر وسط کار توکن تازه شود، توکن تازه باید به فراخوان برسد
-    // وگرنه ذخیره‌ی بعدی‌اش توکن سوخته را برمی‌گرداند
-    const original = credentials.userAgent;
-    for (const c of userAgentCandidates(credentials, browserUserAgent)) {
-      credentials.userAgent = c.userAgent;
-      const res = await this.authedFetch(credentials, "/profile").catch(() => null);
-      if (!res) {
-        results.push({ ...c, ok: false, message: "خطای شبکه" });
-        continue;
-      }
-      if (res.ok) {
-        results.push({ ...c, ok: true, message: "پذیرفته شد" });
-        return { accepted: c.userAgent, results };
-      }
-      results.push({ ...c, ok: false, message: await errorText(res) });
-      await this.rateLimit(1000);
-    }
-    if (original === undefined) delete credentials.userAgent;
-    else credentials.userAgent = original;
-    return { results };
-  }
-
   // ── تست اتصال — پروفایل فروشنده ──────────────────────────────────
   async testConnection(credentials: Record<string, string>): Promise<ConnectionTestResult> {
     try {
       const res = await this.authedFetch(credentials, "/profile");
       if (res.status === 401) {
         if (await DigikalaAdapter.isUserAgentError(res.clone())) {
-          return { success: false, message: "دیجی‌کالا User-Agent درخواست را نپذیرفت (Invalid User-Agent)", shopInfo: { userAgentError: true } };
+          return { success: false, message: `دیجی‌کالا User-Agent را نپذیرفت (${userAgentOf(credentials) ?? "خالی"}) — «کد فروشندگی» را بررسی کنید` };
         }
         return { success: false, message: `توکن منقضی یا باطل شده — در پنل دیجی‌کالا توکن را دوباره فعال و کد تازه را وارد کنید (${await errorText(res)})` };
       }
@@ -393,12 +341,9 @@ export class DigikalaAdapter extends BaseAdapter {
     credentials: Record<string, string>,
     updates: StockUpdate[],
   ): Promise<BatchResult> {
-    return this.eachVariant(updates, (u) =>
-      this.authedFetch(credentials, `/variants/${u.platformProductId}/seller-stock`, {
-        method: "PATCH",
-        body:   JSON.stringify({ seller_stock: Math.max(0, Math.floor(u.stock)) }),
-      }),
-    );
+    return this.runBatch(credentials, "/batch/variant/seller-stock/update", updates, (u) => ({
+      seller_stock: Math.max(0, Math.floor(u.stock)),
+    }));
   }
 
   // ── قیمت: selling_price به ریال ─────────────────────────────────────
@@ -408,39 +353,103 @@ export class DigikalaAdapter extends BaseAdapter {
     credentials: Record<string, string>,
     updates: PriceUpdate[],
   ): Promise<BatchResult> {
-    return this.eachVariant(updates, (u) => {
-      const { effective } = applyDiscount(u.price, u.discount);
-      return this.authedFetch(credentials, `/variants/${u.platformProductId}`, {
-        method: "PUT",
-        body:   JSON.stringify({ selling_price: effective * 10 }),
-      });
-    });
+    return this.runBatch(credentials, "/batch/variant/update", updates, (u) => ({
+      selling_price: applyDiscount(u.price, u.discount).effective * 10,
+    }));
   }
 
-  private async eachVariant<T extends { platformProductId: string }>(
+  // ── ارسال دسته‌ای ────────────────────────────────────────────────────
+  // سقف نوشتن تنگ است: ۲۰۰ در ساعت برای هر مسیر و ۷۰ در ۳۰ دقیقه برای هر IP
+  // (servicehub/03-rate-limits.md). ارسال تک‌تنوعی با چند صد محصول همان دور اول
+  // به ۴۲۹ می‌خورد؛ API دسته‌ای کل دسته را یک درخواست حساب می‌کند. کار ناهمگام است:
+  // batch_id برمی‌گردد و نتیجه‌ی هر قلم با /batch/inquiry خوانده می‌شود.
+  private static readonly BATCH_SIZE    = 100;
+  private static readonly BATCH_WAIT_MS = 120_000;
+
+  private async runBatch<T extends { platformProductId: string }>(
+    credentials: Record<string, string>,
+    path: string,
     updates: T[],
-    send: (u: T) => Promise<Response>,
+    payload: (u: T) => Record<string, unknown>,
   ): Promise<BatchResult> {
     const success: string[] = [];
     const failed:  { id: string; error: string }[] = [];
 
-    for (const u of updates) {
-      const id = u.platformProductId;
-      if (!/^\d+$/.test(id)) {
-        failed.push({ id, error: "شناسه‌ی تنوع دیجی‌کالا باید عدد باشد" });
-        continue;
-      }
+    const valid = updates.filter((u) => {
+      if (/^\d+$/.test(u.platformProductId)) return true;
+      failed.push({ id: u.platformProductId, error: "شناسه‌ی تنوع دیجی‌کالا باید عدد باشد" });
+      return false;
+    });
+
+    for (let i = 0; i < valid.length; i += DigikalaAdapter.BATCH_SIZE) {
+      const chunk = valid.slice(i, i + DigikalaAdapter.BATCH_SIZE);
+      const ids   = chunk.map((u) => u.platformProductId);
       try {
-        // ~۳۳ درخواست در ۳۰ ثانیه برای هر مسیر
-        await this.rateLimit(1000);
-        const res = await send(u);
-        if (res.ok) success.push(id);
-        else failed.push({ id, error: await errorText(res) });
+        const res = await this.authedFetch(credentials, path, {
+          method: "POST",
+          body:   JSON.stringify({
+            deadline: 600,
+            items:    chunk.map((u) => ({ variant_id: Number(u.platformProductId), payload: payload(u) })),
+          }),
+        });
+        if (!res.ok) {
+          const error = await errorText(res);
+          failed.push(...ids.map((id) => ({ id, error })));
+          continue;
+        }
+        const json = await res.json() as { data?: { batch_id?: number } };
+        const batchId = json.data?.batch_id;
+        if (batchId == null) {
+          failed.push(...ids.map((id) => ({ id, error: "دیجی‌کالا شناسه‌ی دسته را برنگرداند" })));
+          continue;
+        }
+        const outcome = await this.waitForBatch(credentials, batchId);
+        for (const id of ids) {
+          const r = outcome.get(id);
+          // تا پایان مهلت تمام نشد: ثبت شده و در دیجی‌کالا ادامه دارد — شکست حسابش نمی‌کنیم
+          // چون ارسال دوباره همان دسته را تکرار می‌کند
+          if (!r || r.ok) success.push(id);
+          else failed.push({ id, error: r.error });
+        }
       } catch (err) {
-        failed.push({ id, error: err instanceof Error ? err.message : "خطای شبکه" });
+        const error = err instanceof Error ? err.message : "خطای شبکه";
+        failed.push(...ids.map((id) => ({ id, error })));
       }
     }
     return { success, failed };
+  }
+
+  /** نتیجه‌ی هر قلم دسته (کلید = variant_id)؛ اگر تا مهلت تمام نشد، نقشه‌ی خالی. */
+  private async waitForBatch(
+    credentials: Record<string, string>,
+    batchId: number,
+  ): Promise<Map<string, { ok: boolean; error: string }>> {
+    const result = new Map<string, { ok: boolean; error: string }>();
+    const until  = Date.now() + DigikalaAdapter.BATCH_WAIT_MS;
+    let delay = 2000;
+    while (Date.now() < until) {
+      await this.rateLimit(delay);
+      delay = Math.min(delay * 1.5, 10_000);
+      const res = await this.authedFetch(credentials, "/batch/inquiry", {
+        method: "POST",
+        body:   JSON.stringify({ batch_id: batchId }),
+      }).catch(() => null);
+      if (!res?.ok) continue;
+      const json = await res.json().catch(() => null) as
+        | { data?: { status?: string; items?: { key?: number | string; status?: string; errors?: unknown }[] } }
+        | null;
+      if (json?.data?.status === "processing" || !json?.data?.items) continue;
+      for (const it of json.data.items) {
+        if (it.key == null) continue;
+        const ok = it.status === "success";
+        result.set(String(it.key), {
+          ok,
+          error: ok ? "" : typeof it.errors === "string" ? it.errors : JSON.stringify(it.errors ?? it.status),
+        });
+      }
+      return result;
+    }
+    return result;
   }
 
   // ── سفارش‌ها: اقلام سفارش «فعال» ─────────────────────────────────

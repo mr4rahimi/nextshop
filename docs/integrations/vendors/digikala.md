@@ -11,6 +11,10 @@
 | `Digikala.html` | خروجی ذخیره‌شده‌ی صفحه‌ی Swagger |
 | `doc01` | متن صفحه‌ی «توکن اختصاصی» پنل فروشندگان |
 | `01.png` – `03.png` | تصویر مراحل فعال‌سازی توکن در پنل فروشندگان |
+| `servicehub/01-getting-started.md` | آکادمی سرویس‌هاب: شروع کار، **هدر الزامی User-Agent**، مدیریت خطاها |
+| `servicehub/02-auth-guide.md` | آکادمی سرویس‌هاب: احراز هویت، کلید RSA، رمزگشایی (PKCS1)، refresh، لغو، نمونه‌کد ۵ زبان |
+| `servicehub/03-rate-limits.md` | آکادمی سرویس‌هاب: لایه‌های سقف درخواست، `rate_limit`، `Retry-After`، بهترین شیوه‌ها |
+| `hubservice.html` | خروجی ذخیره‌شده‌ی صفحه‌ی «شروع کار» (همان servicehub/01) |
 
 ## اتصال
 
@@ -65,43 +69,61 @@ credentials ذخیره‌شده:
 | `accessExpiresAt` | میلی‌ثانیه‌ی انقضای access |
 | `activatedAt` | زمان آخرین فعال‌سازی با کد |
 | `scopes` | دسترسی‌های توکن، با ویرگول (مثل `variant,order,profile`) |
-| `clientCode` | «کد کلاینت» واردشده در فرم؛ خالی = claim `client_code` توکن |
+| `sellerCode` | «کد فروشندگی» فرم؛ خالی = claim `seller_id` توکن |
+| `userAgent` | User-Agent دستی (پیشرفته)؛ خالی = `DigikalaTrustedBot/SelfToken/{sellerCode}` |
 
 > فرم دیجی‌کالا از `/api/integration/connections/test` استفاده **نمی‌کند**؛ آن مسیر
 > credentials را با بدنه‌ی درخواست بازنویسی می‌کند و کلیدها را پاک می‌کرد. تست از
 > `POST /api/integration/connections/digikala {action:"test"}` با توکن ذخیره‌شده است.
 > ذخیره‌ی تنظیمات همگام‌سازی همان `POST /api/integration/connections` بدون credentials است.
 
-## User-Agent = کد کلاینت (در مستند نیامده)
+## User-Agent الزامی — `DigikalaTrustedBot/SelfToken/{کد فروشندگی}`
 
-اولین فعال‌سازی واقعی (مای‌مونتا، ۱۴۰۵/۰۸/۰۷): تبادل کد و refresh موفق بودند ولی `GET /profile`
-با توکن سالم ۴۰۱ داد:
+**از ۴ مهر ۱۴۰۵** هر درخواست با توکن اختصاصی باید این هدر را داشته باشد، وگرنه ۴۰۱
+`Invalid User-Agent!` — حتی با توکن سالم. منبع: پاسخ تیکت پشتیبانی (۱۴۰۵/۰۸/۰۷) و بخش «هدر الزامی:
+User-Agent» در [servicehub/01-getting-started.md](digikala/servicehub/01-getting-started.md).
 
-```json
-{"status":"error","message":"Invalid User-Agent!","code":401}
+```
+User-Agent: DigikalaTrustedBot/SelfToken/153053      ← توکن اختصاصی (کد فروشندگی)
+User-Agent: DigikalaTrustedBot/MyAwesomeApp          ← سرویس‌دهنده‌ی ثبت‌شده (نام انگلیسی بی‌فاصله)
 ```
 
-مسیرهای `/auth/*` بدون User-Agent کار می‌کنند، مسیرهای داده نه. پنل دیجی‌کالا کنار کد
-اعتبارسنجی یک **«کد کلاینت»** هم نشان می‌دهد و JWT توکن claimهای
-`token_id, seller_id, client_code, exp` دارد. آداپتور `User-Agent: <client_code>` می‌فرستد
-(`clientCodeOf`: مقدار فرم، وگرنه claim توکن) — مثل «کد یکتای» اسنپ‌شاپ. *پذیرفته شدن این
-مقدار هنوز با پاسخ موفق تأیید نشده؛ اگر رد شد، مقدار فرم را با کد کلاینت پنل عوض کنید
-(«ذخیره کد کلاینت و تست» بدون فعال‌سازی دوباره).*
+پیش‌فرض کتابخانه‌ها (`node`, `curl/8.x`, `PostmanRuntime/7.x`) رد می‌شوند. دیجی‌کالا اول توکن را
+می‌سنجد، پس با توکن جعلی هر User-Agentی «Invalid token!» می‌گیرد — این خطا فقط با توکن واقعی دیده
+می‌شود. آزموده با توکن واقعی مای‌مونتا: `/profile`, `/variants`, `/orders` همه ۲۰۰.
 
-نکته‌ها:
-- ۴۰۱ «Invalid User-Agent» دیگر refresh را صدا نمی‌زند (`isUserAgentError`) — قبلاً هر تست یک
-  توکن تازه می‌سوزاند (زمان انقضا در فرم مدام عوض می‌شد).
-- انقضای access در عمل **دو ساعت** بود، نه یک ساعت (exp منهای زمان فعال‌سازی).
-- **کد اعتبارسنجی یک‌بارمصرف است** و پنل دیجی‌کالا فقط یک‌بار نشانش می‌دهد. استفاده‌ی دوباره:
-  `400 seller.service.token.not.found`. فرم بعد از تبادل موفق کادر کد را پنهان می‌کند
-  («وارد کردن کد تازه» برای فعال‌سازی دوباره).
+پیاده‌سازی (`userAgentOf` در آداپتور، روی همه‌ی درخواست‌ها از جمله refresh):
+- کد فروشندگی = فیلد «کد فروشندگی دیجی‌کالا» فرم (`sellerCode`)، وگرنه claim `seller_id` توکن
+  (JWT claimها: `token_id, seller_id, client_code, exp`). در تبادل کد، توکن هنوز نیست؛ اگر فرم کد
+  داشته باشد همان فرستاده می‌شود (`/auth/*` بدون آن هم کار کرده).
+- «تنظیمات پیشرفته ← User-Agent دستی» (`userAgent`) کل مقدار را جایگزین می‌کند — فقط اگر دیجی‌کالا
+  فرمت را عوض کرد.
+- ۴۰۱ با متن User-Agent باعث refresh نمی‌شود (`isUserAgentError`) — توکن تازه درستش نمی‌کند.
+
+مسیر کشف (برای اینکه دوباره تکرار نشود): «کد کلاینت» پنل (= claim `client_code`)، Base64 بازشده‌اش،
+User-Agent مرورگر فعال‌کننده و پیش‌فرض کتابخانه‌ها همه رد شدند. سورس پنل پرچم
+`module_seller_service_check_user_agent_self_token` دارد. «کد کلاینت» برای توکن اختصاصی لازم نیست.
+
+نکته‌های دیگر:
+- انقضای access در عمل **دو ساعت** بود، نه یک ساعت.
+- **کد اعتبارسنجی یک‌بارمصرف است**، کمتر از ۵ دقیقه اعتبار دارد و پنل فقط یک‌بار نشانش می‌دهد.
+  استفاده‌ی دوباره: `400 seller.service.token.not.found`. فرم بعد از تبادل موفق کادر کد را پنهان
+  می‌کند («وارد کردن کد تازه» برای فعال‌سازی دوباره).
+- padding رمزگشایی طبق راهنمای رسمی `RSA/ECB/PKCS1Padding` است.
 
 ## سقف درخواست
 
-هر پاسخ `rate_limit: {max, current, resetTime:{date, timezone:"Asia/Tehran"}}` دارد و سقف
-**برای هر مسیر جداست** — مثلاً `/` حدود ۳۳ در ۳۰ ثانیه و `/auth/token` حدود ۲۲۱ در ساعت
-(دیده‌شده ۱۴۰۵/۰۸/۰۷). آداپتور بین ارسال‌های تک‌تنوعی ۱ ثانیه صبر می‌کند و روی ۴۲۹ تا
-`resetTime` (حداکثر ۶۰ ثانیه) صبر و یک‌بار دوباره تلاش می‌کند.
+مرجع: [servicehub/03-rate-limits.md](digikala/servicehub/03-rate-limits.md).
+
+| لایه | خواندن (View) | نوشتن (Form) |
+|---|---|---|
+| سراسری، به ازای IP | ۵۰ در ۳ دقیقه | **۷۰ در ۳۰ دقیقه** |
+| سرویس‌هاب، به ازای فروشنده+کلاینت+مسیر | ۳۰ در ۳۰ ثانیه | **۲۰۰ در ساعت** |
+
+مسیرهای `variant` سقف پویا بر اساس تعداد تنوع فعال دارند (۶۰۰ تنوع ≈ ۱۵ در دقیقه). سقف نوشتن یعنی
+**ارسال تک‌تنوعی ممکن نیست** — موجودی و قیمت با API دسته‌ای می‌روند (پایین). هر پاسخ
+`rate_limit: {max, current, resetTime}` دارد؛ روی ۴۲۹ آداپتور هدر `Retry-After` (ثانیه) یا
+`resetTime` را می‌خواند، تا ۶۰ ثانیه صبر و یک‌بار دوباره تلاش می‌کند.
 
 ## خطاها
 
@@ -120,8 +142,9 @@ credentials ذخیره‌شده:
 | `POST /auth/refresh-token` | — | تمدید |
 | `GET /profile` | `profile` | تست اتصال (نام و شناسه‌ی فروشنده) |
 | `GET /variants?page&size=50` | `variant` | دریافت تنوع‌ها برای نگاشت |
-| `PATCH /variants/{id}/seller-stock` | `variant` | ارسال موجودی `{seller_stock}` |
-| `PUT /variants/{id}` | `variant` | ارسال قیمت `{selling_price}` (ریال) |
+| `POST /batch/variant/seller-stock/update` | `variant` | ارسال موجودی، دسته‌های ۱۰۰تایی `{seller_stock}` |
+| `POST /batch/variant/update` | `variant` | ارسال قیمت، دسته‌های ۱۰۰تایی `{selling_price}` (ریال) |
+| `POST /batch/inquiry` | `self_settings` | نتیجه‌ی هر قلم دسته |
 | `GET /orders?page&size=50` | `order` | اقلام سفارش فعال |
 
 اگر توکن scope لازم را نداشته باشد پاسخ ۴۰۳ است؛ scopeهای توکن در فرم نمایش داده می‌شوند.
@@ -135,7 +158,7 @@ lightening_deal, ticketing, seller_page, sbs_order_change_status, search_ads, in
 
 | فیلد دیجی‌کالا | در پنل |
 |---|---|
-| `id` (seller variant id) | `platformProductId` — همان شناسه‌ای که در `/variants/{variant_id}` می‌رود |
+| `id` (seller variant id) | `platformProductId` — در داده‌ی واقعی برابر `product_variant_id` است (سفارش‌ها مستقیم وصل می‌شوند) |
 | `product_id`, `product_variant_id` | `rawData.refs.product` / `rawData.refs.variant` |
 | `title` / `product_title` | عنوان |
 | `supplier_code` | SKU (کد فروشنده) |
@@ -143,6 +166,14 @@ lightening_deal, ticketing, seller_page, sbs_order_change_status, search_ads, in
 | `price_list` | ذخیره **نمی‌شود** — «قیمت مرجع» دیجی‌کالاست، نه تخفیف فروشنده |
 | `marketplace_seller_stock` | `stock` — فقط موجودی نزد فروشنده؛ `warehouse_stock` (انبار دیجی‌کالا) دست ما نیست |
 | `is_archived` | آرشیوشده‌ها کنار گذاشته می‌شوند |
+
+## ارسال دسته‌ای
+
+`{deadline: 600, items: [{variant_id, payload}]}` ← `{batch_id, status: "processing"}`. آداپتور
+`/batch/inquiry` را با فاصله‌ی ۲ تا ۱۰ ثانیه تا ۲ دقیقه می‌پرسد؛ هر قلم
+`{key: variant_id, status: "success"|..., errors}`. قلمی که تا پایان مهلت نتیجه نگرفت موفق حساب
+می‌شود (در دیجی‌کالا ادامه دارد؛ ارسال دوباره فقط تکرارش می‌کند). *اینکه `key` همان variant_id
+است از مثال spec برداشته شده و هنوز با پاسخ واقعی دیده نشده.*
 
 ## قیمت و تخفیف
 
@@ -153,8 +184,9 @@ lightening_deal, ticketing, seller_page, sbs_order_change_status, search_ads, in
 - پروموشن‌ها، شگفت‌انگیز و تخفیف هوشمند در API جدا (`/pricing/...`) هستند و پنل فعلاً
   به آن‌ها دست نمی‌زند.
 - `PATCH /variants/selling-price` هم وجود دارد ولی `credit_increase_percentage` را اجباری
-  می‌خواهد؛ برای همین قیمت با `PUT /variants/{id}` (همه‌ی فیلدها اختیاری) فرستاده می‌شود.
-- `PUT /variants/{id}` اگر تنوع عکس تأییدشده‌ی کافی نداشته باشد ۴۰۰ می‌دهد (spec).
+  می‌خواهد؛ قیمت با `batch/variant/update` (فیلدهای payload اختیاری) فرستاده می‌شود.
+- ویرایش تنوع اگر عکس تأییدشده‌ی کافی نداشته باشد خطا می‌دهد (spec) — در نتیجه‌ی همان قلم.
+- داده‌ی واقعی: `price_sale` گاهی **بزرگ‌تر** از `price_list` است، پس `price_list` تخفیف نیست.
 
 ## سفارش‌ها
 
@@ -181,18 +213,10 @@ lightening_deal, ticketing, seller_page, sbs_order_change_status, search_ads, in
 ## کارهای مانده
 
 - [x] فعال‌سازی با کد واقعی — padding درست بود، تبادل و refresh موفق (۱۴۰۵/۰۸/۰۷)
-- [ ] **User-Agent:** با توکن واقعی (۱۴۰۵/۰۸/۰۷، مای‌مونتا) همه رد شدند: بدون هدر، `node`، کد کلاینت
-  (= claim `client_code`)، Base64 بازشده‌اش، `GuzzleHttp/7`، `curl`، `python-requests`، `PostmanRuntime` —
-  روی `/profile`, `/variants`, `/orders`, `/webhook/event-types`, `/auth/scopes/{client_code}`. فرضیه‌ی
-  باقی‌مانده: توکن به User-Agent مرورگری که فروشنده با آن در پنل دیجی‌کالا فعالش کرده گره خورده.
-  تست اتصال حالا نامزدها را خودکار می‌سنجد (`probeUserAgents`، شامل User-Agent مرورگر ادمین) و
-  پذیرفته‌شده را در `userAgent` ذخیره می‌کند. **User-Agent مرورگر فایرفاکسی که توکن با آن فعال شده
-  هم رد شد** — فرضیه‌ی گره خوردن به مرورگر رد است. در سورس صفحه‌ی پنل (`digikala/Digikala.html`)
-  پرچم `module_seller_service_check_user_agent_self_token = 1` هست: بررسی User-Agent مخصوص توکن
-  اختصاصی، با قاعده‌ای مستندنشده. تیکت پشتیبانی ثبت شد (۱۴۰۵/۰۸/۰۷) — نمونه‌ی درخواست:
-  `x-dk-request-id: 9fb6a279de0a26369a7371d34893d776`، seller_id 153053، token_id 29910. پاسخ را این‌جا بنویسید.
-- [ ] بررسی اینکه `id` و `product_variant_id` تنوع در داده‌ی واقعی یکی‌اند یا نه
+- [x] User-Agent: `DigikalaTrustedBot/SelfToken/{seller_id}` (پاسخ تیکت، ۱۴۰۵/۰۸/۰۷)
+- [x] `id` و `product_variant_id` در داده‌ی واقعی یکی‌اند (۱۰۸ تنوع مای‌مونتا)
 - [ ] سفارش‌های ارسال توسط فروشنده (`ship-by-seller-orders`) و لغو اقلام
-- [ ] ارسال دسته‌ای با `/batch/variant/seller-stock/update` برای کاتالوگ بزرگ
+- [x] ارسال دسته‌ای موجودی و قیمت
+- [ ] دیدن پاسخ واقعی `/batch/inquiry` (کلید `key`)
 - [ ] لینک دیجی‌کالا در کاتالوگ ربات بله (`https://www.digikala.com/product/dkp-{product}/`)
 - [ ] وب‌هوک، اگر نشانی‌اش برای توکن اختصاصی قابل تنظیم باشد

@@ -1,0 +1,461 @@
+<!DOCTYPE html><html lang="fa"><head><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta charset="UTF-8"><meta name="viewport" content="user-scalable=yes, width=device-width, initial-scale=1, maximum-scale=5"><meta name="theme-color" content="#1976d2"><meta name="msapplication-TileColor" content="#1976d2"><meta name="msapplication-TileImage" content="/_assets/favicons/mstile-150x150.png"><title>شروع کار با سرویس‌هاب — اولین درخواست API | آکادمی سرویس‌هاب دیجی کالا</title><meta name="description" content="راهنمای گام‌به‌گام برای اولین یکپارچه‌سازی با Marketplace API دیجی‌کالا: احراز هویت OAuth 2.0، دریافت توکن و اولین فراخوانی API"><meta property="og:title" content="شروع کار با سرویس‌هاب — اولین درخواست API"><meta property="og:type" content="website"><meta property="og:description" content="راهنمای گام‌به‌گام برای اولین یکپارچه‌سازی با Marketplace API دیجی‌کالا: احراز هویت OAuth 2.0، دریافت توکن و اولین فراخوانی API"><meta property="og:image"><meta property="og:url" content="https://servicehub.digikala.services/fa/%D8%B4%D8%B1%D9%88%D8%B9-%DA%A9%D8%A7%D8%B1-%D8%A8%D8%A7-%D8%B3%D8%B1%D9%88%DB%8C%D8%B3-%D9%87%D8%A7%D8%A8"><meta property="og:site_name" content="آکادمی سرویس‌هاب دیجی کالا"><link rel="apple-touch-icon" sizes="180x180" href="/_assets/favicons/apple-touch-icon.png"><link rel="icon" type="image/png" sizes="192x192" href="/_assets/favicons/android-chrome-192x192.png"><link rel="icon" type="image/png" sizes="32x32" href="/_assets/favicons/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/_assets/favicons/favicon-16x16.png"><link rel="mask-icon" href="/_assets/favicons/safari-pinned-tab.svg" color="#1976d2"><link rel="manifest" href="/_assets/manifest.json"><script>var siteConfig = {"title":"آکادمی سرویس‌هاب دیجی کالا","theme":"default","darkMode":false,"tocPosition":"left","lang":"fa","rtl":true,"company":"دیجی‌کالا","contentLicense":"alr","footerOverride":"","logoUrl":"https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://www.digikala.com/&size=256"}
+var siteLangs = [{"code":"en","name":"English"},{"code":"fa","name":"فارسی"}]
+</script><link type="text/css" rel="stylesheet" href="/_assets/css/app.766a556e9dcc61b7fcd5.css"><script type="text/javascript" src="/_assets/js/runtime.js?1716156900"></script><script type="text/javascript" src="/_assets/js/app.js?1716156900"></script><!-- Yandex.Metrika counter -->
+<script type="text/javascript" >
+  (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+  m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+  (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+  ym(109740656, "init", {
+    clickmap:true,
+    trackLinks:true,
+    accurateTrackBounce:true,
+    webvisor:true
+  });
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/109740656" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+<style type="text/css">@import url(https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap);@font-face{font-family:Vazirmatn;src:url('/fonts/Vazirmatn-Regular.woff2') format('woff2');font-weight:400;font-display:swap}@font-face{font-family:Vazirmatn;src:url('/fonts/Vazirmatn-Bold.woff2') format('woff2');font-weight:700;font-display:swap}.markdown-body,.page-col-content,.v-application,body,html{font-family:Vazirmatn,sans-serif!important}.v-application .body-1,.v-application .body-2,.v-application .caption,.v-application .display-1,.v-application .display-2,.v-application .display-3,.v-application .display-4,.v-application .headline,.v-application .overline,.v-application .subtitle-1,.v-application .subtitle-2,.v-application .text-body-1,.v-application .text-body-2,.v-application .text-button,.v-application .text-caption,.v-application .text-h1,.v-application .text-h2,.v-application .text-h3,.v-application .text-h4,.v-application .text-h5,.v-application .text-h6,.v-application .text-overline,.v-application .text-subtitle-1,.v-application .text-subtitle-2,.v-application .title,.v-application .v-toolbar__title{font-family:Vazirmatn,sans-serif!important}.page-author-card{display:none!important}</style></head><body><div id="root"><page locale="fa" path="شروع-کار-با-سرویس-هاب" title="شروع کار با سرویس‌هاب — اولین درخواست API" description="راهنمای گام‌به‌گام برای اولین یکپارچه‌سازی با Marketplace API دیجی‌کالا: احراز هویت OAuth 2.0، دریافت توکن و اولین فراخوانی API" :tags="[]" created-at="2026-05-17T12:02:27.785Z" updated-at="2026-09-14T15:01:33.618Z" author-name="Ali Mousavi" :author-id="6" editor="markdown" :is-published="true" toc="W3sidGl0bGUiOiLYtNix2YjYuSDaqdin2LEg2KjYpyDYs9ix2YjbjNiz4oCM2YfYp9ioIOKAlCDYp9mI2YTbjNmGINiv2LHYrtmI2KfYs9iqIEFQSSIsImFuY2hvciI6IiPYtNix2YjYuS3aqdin2LEt2KjYpy3Ys9ix2YjbjNiz2YfYp9ioLdin2YjZhNuM2YYt2K/Ysdiu2YjYp9iz2KotYXBpIiwiY2hpbGRyZW4iOlt7InRpdGxlIjoi2YHZh9ix2LPYqiDZhdi32KfZhNioIiwiYW5jaG9yIjoiI9mB2YfYsdiz2Kot2YXYt9in2YTYqCIsImNoaWxkcmVuIjpbXX0seyJ0aXRsZSI6IvCfk5Yg2YXZgtiv2YXZhyIsImFuY2hvciI6IiPZhdmC2K/ZhdmHIiwiY2hpbGRyZW4iOlt7InRpdGxlIjoi2YLYp9io2YTbjNiq4oCM2YfYp9uMINin2LXZhNuMIiwiYW5jaG9yIjoiI9mC2KfYqNmE24zYqtmH2KfbjC3Yp9i12YTbjCIsImNoaWxkcmVuIjpbXX1dfSx7InRpdGxlIjoi4pqZ77iPINm+24zYtOKAjNmG24zYp9iy2YfYpyIsImFuY2hvciI6IiPvuI8t2b7bjNi02YbbjNin2LLZh9inIiwiY2hpbGRyZW4iOltdfSx7InRpdGxlIjoi8J+UhCDZhdix2YjYsSDaqdmE24wg2KzYsduM2KfZhiDYp9it2LHYp9iyINmH2YjbjNiqIiwiYW5jaG9yIjoiI9mF2LHZiNixLdqp2YTbjC3YrNix24zYp9mGLdin2K3Ysdin2LIt2YfZiNuM2KoiLCJjaGlsZHJlbiI6W119LHsidGl0bGUiOiLwn5SXINmF2LHYrdmE2Ycg27E6INmH2K/Yp9uM2Kog2YHYsdmI2LTZhtiv2Ycg2KjZhyDYtdmB2K3ZhyDYsdi22KfbjNiqIiwiYW5jaG9yIjoiI9mF2LHYrdmE2Yct27Et2YfYr9in24zYqi3Zgdix2YjYtNmG2K/Zhy3YqNmHLdi12YHYrdmHLdix2LbYp9uM2KoiLCJjaGlsZHJlbiI6W3sidGl0bGUiOiLZvtin2LHYp9mF2KrYsdmH2KciLCJhbmNob3IiOiIj2b7Yp9ix2KfZhdiq2LHZh9inIiwiY2hpbGRyZW4iOltdfV19LHsidGl0bGUiOiLwn5STINmF2LHYrdmE2Ycg27I6INiv2LHbjNin2YHYqiDZiCDYsdmF2LLar9i02KfbjNuMINqp2K8iLCJhbmNob3IiOiIj2YXYsdit2YTZhy3bsi3Yr9ix24zYp9mB2Kot2Ygt2LHZhdiy2q/YtNin24zbjC3aqdivIiwiY2hpbGRyZW4iOltdfSx7InRpdGxlIjoi8J+On++4jyDZhdix2K3ZhNmHINuzOiDYr9ix24zYp9mB2Kog2KrZiNqp2YYiLCJhbmNob3IiOiIj77iPLdmF2LHYrdmE2Yct27Mt2K/YsduM2KfZgdiqLdiq2YjaqdmGIiwiY2hpbGRyZW4iOlt7InRpdGxlIjoi2b7Yp9iz2K4g2YXZiNmB2YIgKEhUVFAgMjAwKSIsImFuY2hvciI6IiPZvtin2LPYri3ZhdmI2YHZgi1odHRwLTIwMCIsImNoaWxkcmVuIjpbXX1dfSx7InRpdGxlIjoi8J+agCDZhdix2K3ZhNmHINu0OiDYp9mI2YTbjNmGINiv2LHYrtmI2KfYs9iqIEFQSSIsImFuY2hvciI6IiPZhdix2K3ZhNmHLdu0Ldin2YjZhNuM2YYt2K/Ysdiu2YjYp9iz2KotYXBpIiwiY2hpbGRyZW4iOlt7InRpdGxlIjoi2K/YsduM2KfZgdiqINm+2LHZiNmB2KfbjNmEINmB2LHZiNi02YbYr9mHIiwiYW5jaG9yIjoiI9iv2LHbjNin2YHYqi3Zvtix2YjZgdin24zZhC3Zgdix2YjYtNmG2K/ZhyIsImNoaWxkcmVuIjpbXX0seyJ0aXRsZSI6Itm+2KfYs9iuINmG2YXZiNmG2YciLCJhbmNob3IiOiIj2b7Yp9iz2K4t2YbZhdmI2YbZhyIsImNoaWxkcmVuIjpbXX1dfSx7InRpdGxlIjoi8J+UpCDZh9iv2LEg2KfZhNiy2KfZhduMOiBVc2VyLUFnZW50IiwiYW5jaG9yIjoiI9mH2K/YsS3Yp9mE2LLYp9mF24wtdXNlci1hZ2VudCIsImNoaWxkcmVuIjpbXX0seyJ0aXRsZSI6IvCflIEg2KrZhdiv24zYryDYqtmI2qnZhiIsImFuY2hvciI6IiPYqtmF2K/bjNivLdiq2YjaqdmGIiwiY2hpbGRyZW4iOltdfSx7InRpdGxlIjoi4pqg77iPINmF2K/bjNix24zYqiDYrti32KfZh9inIiwiYW5jaG9yIjoiI++4jy3Zhdiv24zYsduM2Kot2K7Yt9in2YfYpyIsImNoaWxkcmVuIjpbXX0seyJ0aXRsZSI6IvCflJcg2YTbjNmG2qnigIzZh9in24wg2YXYsdiq2KjYtyIsImFuY2hvciI6IiPZhNuM2YbaqdmH2KfbjC3Zhdix2KrYqNi3IiwiY2hpbGRyZW4iOltdfV19XQ==" :page-id="90" sidebar="W3siaSI6InNkaS0xIiwiayI6ImRpdmlkZXIiLCJsIjpudWxsLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktMiIsImsiOiJoZWFkZXIiLCJsIjoi2K/Ysdio2KfYseKAjNmH4oCM24wg2LPYp9uM2KoiLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktMyIsImsiOiJsaW5rIiwibCI6ItmF2LPYqtmG2K8g2LPYsdmI24zYs+KAjNmH2KfbjCDYs9ix2YjbjNiz4oCM2YfYp9ioIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL2hvbWUifSx7ImkiOiJzZGktNCIsImsiOiJsaW5rIiwibCI6Itin2LfZhNin2Lkg2LHYs9in2YbbjCDZh9inIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL3JlbGVhc2UvY2hhbmdlcyJ9LHsiaSI6InNkaS01IiwiayI6ImRpdmlkZXIiLCJsIjpudWxsLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktNiIsImsiOiJoZWFkZXIiLCJsIjoi2YXZgtiv2YXYp9iqINmB2LnYp9mE24zYqiDYr9ixINiz2LHZiNuM2LPigIzZh9in2KgiLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktNyIsImsiOiJsaW5rIiwibCI6Itin2YjZhNuM2YYg2K/Ysdiu2YjYp9iz2KogQVBJICIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS/YtNix2YjYuS3aqdin2LEt2KjYpy3Ys9ix2YjbjNizLdmH2KfYqCJ9LHsiaSI6InNkaS04IiwiayI6ImxpbmsiLCJsIjoi2KfYrdix2KfYsiDZh9mI24zYqiDZgdix2YjYtNmG2K/ZhyIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS/Ysdin2YfZhtmF2KfbjC3bjNqp2b7Yp9ix2obZhy3Ys9in2LLbjCJ9LHsiaSI6InNkaS05IiwiayI6ImxpbmsiLCJsIjoiUmF0ZSBMaW1pdCIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9yYXRlLWxpbWl0cyJ9LHsiaSI6InNkaS0xMCIsImsiOiJsaW5rIiwibCI6Itiq2YjaqdmGINin2K7Yqti12KfYtduMIChTZWxmIFRva2VuKSIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9zZXJ2aWNlLWh1Yi9zZWxmLXRva2VuIn0seyJpIjoic2RpLTExIiwiayI6ImRpdmlkZXIiLCJsIjpudWxsLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktMTIiLCJrIjoiaGVhZGVyIiwibCI6ItmF2LPYqtmG2K/Yp9iqINmB2YbbjCIsImMiOm51bGwsInkiOm51bGwsInQiOm51bGx9LHsiaSI6InNkaS0xMyIsImsiOiJsaW5rIiwibCI6IlN3YWdnZXIiLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoiZXh0ZXJuYWwiLCJ0IjoiaHR0cHM6Ly9zZWxsZXIuZGlnaWthbGEuY29tL29wZW4tYXBpL3YxL2RvYy8jLyJ9LHsiaSI6InNkaS0xNCIsImsiOiJsaW5rIiwibCI6IlNhbmRib3giLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoiZXh0ZXJuYWwiLCJ0IjoiaHR0cHM6Ly9naXRodWIuY29tL3NhbGltb3VzYXZpL3NlbGxlcl9zZXJ2aWNlX3NhbmRib3gifSx7ImkiOiJzZGktMTUiLCJrIjoibGluayIsImwiOiLZiNioINmH2YjaqSAoV2ViaG9vaykiLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEv2YjYqNmH2YjaqSJ9LHsiaSI6InNkaS0xNiIsImsiOiJsaW5rIiwibCI6Itiv2LHYrtmI2KfYs9iq4oCM2YfYp9uMINin2YbYqNmI2YcgKEJhdGNoIEFQSSkiLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvYmF0Y2gtYXBpIn0seyJpIjoic2RpLTE3IiwiayI6ImRpdmlkZXIiLCJsIjpudWxsLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktMTgiLCJrIjoiaGVhZGVyIiwibCI6Itin24zYrNin2K8g2YXYrdiq2YjYpyIsImMiOm51bGwsInkiOm51bGwsInQiOm51bGx9LHsiaSI6InNkaS0xOSIsImsiOiJsaW5rIiwibCI6Itis2LPYqiDZiCDYrNmIINmIINiv2LHYrCDaqdin2YTYpyIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS/YrNiz2Kot2Ygt2KzZiC3ZiC3Yr9ix2Kwt2qnYp9mE2KcifSx7ImkiOiJzZGktMjAiLCJrIjoibGluayIsImwiOiLZiNuM2LHYp9uM2LQg2qnYp9mE2KciLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEv2YjbjNix2KfbjNi0Ldqp2KfZhNinIn0seyJpIjoic2RpLTIxIiwiayI6ImxpbmsiLCJsIjoi2b7Ysdiz2LQg2Ygg2b7Yp9iz2K4iLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEv2b7Ysdiz2LQt2Ygt2b7Yp9iz2K4ifSx7ImkiOiJzZGktMjIiLCJrIjoiZGl2aWRlciIsImwiOm51bGwsImMiOm51bGwsInkiOm51bGwsInQiOm51bGx9LHsiaSI6InNkaS0yMyIsImsiOiJoZWFkZXIiLCJsIjoi2YXYr9uM2LHbjNiqINiz2YHYp9ix2LTigIzZh9inINmIINin2LHYs9in2YQiLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktMjQiLCJrIjoibGluayIsImwiOiLYqtmG2LjbjNmF2KfYqiDYp9ix2LPYp9mEINiq2YjYs9i3INmB2LHZiNi02YbYr9mHIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL9iq2YbYuNuM2YXYp9iqLdin2LHYs9in2YQt2KrZiNiz2Lct2YHYsdmI2LTZhtiv2YcifSx7ImkiOiJzZGktMjUiLCJrIjoibGluayIsImwiOiLYs9mB2KfYsdi04oCM2YfYp9uMINio2Kcg2KfYsdiz2KfZhCDZgdix2YjYtNmG2K/ZhyIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS/Ys9mB2KfYsdi0LdmH2KfbjC3YqNinLdin2LHYs9in2YQt2YHYsdmI2LTZhtiv2Yct2KzYr9uM2K8ifSx7ImkiOiJzZGktMjYiLCJrIjoibGluayIsImwiOiLYs9mB2KfYsdi04oCM2YfYp9uMINio2Kcg2KfYsdiz2KfZhCDYr9uM2KzbjOKAjNqp2KfZhNinIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL9iz2YHYp9ix2LQt2KjYpy3Yp9ix2LPYp9mELdiv24zYrNuM4oCM2qnYp9mE2KcifSx7ImkiOiJzZGktMjciLCJrIjoibGluayIsImwiOiLYq9io2Kog2K/ZhNuM2YjYsduMINiz2YHYp9ix2LTigIzZh9in24wg2KjYpyDYp9ix2LPYp9mEINiq2YjYs9i3INmB2LHZiNi02YbYr9mHIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL9ir2KjYqi3Yr9mE24zZiNix24wt2LPZgdin2LHYtNin2Kot2KfYsdiz2KfZhC3YqtmI2LPYty3Zgdix2YjYtNmG2K/ZhyJ9LHsiaSI6InNkaS0yOCIsImsiOiJsaW5rIiwibCI6Itin2LHYs9in2YQg27Mg2LPYp9i52KrZhyIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9OZWFyYnktc3RvcmUifSx7ImkiOiJzZGktMjkiLCJrIjoiZGl2aWRlciIsImwiOm51bGwsImMiOm51bGwsInkiOm51bGwsInQiOm51bGx9LHsiaSI6InNkaS0zMCIsImsiOiJoZWFkZXIiLCJsIjoi2KfbjNis2KfYryDYqtmG2YjYudiMINmF2K/bjNix24zYqiDYqtmG2YjYuSDZiCDZgtuM2YXYquKAjNqv2LDYp9ix24wiLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktMzEiLCJrIjoibGluayIsImwiOiLZhdmB2KfZh9uM2YUg2qnZhNuM2K/bjCDYqtmG2YjYuSIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS/ZhdmB2KfZh9uM2YUt2qnZhNuM2K/bjC3YqtmG2YjYuSJ9LHsiaSI6InNkaS0zMiIsImsiOiJsaW5rIiwibCI6Itin24zYrNin2K8g2KrZhtmI2LkiLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEv2KfbjNis2KfYry3YqtmG2YjYuSJ9LHsiaSI6InNkaS0zMyIsImsiOiJkaXZpZGVyIiwibCI6bnVsbCwiYyI6bnVsbCwieSI6bnVsbCwidCI6bnVsbH0seyJpIjoic2RpLTM0IiwiayI6ImhlYWRlciIsImwiOiLYqtio2YTbjNi62KfYqiIsImMiOm51bGwsInkiOm51bGwsInQiOm51bGx9LHsiaSI6InNkaS0zNSIsImsiOiJsaW5rIiwibCI6Itiq2KjZhNuM2LrYp9iqINis2LPYqiDZiCDYrNmIINmF2K3ZiNixIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL9iq2KjZhNuM2LrYp9iqLdis2LPYqi3ZiC3YrNmILdmF2K3ZiNixIn0seyJpIjoic2RpLTM2IiwiayI6ImRpdmlkZXIiLCJsIjpudWxsLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktMzciLCJrIjoiaGVhZGVyIiwibCI6Itin2qnYp9mG2KogVHJpYWwiLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktMzgiLCJrIjoibGluayIsImwiOiLZvtuM2KfYr9mHINiz2KfYstuMINmB2YbbjCBUcmlhbCBBY2NvdW50IiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL9in2qnYp9mG2Kot2KrYsdin24zYp9mEIn0seyJpIjoic2RpLTM5IiwiayI6ImRpdmlkZXIiLCJsIjpudWxsLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktNDAiLCJrIjoiaGVhZGVyIiwibCI6Itiz2YHYp9ix2LTigIzZh9inIiwiYyI6bnVsbCwieSI6bnVsbCwidCI6bnVsbH0seyJpIjoic2RpLTQxIiwiayI6ImxpbmsiLCJsIjoi2KfYs9qp2YjZviDYs9mB2KfYsdi02KfYqiIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS/Yp9iz2qnZiNm+Ldiz2YHYp9ix2LTYp9iqIn0seyJpIjoic2RpLTQyIiwiayI6ImxpbmsiLCJsIjoi2YTbjNiz2Kog2LPZgdin2LHYtNin2Kog2YHYudin2YQg2KfYsdiz2KfZhCDYqtmI2LPYtyDYr9uM2KzbjOKAjNqp2KfZhNinIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL9mE24zYs9iqLdiz2YHYp9ix2LTYp9iqLdmB2LnYp9mEIn0seyJpIjoic2RpLTQzIiwiayI6ImxpbmsiLCJsIjoi2KLZhdin2LEg2LPZgdin2LHYtOKAjNmH2KfbjCDZgdi52KfZhCIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS/YotmF2KfYsS3Ys9mB2KfYsdi04oCM2YfYp9uMLdmB2LnYp9mEIn0seyJpIjoic2RpLTQ0IiwiayI6ImxpbmsiLCJsIjoi2KrYp9ix24zYrtqG2Ycg2LPZgdin2LHYtNin2KoiLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEv2KrYp9ix24zYrtqG2Yct2LPZgdin2LHYtNin2KoifSx7ImkiOiJzZGktNDUiLCJrIjoibGluayIsImwiOiLZhNi62Ygg2LPZgdin2LHYtCDYqtmI2LPYtyDZgdix2YjYtNmG2K/ZhyIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS/ZhNi62Ygt2LPZgdin2LHYtCJ9LHsiaSI6InNkaS00NiIsImsiOiJkaXZpZGVyIiwibCI6bnVsbCwiYyI6bnVsbCwieSI6bnVsbCwidCI6bnVsbH0seyJpIjoic2RpLTQ3IiwiayI6ImhlYWRlciIsImwiOiLZhdix2LPZiNmE2YciLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktNDgiLCJrIjoibGluayIsImwiOiLYoti02YbYp9uM24wg2KjYpyDZhdix2LPZiNmE2Ycg2Ygg2YHYsdin24zZhtivINis2YXYueKAjNii2YjYsduMIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9kay1zaGlwbWVudHMtb3ZlcnZpZXcifSx7ImkiOiJzZGktNDkiLCJrIjoibGluayIsImwiOiLYr9ix24zYp9mB2Kog2YHZh9ix2LPYqiDZhdix2LPZiNmE2YfigIzZh9inIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9kay1zaGlwbWVudHMtbGlzdCJ9LHsiaSI6InNkaS01MCIsImsiOiJsaW5rIiwibCI6Itin24zYrNin2K8g2YXYsdiz2YjZhNmHIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9kay1zaGlwbWVudHMtY3JlYXRlIn0seyJpIjoic2RpLTUxIiwiayI6ImxpbmsiLCJsIjoi2YHZh9ix2LPYqiDYqNiz2KrZh+KAjNmH2KfbjCDZgtin2KjZhCDYp9ix2LPYp9mEIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9kay1zaGlwbWVudHMtcGFja2FnZXMifSx7ImkiOiJzZGktNTIiLCJrIjoibGluayIsImwiOiLYrNiy2KbbjNin2Kog2YXYsdiz2YjZhNmHIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9kay1zaGlwbWVudHMtZGV0YWlsIn0seyJpIjoic2RpLTUzIiwiayI6ImxpbmsiLCJsIjoi2K3YsNmBINmF2LHYs9mI2YTZhyIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9tcC1hcGkvZGstc2hpcG1lbnRzLWRlbGV0ZSJ9LHsiaSI6InNkaS01NCIsImsiOiJkaXZpZGVyIiwibCI6bnVsbCwiYyI6bnVsbCwieSI6bnVsbCwidCI6bnVsbH0seyJpIjoic2RpLTU1IiwiayI6ImhlYWRlciIsImwiOiLZvtix2YjZgdin24zZhCDZgdix2YjYtNmG2K/ZhyIsImMiOm51bGwsInkiOm51bGwsInQiOm51bGx9LHsiaSI6InNkaS01NiIsImsiOiJsaW5rIiwibCI6Itii2LTZhtin24zbjCDYqNinINm+2LHZiNmB2KfbjNmEINmB2LHZiNi02YbYr9mHIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9maWxlLW92ZXJ2aWV3In0seyJpIjoic2RpLTU3IiwiayI6ImxpbmsiLCJsIjoi2KfYt9mE2KfYudin2Kog2qnZhNuMINm+2LHZiNmB2KfbjNmEIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9maWxlLWdldCJ9LHsiaSI6InNkaS01OCIsImsiOiJsaW5rIiwibCI6Itin2LfZhNin2LnYp9iqINqp2LPYqOKAjNmI2qnYp9ixIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9maWxlLWJ1c2luZXNzIn0seyJpIjoic2RpLTU5IiwiayI6ImxpbmsiLCJsIjoi2YjbjNix2KfbjNi0INin2LfZhNin2LnYp9iqINqp2LPYqOKAjNmI2qnYp9ixIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9maWxlLWJ1c2luZXNzLWVkaXQifSx7ImkiOiJzZGktNjAiLCJrIjoibGluayIsImwiOiLYp9i32YTYp9i52KfYqiDZgdix2YjYtNqv2KfZhyIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9tcC1hcGkvcHJvZmlsZS1zdG9yZSJ9LHsiaSI6InNkaS02MSIsImsiOiJsaW5rIiwibCI6Itii2K/Ysdiz4oCM2YfYp9uMINmB2LHZiNi02YbYr9mHIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9maWxlLWFkZHJlc3MifSx7ImkiOiJzZGktNjIiLCJrIjoibGluayIsImwiOiLYotiv2LHYs+KAjNmH2KfbjCDYp9mG2KjYp9ixIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9maWxlLXdhcmVob3VzZSJ9LHsiaSI6InNkaS02MyIsImsiOiJsaW5rIiwibCI6ItmF2K/Yp9ix2qkg2YHYsdmI2LTZhtiv2YciLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2ZpbGUtZG9jdW1lbnQifSx7ImkiOiJzZGktNjQiLCJrIjoibGluayIsImwiOiLYotmF2YjYsti0INmB2LHZiNi02YbYr9mHIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9maWxlLXRyYWluaW5nIn0seyJpIjoic2RpLTY1IiwiayI6ImxpbmsiLCJsIjoi2LnZhdmE2qnYsdivINmB2LHZiNi02YbYr9mHIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9maWxlLXBlcmZvcm1hbmNlIn0seyJpIjoic2RpLTY2IiwiayI6ImRpdmlkZXIiLCJsIjpudWxsLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktNjciLCJrIjoiaGVhZGVyIiwibCI6Itiv2LHYrCDZiCDZhdiv24zYsduM2Kog2qnYp9mE2KciLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktNjgiLCJrIjoibGluayIsImwiOiLYoti02YbYp9uM24wg2KjYpyDYr9ix2Kwg2Ygg2YXYr9uM2LHbjNiqINqp2KfZhNinIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9kdWN0LW92ZXJ2aWV3In0seyJpIjoic2RpLTY5IiwiayI6ImxpbmsiLCJsIjoi2KzYs9iq4oCM2YjYrNmI24wg2qnYp9mE2KciLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3Qtc2VhcmNoIn0seyJpIjoic2RpLTcwIiwiayI6ImxpbmsiLCJsIjoi2b7bjNi02YbZh9in2K8g2qnYp9mE2KciLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3Qtc2VhcmNoLXN1Z2dlc3Rpb24ifSx7ImkiOiJzZGktNzEiLCJrIjoibGluayIsImwiOiLZgdix2YjYtNmG2K/ZhyDYtNiv2YYg2qnYp9mE2KciLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3QtYmUtc2VsbGVyIn0seyJpIjoic2RpLTcyIiwiayI6ImxpbmsiLCJsIjoi2KzYs9iq4oCM2YjYrNmI24wg2q/YsdmI2Ycg2qnYp9mE2KfbjNuMIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9kdWN0LWNhdGVnb3J5LXNlYXJjaCJ9LHsiaSI6InNkaS03MyIsImsiOiJsaW5rIiwibCI6Itin2LnYqtio2KfYsdiz2YbYrNuMINqv2LHZiNmHINqp2KfZhNin24zbjCIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9tcC1hcGkvcHJvZHVjdC1jYXRlZ29yeS12YWxpZGF0aW9uIn0seyJpIjoic2RpLTc0IiwiayI6ImxpbmsiLCJsIjoi2KfYudiq2KjYp9ix2LPZhtis24wg2Ygg2KvYqNiqINmF2LTYrti12KfYqiDaqdin2YTYpyIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9tcC1hcGkvcHJvZHVjdC1kZXRhaWwtdmFsaWRhdGlvbiJ9LHsiaSI6InNkaS03NSIsImsiOiJsaW5rIiwibCI6Itiq2LnYr9in2K8g2b7bjNi04oCM2YbZiNuM2LPigIzZh9inIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9kdWN0LWRyYWZ0LWNvdW50In0seyJpIjoic2RpLTc2IiwiayI6ImxpbmsiLCJsIjoi2KzYstim24zYp9iqINm+24zYtOKAjNmG2YjbjNizIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9kdWN0LWRyYWZ0LWdldCJ9LHsiaSI6InNkaS03NyIsImsiOiJsaW5rIiwibCI6Itm+24zYtNmG2YfYp9ivINi52YbZiNin2YYgKNiv2LHbjNin2YHYqikiLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3QtYXV0by10aXRsZS1nZXQifSx7ImkiOiJzZGktNzgiLCJrIjoibGluayIsImwiOiLYsNiu24zYsdmH4oCM24wg2LnZhtmI2KfZhiIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9tcC1hcGkvcHJvZHVjdC1hdXRvLXRpdGxlLXNhdmUifSx7ImkiOiJzZGktNzkiLCJrIjoibGluayIsImwiOiLYr9ix24zYp9mB2Kog2YjbjNqY2q/bjOKAjNmH2KfbjCDar9ix2YjZhyDaqdin2YTYp9uM24wiLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3QtYXR0cmlidXRlcy1nZXQifSx7ImkiOiJzZGktODAiLCJrIjoibGluayIsImwiOiLYp9i52KrYqNin2LHYs9mG2KzbjCDZiNuM2pjar9uM4oCM2YfYpyIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9tcC1hcGkvcHJvZHVjdC1hdHRyaWJ1dGVzLXZhbGlkYXRlIn0seyJpIjoic2RpLTgxIiwiayI6ImxpbmsiLCJsIjoi2KjYp9ix2q/YsNin2LHbjCDZhNmI2q/ZiNuMINio2LHZhtivIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9kdWN0LWJyYW5kLWxvZ28tdXBsb2FkIn0seyJpIjoic2RpLTgyIiwiayI6ImxpbmsiLCJsIjoi2KjYp9ix2q/YsNin2LHbjCDYqti12YjbjNixINiv2LHYrtmI2KfYs9iqINmF2K3YqtmI2KciLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3QtcmVxdWVzdC1pbWFnZS11cGxvYWQifSx7ImkiOiJzZGktODMiLCJrIjoibGluayIsImwiOiLZhdiv24zYsduM2Kog2KrYtdin2YjbjNixINmF2K3YtdmI2YQgKFByb2R1Y3QgSW1hZ2VzKSIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9tcC1hcGkvcHJvZHVjdC1pbWFnZSJ9LHsiaSI6InNkaS04NCIsImsiOiJsaW5rIiwibCI6Itio2LHYsdiz24wg2KrYtdmI24zYsSDYqNinINmH2YjYtCDZhdi12YbZiNi524wiLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3QtaW1hZ2UtYWkifSx7ImkiOiJzZGktODUiLCJrIjoibGluayIsImwiOiLYsNiu24zYsdmHINmIINir2KjYqiDaqdin2YTYpyIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9tcC1hcGkvcHJvZHVjdC1zYXZlIn0seyJpIjoic2RpLTg2IiwiayI6ImxpbmsiLCJsIjoi2KfYrtiq2LXYp9i1INqp2KfZhNinINio2Ycg2YHYsdmI2LTZhtiv2YciLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3QtYXNzaWduIn0seyJpIjoic2RpLTg3IiwiayI6ImxpbmsiLCJsIjoi2K/Ysdiu2YjYp9iz2Kog2KvYqNiqINio2LHZhtivIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9wcm9kdWN0LWJyYW5kLXJlcXVlc3QifSx7ImkiOiJzZGktODgiLCJrIjoibGluayIsImwiOiLYrNiz2KrigIzZiNis2YjbjCDYqNix2YbYryIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9tcC1hcGkvcHJvZHVjdC1icmFuZC1zZWFyY2gifSx7ImkiOiJzZGktODkiLCJrIjoibGluayIsImwiOiLZgdmH2LHYs9iqINm+24zYtOKAjNmG2YjbjNiz4oCM2YfYp9uMINmB2LHZiNi02YbYr9mHIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL21wLWFwaS9kcmFmdC1wcm9kdWN0cy1zZWxsZXIifSx7ImkiOiJzZGktOTAiLCJrIjoibGluayIsImwiOiLYrdiw2YEg2b7bjNi04oCM2YbZiNuM2LMiLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL2RyYWZ0LXByb2R1Y3RzLWRlbGV0ZSJ9LHsiaSI6InNkaS05MSIsImsiOiJsaW5rIiwibCI6ItmB2YfYsdiz2Kog2qnYp9mE2KfZh9in24wg2YHYsdmI2LTZhtiv2YciLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3RzLXNlbGxlciJ9LHsiaSI6InNkaS05MiIsImsiOiJsaW5rIiwibCI6Itin2YXYqtuM2KfYsiDZhdit2KrZiNin24wg2qnYp9mE2KciLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3Qtc2NvcmUifSx7ImkiOiJzZGktOTMiLCJrIjoibGluayIsImwiOiLYp9mG2KrYtNin2LEg2qnYp9mE2Kcg2b7YsyDYp9iyINmI24zYsdin24zYtCIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS9tcC1hcGkvcHJvZHVjdC1lZGl0LXB1Ymxpc2gifSx7ImkiOiJzZGktOTQiLCJrIjoibGluayIsImwiOiLZhdi02KfZh9iv2YfigIzbjCDaqdin2YTYpyDYqNix2KfbjCDZiNuM2LHYp9uM2LQiLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3QtZWRpdC1nZXQifSx7ImkiOiJzZGktOTUiLCJrIjoibGluayIsImwiOiLZiNuM2LHYp9uM2LQg2YHbjNmE2K/Zh9in24wg2qnYp9mE2KciLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3QtZWRpdC11cGRhdGUifSx7ImkiOiJzZGktOTYiLCJrIjoibGluayIsImwiOiLZvtuM2LTZhtmH2KfYryDYudmG2YjYp9mGINio2LEg2KfYs9in2LMg2YHbjNmE2K/Zh9in24wg2qnYp9mE2KciLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEvbXAtYXBpL3Byb2R1Y3QtZWRpdC1hdXRvLXRpdGxlIn0seyJpIjoic2RpLTk3IiwiayI6ImRpdmlkZXIiLCJsIjpudWxsLCJjIjpudWxsLCJ5IjpudWxsLCJ0IjpudWxsfSx7ImkiOiJzZGktOTgiLCJrIjoiaGVhZGVyIiwibCI6ItmF2LHYrNmI2LnbjCDZiCDYrtiz2KfYsdiqIiwiYyI6bnVsbCwieSI6bnVsbCwidCI6bnVsbH0seyJpIjoic2RpLTk5IiwiayI6ImxpbmsiLCJsIjoi2YXYtNin2YfYr9mHINiv2LHYrtmI2KfYs9iqINmH2KfbjCDYrtiz2KfYsdiqIChEUE8gTGlzdCkiLCJjIjoibWRpLWNoZXZyb24tcmlnaHQiLCJ5IjoicGFnZSIsInQiOiIvZmEv2YXYsdis2YjYuduMLdiu2LPYp9ix2Kov2K/Ysdiu2YjYp9iz2Kot2K7Ys9in2LHYqiJ9LHsiaSI6InNkaS0xMDAiLCJrIjoibGluayIsImwiOiLYr9ix2K7ZiNin2LPYqiDYrtiz2KfYsdiqIChEUE8gQ2xhaW0pIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL9mF2LHYrNmI2LnbjC3Yrtiz2KfYsdiqL9iv2LHYrtmI2KfYs9iqLdiu2LPYp9ix2Kot2YHYsdmI2LTZhtiv2YcifSx7ImkiOiJzZGktMTAxIiwiayI6ImxpbmsiLCJsIjoi2K/Ysdiu2YjYp9iz2Kog2YXYsdis2YjYuduMIChSVFMpIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL9mF2LHYrNmI2LnbjC3Yrtiz2KfYsdiqL9iv2LHYrtmI2KfYs9iqLdmF2LHYrNmI2LnbjCJ9LHsiaSI6InNkaS0xMDIiLCJrIjoiZGl2aWRlciIsImwiOiIiLCJjIjoiIiwieSI6IiIsInQiOiIifSx7ImkiOiJzZGktMTAzIiwiayI6ImhlYWRlciIsImwiOiLYqtuM2qnYqtuM2YbaryIsImMiOiIiLCJ5IjoiIiwidCI6IiJ9LHsiaSI6InNkaS0xMDQiLCJrIjoibGluayIsImwiOiLYoti02YbYp9uM24wg2KjYpyDYqtuM2qnYqtuM2YbaryDZgdix2YjYtNmG2K/ZhyIsImMiOiJtZGktY2hldnJvbi1yaWdodCIsInkiOiJwYWdlIiwidCI6Ii9mYS90aWNrZXRpbmcvb3ZlcnZpZXcifSx7ImkiOiJzZGktMTA1IiwiayI6ImRpdmlkZXIifSx7ImkiOiJzZGktMTA2IiwiayI6ImhlYWRlciIsImwiOiLZhdin2YTbjCJ9LHsiaSI6InNkaS0xMDciLCJrIjoibGluayIsImwiOiLaqdmF24zYs9uM2YjZhiDZgdix2YjYtNmG2K/ZhyDZh9inIiwiYyI6Im1kaS1jaGV2cm9uLXJpZ2h0IiwieSI6InBhZ2UiLCJ0IjoiL2ZhL2ZpbmFuY2UvY29tbWlzc2lvbiJ9XQ==" nav-mode="STATIC" effective-permissions="eyJjb21tZW50cyI6eyJyZWFkIjpmYWxzZSwid3JpdGUiOmZhbHNlLCJtYW5hZ2UiOmZhbHNlfSwiaGlzdG9yeSI6eyJyZWFkIjpmYWxzZX0sInNvdXJjZSI6eyJyZWFkIjpmYWxzZX0sInBhZ2VzIjp7InJlYWQiOnRydWUsIndyaXRlIjpmYWxzZSwibWFuYWdlIjpmYWxzZSwiZGVsZXRlIjpmYWxzZSwic2NyaXB0IjpmYWxzZSwic3R5bGUiOmZhbHNlfSwic3lzdGVtIjp7Im1hbmFnZSI6ZmFsc2V9fQ==" edit-shortcuts="eyJlZGl0RmFiIjpmYWxzZSwiZWRpdE1lbnVCYXIiOmZhbHNlLCJlZGl0TWVudUJ0biI6dHJ1ZSwiZWRpdE1lbnVFeHRlcm5hbEJ0biI6ZmFsc2UsImVkaXRNZW51RXh0ZXJuYWxVcmwiOiJodHRwczovL2dpdGh1Yi5jb20vb3JnL3JlcG8vYmxvYi9tYWluL3tmaWxlbmFtZX0iLCJlZGl0TWVudUV4dGVybmFsSWNvbiI6Im1kaS1naXRodWIiLCJlZGl0TWVudUV4dGVybmFsTmFtZSI6IkdpdEh1YiJ9" filename="fa/شروع-کار-با-سرویس-هاب.md"><template slot="contents"><div><h1 class="toc-header" id="شروع-کار-با-سرویسهاب-اولین-درخواست-api"><a href="#شروع-کار-با-سرویسهاب-اولین-درخواست-api" class="toc-anchor">¶</a> شروع کار با سرویس‌هاب — اولین درخواست API</h1>
+<blockquote>
+<p><strong>مخاطب:</strong> توسعه‌دهندگانی که می‌خواهند برای اولین بار اپلیکیشن خود را با Marketplace API دیجی‌کالا یکپارچه کنند.</p>
+</blockquote>
+<hr>
+<h2 class="toc-header" id="فهرست-مطالب"><a href="#فهرست-مطالب" class="toc-anchor">¶</a> فهرست مطالب</h2>
+<ol>
+<li><a href="#-%D9%85%D9%82%D8%AF%D9%85%D9%87">مقدمه</a></li>
+<li><a href="#-%D9%BE%DB%8C%D8%B4%E2%80%8C%D9%86%DB%8C%D8%A7%D8%B2%D9%87%D8%A7">پیش‌نیازها</a></li>
+<li><a href="#-%D9%85%D8%B1%D9%88%D8%B1-%DA%A9%D9%84%DB%8C-%D8%AC%D8%B1%DB%8C%D8%A7%D9%86-%D8%A7%D8%AD%D8%B1%D8%A7%D8%B2-%D9%87%D9%88%DB%8C%D8%AA">مرور کلی جریان احراز هویت</a></li>
+<li><a href="#-%D9%85%D8%B1%D8%AD%D9%84%D9%87-%DB%B1-%D9%87%D8%AF%D8%A7%DB%8C%D8%AA-%D9%81%D8%B1%D9%88%D8%B4%D9%86%D8%AF%D9%87-%D8%A8%D9%87-%D8%B5%D9%81%D8%AD%D9%87-%D8%B1%D8%B6%D8%A7%DB%8C%D8%AA">مرحله ۱: هدایت فروشنده به صفحه رضایت</a></li>
+<li><a href="#-%D9%85%D8%B1%D8%AD%D9%84%D9%87-%DB%B2-%D8%AF%D8%B1%DB%8C%D8%A7%D9%81%D8%AA-%D9%88-%D8%B1%D9%85%D8%B2%DA%AF%D8%B4%D8%A7%DB%8C%DB%8C-%DA%A9%D8%AF">مرحله ۲: دریافت و رمزگشایی کد</a></li>
+<li><a href="#-%D9%85%D8%B1%D8%AD%D9%84%D9%87-%DB%B3-%D8%AF%D8%B1%DB%8C%D8%A7%D9%81%D8%AA-%D8%AA%D9%88%DA%A9%D9%86">مرحله ۳: دریافت توکن</a></li>
+<li><a href="#-%D9%85%D8%B1%D8%AD%D9%84%D9%87-%DB%B4-%D8%A7%D9%88%D9%84%DB%8C%D9%86-%D8%AF%D8%B1%D8%AE%D9%88%D8%A7%D8%B3%D8%AA-api">مرحله ۴: اولین درخواست API</a></li>
+<li><a href="#-%D8%AA%D9%85%D8%AF%DB%8C%D8%AF-%D8%AA%D9%88%DA%A9%D9%86">تمدید توکن</a></li>
+<li><a href="#-%D9%85%D8%AF%DB%8C%D8%B1%DB%8C%D8%AA-%D8%AE%D8%B7%D8%A7%D9%87%D8%A7">مدیریت خطاها</a></li>
+<li><a href="#-%D9%84%DB%8C%D9%86%DA%A9%E2%80%8C%D9%87%D8%A7%DB%8C-%D9%85%D8%B1%D8%AA%D8%A8%D8%B7">لینک‌های مرتبط</a></li>
+</ol>
+<hr>
+<h2 class="toc-header" id="مقدمه"><a href="#مقدمه" class="toc-anchor">¶</a> 📖 مقدمه</h2>
+<p><strong>سرویس‌هاب</strong> زیرساخت Open API دیجی‌کالا برای فروشندگان مارکت‌پلیس است. این پلتفرم بر پایه OAuth 2.0 ساخته شده و به اپلیکیشن‌های third-party اجازه می‌دهد با کسب رضایت صریح از فروشنده، به داده‌ها و عملیات پنل فروشندگی دسترسی پیدا کنند.</p>
+<h3 class="toc-header" id="قابلیتهای-اصلی"><a href="#قابلیتهای-اصلی" class="toc-anchor">¶</a> قابلیت‌های اصلی</h3>
+<div class="table-container"><table>
+<thead>
+<tr>
+<th>حوزه</th>
+<th>توضیح</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>محصولات و تنوع‌ها</strong></td>
+<td>ایجاد، ویرایش و جستجوی محصولات و SKU‌ها</td>
+</tr>
+<tr>
+<td><strong>سفارشات</strong></td>
+<td>دریافت و مدیریت سفارشات فروشنده</td>
+</tr>
+<tr>
+<td><strong>مرسوله‌ها و محموله‌ها</strong></td>
+<td>پیگیری وضعیت ارسال و تحویل</td>
+</tr>
+<tr>
+<td><strong>موجودی</strong></td>
+<td>به‌روزرسانی موجودی انبار</td>
+</tr>
+<tr>
+<td><strong>تخفیفات و تبلیغات</strong></td>
+<td>مدیریت کمپین‌های قیمتی و تبلیغاتی</td>
+</tr>
+<tr>
+<td><strong>گزارش‌های تحلیلی</strong></td>
+<td>دسترسی به داده‌های فروش و عملکرد</td>
+</tr>
+<tr>
+<td><strong>پروفایل فروشنده</strong></td>
+<td>مشاهده و ویرایش اطلاعات فروشگاه</td>
+</tr>
+</tbody>
+</table></div>
+<p>برای پشتیبانی فنی با ایمیل <a href="mailto:Marketplace-API@digikala.com">Marketplace-API@digikala.com</a> تماس بگیرید.</p>
+<hr>
+<h2 class="toc-header" id="️-پیشنیازها"><a href="#️-پیشنیازها" class="toc-anchor">¶</a> ⚙️ پیش‌نیازها</h2>
+<p>قبل از شروع، موارد زیر را آماده کنید:</p>
+<p><strong>۱. ثبت‌نام اپلیکیشن</strong> — اپلیکیشن شما باید توسط تیم دیجی‌کالا تأیید شده باشد. پس از تأیید، یک <code>client_code</code> منحصربه‌فرد دریافت خواهید کرد.</p>
+<p><strong>۲. جفت کلید RSA (4096-bit)</strong> — پلتفرم authorization code را با کلید عمومی شما رمزگذاری می‌کند. برای تولید کلید و فرمت مورد نیاز (PKCS#8) به <a class="is-internal-link is-valid-page" href="/fa/%D8%B1%D8%A7%D9%87%D9%86%D9%85%D8%A7%DB%8C-%DB%8C%DA%A9%D9%BE%D8%A7%D8%B1%DA%86%D9%87-%D8%B3%D8%A7%D8%B2%DB%8C">راهنمای احراز هویت — بخش ایجاد کلیدهای RSA</a> مراجعه کنید.</p>
+<blockquote>
+<p>⚠️ فایل کلید خصوصی را هرگز در repository کامیت نکنید و دسترسی فایل‌سیستم آن را محدود کنید (<code>chmod 600 private_pkcs8.pem</code>).</p>
+</blockquote>
+<hr>
+<h2 class="toc-header" id="مرور-کلی-جریان-احراز-هویت"><a href="#مرور-کلی-جریان-احراز-هویت" class="toc-anchor">¶</a> 🔄 مرور کلی جریان احراز هویت</h2>
+<div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-">App  ──▶  Redirect to consent page  ──▶  Seller approves
+ │
+ ▼
+Receive encrypted authorization_code in callback URL
+ │
+ ▼
+Decrypt with RSA private key (PKCS#1 v1.5 padding)
+ │
+ ▼
+POST /open-api/v1/auth/token  ──▶  Receive access_token + refresh_token
+ │
+ ▼
+Call API with  Authorization: Bearer &lt;access_token&gt;
+</code></pre>
+</div>
+<hr>
+<h2 class="toc-header" id="مرحله-۱-هدایت-فروشنده-به-صفحه-رضایت"><a href="#مرحله-۱-هدایت-فروشنده-به-صفحه-رضایت" class="toc-anchor">¶</a> 🔗 مرحله ۱: هدایت فروشنده به صفحه رضایت</h2>
+<p>فروشنده را به URL زیر ریدایرکت کنید تا مجوز دسترسی اپلیکیشن را تأیید کند:</p>
+<div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-">https://seller.digikala.com/pwa/seller-services/consents
+  ?client_code=YOUR_CLIENT_CODE
+  &amp;scopes=profile.read,order.read
+  &amp;redirect_uri=https://yourapp.com/callback
+  &amp;state=RANDOM_CSRF_TOKEN
+</code></pre>
+</div>
+<h3 class="toc-header" id="پارامترها"><a href="#پارامترها" class="toc-anchor">¶</a> پارامترها</h3>
+<div class="table-container"><table>
+<thead>
+<tr>
+<th>پارامتر</th>
+<th>اجباری</th>
+<th>توضیح</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>client_code</code></td>
+<td>بله</td>
+<td>کد اپلیکیشن دریافت‌شده هنگام ثبت‌نام</td>
+</tr>
+<tr>
+<td><code>scopes</code></td>
+<td>بله</td>
+<td>لیست دسترسی‌های مورد نیاز، با کاما جدا شده</td>
+</tr>
+<tr>
+<td><code>redirect_uri</code></td>
+<td>بله</td>
+<td>آدرس callback که پس از تأیید فروشنده ریدایرکت می‌شود</td>
+</tr>
+<tr>
+<td><code>state</code></td>
+<td>توصیه می‌شود</td>
+<td>رشته تصادفی برای جلوگیری از CSRF</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>لیست کامل scope‌های موجود را در <a class="is-internal-link is-valid-page" href="/fa/%D8%B1%D8%A7%D9%87%D9%86%D9%85%D8%A7%DB%8C-%DB%8C%DA%A9%D9%BE%D8%A7%D8%B1%DA%86%D9%87-%D8%B3%D8%A7%D8%B2%DB%8C">راهنمای احراز هویت — بخش Scope‌ها</a> ببینید.</p>
+</blockquote>
+<hr>
+<h2 class="toc-header" id="مرحله-۲-دریافت-و-رمزگشایی-کد"><a href="#مرحله-۲-دریافت-و-رمزگشایی-کد" class="toc-anchor">¶</a> 🔓 مرحله ۲: دریافت و رمزگشایی کد</h2>
+<p>پس از تأیید فروشنده، دیجی‌کالا به <code>redirect_uri</code> شما ریدایرکت می‌کند:</p>
+<div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-">https://yourapp.com/callback?code=ENCRYPTED_CODE&amp;state=RANDOM_CSRF_TOKEN
+</code></pre>
+</div>
+<p>مقدار <code>code</code> با ترتیب <strong>URL-encode ← Base64 ← RSA(PKCS#1 v1.5)</strong> رمزگذاری شده است. مراحل رمزگشایی:</p>
+<ol>
+<li>مقدار <code>code</code> را از query string استخراج کنید</li>
+<li>آن را <strong>URL-decode</strong> کنید</li>
+<li>نتیجه را <strong>Base64-decode</strong> کنید</li>
+<li>خروجی را با کلید خصوصی RSA و padding از نوع <strong>PKCS#1 v1.5</strong> رمزگشایی کنید</li>
+</ol>
+<blockquote>
+<p>نمونه کد رمزگشایی در تمام زبان‌های برنامه‌نویسی پشتیبانی‌شده را در <a class="is-internal-link is-valid-page" href="/fa/%D8%B1%D8%A7%D9%87%D9%86%D9%85%D8%A7%DB%8C-%DB%8C%DA%A9%D9%BE%D8%A7%D8%B1%DA%86%D9%87-%D8%B3%D8%A7%D8%B2%DB%8C">راهنمای احراز هویت — بخش رمزگشایی</a> ببینید.</p>
+</blockquote>
+<hr>
+<h2 class="toc-header" id="️-مرحله-۳-دریافت-توکن"><a href="#️-مرحله-۳-دریافت-توکن" class="toc-anchor">¶</a> 🎟️ مرحله ۳: دریافت توکن</h2>
+<p>پس از رمزگشایی کد، آن را با access_token تبادل کنید:</p>
+<div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-http">POST /open-api/v1/auth/token
+Host: seller.digikala.com
+Content-Type: application/json
+
+{
+  "authorization_code": "DECRYPTED_CODE_FROM_PREVIOUS_STEP"
+}
+</code></pre>
+</div>
+<h3 class="toc-header" id="پاسخ-موفق-http-200"><a href="#پاسخ-موفق-http-200" class="toc-anchor">¶</a> پاسخ موفق (HTTP 200)</h3>
+<div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-json">{
+  "access_token": "&lt;jwt-access-token&gt;",
+  "refresh_token": "&lt;refresh-token&gt;",
+  "access_token_expires_at": {
+    "date": "2025-02-07 02:00:00.000000",
+    "timezone_type": 3,
+    "timezone": "Asia/Tehran"
+  },
+  "refresh_token_expires_at": {
+    "date": "2026-02-07 00:00:00.000000",
+    "timezone_type": 3,
+    "timezone": "Asia/Tehran"
+  }
+}
+</code></pre>
+</div>
+<div class="table-container"><table>
+<thead>
+<tr>
+<th>فیلد</th>
+<th>اعتبار</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>access_token</code></td>
+<td><strong>۲ ساعت</strong></td>
+</tr>
+<tr>
+<td><code>refresh_token</code></td>
+<td><strong>۱ سال</strong></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>⚠️ هر <code>authorization_code</code> فقط یک بار قابل استفاده است. نمونه کد تبادل توکن در تمام زبان‌ها را در <a class="is-internal-link is-valid-page" href="/fa/%D8%B1%D8%A7%D9%87%D9%86%D9%85%D8%A7%DB%8C-%DB%8C%DA%A9%D9%BE%D8%A7%D8%B1%DA%86%D9%87-%D8%B3%D8%A7%D8%B2%DB%8C">راهنمای احراز هویت</a> ببینید.</p>
+</blockquote>
+<hr>
+<h2 class="toc-header" id="مرحله-۴-اولین-درخواست-api"><a href="#مرحله-۴-اولین-درخواست-api" class="toc-anchor">¶</a> 🚀 مرحله ۴: اولین درخواست API</h2>
+<p>اکنون می‌توانید <code>access_token</code> را در هدر <code>Authorization</code> قرار دهید و API را فراخوانی کنید.</p>
+<h3 class="toc-header" id="دریافت-پروفایل-فروشنده"><a href="#دریافت-پروفایل-فروشنده" class="toc-anchor">¶</a> دریافت پروفایل فروشنده</h3>
+<div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-http">GET /open-api/v1/profile?mini=true
+Host: seller.digikala.com
+Authorization: Bearer &lt;access_token&gt;
+</code></pre>
+</div>
+<h3 class="toc-header" id="پاسخ-نمونه"><a href="#پاسخ-نمونه" class="toc-anchor">¶</a> پاسخ نمونه</h3>
+<div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-json">{
+  "seller_id": 12345,
+  "seller_name": "فروشگاه نمونه",
+  "secondary_business_name": "شرکت نمونه",
+  "seller_rating": 4.5,
+  "wallet_credit": 50000,
+  "new_notifications": 3,
+  "new_questions": 2,
+  "is_private": true,
+  "registration_status": "active",
+  "first_name": "علی",
+  "last_name": "محمدی",
+  "email": "seller@example.com",
+  "phone": "09121234567",
+  "state": "تهران",
+  "city": "تهران"
+}
+</code></pre>
+</div>
+<tabset><template v-slot:tabs=""><li>Java</li><li>PHP</li><li>Python</li><li>NodeJS</li><li>C#</li></template><template v-slot:content=""><div class="tabset-panel"><div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-java">import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+var http    = HttpClient.newHttpClient();
+var request = HttpRequest.newBuilder()
+    .uri(URI.create("https://seller.digikala.com/open-api/v1/profile?mini=true"))
+    .header("Authorization", "Bearer " + accessToken)
+    .GET()
+    .build();
+var response = http.sendAsync(request, HttpResponse.BodyHandlers.ofString()).join();
+System.out.println(response.body());
+</code></pre>
+</div></div><div class="tabset-panel"><div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-php">&lt;?php
+
+$ch = curl_init('https://seller.digikala.com/open-api/v1/profile?mini=true');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER =&gt; true,
+    CURLOPT_HTTPHEADER     =&gt; ['Authorization: Bearer ' . $accessToken],
+]);
+$data = json_decode(curl_exec($ch), true);
+curl_close($ch);
+echo $data['seller_name'];
+</code></pre>
+</div></div><div class="tabset-panel"><div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-python">import requests
+
+response = requests.get(
+    'https://seller.digikala.com/open-api/v1/profile',
+    params={'mini': 'true'},
+    headers={'Authorization': 'Bearer ' + access_token},
+)
+response.raise_for_status()
+print(response.json()['seller_name'])
+</code></pre>
+</div></div><div class="tabset-panel"><div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-js">const https = require('https');
+
+function getProfile(accessToken) {
+    return new Promise((resolve, reject) =&gt; {
+        https.get({
+            hostname: 'seller.digikala.com',
+            path:     '/open-api/v1/profile?mini=true',
+            headers:  { Authorization: 'Bearer ' + accessToken },
+        }, res =&gt; {
+            let data = '';
+            res.on('data', chunk =&gt; { data += chunk; });
+            res.on('end', () =&gt; resolve(JSON.parse(data)));
+        }).on('error', reject);
+    });
+}
+
+const profile = await getProfile(accessToken);
+process.stdout.write(profile.seller_name + '\n');
+</code></pre>
+</div></div><div class="tabset-panel"><div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-csharp">using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text.Json;
+
+var client = new HttpClient();
+client.DefaultRequestHeaders.Authorization =
+    new AuthenticationHeaderValue("Bearer", accessToken);
+var resp = await client.GetAsync(
+    "https://seller.digikala.com/open-api/v1/profile?mini=true"
+);
+var data = JsonSerializer.Deserialize&lt;JsonElement&gt;(
+    await resp.Content.ReadAsStringAsync()
+);
+Console.WriteLine(data.GetProperty("seller_name").GetString());
+</code></pre>
+</div><hr></div></template></tabset>
+
+
+
+
+
+
+
+
+
+
+
+<h2 class="toc-header" id="هدر-الزامی-user-agent"><a href="#هدر-الزامی-user-agent" class="toc-anchor">¶</a> 🔤 هدر الزامی: User-Agent</h2>
+<p>علاوه بر هدر <code>Authorization</code>، تمام درخواست‌هایی که به Open API سرویس‌هاب ارسال می‌کنید باید هدر <code>User-Agent</code> را هم با فرمت مشخص زیر داشته باشند؛ در غیر این صورت درخواست شما رد می‌شود.</p>
+<p><strong>برای سرویس دهنده ها:</strong></p>
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-">User-Agent: DigikalaTrustedBot/{service_name}
+</code></pre>
+<p><code>{service_name}</code> را با نام انگلیسی اپلیکیشن/سرویس خودتان جایگزین کنید (بدون فاصله). برای مثال، اگر نام سرویس شما «MyAwesomeApp» باشد:</p>
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-">User-Agent: DigikalaTrustedBot/MyAwesomeApp
+</code></pre>
+<p><strong>برای توکن های شخصی:</strong></p>
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-">User-Agent: DigikalaTrustedBot/SelfToken/{seller_id}
+</code></pre>
+<p><code>{seller_id}</code> را با نام کد فروشندگی خودتان جایگزین کنید. برای مثال، اگر کد فروشندگی شما «12345» باشد:</p>
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-">User-Agent: DigikalaTrustedBot/SelfToken/12345
+</code></pre>
+<p>مثال کامل درخواست:</p>
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-http">GET /open-api/v1/profile?mini=true
+Host: seller.digikala.com
+Authorization: Bearer &lt;access_token&gt;
+User-Agent: DigikalaTrustedBot/SelfToken/12345
+</code></pre>
+<p>⚠️ <strong>خطاهای رایج که باعث رد شدن درخواست می‌شوند:</strong></p>
+<ul>
+<li>عدم ارسال هدر <code>User-Agent</code> (خیلی از کتابخانه‌های HTTP این هدر را با مقدار پیش‌فرض خودشان می‌فرستند، مثل <code>curl/8.x</code> یا <code>PostmanRuntime/7.x</code>، که مورد قبول نیست)</li>
+<li>ننوشتن پیشوند <code>DigikalaTrustedBot/</code></li>
+<li>استفاده از <code>/</code> اشتباه یا فاصله‌ی اضافه بین <code>DigikalaTrustedBot</code> و نام سرویس</li>
+<li>نوشتن نام سرویس به فارسی یا با کاراکترهای غیرمجاز</li>
+</ul>
+<p>اگر هدر <code>User-Agent</code> ارسال نشود یا با این فرمت مطابقت نداشته باشد، سرور با خطای زیر پاسخ می‌دهد:</p>
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-http">HTTP/1.1 401 Unauthorized
+</code></pre>
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-json">{
+    "status": "error",
+    "message": "user-agent is invalid",
+    "code": 401
+}
+</code></pre>
+<h2 class="toc-header" id="تمدید-توکن"><a href="#تمدید-توکن" class="toc-anchor">¶</a> 🔁 تمدید توکن</h2>
+<p><code>access_token</code> پس از ۲ ساعت منقضی می‌شود. از <code>refresh_token</code> برای دریافت توکن جدید بدون نیاز به ریدایرکت مجدد فروشنده استفاده کنید:</p>
+<div dir="ltr">
+<pre class="prismjs line-numbers" v-pre="true"><code class="language-http">POST /open-api/v1/auth/refresh-token
+Host: seller.digikala.com
+Content-Type: application/json
+
+{
+  "access_token":  "&lt;expired-or-valid-access-token&gt;",
+  "refresh_token": "&lt;refresh-token&gt;"
+}
+</code></pre>
+</div>
+<blockquote>
+<p>پس از هر refresh، <strong>هر دو توکن</strong> به‌روز می‌شوند. توکن‌های قدیمی را دور بیندازید.</p>
+<p>برای پیاده‌سازی TokenManager (refresh خودکار پیش از انقضا) در تمام زبان‌ها به <a class="is-internal-link is-valid-page" href="/fa/%D8%B1%D8%A7%D9%87%D9%86%D9%85%D8%A7%DB%8C-%DB%8C%DA%A9%D9%BE%D8%A7%D8%B1%DA%86%D9%87-%D8%B3%D8%A7%D8%B2%DB%8C">راهنمای احراز هویت — بخش Refresh</a> مراجعه کنید.</p>
+</blockquote>
+<hr>
+<h2 class="toc-header" id="️-مدیریت-خطاها"><a href="#️-مدیریت-خطاها" class="toc-anchor">¶</a> ⚠️ مدیریت خطاها</h2>
+<div class="table-container"><table>
+<thead>
+<tr>
+<th>کد HTTP</th>
+<th>معنی</th>
+<th>راه‌حل</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>401</code></td>
+<td>توکن منقضی یا نامعتبر</td>
+<td><code>refresh_token</code> را فراخوانی کنید</td>
+</tr>
+<tr>
+<td><code>403</code></td>
+<td>دسترسی کافی ندارید</td>
+<td>اسکوپ‌های لازم را بررسی و در صورت نیاز مجدداً consent بگیرید</td>
+</tr>
+<tr>
+<td><code>404</code></td>
+<td>منبع یافت نشد</td>
+<td>شناسه endpoint یا resource را بررسی کنید</td>
+</tr>
+<tr>
+<td><code>422</code></td>
+<td>داده ارسالی نامعتبر</td>
+<td>پیام خطا و مستندات endpoint مربوطه را بررسی کنید</td>
+</tr>
+<tr>
+<td><code>429</code></td>
+<td>محدودیت نرخ درخواست</td>
+<td>با exponential backoff مجدداً تلاش کنید — <a class="is-internal-link is-valid-page" href="/fa/rate-limits">مستندات Rate Limiting</a></td>
+</tr>
+<tr>
+<td><code>500</code></td>
+<td>خطای داخلی سرور</td>
+<td>مجدداً تلاش کنید؛ اگر ادامه داشت با پشتیبانی تماس بگیرید</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<h2 class="toc-header" id="لینکهای-مرتبط"><a href="#لینکهای-مرتبط" class="toc-anchor">¶</a> 🔗 لینک‌های مرتبط</h2>
+<div class="table-container"><table>
+<thead>
+<tr>
+<th>منبع</th>
+<th>توضیح</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a class="is-internal-link is-valid-page" href="/fa/%D8%B1%D8%A7%D9%87%D9%86%D9%85%D8%A7%DB%8C-%DB%8C%DA%A9%D9%BE%D8%A7%D8%B1%DA%86%D9%87-%D8%B3%D8%A7%D8%B2%DB%8C">راهنمای احراز هویت</a></td>
+<td>مرجع کامل: تولید کلید RSA، scope‌ها، رمزگشایی، توکن، لغو دسترسی، نمونه کد ۵ زبان</td>
+</tr>
+<tr>
+<td><a class="is-internal-link is-valid-page" href="/fa/rate-limits">محدودیت نرخ درخواست</a></td>
+<td>جزئیات Rate Limiting چندلایه و بهترین شیوه‌ها</td>
+</tr>
+<tr>
+<td><a href="mailto:Marketplace-API@digikala.com">Marketplace-API@digikala.com</a></td>
+<td>ایمیل پشتیبانی فنی تیم API</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<blockquote>
+<p>این راهنما شما را تا اولین درخواست موفق API همراهی می‌کند. برای جزئیات فنی هر مرحله به <a class="is-internal-link is-valid-page" href="/fa/%D8%B1%D8%A7%D9%87%D9%86%D9%85%D8%A7%DB%8C-%DB%8C%DA%A9%D9%BE%D8%A7%D8%B1%DA%86%D9%87-%D8%B3%D8%A7%D8%B2%DB%8C">راهنمای احراز هویت</a> مراجعه کنید.</p>
+</blockquote>
+</div></template><template slot="comments"><div><comments></comments></div></template></page></div></body></html>

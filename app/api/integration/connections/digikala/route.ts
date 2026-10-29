@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { decryptCredentials, encryptCredentials } from "@/lib/integration/core/crypto";
 import { getAdapter } from "@/lib/integration/core/adapter-registry";
-import { patchConnectionCredentials } from "@/lib/integration/core/credentials";
 import {
-  DigikalaAdapter,
-  clientCodeOf,
   decryptAuthorizationCode,
   exchangeAuthorizationCode,
   generateDigikalaKeyPair,
+  sellerCodeOf,
+  userAgentOf,
 } from "@/lib/integration/adapters/marketplace/digikala.adapter";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +17,7 @@ const PLATFORM = "digikala";
 // اتصال دیجی‌کالا فرم «توکن بچسبان» ندارد — مراحلش این‌جاست:
 //   generate-key → کلید عمومی برای ثبت در «سرویس‌هاب ← توکن اختصاصی»
 //   activate     → کد اعتبارسنجی پنل دیجی‌کالا → رمزگشایی → توکن‌ها
+//   settings     → کد فروشندگی و User-Agent دستی (+ تست)
 //   test         → تست با توکن ذخیره‌شده (نه اعتبارنامه‌ی فرم)
 // کلید خصوصی و توکن‌ها فقط رمزشده در credentials می‌مانند و هرگز برنمی‌گردند.
 // docs/integrations/vendors/digikala.md
@@ -55,26 +55,6 @@ async function save(
   }
 }
 
-/**
- * تست با /profile؛ اگر دیجی‌کالا User-Agent را نپذیرفت، نامزدها امتحان و پذیرفته‌شده در
- * `creds.userAgent` گذاشته می‌شود (فراخوان ذخیره می‌کند). نتیجه‌ی هر نامزد برای فرم برمی‌گردد.
- */
-async function testWithProbe(creds: Record<string, string>, browserUserAgent: string | null) {
-  const adapter = getAdapter(PLATFORM) as DigikalaAdapter;
-  const result = await adapter.testConnection(creds);
-  if (result.success || !result.shopInfo?.userAgentError) return { result };
-
-  const probe = await adapter.probeUserAgents(creds, browserUserAgent ?? undefined);
-  if (!probe.accepted) {
-    return {
-      result: { ...result, message: "دیجی‌کالا هیچ‌کدام از User-Agentهای آزموده را نپذیرفت — جدول زیر را برای پشتیبانی بفرستید" },
-      probes: probe.results,
-    };
-  }
-  creds.userAgent = probe.accepted;
-  return { result: await adapter.testConnection(creds), probes: probe.results };
-}
-
 // GET — وضعیت بدون هیچ راز: کلید عمومی، فعال بودن توکن، انقضا، دسترسی‌ها
 export async function GET() {
   const { creds } = await load();
@@ -84,16 +64,19 @@ export async function GET() {
     accessExpiresAt: creds.accessExpiresAt ? Number(creds.accessExpiresAt) : null,
     activatedAt:     creds.activatedAt ? Number(creds.activatedAt) : null,
     scopes:          creds.scopes ? creds.scopes.split(",") : [],
-    // شناسه‌ی برنامه است، نه راز — نمایش داده می‌شود تا با پنل دیجی‌کالا مقایسه شود
-    clientCode:      clientCodeOf(creds) ?? null,
-    userAgent:       creds.userAgent ?? null,
+    // کد فروشندگی و User-Agent راز نیستند؛ مقدار مؤثر و مقدار دستی جدا برمی‌گردند
+    sellerCode:       sellerCodeOf(creds) ?? null,
+    sellerCodeManual: creds.sellerCode?.trim() || null,
+    userAgent:        userAgentOf(creds) ?? null,
+    userAgentManual:  creds.userAgent?.trim() || null,
   });
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({})) as { action?: string; code?: string; clientCode?: string; force?: boolean };
+  const body = await req.json().catch(() => ({})) as {
+    action?: string; code?: string; sellerCode?: string; userAgent?: string; force?: boolean;
+  };
   const { conn, creds } = await load();
-  const browserUa = req.headers.get("user-agent");
 
   if (body.action === "generate-key") {
     // کلید تازه، توکن فعلی را بی‌اعتبار نمی‌کند ولی دیجی‌کالا کلید قبلی را نگه
@@ -104,6 +87,14 @@ export async function POST(req: NextRequest) {
     const { publicKey, privateKey } = generateDigikalaKeyPair();
     await save(conn?.id, { ...creds, publicKey, privateKey });
     return NextResponse.json({ publicKey });
+  }
+
+  // فیلدهای فرم؛ undefined یعنی «دست نزن»، رشته‌ی خالی یعنی «برگرد به پیش‌فرض»
+  const settings: Record<string, string> = {};
+  if (body.sellerCode !== undefined) settings.sellerCode = body.sellerCode.trim();
+  if (body.userAgent  !== undefined) settings.userAgent  = body.userAgent.trim();
+  if (settings.sellerCode && !/^\d+$/.test(settings.sellerCode)) {
+    return NextResponse.json({ error: "کد فروشندگی فقط عدد است" }, { status: 400 });
   }
 
   if (body.action === "activate") {
@@ -117,7 +108,7 @@ export async function POST(req: NextRequest) {
     let tokens: Record<string, string>;
     try {
       const authCode = decryptAuthorizationCode(creds.privateKey, body.code);
-      tokens = await exchangeAuthorizationCode(authCode);
+      tokens = await exchangeAuthorizationCode(authCode, userAgentOf({ ...creds, ...settings }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : "فعال‌سازی ناموفق بود";
       // کد اعتبارسنجی یک‌بارمصرف است و پنل دیجی‌کالا هم فقط یک‌بار نشانش می‌دهد
@@ -129,40 +120,30 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const next: Record<string, string> = {
-      ...creds,
-      ...tokens,
-      ...(body.clientCode?.trim() ? { clientCode: body.clientCode.trim() } : {}),
-      activatedAt: String(Date.now()),
-    };
-    // User-Agent پذیرفته‌شده‌ی توکن قبلی برای توکن تازه دوباره سنجیده می‌شود
-    delete next.userAgent;
-    const { result, probes } = await testWithProbe(next, browserUa);
+    const next: Record<string, string> = { ...creds, ...settings, ...tokens, activatedAt: String(Date.now()) };
+    const result = await getAdapter(PLATFORM)!.testConnection(next);
     await save(conn?.id, next, { ok: result.success, message: result.message });
-    return NextResponse.json({ ...result, probes });
+    return NextResponse.json(result);
   }
 
-  if (body.action === "client-code") {
-    // خالی یعنی برگشت به claim `client_code` خود توکن
-    const next: Record<string, string> = { ...creds, clientCode: body.clientCode?.trim() ?? "" };
+  if (body.action === "settings") {
+    const next: Record<string, string> = { ...creds, ...settings };
     if (!next.accessToken) {
       await save(conn?.id, next);
-      return NextResponse.json({ success: true, message: "کد کلاینت ذخیره شد" });
+      return NextResponse.json({ success: true, message: "ذخیره شد" });
     }
-    delete next.userAgent;
-    const { result, probes } = await testWithProbe(next, browserUa);
+    const result = await getAdapter(PLATFORM)!.testConnection(next);
     await save(conn?.id, next, { ok: result.success, message: result.message });
-    return NextResponse.json({ ...result, probes });
+    return NextResponse.json(result);
   }
 
   if (body.action === "test") {
     if (!creds.accessToken) {
       return NextResponse.json({ success: false, message: "توکن هنوز فعال نشده است" });
     }
-    const { result, probes } = await testWithProbe(creds, browserUa);
+    const result = await getAdapter(PLATFORM)!.testConnection(creds);
     // ممکن است وسط تست توکن تازه شده باشد — آداپتور خودش آن را ذخیره کرده؛
-    // این‌جا فقط User-Agent پذیرفته‌شده patch و وضعیت عوض می‌شود تا بلوب تازه بازنویسی نشود
-    if (creds.userAgent) await patchConnectionCredentials(PLATFORM, { userAgent: creds.userAgent });
+    // این‌جا فقط وضعیت عوض می‌شود تا بلوب تازه بازنویسی نشود
     await prisma.integConnection.updateMany({
       where: { platformCode: PLATFORM, siteId: null },
       data: {
@@ -172,7 +153,7 @@ export async function POST(req: NextRequest) {
         updatedAt:   new Date(),
       },
     });
-    return NextResponse.json({ ...result, probes });
+    return NextResponse.json(result);
   }
 
   return NextResponse.json({ error: "action نامعتبر" }, { status: 400 });

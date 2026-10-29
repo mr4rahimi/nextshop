@@ -15,11 +15,11 @@ interface AuthState {
   accessExpiresAt: number | null;
   activatedAt:     number | null;
   scopes:          string[];
-  clientCode:      string | null;
-  userAgent:       string | null;
+  sellerCode:       string | null;
+  sellerCodeManual: string | null;
+  userAgent:        string | null;
+  userAgentManual:  string | null;
 }
-
-interface Probe { label: string; userAgent: string; ok: boolean; message: string }
 
 const API = "/api/integration/connections/digikala";
 const SELLER_PANEL = "https://seller.digikala.com";
@@ -51,12 +51,14 @@ export default function DigikalaForm({ existingConnection }: Props) {
   const [generating, setGenerating] = useState(false);
   const [copied,     setCopied]     = useState(false);
   const [code,       setCode]       = useState("");
-  const [clientCode, setClientCode] = useState("");
+  const [sellerCode, setSellerCode] = useState("");
+  const [userAgent,  setUserAgent]  = useState("");
+  const [advanced,   setAdvanced]   = useState(false);
   const [newCode,    setNewCode]    = useState(false);
   const [savingCc,   setSavingCc]   = useState(false);
   const [activating, setActivating] = useState(false);
   const [testing,    setTesting]    = useState(false);
-  const [result,     setResult]     = useState<{ success: boolean; message?: string; probes?: Probe[] } | null>(null);
+  const [result,     setResult]     = useState<{ success: boolean; message?: string } | null>(null);
 
   const [syncStock, setSyncStock] = useState(existingConnection?.syncStockEnabled ?? true);
   const [syncPrice, setSyncPrice] = useState(existingConnection?.syncPriceEnabled ?? false);
@@ -71,7 +73,9 @@ export default function DigikalaForm({ existingConnection }: Props) {
     if (res.ok) {
       const data = await res.json() as AuthState;
       setAuth(data);
-      setClientCode(c => c || data.clientCode || "");
+      setSellerCode(c => c || data.sellerCode || "");
+      setUserAgent(c => c || data.userAgentManual || "");
+      if (data.userAgentManual) setAdvanced(true);
     }
   }
   useEffect(() => { void loadAuth(); }, []);
@@ -82,7 +86,7 @@ export default function DigikalaForm({ existingConnection }: Props) {
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify(body),
     });
-    const data = await res.json().catch(() => ({})) as { success?: boolean; message?: string; error?: string; publicKey?: string; probes?: Probe[] };
+    const data = await res.json().catch(() => ({})) as { success?: boolean; message?: string; error?: string; publicKey?: string };
     return { ok: res.ok, data };
   }
 
@@ -118,8 +122,8 @@ export default function DigikalaForm({ existingConnection }: Props) {
   async function handleActivate() {
     setActivating(true); setResult(null);
     try {
-      const { ok, data } = await post({ action: "activate", code, clientCode });
-      setResult(ok ? { success: !!data.success, message: data.message, probes: data.probes } : { success: false, message: data.error });
+      const { ok, data } = await post({ action: "activate", code, sellerCode, userAgent });
+      setResult(ok ? { success: !!data.success, message: data.message } : { success: false, message: data.error });
       // کد یک‌بارمصرف است — بعد از تبادل موفق، حتی اگر تست شکست بخورد، دیگر به کار نمی‌آید
       if (ok) { setCode(""); setNewCode(false); }
       await loadAuth();
@@ -128,11 +132,11 @@ export default function DigikalaForm({ existingConnection }: Props) {
     }
   }
 
-  async function handleSaveClientCode() {
+  async function handleSaveConnSettings() {
     setSavingCc(true); setResult(null);
     try {
-      const { ok, data } = await post({ action: "client-code", clientCode });
-      setResult(ok ? { success: !!data.success, message: data.message, probes: data.probes } : { success: false, message: data.error });
+      const { ok, data } = await post({ action: "settings", sellerCode, userAgent });
+      setResult(ok ? { success: !!data.success, message: data.message } : { success: false, message: data.error });
       await loadAuth();
     } finally {
       setSavingCc(false);
@@ -143,7 +147,7 @@ export default function DigikalaForm({ existingConnection }: Props) {
     setTesting(true); setResult(null);
     try {
       const { data } = await post({ action: "test" });
-      setResult({ success: !!data.success, message: data.message ?? data.error, probes: data.probes });
+      setResult({ success: !!data.success, message: data.message ?? data.error });
       await loadAuth();
     } finally {
       setTesting(false);
@@ -257,7 +261,7 @@ export default function DigikalaForm({ existingConnection }: Props) {
           </ol>
         </Step>
 
-        <Step n={3} title="وارد کردن کد اعتبارسنجی و کد کلاینت" done={hasToken && !newCode}>
+        <Step n={3} title="وارد کردن کد اعتبارسنجی و کد فروشندگی" done={hasToken && !newCode}>
           {hasToken && !newCode ? (
             <div className="space-y-2">
               <p className="text-xs text-gray-500 leading-6">
@@ -281,15 +285,35 @@ export default function DigikalaForm({ existingConnection }: Props) {
           )}
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1.5">کد کلاینت</label>
+            <label className="block text-xs font-bold text-gray-500 mb-1.5">کد فروشندگی دیجی‌کالا</label>
             <input
-              value={clientCode} onChange={e => setClientCode(e.target.value)} dir="ltr"
-              placeholder="کنار کد اعتبارسنجی در پنل دیجی‌کالا نشان داده می‌شود"
+              value={sellerCode} onChange={e => setSellerCode(e.target.value.replace(/[۰-۹]/g, d => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))))}
+              dir="ltr" inputMode="numeric" placeholder="مثلاً 153053"
               className={input}
             />
             <p className="text-[11px] text-gray-400 mt-1.5 leading-5">
-              دیجی‌کالا آن را در هر درخواست می‌خواهد. اگر خالی بماند از خود توکن خوانده می‌شود.
+              در پنل فروشندگان دیجی‌کالا کنار نام فروشگاه دیده می‌شود. دیجی‌کالا آن را در هر درخواست می‌خواهد؛
+              اگر خالی بماند از خود توکن خوانده می‌شود.
             </p>
+          </div>
+
+          <div>
+            <button type="button" onClick={() => setAdvanced(a => !a)} className="text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              {advanced ? "▾" : "▸"} تنظیمات پیشرفته
+            </button>
+            {advanced && (
+              <div className="mt-2">
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">User-Agent دستی</label>
+                <input
+                  value={userAgent} onChange={e => setUserAgent(e.target.value)} dir="ltr"
+                  placeholder={`DigikalaTrustedBot/SelfToken/${sellerCode || "کد فروشندگی"}`}
+                  className={input}
+                />
+                <p className="text-[11px] text-gray-400 mt-1.5 leading-5">
+                  فقط اگر دیجی‌کالا فرمت را عوض کرد پر کنید. خالی یعنی فرمت رسمی بالا.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -299,8 +323,8 @@ export default function DigikalaForm({ existingConnection }: Props) {
               </button>
             )}
             {hasToken && (
-              <button onClick={handleSaveClientCode} disabled={savingCc} className={btnOutline}>
-                {savingCc ? "در حال ذخیره..." : "ذخیره کد کلاینت و تست"}
+              <button onClick={handleSaveConnSettings} disabled={savingCc} className={btnOutline}>
+                {savingCc ? "در حال ذخیره..." : "ذخیره و تست"}
               </button>
             )}
             {hasToken && newCode && (
@@ -318,7 +342,7 @@ export default function DigikalaForm({ existingConnection }: Props) {
           <div className="text-xs text-gray-500 space-y-1 pt-1 border-t border-gray-100 dark:border-white/[0.06]">
             {auth?.activatedAt && <p className="pt-3">فعال‌شده: {new Date(auth.activatedAt).toLocaleString("fa-IR")}</p>}
             {auth?.accessExpiresAt && <p>انقضای توکن فعلی: {new Date(auth.accessExpiresAt).toLocaleString("fa-IR")}</p>}
-            {auth?.userAgent && <p>User-Agent پذیرفته‌شده: <span dir="ltr" className="font-mono">{auth.userAgent.slice(0, 60)}</span></p>}
+            {auth?.userAgent && <p>User-Agent: <span dir="ltr" className="font-mono">{auth.userAgent.slice(0, 60)}</span></p>}
             {!!auth?.scopes.length && (
               <p className="flex flex-wrap gap-1 items-center">
                 دسترسی‌ها:
@@ -337,19 +361,6 @@ export default function DigikalaForm({ existingConnection }: Props) {
               : "bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400"
           }`}>
             {result.success ? "✓ " : "✗ "}{result.message}
-            {!!result.probes?.length && (
-              <div className="mt-3 space-y-1 text-[11px] text-gray-600 dark:text-gray-400">
-                <p className="font-bold">User-Agentهای آزموده:</p>
-                {result.probes.map((p, i) => (
-                  <div key={i} className="flex gap-2 items-start">
-                    <span className={p.ok ? "text-green-600" : "text-red-500"}>{p.ok ? "✓" : "✗"}</span>
-                    <span className="shrink-0">{p.label}</span>
-                    <span dir="ltr" className="font-mono break-all opacity-70">{p.userAgent.slice(0, 60)}</span>
-                    {!p.ok && <span dir="ltr" className="opacity-70 mr-auto">{p.message}</span>}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
 
