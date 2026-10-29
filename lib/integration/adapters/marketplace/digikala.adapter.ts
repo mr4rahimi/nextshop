@@ -88,13 +88,25 @@ export function decryptAuthorizationCode(privateKey: string, encoded: string): s
     { padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha1" },
     { padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" },
   ];
+  const valid = (s: string | null) => !!s && /^[\x21-\x7e]+$/.test(s);
   for (const a of attempts) {
     try {
       const plain = privateDecrypt({ key: privateKey, ...a }, cipher).toString("utf8").trim();
       // PKCS#1 در OpenSSL جدید به‌جای خطا داده‌ی تصادفی برمی‌گرداند (implicit rejection)
-      if (plain && /^[\x21-\x7e]+$/.test(plain)) return plain;
+      if (valid(plain)) return plain;
     } catch { /* padding بعدی */ }
   }
+  // Node روی OpenSSL 3.0 (سرورهای ما: Node 22.15) رمزگشایی PKCS#1 را به‌خاطر حمله‌ی
+  // Marvin کلاً رد می‌کند. این‌جا اوراکلی بیرون نمی‌رود (فقط ادمین، یک‌بار)، پس RSA
+  // خام و برداشتن دستی padding نوع ۲: 00 02 [PS غیرصفر ≥۸] 00 پیام
+  try {
+    const raw = privateDecrypt({ key: privateKey, padding: constants.RSA_NO_PADDING }, cipher);
+    const sep = raw.indexOf(0, 2);
+    if (raw[0] === 0 && raw[1] === 2 && sep >= 10) {
+      const plain = raw.subarray(sep + 1).toString("utf8").trim();
+      if (valid(plain)) return plain;
+    }
+  } catch { /* کلید یا کد نامعتبر */ }
   throw new Error("رمزگشایی کد ممکن نشد — کد را از همان صفحه‌ای کپی کنید که کلید عمومی همین پنل در آن ثبت شده است");
 }
 

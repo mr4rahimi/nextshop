@@ -40,7 +40,10 @@
 **padding:** مستند نوع padding را نگفته. `decryptAuthorizationCode` به ترتیب PKCS#1 v1.5
 (پیش‌فرض openssl در PHP)، OAEP-SHA1 و OAEP-SHA256 را امتحان می‌کند و خروجی را فقط اگر
 ASCII چاپی باشد می‌پذیرد (OpenSSL 3.2+ برای PKCS#1 نامعتبر به‌جای خطا داده‌ی تصادفی
-برمی‌گرداند). روی Node 22 / OpenSSL 3.5 هر سه آزموده شده‌اند. *هنوز با کد واقعی
+برمی‌گرداند). **Node سرورها (22.15 / OpenSSL 3.0) رمزگشایی PKCS#1 را کلاً رد می‌کند**
+(`RSA_PKCS1_PADDING is no longer supported for private decryption` — حمله‌ی Marvin)؛ برای
+همین آخرین تلاش RSA خام (`RSA_NO_PADDING`) و برداشتن دستی padding نوع ۲ است. هر سه
+padding روی Node محلی (OpenSSL 3.5) و سرور 9dm آزموده شده‌اند. *هنوز با کد واقعی
 دیجی‌کالا آزموده نشده — بعد از اولین فعال‌سازی واقعی این خط را به‌روز کنید.*
 
 **اعتبار توکن‌ها:** access یک ساعت، refresh شش ماه. آداپتور زمان انقضا را از `exp` خود JWT
