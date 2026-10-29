@@ -18,16 +18,50 @@ import { applyDiscount, parseTehranTime } from "@/lib/integration/types";
 // docs/integrations/vendors/digikala/spec.yml
 const BASE = "https://seller.digikala.com/open-api/v1";
 
-// مسیرهای داده (نه /auth) بدون User-Agent درست با ۴۰۱ «Invalid User-Agent!» رد می‌شوند —
-// حتی با توکن سالم (دیده‌شده روی پنل واقعی ۱۴۰۵/۰۸/۰۷). مقدارش «کد کلاینت» است که پنل
-// دیجی‌کالا کنار کد اعتبارسنجی نشان می‌دهد و همان claim `client_code` توکن است.
-function baseHeaders(accessToken?: string, clientCode?: string): HeadersInit {
+// مسیرهای داده (نه /auth) با توکن سالم هم ممکن است ۴۰۱ «Invalid User-Agent!» بدهند
+// (پنل واقعی ۱۴۰۵/۰۸/۰۷). قاعده‌اش مستند نیست و فقط با توکن واقعی دیده می‌شود — دیجی‌کالا
+// اول توکن را می‌سنجد، پس با توکن جعلی هر User-Agentی «Invalid token!» می‌گیرد. نه «node»
+// پیش‌فرض fetch پذیرفته شد نه کد کلاینت؛ برای همین تست اتصال چند نامزد را امتحان می‌کند
+// (`probeUserAgents`) و پذیرفته‌شده را در `userAgent` ذخیره می‌کند.
+function baseHeaders(accessToken?: string, userAgent?: string): HeadersInit {
   return {
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-    ...(clientCode ? { "User-Agent": clientCode } : {}),
+    ...(userAgent ? { "User-Agent": userAgent } : {}),
     Accept:         "application/json",
     "Content-Type": "application/json",
   };
+}
+
+/** User-Agent ارسالی: مقدار پذیرفته‌شده‌ی ذخیره‌شده، وگرنه کد کلاینت. */
+function userAgentOf(credentials: Record<string, string>): string | undefined {
+  return credentials.userAgent?.trim() || clientCodeOf(credentials);
+}
+
+export interface UserAgentProbe { label: string; userAgent: string; ok: boolean; message: string }
+
+/**
+ * نامزدهای User-Agent به ترتیب. `browserUserAgent` مرورگر خود ادمینی است که تست را
+ * زده — برای فرضیه‌ی «توکن به مرورگری که در پنل دیجی‌کالا فعالش کرده گره خورده».
+ */
+function userAgentCandidates(credentials: Record<string, string>, browserUserAgent?: string): { label: string; userAgent: string }[] {
+  const list: { label: string; userAgent: string }[] = [];
+  const add = (label: string, ua?: string | null) => {
+    const v = ua?.trim();
+    if (v && !list.some((c) => c.userAgent === v)) list.push({ label, userAgent: v });
+  };
+  add("ذخیره‌شده", credentials.userAgent);
+  add("کد کلاینت فرم", credentials.clientCode);
+  add("کد کلاینت توکن", jwtClaims(credentials.accessToken ?? "").client_code);
+  for (const code of [credentials.clientCode, jwtClaims(credentials.accessToken ?? "").client_code]) {
+    try {
+      const decoded = code ? Buffer.from(code, "base64").toString("utf8") : "";
+      if (/^[\x21-\x7e]+$/.test(decoded)) add("کد کلاینت (Base64 بازشده)", decoded);
+    } catch { /* نامزد بعدی */ }
+  }
+  add("نام برنامه", "NextShop-Integration/1.0");
+  add("کتابخانه‌ی PHP (Guzzle)", "GuzzleHttp/7");
+  add("مرورگر شما", browserUserAgent);
+  return list;
 }
 
 /** کد کلاینت: مقدار واردشده در فرم، وگرنه claim `client_code` توکن. */
@@ -226,7 +260,7 @@ export class DigikalaAdapter extends BaseAdapter {
     if (exp && exp - Date.now() < REFRESH_MARGIN_MS) await this.refreshAccessToken(credentials);
 
     const url  = `${BASE}${path}`;
-    const send = () => fetch(url, { ...init, headers: baseHeaders(credentials.accessToken, clientCodeOf(credentials)) });
+    const send = () => fetch(url, { ...init, headers: baseHeaders(credentials.accessToken, userAgentOf(credentials)) });
     let res = await send();
 
     // ۴۰۱ همیشه یعنی توکن منقضی نیست: «Invalid User-Agent!» را refresh درست نمی‌کند و
@@ -260,13 +294,44 @@ export class DigikalaAdapter extends BaseAdapter {
     return ms > 0 && ms <= 60_000 ? ms : null;
   }
 
+  /**
+   * روی «Invalid User-Agent» نامزدها را یکی‌یکی با /profile می‌سنجد. اولین پذیرفته‌شده
+   * برگردانده می‌شود تا فراخوان در credentials ذخیره‌اش کند.
+   */
+  async probeUserAgents(
+    credentials: Record<string, string>,
+    browserUserAgent?: string,
+  ): Promise<{ accepted?: string; results: UserAgentProbe[] }> {
+    const results: UserAgentProbe[] = [];
+    // روی همان شیء، نه کپی: اگر وسط کار توکن تازه شود، توکن تازه باید به فراخوان برسد
+    // وگرنه ذخیره‌ی بعدی‌اش توکن سوخته را برمی‌گرداند
+    const original = credentials.userAgent;
+    for (const c of userAgentCandidates(credentials, browserUserAgent)) {
+      credentials.userAgent = c.userAgent;
+      const res = await this.authedFetch(credentials, "/profile").catch(() => null);
+      if (!res) {
+        results.push({ ...c, ok: false, message: "خطای شبکه" });
+        continue;
+      }
+      if (res.ok) {
+        results.push({ ...c, ok: true, message: "پذیرفته شد" });
+        return { accepted: c.userAgent, results };
+      }
+      results.push({ ...c, ok: false, message: await errorText(res) });
+      await this.rateLimit(1000);
+    }
+    if (original === undefined) delete credentials.userAgent;
+    else credentials.userAgent = original;
+    return { results };
+  }
+
   // ── تست اتصال — پروفایل فروشنده ──────────────────────────────────
   async testConnection(credentials: Record<string, string>): Promise<ConnectionTestResult> {
     try {
       const res = await this.authedFetch(credentials, "/profile");
       if (res.status === 401) {
         if (await DigikalaAdapter.isUserAgentError(res.clone())) {
-          return { success: false, message: "دیجی‌کالا «کد کلاینت» را نپذیرفت (Invalid User-Agent) — کد کلاینتی که پنل دیجی‌کالا نشان داده را در همین صفحه وارد کنید" };
+          return { success: false, message: "دیجی‌کالا User-Agent درخواست را نپذیرفت (Invalid User-Agent)", shopInfo: { userAgentError: true } };
         }
         return { success: false, message: `توکن منقضی یا باطل شده — در پنل دیجی‌کالا توکن را دوباره فعال و کد تازه را وارد کنید (${await errorText(res)})` };
       }

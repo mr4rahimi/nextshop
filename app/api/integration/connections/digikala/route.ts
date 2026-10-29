@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { decryptCredentials, encryptCredentials } from "@/lib/integration/core/crypto";
 import { getAdapter } from "@/lib/integration/core/adapter-registry";
+import { patchConnectionCredentials } from "@/lib/integration/core/credentials";
 import {
+  DigikalaAdapter,
   clientCodeOf,
   decryptAuthorizationCode,
   exchangeAuthorizationCode,
@@ -53,6 +55,26 @@ async function save(
   }
 }
 
+/**
+ * تست با /profile؛ اگر دیجی‌کالا User-Agent را نپذیرفت، نامزدها امتحان و پذیرفته‌شده در
+ * `creds.userAgent` گذاشته می‌شود (فراخوان ذخیره می‌کند). نتیجه‌ی هر نامزد برای فرم برمی‌گردد.
+ */
+async function testWithProbe(creds: Record<string, string>, browserUserAgent: string | null) {
+  const adapter = getAdapter(PLATFORM) as DigikalaAdapter;
+  const result = await adapter.testConnection(creds);
+  if (result.success || !result.shopInfo?.userAgentError) return { result };
+
+  const probe = await adapter.probeUserAgents(creds, browserUserAgent ?? undefined);
+  if (!probe.accepted) {
+    return {
+      result: { ...result, message: "دیجی‌کالا هیچ‌کدام از User-Agentهای آزموده را نپذیرفت — جدول زیر را برای پشتیبانی بفرستید" },
+      probes: probe.results,
+    };
+  }
+  creds.userAgent = probe.accepted;
+  return { result: await adapter.testConnection(creds), probes: probe.results };
+}
+
 // GET — وضعیت بدون هیچ راز: کلید عمومی، فعال بودن توکن، انقضا، دسترسی‌ها
 export async function GET() {
   const { creds } = await load();
@@ -64,12 +86,14 @@ export async function GET() {
     scopes:          creds.scopes ? creds.scopes.split(",") : [],
     // شناسه‌ی برنامه است، نه راز — نمایش داده می‌شود تا با پنل دیجی‌کالا مقایسه شود
     clientCode:      clientCodeOf(creds) ?? null,
+    userAgent:       creds.userAgent ?? null,
   });
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({})) as { action?: string; code?: string; clientCode?: string; force?: boolean };
   const { conn, creds } = await load();
+  const browserUa = req.headers.get("user-agent");
 
   if (body.action === "generate-key") {
     // کلید تازه، توکن فعلی را بی‌اعتبار نمی‌کند ولی دیجی‌کالا کلید قبلی را نگه
@@ -105,15 +129,17 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const next = {
+    const next: Record<string, string> = {
       ...creds,
       ...tokens,
       ...(body.clientCode?.trim() ? { clientCode: body.clientCode.trim() } : {}),
       activatedAt: String(Date.now()),
     };
-    const result = await getAdapter(PLATFORM)!.testConnection(next);
+    // User-Agent پذیرفته‌شده‌ی توکن قبلی برای توکن تازه دوباره سنجیده می‌شود
+    delete next.userAgent;
+    const { result, probes } = await testWithProbe(next, browserUa);
     await save(conn?.id, next, { ok: result.success, message: result.message });
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, probes });
   }
 
   if (body.action === "client-code") {
@@ -123,18 +149,20 @@ export async function POST(req: NextRequest) {
       await save(conn?.id, next);
       return NextResponse.json({ success: true, message: "کد کلاینت ذخیره شد" });
     }
-    const result = await getAdapter(PLATFORM)!.testConnection(next);
+    delete next.userAgent;
+    const { result, probes } = await testWithProbe(next, browserUa);
     await save(conn?.id, next, { ok: result.success, message: result.message });
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, probes });
   }
 
   if (body.action === "test") {
     if (!creds.accessToken) {
       return NextResponse.json({ success: false, message: "توکن هنوز فعال نشده است" });
     }
-    const result = await getAdapter(PLATFORM)!.testConnection(creds);
+    const { result, probes } = await testWithProbe(creds, browserUa);
     // ممکن است وسط تست توکن تازه شده باشد — آداپتور خودش آن را ذخیره کرده؛
-    // این‌جا فقط وضعیت عوض می‌شود تا بلوب تازه بازنویسی نشود
+    // این‌جا فقط User-Agent پذیرفته‌شده patch و وضعیت عوض می‌شود تا بلوب تازه بازنویسی نشود
+    if (creds.userAgent) await patchConnectionCredentials(PLATFORM, { userAgent: creds.userAgent });
     await prisma.integConnection.updateMany({
       where: { platformCode: PLATFORM, siteId: null },
       data: {
@@ -144,7 +172,7 @@ export async function POST(req: NextRequest) {
         updatedAt:   new Date(),
       },
     });
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, probes });
   }
 
   return NextResponse.json({ error: "action نامعتبر" }, { status: 400 });

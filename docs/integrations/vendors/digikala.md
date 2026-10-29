@@ -181,7 +181,12 @@ lightening_deal, ticketing, seller_page, sbs_order_change_status, search_ads, in
 ## کارهای مانده
 
 - [x] فعال‌سازی با کد واقعی — padding درست بود، تبادل و refresh موفق (۱۴۰۵/۰۸/۰۷)
-- [ ] تأیید اینکه User-Agent = کد کلاینت پذیرفته می‌شود (اولین `/profile` موفق)
+- [ ] **User-Agent:** با توکن واقعی (۱۴۰۵/۰۸/۰۷، مای‌مونتا) همه رد شدند: بدون هدر، `node`، کد کلاینت
+  (= claim `client_code`)، Base64 بازشده‌اش، `GuzzleHttp/7`، `curl`، `python-requests`، `PostmanRuntime` —
+  روی `/profile`, `/variants`, `/orders`, `/webhook/event-types`, `/auth/scopes/{client_code}`. فرضیه‌ی
+  باقی‌مانده: توکن به User-Agent مرورگری که فروشنده با آن در پنل دیجی‌کالا فعالش کرده گره خورده.
+  تست اتصال حالا نامزدها را خودکار می‌سنجد (`probeUserAgents`، شامل User-Agent مرورگر ادمین) و
+  پذیرفته‌شده را در `userAgent` ذخیره می‌کند. اگر هیچ‌کدام نشد، از پشتیبانی دیجی‌کالا قاعده را بپرسید.
 - [ ] بررسی اینکه `id` و `product_variant_id` تنوع در داده‌ی واقعی یکی‌اند یا نه
 - [ ] سفارش‌های ارسال توسط فروشنده (`ship-by-seller-orders`) و لغو اقلام
 - [ ] ارسال دسته‌ای با `/batch/variant/seller-stock/update` برای کاتالوگ بزرگ

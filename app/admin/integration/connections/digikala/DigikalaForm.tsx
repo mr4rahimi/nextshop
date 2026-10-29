@@ -16,7 +16,10 @@ interface AuthState {
   activatedAt:     number | null;
   scopes:          string[];
   clientCode:      string | null;
+  userAgent:       string | null;
 }
+
+interface Probe { label: string; userAgent: string; ok: boolean; message: string }
 
 const API = "/api/integration/connections/digikala";
 const SELLER_PANEL = "https://seller.digikala.com";
@@ -53,7 +56,7 @@ export default function DigikalaForm({ existingConnection }: Props) {
   const [savingCc,   setSavingCc]   = useState(false);
   const [activating, setActivating] = useState(false);
   const [testing,    setTesting]    = useState(false);
-  const [result,     setResult]     = useState<{ success: boolean; message?: string } | null>(null);
+  const [result,     setResult]     = useState<{ success: boolean; message?: string; probes?: Probe[] } | null>(null);
 
   const [syncStock, setSyncStock] = useState(existingConnection?.syncStockEnabled ?? true);
   const [syncPrice, setSyncPrice] = useState(existingConnection?.syncPriceEnabled ?? false);
@@ -79,7 +82,7 @@ export default function DigikalaForm({ existingConnection }: Props) {
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify(body),
     });
-    const data = await res.json().catch(() => ({})) as { success?: boolean; message?: string; error?: string; publicKey?: string };
+    const data = await res.json().catch(() => ({})) as { success?: boolean; message?: string; error?: string; publicKey?: string; probes?: Probe[] };
     return { ok: res.ok, data };
   }
 
@@ -116,7 +119,7 @@ export default function DigikalaForm({ existingConnection }: Props) {
     setActivating(true); setResult(null);
     try {
       const { ok, data } = await post({ action: "activate", code, clientCode });
-      setResult(ok ? { success: !!data.success, message: data.message } : { success: false, message: data.error });
+      setResult(ok ? { success: !!data.success, message: data.message, probes: data.probes } : { success: false, message: data.error });
       // کد یک‌بارمصرف است — بعد از تبادل موفق، حتی اگر تست شکست بخورد، دیگر به کار نمی‌آید
       if (ok) { setCode(""); setNewCode(false); }
       await loadAuth();
@@ -129,7 +132,7 @@ export default function DigikalaForm({ existingConnection }: Props) {
     setSavingCc(true); setResult(null);
     try {
       const { ok, data } = await post({ action: "client-code", clientCode });
-      setResult(ok ? { success: !!data.success, message: data.message } : { success: false, message: data.error });
+      setResult(ok ? { success: !!data.success, message: data.message, probes: data.probes } : { success: false, message: data.error });
       await loadAuth();
     } finally {
       setSavingCc(false);
@@ -140,7 +143,7 @@ export default function DigikalaForm({ existingConnection }: Props) {
     setTesting(true); setResult(null);
     try {
       const { data } = await post({ action: "test" });
-      setResult({ success: !!data.success, message: data.message ?? data.error });
+      setResult({ success: !!data.success, message: data.message ?? data.error, probes: data.probes });
       await loadAuth();
     } finally {
       setTesting(false);
@@ -315,6 +318,7 @@ export default function DigikalaForm({ existingConnection }: Props) {
           <div className="text-xs text-gray-500 space-y-1 pt-1 border-t border-gray-100 dark:border-white/[0.06]">
             {auth?.activatedAt && <p className="pt-3">فعال‌شده: {new Date(auth.activatedAt).toLocaleString("fa-IR")}</p>}
             {auth?.accessExpiresAt && <p>انقضای توکن فعلی: {new Date(auth.accessExpiresAt).toLocaleString("fa-IR")}</p>}
+            {auth?.userAgent && <p>User-Agent پذیرفته‌شده: <span dir="ltr" className="font-mono">{auth.userAgent.slice(0, 60)}</span></p>}
             {!!auth?.scopes.length && (
               <p className="flex flex-wrap gap-1 items-center">
                 دسترسی‌ها:
@@ -333,6 +337,19 @@ export default function DigikalaForm({ existingConnection }: Props) {
               : "bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400"
           }`}>
             {result.success ? "✓ " : "✗ "}{result.message}
+            {!!result.probes?.length && (
+              <div className="mt-3 space-y-1 text-[11px] text-gray-600 dark:text-gray-400">
+                <p className="font-bold">User-Agentهای آزموده:</p>
+                {result.probes.map((p, i) => (
+                  <div key={i} className="flex gap-2 items-start">
+                    <span className={p.ok ? "text-green-600" : "text-red-500"}>{p.ok ? "✓" : "✗"}</span>
+                    <span className="shrink-0">{p.label}</span>
+                    <span dir="ltr" className="font-mono break-all opacity-70">{p.userAgent.slice(0, 60)}</span>
+                    {!p.ok && <span dir="ltr" className="opacity-70 mr-auto">{p.message}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
