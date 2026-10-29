@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import InventoryClient from "./InventoryClient";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,10 @@ export default async function InventoryPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6" dir="rtl">
       <div>
-        <h1 className="text-xl font-black text-gray-900 dark:text-white">مدیریت موجودی</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-black text-gray-900 dark:text-white">مدیریت موجودی</h1>
+          <HelpButton topic="integrationInventory" />
+        </div>
         <p className="text-sm text-gray-500 mt-1">
           فعال/غیرفعال کردن سینک موجودی برای هر محصول نگاشت‌شده و بروزرسانی دستی از حسابداری
         </p>

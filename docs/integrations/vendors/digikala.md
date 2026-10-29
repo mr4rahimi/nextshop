@@ -65,11 +65,36 @@ credentials ذخیره‌شده:
 | `accessExpiresAt` | میلی‌ثانیه‌ی انقضای access |
 | `activatedAt` | زمان آخرین فعال‌سازی با کد |
 | `scopes` | دسترسی‌های توکن، با ویرگول (مثل `variant,order,profile`) |
+| `clientCode` | «کد کلاینت» واردشده در فرم؛ خالی = claim `client_code` توکن |
 
 > فرم دیجی‌کالا از `/api/integration/connections/test` استفاده **نمی‌کند**؛ آن مسیر
 > credentials را با بدنه‌ی درخواست بازنویسی می‌کند و کلیدها را پاک می‌کرد. تست از
 > `POST /api/integration/connections/digikala {action:"test"}` با توکن ذخیره‌شده است.
 > ذخیره‌ی تنظیمات همگام‌سازی همان `POST /api/integration/connections` بدون credentials است.
+
+## User-Agent = کد کلاینت (در مستند نیامده)
+
+اولین فعال‌سازی واقعی (مای‌مونتا، ۱۴۰۵/۰۸/۰۷): تبادل کد و refresh موفق بودند ولی `GET /profile`
+با توکن سالم ۴۰۱ داد:
+
+```json
+{"status":"error","message":"Invalid User-Agent!","code":401}
+```
+
+مسیرهای `/auth/*` بدون User-Agent کار می‌کنند، مسیرهای داده نه. پنل دیجی‌کالا کنار کد
+اعتبارسنجی یک **«کد کلاینت»** هم نشان می‌دهد و JWT توکن claimهای
+`token_id, seller_id, client_code, exp` دارد. آداپتور `User-Agent: <client_code>` می‌فرستد
+(`clientCodeOf`: مقدار فرم، وگرنه claim توکن) — مثل «کد یکتای» اسنپ‌شاپ. *پذیرفته شدن این
+مقدار هنوز با پاسخ موفق تأیید نشده؛ اگر رد شد، مقدار فرم را با کد کلاینت پنل عوض کنید
+(«ذخیره کد کلاینت و تست» بدون فعال‌سازی دوباره).*
+
+نکته‌ها:
+- ۴۰۱ «Invalid User-Agent» دیگر refresh را صدا نمی‌زند (`isUserAgentError`) — قبلاً هر تست یک
+  توکن تازه می‌سوزاند (زمان انقضا در فرم مدام عوض می‌شد).
+- انقضای access در عمل **دو ساعت** بود، نه یک ساعت (exp منهای زمان فعال‌سازی).
+- **کد اعتبارسنجی یک‌بارمصرف است** و پنل دیجی‌کالا فقط یک‌بار نشانش می‌دهد. استفاده‌ی دوباره:
+  `400 seller.service.token.not.found`. فرم بعد از تبادل موفق کادر کد را پنهان می‌کند
+  («وارد کردن کد تازه» برای فعال‌سازی دوباره).
 
 ## سقف درخواست
 
@@ -100,6 +125,9 @@ credentials ذخیره‌شده:
 | `GET /orders?page&size=50` | `order` | اقلام سفارش فعال |
 
 اگر توکن scope لازم را نداشته باشد پاسخ ۴۰۳ است؛ scopeهای توکن در فرم نمایش داده می‌شوند.
+توکن واقعی مای‌مونتا همه‌ی scopeها را داشت: `question, growth_coach, insight, profile, inventory,
+order, product, variant, commission, sbs_shipment, sbs_orders, sbs_setting, shipment, package,
+lightening_deal, ticketing, seller_page, sbs_order_change_status, search_ads, invoice, voucher, promotion`.
 
 ## فیلدهای تنوع (`GET /variants`)
 
@@ -152,7 +180,8 @@ credentials ذخیره‌شده:
 
 ## کارهای مانده
 
-- [ ] آزمودن فعال‌سازی با کد واقعی (padding) و ثبت scopeهای واقعی توکن
+- [x] فعال‌سازی با کد واقعی — padding درست بود، تبادل و refresh موفق (۱۴۰۵/۰۸/۰۷)
+- [ ] تأیید اینکه User-Agent = کد کلاینت پذیرفته می‌شود (اولین `/profile` موفق)
 - [ ] بررسی اینکه `id` و `product_variant_id` تنوع در داده‌ی واقعی یکی‌اند یا نه
 - [ ] سفارش‌های ارسال توسط فروشنده (`ship-by-seller-orders`) و لغو اقلام
 - [ ] ارسال دسته‌ای با `/batch/variant/seller-stock/update` برای کاتالوگ بزرگ

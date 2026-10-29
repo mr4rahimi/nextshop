@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import TapsiForm from "./TapsiForm";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function TapsiConnectionPage() {
             ت
           </div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">تپسی‌شاپ</h1>
+          <HelpButton topic="integrationTapsi" />
         </div>
       </div>
 

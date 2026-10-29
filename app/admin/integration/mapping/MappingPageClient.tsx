@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -1020,7 +1021,10 @@ export default function MappingPageClient({ platforms, initialMappingCount, init
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6" dir="rtl">
       <div>
-        <h1 className="text-xl font-black text-gray-900 dark:text-white">نگاشت محصولات</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-black text-gray-900 dark:text-white">نگاشت محصولات</h1>
+          <HelpButton topic="integrationMapping" />
+        </div>
         <p className="text-sm text-gray-500 mt-1">ارتباط محصولات بین همه پلتفرم‌ها در یک ظرف یکپارچه</p>
       </div>
 

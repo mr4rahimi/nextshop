@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import BasalamForm from "./BasalamForm";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ export default async function BasalamConnectionPage() {
             ب
           </div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">باسلام</h1>
+          <HelpButton topic="integrationBasalam" />
         </div>
       </div>
 

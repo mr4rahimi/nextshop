@@ -1,5 +1,6 @@
 import Link from "next/link";
 import RuleFormClient from "../RuleFormClient";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 export default function CreatePriceRulePage() {
   return (
@@ -10,7 +11,10 @@ export default function CreatePriceRulePage() {
           ← قوانین قیمت
         </Link>
         <span className="text-gray-300 dark:text-gray-600">/</span>
-        <h1 className="text-xl font-black text-gray-900 dark:text-white">قانون جدید</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-black text-gray-900 dark:text-white">قانون جدید</h1>
+          <HelpButton topic="integrationPriceRules" />
+        </div>
       </div>
 
       <RuleFormClient mode="create" />

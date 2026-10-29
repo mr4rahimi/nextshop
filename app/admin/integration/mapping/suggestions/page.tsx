@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import SuggestionsClient from "./SuggestionsClient";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,10 @@ export default async function SuggestionsPage() {
         </Link>
         <span className="text-gray-300 dark:text-gray-600">/</span>
         <div>
-          <h1 className="text-xl font-black text-gray-900 dark:text-white">پیشنهادهای اتصال</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-black text-gray-900 dark:text-white">پیشنهادهای اتصال</h1>
+            <HelpButton topic="integrationMappingSuggestions" />
+          </div>
         </div>
       </div>
 

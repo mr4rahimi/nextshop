@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 interface MissingPlatform {
   platformCode: string;
@@ -54,7 +55,10 @@ export default function ProductSuggestionsPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6" dir="rtl">
       <div>
-        <h1 className="text-xl font-black text-gray-900 dark:text-white">پیشنهادات اضافه کردن محصول</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-black text-gray-900 dark:text-white">پیشنهادات اضافه کردن محصول</h1>
+          <HelpButton topic="integrationProductSuggestions" />
+        </div>
         <p className="text-sm text-gray-500 mt-1">
           نگاشت‌هایی که حداقل یک پلتفرم هنوز لینک نشده — این محصولات باید در پلتفرم‌های مفقود ایجاد یا لینک شوند.
         </p>

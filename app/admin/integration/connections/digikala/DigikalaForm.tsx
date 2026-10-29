@@ -15,6 +15,7 @@ interface AuthState {
   accessExpiresAt: number | null;
   activatedAt:     number | null;
   scopes:          string[];
+  clientCode:      string | null;
 }
 
 const API = "/api/integration/connections/digikala";
@@ -47,6 +48,9 @@ export default function DigikalaForm({ existingConnection }: Props) {
   const [generating, setGenerating] = useState(false);
   const [copied,     setCopied]     = useState(false);
   const [code,       setCode]       = useState("");
+  const [clientCode, setClientCode] = useState("");
+  const [newCode,    setNewCode]    = useState(false);
+  const [savingCc,   setSavingCc]   = useState(false);
   const [activating, setActivating] = useState(false);
   const [testing,    setTesting]    = useState(false);
   const [result,     setResult]     = useState<{ success: boolean; message?: string } | null>(null);
@@ -61,7 +65,11 @@ export default function DigikalaForm({ existingConnection }: Props) {
 
   async function loadAuth() {
     const res = await fetch(API);
-    if (res.ok) setAuth(await res.json() as AuthState);
+    if (res.ok) {
+      const data = await res.json() as AuthState;
+      setAuth(data);
+      setClientCode(c => c || data.clientCode || "");
+    }
   }
   useEffect(() => { void loadAuth(); }, []);
 
@@ -107,12 +115,24 @@ export default function DigikalaForm({ existingConnection }: Props) {
   async function handleActivate() {
     setActivating(true); setResult(null);
     try {
-      const { ok, data } = await post({ action: "activate", code });
+      const { ok, data } = await post({ action: "activate", code, clientCode });
       setResult(ok ? { success: !!data.success, message: data.message } : { success: false, message: data.error });
-      if (ok) setCode("");
+      // کد یک‌بارمصرف است — بعد از تبادل موفق، حتی اگر تست شکست بخورد، دیگر به کار نمی‌آید
+      if (ok) { setCode(""); setNewCode(false); }
       await loadAuth();
     } finally {
       setActivating(false);
+    }
+  }
+
+  async function handleSaveClientCode() {
+    setSavingCc(true); setResult(null);
+    try {
+      const { ok, data } = await post({ action: "client-code", clientCode });
+      setResult(ok ? { success: !!data.success, message: data.message } : { success: false, message: data.error });
+      await loadAuth();
+    } finally {
+      setSavingCc(false);
     }
   }
 
@@ -234,20 +254,59 @@ export default function DigikalaForm({ existingConnection }: Props) {
           </ol>
         </Step>
 
-        <Step n={3} title="وارد کردن کد اعتبارسنجی" done={hasToken && !code}>
-          <textarea
-            value={code} onChange={e => setCode(e.target.value)} rows={4} dir="ltr"
-            placeholder="کد Base64 نمایش‌داده‌شده در پنل دیجی‌کالا"
-            disabled={!hasKey}
-            className={`${input} text-[11px] leading-5 resize-none disabled:opacity-50`}
-          />
-          <button onClick={handleActivate} disabled={activating || !hasKey || !code.trim()} className={btnPrimary}>
-            {activating ? "در حال فعال‌سازی..." : hasToken ? "فعال‌سازی دوباره" : "فعال‌سازی توکن"}
-          </button>
+        <Step n={3} title="وارد کردن کد اعتبارسنجی و کد کلاینت" done={hasToken && !newCode}>
+          {hasToken && !newCode ? (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500 leading-6">
+                توکن فعال است. کد اعتبارسنجی یک‌بارمصرف است و دوباره لازم نیست — فقط وقتی توکن را در
+                پنل دیجی‌کالا حذف و دوباره فعال کردید یا شش ماه گذشت، کد تازه را وارد کنید.
+              </p>
+              <button onClick={() => setNewCode(true)} className={btnGhost}>وارد کردن کد تازه</button>
+            </div>
+          ) : (
+            <>
+              <textarea
+                value={code} onChange={e => setCode(e.target.value)} rows={4} dir="ltr"
+                placeholder="کد Base64 نمایش‌داده‌شده در پنل دیجی‌کالا"
+                disabled={!hasKey}
+                className={`${input} text-[11px] leading-5 resize-none disabled:opacity-50`}
+              />
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 leading-5">
+                دیجی‌کالا این کد را فقط یک‌بار نشان می‌دهد و هر کد فقط یک‌بار قابل استفاده است.
+              </p>
+            </>
+          )}
+
+          <div>
+            <label className="block text-xs font-bold text-gray-500 mb-1.5">کد کلاینت</label>
+            <input
+              value={clientCode} onChange={e => setClientCode(e.target.value)} dir="ltr"
+              placeholder="کنار کد اعتبارسنجی در پنل دیجی‌کالا نشان داده می‌شود"
+              className={input}
+            />
+            <p className="text-[11px] text-gray-400 mt-1.5 leading-5">
+              دیجی‌کالا آن را در هر درخواست می‌خواهد. اگر خالی بماند از خود توکن خوانده می‌شود.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {(!hasToken || newCode) && (
+              <button onClick={handleActivate} disabled={activating || !hasKey || !code.trim()} className={btnPrimary}>
+                {activating ? "در حال فعال‌سازی..." : "فعال‌سازی توکن"}
+              </button>
+            )}
+            {hasToken && (
+              <button onClick={handleSaveClientCode} disabled={savingCc} className={btnOutline}>
+                {savingCc ? "در حال ذخیره..." : "ذخیره کد کلاینت و تست"}
+              </button>
+            )}
+            {hasToken && newCode && (
+              <button onClick={() => { setNewCode(false); setCode(""); }} className={btnGhost}>انصراف</button>
+            )}
+          </div>
           {hasToken && (
             <p className="text-[11px] text-gray-400 leading-5">
-              توکن دسترسی هر یک ساعت خودکار تمدید می‌شود و توکن تمدید شش ماه اعتبار دارد؛ بعد از
-              آن باید در پنل دیجی‌کالا دوباره فعالش کنید و کد تازه را این‌جا بزنید.
+              توکن دسترسی خودکار تمدید می‌شود و توکن تمدید شش ماه اعتبار دارد.
             </p>
           )}
         </Step>

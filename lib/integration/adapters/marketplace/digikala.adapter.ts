@@ -18,12 +18,23 @@ import { applyDiscount, parseTehranTime } from "@/lib/integration/types";
 // docs/integrations/vendors/digikala/spec.yml
 const BASE = "https://seller.digikala.com/open-api/v1";
 
-function baseHeaders(accessToken?: string): HeadersInit {
+// مسیرهای داده (نه /auth) بدون User-Agent درست با ۴۰۱ «Invalid User-Agent!» رد می‌شوند —
+// حتی با توکن سالم (دیده‌شده روی پنل واقعی ۱۴۰۵/۰۸/۰۷). مقدارش «کد کلاینت» است که پنل
+// دیجی‌کالا کنار کد اعتبارسنجی نشان می‌دهد و همان claim `client_code` توکن است.
+function baseHeaders(accessToken?: string, clientCode?: string): HeadersInit {
   return {
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...(clientCode ? { "User-Agent": clientCode } : {}),
     Accept:         "application/json",
     "Content-Type": "application/json",
   };
+}
+
+/** کد کلاینت: مقدار واردشده در فرم، وگرنه claim `client_code` توکن. */
+export function clientCodeOf(credentials: Record<string, string>): string | undefined {
+  const manual = credentials.clientCode?.trim();
+  if (manual) return manual;
+  return jwtClaims(credentials.accessToken ?? "").client_code;
 }
 
 interface DkPager { page?: number; item_per_page?: number; total_pages?: number; total_rows?: number }
@@ -110,13 +121,19 @@ export function decryptAuthorizationCode(privateKey: string, encoded: string): s
   throw new Error("رمزگشایی کد ممکن نشد — کد را از همان صفحه‌ای کپی کنید که کلید عمومی همین پنل در آن ثبت شده است");
 }
 
+/** claimهای توکن دسترسی: token_id, seller_id, client_code, exp */
+function jwtClaims(token: string): { exp?: number; client_code?: string; seller_id?: number } {
+  try {
+    return JSON.parse(Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8"));
+  } catch {
+    return {};
+  }
+}
+
 /** زمان انقضای JWT (میلی‌ثانیه)؛ اگر خوانده نشد یک ساعت از الان. */
 function jwtExpiry(token: string): number {
-  try {
-    const payload = JSON.parse(Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8")) as { exp?: number };
-    if (typeof payload.exp === "number") return payload.exp * 1000;
-  } catch { /* پیش‌فرض */ }
-  return Date.now() + 60 * 60_000;
+  const { exp } = jwtClaims(token);
+  return typeof exp === "number" ? exp * 1000 : Date.now() + 60 * 60_000;
 }
 
 function tokenPatch(data: DkTokenData): Record<string, string> {
@@ -132,7 +149,7 @@ function tokenPatch(data: DkTokenData): Record<string, string> {
 async function errorText(res: Response): Promise<string> {
   const body = await res.text().catch(() => "");
   try {
-    const j = JSON.parse(body) as { message?: string; errors?: Record<string, string[]> };
+    const j = JSON.parse(body) as { message?: string; errors?: Record<string, string[]> | string[] };
     const details = j.errors ? Object.values(j.errors).flat().join(" | ") : "";
     return `HTTP ${res.status}: ${[j.message, details].filter(Boolean).join(" — ")}`;
   } catch {
@@ -209,10 +226,13 @@ export class DigikalaAdapter extends BaseAdapter {
     if (exp && exp - Date.now() < REFRESH_MARGIN_MS) await this.refreshAccessToken(credentials);
 
     const url  = `${BASE}${path}`;
-    const send = () => fetch(url, { ...init, headers: baseHeaders(credentials.accessToken) });
+    const send = () => fetch(url, { ...init, headers: baseHeaders(credentials.accessToken, clientCodeOf(credentials)) });
     let res = await send();
 
-    if (res.status === 401 && (await this.refreshAccessToken(credentials))) res = await send();
+    // ۴۰۱ همیشه یعنی توکن منقضی نیست: «Invalid User-Agent!» را refresh درست نمی‌کند و
+    // فقط یک توکن تازه می‌سوزاند
+    if (res.status === 401 && !(await DigikalaAdapter.isUserAgentError(res.clone()))
+      && (await this.refreshAccessToken(credentials))) res = await send();
 
     // سقف درخواست هر مسیر جداست (مثلاً ۳۳ در ۳۰ ثانیه) و زمان آزاد شدنش در بدنه‌ی
     // پاسخ می‌آید؛ یک‌بار صبر و تلاش دوباره، نه شکست کل دسته
@@ -224,6 +244,11 @@ export class DigikalaAdapter extends BaseAdapter {
       }
     }
     return res;
+  }
+
+  private static async isUserAgentError(res: Response): Promise<boolean> {
+    const body = await res.text().catch(() => "");
+    return /user-agent/i.test(body);
   }
 
   private static async retryAfterMs(res: Response): Promise<number | null> {
@@ -239,7 +264,12 @@ export class DigikalaAdapter extends BaseAdapter {
   async testConnection(credentials: Record<string, string>): Promise<ConnectionTestResult> {
     try {
       const res = await this.authedFetch(credentials, "/profile");
-      if (res.status === 401) return { success: false, message: "توکن منقضی یا باطل شده — دوباره کد اعتبارسنجی را وارد کنید (۴۰۱)" };
+      if (res.status === 401) {
+        if (await DigikalaAdapter.isUserAgentError(res.clone())) {
+          return { success: false, message: "دیجی‌کالا «کد کلاینت» را نپذیرفت (Invalid User-Agent) — کد کلاینتی که پنل دیجی‌کالا نشان داده را در همین صفحه وارد کنید" };
+        }
+        return { success: false, message: `توکن منقضی یا باطل شده — در پنل دیجی‌کالا توکن را دوباره فعال و کد تازه را وارد کنید (${await errorText(res)})` };
+      }
       if (res.status === 403) return { success: false, message: "توکن به پروفایل فروشنده دسترسی ندارد (۴۰۳)" };
       if (!res.ok) return { success: false, message: await errorText(res) };
 

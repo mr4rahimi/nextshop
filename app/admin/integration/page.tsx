@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { getQueueStats } from "@/lib/integration/core/queue";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +115,10 @@ export default async function IntegrationDashboardPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-8" dir="rtl">
       <div>
-        <h1 className="text-2xl font-black text-gray-900 dark:text-white">سیستم یکپارچه‌سازی</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-black text-gray-900 dark:text-white">سیستم یکپارچه‌سازی</h1>
+          <HelpButton topic="integration" />
+        </div>
         <p className="text-sm text-gray-500 mt-1">مدیریت اتصال به نرم‌افزارهای حسابداری و مارکت‌پلیس‌ها</p>
       </div>
 

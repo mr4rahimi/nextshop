@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 interface MappingLink { platformCode: string; externalId: string; externalTitle: string | null }
 
@@ -124,7 +125,10 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-black text-gray-900 dark:text-white">سفارش‌های بازارگاه</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-black text-gray-900 dark:text-white">سفارش‌های بازارگاه</h1>
+            <HelpButton topic="integrationOrders" />
+          </div>
           <p className="text-xs text-gray-500 mt-1">
             هر ردیف یک قلم از یک سفارش است. ردیف‌های «نیازمند نگاشت» فاکتور نخورده‌اند چون
             محصولشان به کالای حسابداری وصل نیست. شیوه‌ی ثبت فاکتور (خودکار یا دستی) را از

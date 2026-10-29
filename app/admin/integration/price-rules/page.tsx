@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import PriceRulesClient from "./PriceRulesClient";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,10 @@ export default async function PriceRulesPage() {
     <div className="p-6 max-w-4xl mx-auto space-y-6" dir="rtl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-black text-gray-900 dark:text-white">قوانین قیمت</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-black text-gray-900 dark:text-white">قوانین قیمت</h1>
+            <HelpButton topic="integrationPriceRules" />
+          </div>
           <p className="text-sm text-gray-500 mt-1">فرمول محاسبه‌ی قیمت هنگام ارسال به پلتفرم‌ها بر اساس قیمت خرید</p>
         </div>
         <Link href="/admin/integration/price-rules/create" className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors">

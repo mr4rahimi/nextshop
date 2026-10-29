@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { decryptCredentials, encryptCredentials } from "@/lib/integration/core/crypto";
 import { getAdapter } from "@/lib/integration/core/adapter-registry";
 import {
+  clientCodeOf,
   decryptAuthorizationCode,
   exchangeAuthorizationCode,
   generateDigikalaKeyPair,
@@ -61,11 +62,13 @@ export async function GET() {
     accessExpiresAt: creds.accessExpiresAt ? Number(creds.accessExpiresAt) : null,
     activatedAt:     creds.activatedAt ? Number(creds.activatedAt) : null,
     scopes:          creds.scopes ? creds.scopes.split(",") : [],
+    // شناسه‌ی برنامه است، نه راز — نمایش داده می‌شود تا با پنل دیجی‌کالا مقایسه شود
+    clientCode:      clientCodeOf(creds) ?? null,
   });
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({})) as { action?: string; code?: string; force?: boolean };
+  const body = await req.json().catch(() => ({})) as { action?: string; code?: string; clientCode?: string; force?: boolean };
   const { conn, creds } = await load();
 
   if (body.action === "generate-key") {
@@ -92,10 +95,34 @@ export async function POST(req: NextRequest) {
       const authCode = decryptAuthorizationCode(creds.privateKey, body.code);
       tokens = await exchangeAuthorizationCode(authCode);
     } catch (err) {
-      return NextResponse.json({ error: err instanceof Error ? err.message : "فعال‌سازی ناموفق بود" }, { status: 400 });
+      const msg = err instanceof Error ? err.message : "فعال‌سازی ناموفق بود";
+      // کد اعتبارسنجی یک‌بارمصرف است و پنل دیجی‌کالا هم فقط یک‌بار نشانش می‌دهد
+      const reused = /token\.not\.found|code\.invalid/i.test(msg);
+      return NextResponse.json({
+        error: reused
+          ? "این کد اعتبارسنجی قبلاً مصرف شده یا باطل است. اگر بالای صفحه «متصل» است کاری لازم نیست؛ وگرنه در پنل دیجی‌کالا توکن را حذف و دوباره فعال کنید و کد تازه را این‌جا بزنید."
+          : msg,
+      }, { status: 400 });
     }
 
-    const next = { ...creds, ...tokens, activatedAt: String(Date.now()) };
+    const next = {
+      ...creds,
+      ...tokens,
+      ...(body.clientCode?.trim() ? { clientCode: body.clientCode.trim() } : {}),
+      activatedAt: String(Date.now()),
+    };
+    const result = await getAdapter(PLATFORM)!.testConnection(next);
+    await save(conn?.id, next, { ok: result.success, message: result.message });
+    return NextResponse.json(result);
+  }
+
+  if (body.action === "client-code") {
+    // خالی یعنی برگشت به claim `client_code` خود توکن
+    const next: Record<string, string> = { ...creds, clientCode: body.clientCode?.trim() ?? "" };
+    if (!next.accessToken) {
+      await save(conn?.id, next);
+      return NextResponse.json({ success: true, message: "کد کلاینت ذخیره شد" });
+    }
     const result = await getAdapter(PLATFORM)!.testConnection(next);
     await save(conn?.id, next, { ok: result.success, message: result.message });
     return NextResponse.json(result);

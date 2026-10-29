@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 interface ChatRow {
   id:              string;
@@ -158,7 +159,10 @@ export default function MessagesClient({ platforms }: { platforms: { code: strin
     <div className="p-6 max-w-6xl mx-auto space-y-5" dir="rtl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-white">پیام‌های بازارگاه</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white">پیام‌های بازارگاه</h1>
+            <HelpButton topic="integrationMessages" />
+          </div>
           <p className="text-sm text-gray-500 mt-1">گفت‌وگوهای مشتریان باسلام و پاسخ‌دادن از همین‌جا</p>
         </div>
         <button

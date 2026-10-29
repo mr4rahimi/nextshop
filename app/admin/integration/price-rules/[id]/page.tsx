@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import RuleFormClient from "../RuleFormClient";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,10 @@ export default async function EditPriceRulePage({
           ← قوانین قیمت
         </Link>
         <span className="text-gray-300 dark:text-gray-600">/</span>
-        <h1 className="text-xl font-black text-gray-900 dark:text-white">ویرایش قانون</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-black text-gray-900 dark:text-white">ویرایش قانون</h1>
+          <HelpButton topic="integrationPriceRules" />
+        </div>
       </div>
 
       <RuleFormClient mode="edit" initial={initial} />

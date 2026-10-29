@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import LogsClient from "./LogsClient";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,10 @@ export default async function LogsPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6" dir="rtl">
       <div>
-        <h1 className="text-xl font-black text-gray-900 dark:text-white">گزارش لاگ‌ها</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-black text-gray-900 dark:text-white">گزارش لاگ‌ها</h1>
+          <HelpButton topic="integrationLogs" />
+        </div>
         <p className="text-sm text-gray-500 mt-1">تاریخچه کامل عملیات یکپارچه‌سازی با فیلتر و صفحه‌بندی</p>
       </div>
 

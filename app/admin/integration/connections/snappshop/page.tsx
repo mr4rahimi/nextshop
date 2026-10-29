@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import SnappShopForm from "./SnappShopForm";
+import HelpButton from "@/components/admin/worklist/HelpButton";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function SnappShopConnectionPage() {
             س
           </div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">اسنپ‌شاپ</h1>
+          <HelpButton topic="integrationSnapp" />
         </div>
       </div>
 

@@ -36,7 +36,7 @@ export default async function DigikalaConnectionPage() {
           </div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">دیجی‌کالا</h1>
         </div>
-        <div className="mr-auto"><HelpButton topic="digikalaConnection" /></div>
+        <div className="mr-auto"><HelpButton topic="integrationDigikala" /></div>
       </div>
 
       <p className="text-sm text-gray-500 -mt-3">
