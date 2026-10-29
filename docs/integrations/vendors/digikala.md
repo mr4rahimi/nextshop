@@ -186,7 +186,11 @@ lightening_deal, ticketing, seller_page, sbs_order_change_status, search_ads, in
   روی `/profile`, `/variants`, `/orders`, `/webhook/event-types`, `/auth/scopes/{client_code}`. فرضیه‌ی
   باقی‌مانده: توکن به User-Agent مرورگری که فروشنده با آن در پنل دیجی‌کالا فعالش کرده گره خورده.
   تست اتصال حالا نامزدها را خودکار می‌سنجد (`probeUserAgents`، شامل User-Agent مرورگر ادمین) و
-  پذیرفته‌شده را در `userAgent` ذخیره می‌کند. اگر هیچ‌کدام نشد، از پشتیبانی دیجی‌کالا قاعده را بپرسید.
+  پذیرفته‌شده را در `userAgent` ذخیره می‌کند. **User-Agent مرورگر فایرفاکسی که توکن با آن فعال شده
+  هم رد شد** — فرضیه‌ی گره خوردن به مرورگر رد است. در سورس صفحه‌ی پنل (`digikala/Digikala.html`)
+  پرچم `module_seller_service_check_user_agent_self_token = 1` هست: بررسی User-Agent مخصوص توکن
+  اختصاصی، با قاعده‌ای مستندنشده. تیکت پشتیبانی ثبت شد (۱۴۰۵/۰۸/۰۷) — نمونه‌ی درخواست:
+  `x-dk-request-id: 9fb6a279de0a26369a7371d34893d776`، seller_id 153053، token_id 29910. پاسخ را این‌جا بنویسید.
 - [ ] بررسی اینکه `id` و `product_variant_id` تنوع در داده‌ی واقعی یکی‌اند یا نه
 - [ ] سفارش‌های ارسال توسط فروشنده (`ship-by-seller-orders`) و لغو اقلام
 - [ ] ارسال دسته‌ای با `/batch/variant/seller-stock/update` برای کاتالوگ بزرگ
