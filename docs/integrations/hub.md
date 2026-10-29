@@ -132,10 +132,10 @@ lib/
         hesaban.adapter.ts     ← وب‌حسابان
       marketplace/
         basalam.adapter.ts     ← باسلام
-        digikala.adapter.ts    ← (آینده)
+        digikala.adapter.ts    ← دیجی‌کالا (vendors/digikala.md)
         divar.adapter.ts       ← (آینده)
-        snappshop.adapter.ts   ← (آینده)
-        tapsi-shop.adapter.ts  ← (آینده)
+        snappshop.adapter.ts   ← اسنپ‌شاپ
+        tapsi.adapter.ts       ← تپسی‌شاپ
     types/
       integration.types.ts     ← همه TypeScript types
 

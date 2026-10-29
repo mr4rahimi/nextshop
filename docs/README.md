@@ -62,6 +62,7 @@
 | [باسلام](integrations/vendors/basalam.md) | بازارگاه | متن کامل مستندات رسمی |
 | [تپسی‌شاپ](integrations/vendors/tapsi.md) | بازارگاه | مستندات وندور |
 | [اسنپ‌شاپ](integrations/vendors/snapp.md) | بازارگاه | مستندات رسمی نسخه ۲.۱.۲ |
+| [دیجی‌کالا](integrations/vendors/digikala.md) | بازارگاه | OpenAPI رسمی + توکن اختصاصی با کلید RSA |
 | [ترب](integrations/vendors/torob/) | مقایسه قیمت | ۱۰ سند API |
 | [حسابان وب](integrations/vendors/hesaban/) | حسابداری | OpenAPI + Swagger UI |
 | [ایران پیامک](integrations/vendors/iranpayamak/) | پیامک | ۵۰+ سند، هر endpoint یک فایل |

@@ -7,7 +7,7 @@ import type { HesabanAdapter } from "@/lib/integration/adapters/accounting/hesab
 import { isHesabanInvoicingAllowed } from "@/lib/accounting/settings";
 
 const ACCOUNTING_CODE = "hesaban";
-const PLATFORM_SUFFIX: Record<string, string> = { shop: "سایت", basalam: "باسلام", tapsi_shop: "تپسی‌شاپ", snappshop: "اسنپ‌شاپ" };
+const PLATFORM_SUFFIX: Record<string, string> = { shop: "سایت", basalam: "باسلام", tapsi_shop: "تپسی‌شاپ", snappshop: "اسنپ‌شاپ", digikala: "دیجی‌کالا" };
 const MAX_GROUPS_PER_CYCLE = 10;
 
 // وب‌حسابان فیلد id فاکتور را GUID می‌خواهد.

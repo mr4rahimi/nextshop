@@ -12,6 +12,7 @@
 | **باسلام** | بازارگاه | [basalam.md](vendors/basalam.md) | `openapi.basalam.com`<br>`core.basalam.com` | `lib/integration/adapters/marketplace/basalam.adapter.ts` | `/admin/integration/connections/basalam` |
 | **تپسی‌شاپ** | بازارگاه | [tapsi.md](vendors/tapsi.md) | `vendorgw.tapsi.shop/Web/Hub/vendors/v1` | `lib/integration/adapters/marketplace/tapsi.adapter.ts` | `/admin/integration/connections/tapsi_shop` |
 | **اسنپ‌شاپ** | بازارگاه | [snapp.md](vendors/snapp.md) | `apix.snappshop.ir/automation/v1` | `lib/integration/adapters/marketplace/snappshop.adapter.ts` | `/admin/integration/connections/snappshop` |
+| **دیجی‌کالا** | بازارگاه | [digikala.md](vendors/digikala.md) + [digikala/](vendors/digikala/) — OpenAPI | `seller.digikala.com/open-api/v1` | `lib/integration/adapters/marketplace/digikala.adapter.ts` | `/admin/integration/connections/digikala` |
 | **ترب** | موتور مقایسه قیمت | [torob/](vendors/torob/) — ۱۰ سند | `api.torob.com/update/webhook/v1/` | `lib/torob-webhook.ts` | — |
 | **حسابان وب** | حسابداری | [hesaban/](vendors/hesaban/) — OpenAPI | `app.hesabanweb.com` | `lib/integration/adapters/accounting/hesaban.adapter.ts` | `/admin/integration/connections/hesaban` |
 | **ایران پیامک** | پیامک | [iranpayamak/](vendors/iranpayamak/) — ۵۰+ سند | `api.iranpayamak.com` | `lib/club/sms/providers/iranpayamak.ts` | تنظیمات باشگاه مشتریان |
@@ -33,6 +34,10 @@
 ### اسنپ‌شاپ
 مستندات رسمی در پروژه موجود نیست. `vendors/snapp.md` خلاصه‌ای است که از روی کد
 آداپتور نوشته شده — منبع حقیقت خود آداپتور است.
+
+### دیجی‌کالا
+`vendors/digikala/spec.yml` مشخصات OpenAPI رسمی است — **منبع حقیقت همین فایل است**.
+`vendors/digikala.md` خلاصه‌ی پیاده‌سازی، مراحل توکن اختصاصی با کلید RSA و کارهای مانده.
 
 ### ترب
 پوشه‌ی `vendors/torob/` مستندات کامل API است:

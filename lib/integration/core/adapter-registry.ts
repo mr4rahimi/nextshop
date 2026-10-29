@@ -3,6 +3,7 @@ import { HesabanAdapter } from "@/lib/integration/adapters/accounting/hesaban.ad
 import { BasalamAdapter } from "@/lib/integration/adapters/marketplace/basalam.adapter";
 import { TapsiAdapter } from "@/lib/integration/adapters/marketplace/tapsi.adapter";
 import { SnappShopAdapter } from "@/lib/integration/adapters/marketplace/snappshop.adapter";
+import { DigikalaAdapter } from "@/lib/integration/adapters/marketplace/digikala.adapter";
 import { isDemo } from "@/lib/demo";
 import { DEMO_MARKETPLACES, DemoChatMarketplaceAdapter, DemoMarketplaceAdapter } from "@/lib/demo/marketplace";
 
@@ -25,6 +26,7 @@ registerAdapter(new HesabanAdapter());
 registerAdapter(new BasalamAdapter());
 registerAdapter(new TapsiAdapter());
 registerAdapter(new SnappShopAdapter());
+registerAdapter(new DigikalaAdapter());
 
 // دمو (docs/plans/demo.md): بازارگاه‌ها شبیه‌سازی می‌شوند و هیچ درخواستی بیرون نمی‌رود
 if (isDemo()) {

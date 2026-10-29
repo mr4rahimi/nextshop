@@ -51,6 +51,7 @@ const TOPIC_PAGES: Record<string, string> = {
   aiTextBulk: "/admin/products/ai-text",
   aiSettings: "/admin/ai-settings",
   baleBot: "/admin/integration/bale-bot",
+  digikalaConnection: "/admin/integration/connections/digikala",
   blogPost: "/admin/blog",
   accountingItemCoding: "/admin/accounting/inventory/coding",
   accountingRelabel: "/admin/accounting/inventory/relabel",
