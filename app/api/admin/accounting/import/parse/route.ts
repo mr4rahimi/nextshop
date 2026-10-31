@@ -10,7 +10,7 @@ const MAX_BYTES = 15 * 1024 * 1024;
 
 /** POST multipart `file` — خواندن xlsx/csv؛ فقط متن خانه‌ها برمی‌گردد، چیزی ذخیره نمی‌شود */
 export async function POST(req: Request) {
-  const guard = await requirePermission(["ACC_INVENTORY", "ACC_PARTY_MANAGE", "ACC_SETTINGS"]);
+  const guard = await requirePermission(["ACC_INVENTORY", "ACC_PARTY_MANAGE", "ACC_SETTINGS", "ACC_STOCK_COUNT"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   try {
     const form = await req.formData();

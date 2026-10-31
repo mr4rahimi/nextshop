@@ -28,6 +28,7 @@ interface Row {
   book: number | null;
   diff: number | null;
   zone: string | null;
+  place: string | null;
   uncounted: boolean;
   value: string | null;
   updatedAt: string | null;
@@ -111,7 +112,7 @@ export default function CountSheetClient({ id }: { id: string }) {
       if (!d) return d;
       const i = d.rows.findIndex((r) => r.productId === productId);
       if (!line) return { ...d, rows: d.rows.filter((r) => r.productId !== productId || r.uncounted) };
-      const base = i >= 0 ? d.rows[i] : { productId, title: meta?.title ?? "", code: meta?.code ?? "", book: null, diff: null, value: null, uncounted: false, updatedAt: null };
+      const base = i >= 0 ? d.rows[i] : { productId, title: meta?.title ?? "", code: meta?.code ?? "", book: null, diff: null, value: null, place: null, uncounted: false, updatedAt: null };
       const next: Row = {
         ...base,
         uncounted: false,
@@ -607,6 +608,7 @@ function ReviewTab({
                 <span className="block text-sm font-bold truncate">{r.title}</span>
                 <span className="block text-[11px] text-gray-400">
                   {r.code}
+                  {r.place && <span className="font-bold text-blue-600"> · 📍 {r.place}</span>}
                   {r.zone ? ` · ${r.zone}` : ""}
                   {r.book !== null && ` · دفتری ${faNum(r.book)}`}
                   {count.round === 2 && r.recount !== null && ` · شمارش اول ${faNum(r.counted)}`}

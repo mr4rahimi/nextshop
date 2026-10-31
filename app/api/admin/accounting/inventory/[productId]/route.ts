@@ -7,6 +7,7 @@ import { rangeFrom } from "@/lib/accounting/api";
 import { itemCards } from "@/lib/accounting/inventory/items";
 import { itemLinks } from "@/lib/accounting/inventory/to-product";
 import { IN_TRANSIT } from "@/lib/accounting/inventory/docs";
+import { itemPlaces } from "@/lib/accounting/inventory/places";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,10 +75,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ productI
     };
   });
 
+  const places = await itemPlaces(prisma, product.id);
   return NextResponse.json(
     serialize({
       product,
       stocks,
+      places,
       transit: transit.map((l) => ({ ...l.transfer, qty: l.qty })),
       warehouses,
       opening: openingQty?._sum.qty ?? 0,

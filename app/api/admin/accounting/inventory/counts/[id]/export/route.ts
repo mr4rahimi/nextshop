@@ -23,9 +23,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { rows } = await reviewCount(prisma, id, { blind: false, costs });
     const only = new URL(req.url).searchParams.get("only");
     const picked = rows.filter((r) => (only === "diff" ? (r.diff ?? 0) !== 0 : only === "uncounted" ? r.uncounted : true));
-    const head = ["کد", "کالا", "بخش", "شمارش", "شمارش دوم", "نهایی", "دفتری", "اختلاف", ...(costs ? ["ارزش اختلاف (تومان)"] : []), "وضعیت"];
+    const head = ["کد", "کالا", "مکان", "بخش", "شمارش", "شمارش دوم", "نهایی", "دفتری", "اختلاف", ...(costs ? ["ارزش اختلاف (تومان)"] : []), "وضعیت"];
     const lines = picked.map((r) =>
-      [r.code, r.title, r.zone, r.counted, r.recount, r.final, r.book, r.diff, ...(costs ? [r.value] : []), r.uncounted ? "شمرده‌نشده" : ""].map(cell).join(","),
+      [r.code, r.title, r.place, r.zone, r.counted, r.recount, r.final, r.book, r.diff, ...(costs ? [r.value] : []), r.uncounted ? "شمرده‌نشده" : ""].map(cell).join(","),
     );
     const body = "﻿" + [head.join(","), ...lines].join("\r\n");
     return new NextResponse(body, {

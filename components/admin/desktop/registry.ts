@@ -84,6 +84,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/inventory/transfers", label: "حواله‌ها", icon: fx("Left-right arrow"), badge: "transfers", keywords: "در راه تأیید دریافت" },
       { href: "/admin/accounting/inventory/adjustments", label: "ورود و خروج دستی", icon: fx("Up-down arrow") },
       { href: "/admin/accounting/inventory/counts", label: "انبارگردانی", icon: fx("Abacus") },
+      { href: "/admin/accounting/inventory/places", label: "مکان کالا", icon: fx("World map"), keywords: "قفسه ردیف طبقه منطقه جای کالا چیدمان" },
       { href: "/admin/accounting/inventory/groups", label: "گروه کالا", icon: fx("Card index dividers") },
       { href: "/admin/accounting/inventory/coding", label: "کدگذاری", icon: fx("Input numbers") },
       { href: "/admin/accounting/inventory/relabel", label: "برچسب بارکد", icon: fx("Label") },

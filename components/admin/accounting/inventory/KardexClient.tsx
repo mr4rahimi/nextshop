@@ -9,6 +9,7 @@ import { faNum, formatAmount } from "@/lib/accounting/money";
 import { RangeBar, rangeFor, rangeQuery, type Range } from "../Statement";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, Money, PageHeader, Stat } from "../ui";
 import ItemForm from "./ItemForm";
+import { placeText } from "@/lib/accounting/inventory/place-text";
 
 const MOVE_LABELS: Record<string, string> = {
   OPENING: "موجودی اول دوره",
@@ -54,6 +55,7 @@ interface Row {
 interface Data {
   product: { id: string; title: string; sku: string; unit: string; mainImage: string | null; isActive: boolean; hasProduct: boolean; link: { productId: string; product: string; variant: string | null } | null; stock: number | null; lowStockThreshold: number };
   stocks: { warehouseId: string; qty: number }[];
+  places: { warehouseId: string; zone: string | null; aisle: string | null; shelf: string | null; level: string | null }[];
   transit: { id: string; number: number; toWarehouseId: string; qty: number }[];
   warehouses: { id: string; name: string; sellable: boolean }[];
   opening: number;
@@ -136,6 +138,20 @@ export default function KardexClient({ productId }: { productId: string }) {
         {data.cost && <Stat label="میانگین بها" value={<Money value={data.cost.avgCost} />} />}
         {data.cost && <Stat label="ارزش موجودی" value={<Money value={data.cost.totalValue} />} />}
       </div>
+
+      {data.places.length > 0 && (
+        <Card className="p-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-bold text-gray-500">📍 مکان:</span>
+          {data.places.map((p) => (
+            <Link key={p.warehouseId} href={`/admin/accounting/inventory/places?w=${p.warehouseId}&q=${encodeURIComponent(data.product.sku)}`} className="hover:opacity-80">
+              <Badge tone="blue">
+                {data.warehouses.length > 1 ? `${whName.get(p.warehouseId)}: ` : ""}
+                {placeText(p)}
+              </Badge>
+            </Link>
+          ))}
+        </Card>
+      )}
 
       {(data.stocks.length > 1 || data.transit.length > 0) && (
         <Card className="p-3 flex flex-wrap gap-2">

@@ -18,6 +18,8 @@ import { postVoucher, rebuildVoucher, voidVoucher, type Actor, type LineInput } 
 import { hasCarriedOpening } from "../ledger/closing";
 import { scanCode, type ScanResult } from "../pos/scan";
 import { applyMoves, qtyAt, registerCostRebuilder, removeMoves } from "./stock";
+import { placesOf } from "./places";
+import { placeText } from "./place-text";
 import { toLatinDigits } from "../money";
 import { exactItem, itemTitles, normalizeItemCode } from "./items";
 import { OPENING_INV_SOURCE, saveOpeningInventory } from "./opening";
@@ -389,6 +391,8 @@ export interface ReviewRow {
   book: number | null;
   diff: number | null;
   zone: string | null;
+  /** مکان کالا در همین انبار («ویترین · A-03-2») — webhesab-parity.md بخش ۱۱ */
+  place: string | null;
   /** شمرده‌نشده‌ی دامنه (فقط در «کل انبار» در ثبت صفر می‌شود) */
   uncounted: boolean;
   /** برآورد ارزش اختلاف (میانگین × اختلاف) — فقط با دیدن بها */
@@ -419,10 +423,12 @@ export async function reviewCount(db: Db, countId: string, opts: { blind: boolea
   const books = draft ? await bookOfLines(db, c, c.lines) : new Map(c.lines.map((l) => [l.productId, l.systemQty ?? 0]));
   const uncounted = draft && !opts.blind ? await uncountedOf(db, c, new Set(c.lines.map((l) => l.productId))) : new Map<string, number>();
   const ids = [...c.lines.map((l) => l.productId), ...uncounted.keys()];
-  const [items, costs] = await Promise.all([
+  const [items, costs, places] = await Promise.all([
     db.accItem.findMany({ where: { id: { in: ids } }, select: { id: true, title: true, code: true } }),
     opts.costs ? db.accProductCost.findMany({ where: { productId: { in: ids } }, select: { productId: true, avgCost: true, lastCost: true } }) : [],
+    placesOf(db, c.warehouseId, ids),
   ]);
+  const placeOf = (id: string) => placeText(places.get(id)) || null;
   const im = new Map(items.map((i) => [i.id, i]));
   const unit = new Map(costs.map((x) => [x.productId, x.avgCost > 0n ? x.avgCost : x.lastCost]));
   const valueOf = (id: string, diff: number | null) => (opts.costs && diff ? (unit.get(id) ?? 0n) * BigInt(diff) : null);
@@ -442,6 +448,7 @@ export async function reviewCount(db: Db, countId: string, opts: { blind: boolea
       book: opts.blind ? null : book,
       diff: opts.blind ? null : diff,
       zone: l.zone,
+      place: placeOf(l.productId),
       uncounted: false,
       value: opts.blind || v === null ? null : v.toString(),
       updatedAt: l.updatedAt,
@@ -460,6 +467,7 @@ export async function reviewCount(db: Db, countId: string, opts: { blind: boolea
       book,
       diff,
       zone: null,
+      place: placeOf(id),
       uncounted: true,
       value: v === null ? null : v.toString(),
       updatedAt: null,

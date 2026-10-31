@@ -4314,6 +4314,7 @@ model AccItem {
   model        AccItemModel?    @relation(fields: [modelId], references: [id], onDelete: SetNull)
   supplier     AccParty?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   priceChanges AccPriceChange[]
+  places       AccItemPlace[]
 
   @@unique([modelId, attrKey])
   @@index([title])
@@ -4504,18 +4505,37 @@ model AccItemAlias {
 // ── حسابداری — کالا و انبار (فاز ۳، docs/plans/accounting.md بخش ۶.۵ و ۸) ──
 
 model AccWarehouse {
-  id             String   @id @default(cuid())
-  code           Int      @unique
+  id             String         @id @default(cuid())
+  code           Int            @unique
   name           String
   address        String?
   /// موجودی این انبار در `Product.stock` (قابل فروش در سایت) حساب می‌شود؟
-  sellable       Boolean  @default(true)
-  isDefault      Boolean  @default(false)
-  isActive       Boolean  @default(true)
+  sellable       Boolean        @default(true)
+  isDefault      Boolean        @default(false)
+  isActive       Boolean        @default(true)
   /// حواله به این انبار تا «تأیید دریافت» در راه می‌ماند — webhesab-parity.md بخش ۸
-  receiveConfirm Boolean  @default(false)
+  receiveConfirm Boolean        @default(false)
   hesabanId      Int?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime       @default(now())
+  places         AccItemPlace[]
+}
+
+/// مکان قرارگیری کالا در هر انبار — منطقه، ردیف، قفسه، طبقه (webhesab-parity.md بخش ۱۱).
+/// همه متن آزادِ نرمال‌شده («A»، «۰۳» ← «03»)؛ ردیف بی‌همه‌ی چهار فیلد ذخیره نمی‌شود.
+model AccItemPlace {
+  itemId        String
+  warehouseId   String
+  zone          String?
+  aisle         String?
+  shelf         String?
+  level         String?
+  updatedByName String
+  updatedAt     DateTime     @updatedAt
+  item          AccItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  warehouse     AccWarehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, warehouseId])
+  @@index([warehouseId, zone, aisle, shelf, level])
 }
 
 /// موجودی فعلی هر کالا در هر انبار — کشِ جمع کاردکس، فقط از `inventory/stock.ts`
