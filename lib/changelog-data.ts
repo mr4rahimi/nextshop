@@ -19,6 +19,15 @@ export interface ReleaseNote {
 
 export const VERSIONS: ReleaseNote[] = [
   {
+    version: "2.114.1",
+    date: "1405/08/09",
+    tag: "patch",
+    title: "منبع ورود در دموی عمومی",
+    changes: [
+      { type: "improvement", text: "دموی عمومی منبع ورود هر بازدیدکننده (بنر، پیک، کمپین) را به پنل فروش گزارش می‌دهد" },
+    ],
+  },
+  {
     version: "2.114.0",
     date: "1405/08/09",
     tag: "minor",
