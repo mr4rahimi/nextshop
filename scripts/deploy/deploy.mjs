@@ -62,6 +62,11 @@ const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
 const sh = (cmd, opts = {}) => execSync(cmd, { stdio: "inherit", ...opts });
 const shq = (cmd) => execSync(cmd, { encoding: "utf8" }).trim();
 const safeDecode = (s) => { try { return decodeURIComponent(s); } catch { return s; } };
+// سقف حافظه‌ی Node هنگام `next build` (مگابایت). سرور ۱۶ گیگی همه‌ی سایت‌ها ۸ گیگ می‌گیرد،
+// بقیه حداقل ۴ گیگ. برای یک سایت خاص: `"buildMemMb": …` در targets.json.
+const BUILD_MEM_BY_HOST = { "185.164.73.224": 8192 };
+const buildMem = (t) => Math.max(4096, Number(t.buildMemMb) || BUILD_MEM_BY_HOST[t.host] || 4096);
+const buildCmd = (t) => `NODE_OPTIONS="--max-old-space-size=${buildMem(t)}" npx next build`;
 const ssh = (t, cmd) => `ssh -o BatchMode=yes ${t.user}@${t.host} ${JSON.stringify(cmd)}`;
 
 function ask(q) {
@@ -182,10 +187,10 @@ async function deployOne(t) {
   }
 
   // ۵) migrate + build + restart
-  console.log(`${tag} migrate و build...`);
+  console.log(`${tag} migrate و build (حافظه‌ی build: ${buildMem(t)}MB)...`);
   try {
     sh(ssh(t, `cd ${t.path} && npx prisma generate && npx prisma migrate deploy && ` +
-      `NODE_OPTIONS="--max-old-space-size=2048" npx next build`));
+      buildCmd(t)));
   } catch {
     console.error(`${tag} ❌ build شکست خورد — سایت هنوز با نسخه قبلی بالاست`);
     console.error(`${tag} بکاپ: /var/backups/mymonta/${t.name}-code-${ts}.tar.gz`);
@@ -212,7 +217,7 @@ async function deployOne(t) {
   if (!ok) {
     console.error(`\n${tag} ❌ سایت پاسخ نمی‌دهد — بازگردانی...`);
     sh(ssh(t, `cd ${t.path} && tar -xzf /var/backups/mymonta/${t.name}-code-${ts}.tar.gz && ` +
-      `npx next build && pm2 restart ${t.pm2} --update-env`));
+      `${buildCmd(t)} && pm2 restart ${t.pm2} --update-env`));
     throw new Error("health check failed — بازگردانی انجام شد");
   }
 

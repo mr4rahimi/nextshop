@@ -548,9 +548,13 @@ rsync -az --partial node_modules/ root@<IP>:/var/www/<name>/node_modules/
 
 # ساخت و بالا آوردن
 ssh root@<IP> 'cd /var/www/<name> && npx prisma generate && npx prisma migrate deploy \
-  && NODE_OPTIONS="--max-old-space-size=2048" npx next build \
+  && NODE_OPTIONS="--max-old-space-size=4096" npx next build \
   && pm2 start ecosystem.config.js && pm2 save'
 ```
+
+> **حافظه‌ی build:** روی 185.164.73.224 (۱۶ گیگ رم) `8192`، روی بقیه‌ی سرورها حداقل `4096`.
+> `deploy.mjs` همین را خودش از `BUILD_MEM_BY_HOST` برمی‌دارد؛ برای یک سایت خاص در `targets.json`
+> فیلد `"buildMemMb"` بگذارید (کمتر از ۴۰۹۶ پذیرفته نمی‌شود).
 
 بعد `.deps-hash` را بنویسید تا استقرار بعدی بی‌دلیل ۷۰۰ مگابایت جابه‌جا نکند:
 ```bash
