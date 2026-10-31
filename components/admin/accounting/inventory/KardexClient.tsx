@@ -207,6 +207,50 @@ export default function KardexClient({ productId }: { productId: string }) {
           })}
         </div>
       </Card>
+      <PriceLog itemId={productId} />
     </div>
+  );
+}
+
+const PRICE_SOURCE: Record<string, string> = { FORM: "فرم کالا", BULK: "گروهی", EXCEL: "اکسل", UNDO: "برگرداندن" };
+
+/** تاریخچه‌ی قیمت فروشگاه همین کالا (webhesab-parity.md بخش ۱۰) — بسته، با کلیک بار می‌شود */
+function PriceLog({ itemId }: { itemId: string }) {
+  type Log = { id: string; fromPrice: string; toPrice: string | null; source: string; createdByName: string; createdAt: string; batch: { id: string; summary: string } | null };
+  const [log, setLog] = useState<Log[] | null>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (open && !log) api<{ log: Log[] }>(`/api/admin/accounting/items/store-prices/history?item=${itemId}`).then((d) => setLog(d.log)).catch(() => setLog([]));
+  }, [open, log, itemId]);
+  return (
+    <Card className="mt-4 overflow-hidden">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between px-4 py-3 text-sm font-bold">
+        تاریخچه‌ی قیمت فروشگاه
+        <span className="text-xs text-gray-400">{open ? "▲" : "▼"}</span>
+      </button>
+      {open &&
+        (!log ? (
+          <p className="px-4 pb-3 text-xs text-gray-400">در حال بارگذاری…</p>
+        ) : !log.length ? (
+          <Empty title="قیمت این کالا هنوز عوض نشده" />
+        ) : (
+          <div className="divide-y divide-gray-100 dark:divide-white/5">
+            {log.map((l) => (
+              <div key={l.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
+                <span className="tabular-nums text-gray-400 line-through">{BigInt(l.fromPrice) > 0n ? formatAmount(l.fromPrice) : "—"}</span>
+                <span className="font-black tabular-nums">{l.toPrice ? formatAmount(l.toPrice) : "از سایت"}</span>
+                <span className="min-w-0 flex-1 text-[11px] text-gray-500">
+                  {formatJalali(new Date(l.createdAt))} · {PRICE_SOURCE[l.source] ?? l.source} · {l.createdByName}
+                </span>
+                {l.batch && (
+                  <Link href={`/admin/accounting/inventory/prices?tab=history&batch=${l.batch.id}`} className="text-[11px] font-bold text-blue-600">
+                    {l.batch.summary}
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+    </Card>
   );
 }

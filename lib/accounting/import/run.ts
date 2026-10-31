@@ -187,7 +187,7 @@ async function findItemId(tx: Tx, raw: string): Promise<string | null> {
 
 // ── کالا ─────────────────────────────────────────────────────────────
 
-const itemsPlanner: Planner = async (tx, opts) => {
+const itemsPlanner: Planner = async (tx, opts, actor) => {
   const update = opts.update !== false;
   const axes = await tx.accAxis.findMany();
   const seenCode = new Set<string>();
@@ -278,7 +278,7 @@ const itemsPlanner: Planner = async (tx, opts) => {
             ...(salePrice !== null ? { salePrice } : {}),
             ...(groupId ? { groupId } : {}),
             ...(barcodes.length ? { barcodes: [...cur.map((b) => b.barcode), ...barcodes] } : {}),
-          });
+          }, actor);
           if (placement) {
             await t.accItem.update({ where: { id: target.id }, data: { modelId: placement.modelId, attrKey: attrKeyOf(placement.attrs) } });
             await t.accItemAttr.createMany({ data: placement.attrs.map((a) => ({ itemId: target!.id, ...a })) });

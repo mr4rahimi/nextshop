@@ -5,7 +5,7 @@ import { can, requirePermission } from "@/lib/permissions";
 import { updateItem } from "@/lib/accounting/inventory/items";
 import { onlinePricesOf, onlineRule } from "@/lib/accounting/inventory/online-price";
 import { accErrorResponse } from "@/lib/accounting/errors";
-import { readJson } from "@/lib/accounting/api";
+import { actorOf, readJson } from "@/lib/accounting/api";
 import { parseItemInput } from "../parse";
 
 export const runtime = "nodejs";
@@ -40,7 +40,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     const { id } = await params;
     const input = parseItemInput(await readJson(req));
-    const item = await prisma.$transaction((tx) => updateItem(tx, id, input));
+    const item = await prisma.$transaction((tx) => updateItem(tx, id, input, actorOf(guard.access)));
     return NextResponse.json(serialize({ ok: true, item }));
   } catch (e) {
     return accErrorResponse(e, "[acc-item]");

@@ -9,6 +9,8 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { applyOnlinePrices } from "./online-price";
+import { recordPriceChanges, storePrices } from "./price-log";
+import type { Actor } from "../ledger/post";
 import { AccError } from "../errors";
 import { toLatinDigits } from "../money";
 import { allocItemCode } from "./codes";
@@ -190,10 +192,12 @@ export async function createItem(db: Prisma.TransactionClient, input: ItemInput,
   return item;
 }
 
-/** ویرایش — کد عوض‌شده به `AccItemAlias` می‌رود (تصمیم ۶) */
-export async function updateItem(db: Prisma.TransactionClient, id: string, input: ItemInput) {
+/** ویرایش — کد عوض‌شده به `AccItemAlias` می‌رود (تصمیم ۶)؛ تغییر قیمت فروشگاه در تاریخچه‌ی قیمت */
+export async function updateItem(db: Prisma.TransactionClient, id: string, input: ItemInput, actor: Actor = { name: "سیستم" }) {
   const cur = await db.accItem.findUnique({ where: { id } });
   if (!cur) throw new AccError("کالا پیدا نشد", 404);
+  const priceMoved = input.salePrice !== undefined && input.salePrice !== cur.salePrice;
+  const before = priceMoved ? (await storePrices(db, [id])).get(id) : undefined;
   const data: Prisma.AccItemUpdateInput = {};
   if (input.title !== undefined) {
     const t = input.title.trim();
@@ -227,6 +231,8 @@ export async function updateItem(db: Prisma.TransactionClient, id: string, input
   }
   const item = await db.accItem.update({ where: { id }, data });
   if (input.barcodes) await setBarcodes(db, id, input.barcodes);
+  if (priceMoved)
+    await recordPriceChanges(db, [{ itemId: id, fromPrice: before?.price ?? 0n, prevRaw: cur.salePrice, toPrice: input.salePrice ?? null }], { source: "FORM", actor });
   // قیمت فروشگاه، قیمت آنلاین دستی یا گروه عوض شد ← قیمت سایت (اگر کلید روشن است)
   if (input.salePrice !== undefined || input.onlinePrice !== undefined || input.groupId !== undefined) await applyOnlinePrices(db, [id]);
   return item;

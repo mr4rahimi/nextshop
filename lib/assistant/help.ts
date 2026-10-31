@@ -74,6 +74,7 @@ const TOPIC_PAGES: Record<string, string> = {
   accountingRelabel: "/admin/accounting/inventory/relabel",
   accountingPosHub: "/admin/accounting/pos",
   accountingOnlinePrice: "/admin/accounting/inventory/online-prices",
+  accountingStorePrices: "/admin/accounting/inventory/prices",
   accountingCounts: "/admin/accounting/inventory/counts",
   accountingSalesAnalysis: "/admin/accounting/reports/sales",
   accountingMovers: "/admin/accounting/reports/movers",

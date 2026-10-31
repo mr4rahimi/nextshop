@@ -4313,6 +4313,7 @@ model AccItem {
   group        AccItemGroup?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
   model        AccItemModel?    @relation(fields: [modelId], references: [id], onDelete: SetNull)
   supplier     AccParty?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  priceChanges AccPriceChange[]
 
   @@unique([modelId, attrKey])
   @@index([title])
@@ -4320,6 +4321,47 @@ model AccItem {
   @@index([groupId])
   @@index([modelId])
   @@index([supplierId])
+}
+
+/// یک بار تغییر گروهی قیمت فروشگاه (درصد، مبلغ، قیمت ثابت، اکسل یا برگرداندن) — webhesab-parity.md بخش ۱۰
+model AccPriceBatch {
+  id            String           @id @default(cuid())
+  /// PERCENT | AMOUNT | SET | EXCEL | UNDO
+  kind          String
+  /// شرح خوانا: «+۱۰٪ · گروه پیراهن · گرد به ۱٬۰۰۰ رو به بالا»
+  summary       String
+  count         Int
+  /// برگشت داده شد — با دسته‌ی UNDO که `undoOfId` آن همین است
+  undoneAt      DateTime?
+  undoOfId      String?
+  createdByName String
+  createdAt     DateTime         @default(now())
+  changes       AccPriceChange[]
+
+  @@index([createdAt])
+}
+
+/// هر تغییر قیمت فروشگاه (`AccItem.salePrice`) از هر مسیری — تاریخچه و «کالاهای با تغییر قیمت»
+model AccPriceChange {
+  id            String         @id @default(cuid())
+  itemId        String
+  /// قیمتی که فروشگاه پیش از تغییر می‌گرفت (`salePrice`، نبود ← قیمت سایت؛ ۰ = بی‌قیمت)
+  fromPrice     BigInt
+  /// `salePrice` پیشین خام — برگرداندن همین را می‌نویسد (null = قیمت از سایت می‌آمد)
+  prevRaw       BigInt?
+  /// `salePrice` تازه (null = برداشته شد)
+  toPrice       BigInt?
+  /// FORM | BULK | EXCEL | UNDO
+  source        String
+  batchId       String?
+  createdByName String
+  createdAt     DateTime       @default(now())
+  item          AccItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  batch         AccPriceBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([itemId, createdAt])
+  @@index([batchId])
 }
 
 /// گروه کالا — درختی (پوشاک ← پیراهن)
