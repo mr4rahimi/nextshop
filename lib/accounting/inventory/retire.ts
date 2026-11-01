@@ -2,7 +2,7 @@
  * حذف و فعال/غیرفعال دسته‌ای کالا — docs/plans/webhesab-parity.md بخش ۱۲.
  *
  * حذف واقعی فقط برای کالای **بی‌گردش**: نه کاردکس، نه فاکتور (حتی پیش‌نویس)، نه
- * حواله/انبارگردانی/ورود و خروج دستی، نه موجودی، نه محصول سایت، نه کد قبلی. کالای
+ * حواله/انبارگردانی/ورود و خروج دستی، نه موجودی، نه محصول سایت، نه کد قبلی، نه سفارش خرید. کالای
  * گردش‌دار پاک نمی‌شود — غیرفعال می‌شود تا تاریخچه‌ی سندها سالم بماند.
  */
 
@@ -28,6 +28,7 @@ export const USE_LABEL = {
   product: "محصول سایت",
   legacy: "کد قبلی",
   relabel: "برچسب‌زنی",
+  orders: "سفارش خرید",
 } as const;
 export type UseKey = keyof typeof USE_LABEL;
 
@@ -59,6 +60,7 @@ export async function itemUses(db: Db, itemIds: string[]): Promise<Map<string, U
     ],
     legacy: ids(await db.accLegacyItem.findMany({ where: i, select: { itemId: true } })),
     relabel: ids(await db.accRelabelLog.findMany({ where: i, select: { itemId: true }, distinct: ["itemId"] })),
+    orders: ids(await db.accPurchaseOrderLine.findMany({ where: p, select: { productId: true }, distinct: ["productId"] })),
   };
   for (const k of Object.keys(USE_LABEL) as UseKey[]) {
     for (const id of new Set(found[k])) {

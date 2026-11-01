@@ -54,6 +54,9 @@ interface Line {
   maxQty?: number;
   refQty?: number;
   refDisc?: bigint;
+  /** فاکتور خرید از روی سفارش — سقف تعداد این ردیف (webhesab-parity.md بخش ۱۳) */
+  poLineId?: string;
+  poLeft?: number;
 }
 
 interface DetailLine {
@@ -70,6 +73,8 @@ interface DetailLine {
   sku: string | null;
   returnedQty: number;
   refLineId: string | null;
+  poLineId: string | null;
+  poLeft: number | null;
 }
 
 interface Detail {
@@ -94,6 +99,7 @@ interface Detail {
     refInvoiceId: string | null;
     lines: DetailLine[];
   };
+  purchaseOrder?: { id: string; number: number } | null;
 }
 
 let seq = 0;
@@ -123,6 +129,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
   const [additions, setAdditions] = useState("");
   const [additionsTitle, setAdditionsTitle] = useState("");
   const [note, setNote] = useState("");
+  const [po, setPo] = useState<{ id: string; number: number } | null>(null);
   const [refInvoice, setRefInvoice] = useState<{ id: string; number: number | null; type: InvoiceTypeKey } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,6 +169,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
           setAdditions(inv.additions === "0" ? "" : inv.additions);
           setAdditionsTitle(inv.additionsTitle ?? "");
           setNote(inv.note ?? "");
+          setPo(d.purchaseOrder ?? null);
           if (inv.refInvoiceId) {
             const r = await api<Detail>(`/api/admin/accounting/invoices/${inv.refInvoiceId}`);
             setRefInvoice({ id: r.invoice.id, number: r.invoice.number, type: r.invoice.type });
@@ -200,6 +208,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
       accountId: l.accountId ?? "",
       image: l.image,
       sku: l.sku,
+      ...(l.poLineId ? { poLineId: l.poLineId, poLeft: l.poLeft ?? 0 } : {}),
     };
   }
 
@@ -310,6 +319,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
             vatRateBp: pctToBp(l.vatPct),
             accountId: l.accountId || null,
             refLineId: l.refLineId ?? null,
+            poLineId: l.poLineId ?? null,
           })),
         };
         if (batch) {
@@ -377,7 +387,9 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
             ? `از ${INVOICE_TYPE_LABELS[refInvoice.type]} ${faNum(refInvoice.number ?? 0)} — تعداد برگشتی هر کالا را بنویسید؛ مبلغ همان مبلغ فاکتور اصلی است.`
             : batch
               ? "اقلام را یک بار وارد کنید و طرف‌حساب‌ها را انتخاب کنید؛ برای هر کدام یک فاکتور جدا با شماره‌ی خودش صادر می‌شود."
-              : undefined
+              : po
+                ? `از سفارش خرید ${faNum(po.number)} — تعداد هر کالا را به آنچه واقعاً رسیده اصلاح کنید؛ مانده در سفارش باز می‌ماند.`
+                : undefined
         }
       />
 
@@ -530,7 +542,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
                         {hasRef
                           ? `حداکثر ${faNum(l.maxQty ?? 0)} از ${faNum(l.refQty ?? 0)}`
                           : l.productId
-                            ? [l.sku && `کد ${faNum(l.sku)}`, avail !== null && `موجودی ${faNum(avail)}${short ? " — کمتر از تعداد؛ ثبت می‌شود ولی موجودی منفی می‌شود" : ""}`].filter(Boolean).join(" · ") || "کالا"
+                            ? [l.sku && `کد ${faNum(l.sku)}`, l.poLineId && `مانده‌ی سفارش ${faNum(l.poLeft ?? 0)}${Number(l.qty || 0) > (l.poLeft ?? 0) ? " — بیشتر از سفارش؛ اضافه را ردیف جدا بزنید" : ""}`, avail !== null && `موجودی ${faNum(avail)}${short ? " — کمتر از تعداد؛ ثبت می‌شود ولی موجودی منفی می‌شود" : ""}`].filter(Boolean).join(" · ") || "کالا"
                             : null}
                       </p>
                       {!l.productId && !hasRef && (

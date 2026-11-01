@@ -4112,6 +4112,7 @@ model AccParty {
 
   lines            AccVoucherLine[]
   invoices         AccInvoice[]
+  purchaseOrders   AccPurchaseOrder[]
   moneyDocs        AccMoneyDoc[]
   cheques          AccCheque[]
   installmentPlans AccInstallmentPlan[]
@@ -4880,6 +4881,8 @@ model AccInvoice {
   voucherId         String?           @unique
   voidReason        String?
   /// «یک فاکتور برای چند مشتری» — فاکتورهای یک صدور گروهی (فاز ۱۰)
+  /// فاکتور خرید از روی سفارش خرید (webhesab-parity.md بخش ۱۳)
+  purchaseOrderId   String?
   batchId           String?
   /// مودیان — فاز ۹
   taxId             String?
@@ -4900,6 +4903,7 @@ model AccInvoice {
   @@index([partyId, date])
   @@index([type, status, date])
   @@index([orderId])
+  @@index([purchaseOrderId])
   @@index([refInvoiceId])
 }
 
@@ -4925,6 +4929,8 @@ model AccInvoiceLine {
   accountId            String?
   /// برگشتی ← ردیف فاکتور مرجع (سقف تعداد قابل برگشت)
   refLineId            String?
+  /// ردیف سفارش خرید ← سقف تعداد و «دریافت‌شده»ی سفارش
+  poLineId             String?
   orderItemId          String?
   taxCode              String?
 
@@ -4932,6 +4938,7 @@ model AccInvoiceLine {
 
   @@index([invoiceId])
   @@index([productId])
+  @@index([poLineId])
   @@index([refLineId])
 }
 
@@ -5761,4 +5768,52 @@ model DemoLead {
   sections  String[] @default([])
 
   @@index([lastAt])
+}
+
+/// سفارش خرید — docs/plans/webhesab-parity.md بخش ۱۳. سند مالی و کاردکس ندارد؛ دریافت کالا
+/// همان «فاکتور خرید از روی سفارش» است و «دریافت‌شده» از ردیف‌های فاکتور (`poLineId`) حساب می‌شود.
+model AccPurchaseOrder {
+  id            String    @id @default(cuid())
+  /// سراسری (نه سالانه) — GLOBAL_SEQ «purchase-order»
+  number        Int       @unique
+  date          DateTime  @db.Date
+  /// موعد تحویل
+  dueDate       DateTime? @db.Date
+  partyId       String
+  warehouseId   String?
+  /// OPEN | CLOSED (بسته شد، مانده لغو) | CANCELED (باطل، هیچ دریافتی ندارد)
+  status        String    @default("OPEN")
+  /// کد پیگیری/پیش‌فاکتور عرضه‌کننده
+  supplierRef   String?
+  note          String?
+  closedReason  String?
+  closedAt      DateTime?
+  createdById   String?
+  createdByName String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  party AccParty               @relation(fields: [partyId], references: [id])
+  lines AccPurchaseOrderLine[]
+
+  @@index([status, date])
+  @@index([partyId])
+}
+
+model AccPurchaseOrderLine {
+  id        String  @id @default(cuid())
+  orderId   String
+  seq       Int
+  productId String
+  title     String
+  unit      String?
+  qty       Int
+  /// فی پیشنهادی؛ ۰ = هنوز معلوم نیست (در فاکتور پر می‌شود)
+  unitPrice BigInt  @default(0)
+  note      String?
+
+  order AccPurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
 }

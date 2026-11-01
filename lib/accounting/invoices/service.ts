@@ -24,6 +24,7 @@ import { ensureDefaultWarehouse } from "../inventory/docs";
 import { faNum, formatAmount } from "../money";
 import { calcInvoice, CalcError, divRound, INVOICE_TYPE_LABELS, allocate } from "./calc";
 import { ensureItems } from "../inventory/items";
+import { poLineProgress } from "../purchases/progress";
 
 type Tx = Prisma.TransactionClient;
 
@@ -66,6 +67,8 @@ export interface InvoiceLineInput {
   refLineId?: string | null;
   orderItemId?: string | null;
   taxCode?: string | null;
+  /** فاکتور خرید ← ردیف سفارش خرید (webhesab-parity.md بخش ۱۳) */
+  poLineId?: string | null;
 }
 
 export interface PartySnapshot {
@@ -199,6 +202,17 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
     (await tx.accItem.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true } })).map((p) => [p.id, p]),
   );
 
+  // ── سفارش خرید ── هر ردیف حداکثر تا مانده‌ی ردیف سفارش (منهای فاکتورهای دیگر، پیش‌نویس هم)
+  const poIds = [...new Set(input.lines.map((l) => l.poLineId).filter((x): x is string => !!x))];
+  if (poIds.length && type !== "PURCHASE") throw new AccError("فقط فاکتور خرید به سفارش خرید وصل می‌شود");
+  const poLines = new Map(
+    (await tx.accPurchaseOrderLine.findMany({ where: { id: { in: poIds } }, include: { order: { select: { id: true, number: true, status: true, partyId: true } } } })).map((l) => [l.id, l]),
+  );
+  const poUsed = await poLineProgress(tx, poIds, id);
+  const poOrderIds = new Set([...poLines.values()].map((l) => l.order.id));
+  if (poOrderIds.size > 1) throw new AccError("ردیف‌های یک فاکتور فقط از یک سفارش خرید می‌آیند");
+  const prevPo = current ? new Set((await tx.accInvoiceLine.findMany({ where: { invoiceId: current.id, poLineId: { not: null } }, select: { poLineId: true } })).map((l) => l.poLineId)) : new Set();
+
   const lines: (Required<Omit<InvoiceLineInput, "discount" | "vatRateBp" | "title">> & { title: string; discount: bigint; vatRateBp: number })[] = [];
   for (const [i, l] of input.lines.entries()) {
     const at = `ردیف ${faNum(i + 1)}`;
@@ -222,8 +236,20 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
         refLineId: rl.id,
         orderItemId: rl.orderItemId,
         taxCode: rl.taxCode,
+        poLineId: null,
       });
       continue;
+    }
+    if (l.poLineId) {
+      const pl = poLines.get(l.poLineId);
+      if (!pl) throw new AccError(`${at}: ردیف سفارش خرید پیدا نشد`);
+      // ردیفی که از قبل در همین فاکتور بود با بسته شدن سفارش بیرون نمی‌افتد (ویرایش فاکتور صادرشده)
+      if (pl.order.status !== "OPEN" && !prevPo.has(pl.id)) throw new AccError(`${at}: سفارش خرید ${faNum(pl.order.number)} باز نیست`);
+      if (pl.order.partyId !== partyId) throw new AccError(`${at}: سفارش خرید ${faNum(pl.order.number)} مال عرضه‌کننده‌ی دیگری است`);
+      if (l.productId && l.productId !== pl.productId) throw new AccError(`${at}: کالای ردیف با سفارش یکی نیست`);
+      const u = poUsed.get(pl.id);
+      const left = pl.qty - (u?.received ?? 0) - (u?.draft ?? 0) - lines.filter((x) => x.poLineId === pl.id).reduce((s, x) => s + x.qty, 0);
+      if (l.qty > left) throw new AccError(`${at}: از «${pl.title}» در سفارش ${faNum(pl.order.number)} فقط ${faNum(Math.max(0, left))} عدد مانده؛ اضافه را در ردیف جدا (بی‌سفارش) بنویسید`);
     }
     const productId = l.productId || null;
     if (productId && !products.has(productId)) throw new AccError(`${at}: کالا پیدا نشد`);
@@ -249,6 +275,7 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
       refLineId: null,
       orderItemId: l.orderItemId ?? null,
       taxCode: l.taxCode ?? null,
+      poLineId: l.poLineId ?? null,
     });
   }
 
@@ -325,6 +352,7 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
     total: calc.total,
     note: input.note?.trim() || null,
     refInvoiceId: ref?.id ?? null,
+    purchaseOrderId: [...poOrderIds][0] ?? null,
     ...(issue && !current?.issuedAt ? { issuedAt: new Date() } : {}),
   };
 
@@ -368,6 +396,7 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
       refLineId: l.refLineId,
       orderItemId: l.orderItemId,
       taxCode: l.taxCode,
+      poLineId: l.poLineId,
     })),
   });
 

@@ -9,6 +9,7 @@ import type { AccInvoiceStatus, AccInvoiceType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { can, type StaffAccess } from "@/lib/permissions";
 import { AccError, toAmount } from "../errors";
+import { poLineProgress } from "../purchases/progress";
 import { parseDay } from "../dates";
 import { toLatinDigits } from "../money";
 import { returnedQty, INVOICE_SOURCE, type InvoiceInput } from "./service";
@@ -43,6 +44,7 @@ interface LineBody {
   accountId?: string | null;
   refLineId?: string | null;
   taxCode?: string | null;
+  poLineId?: string | null;
 }
 
 export interface InvoiceBody {
@@ -83,6 +85,7 @@ export function inputFromBody(b: InvoiceBody): InvoiceInput {
       accountId: l.accountId || null,
       refLineId: l.refLineId || null,
       taxCode: l.taxCode?.trim() || null,
+      poLineId: l.poLineId || null,
     };
   });
   return {
@@ -184,6 +187,14 @@ export async function invoiceDetail(id: string, access: StaffAccess) {
   const byAccount = new Map(accounts.map((a) => [a.id, a]));
   const returned = inv.type === "SALES" || inv.type === "PURCHASE" ? await returnedQty(prisma, inv.lines.map((l) => l.id)) : new Map<string, number>();
   const costByLine = new Map(moves.map((m) => [m.sourceLineId, m.totalCost]));
+  // سفارش خرید (webhesab-parity.md بخش ۱۳): مانده‌ی هر ردیف برای این فاکتور = سفارش − فاکتورهای دیگر
+  const poLineIds = inv.lines.map((l) => l.poLineId).filter((x): x is string => !!x);
+  const [purchaseOrder, poLines, poUsed] = await Promise.all([
+    inv.purchaseOrderId ? prisma.accPurchaseOrder.findUnique({ where: { id: inv.purchaseOrderId }, select: { id: true, number: true, status: true } }) : null,
+    prisma.accPurchaseOrderLine.findMany({ where: { id: { in: poLineIds } }, select: { id: true, qty: true } }),
+    poLineProgress(prisma, poLineIds, inv.id),
+  ]);
+  const poLeft = new Map(poLines.map((p) => [p.id, p.qty - (poUsed.get(p.id)?.received ?? 0) - (poUsed.get(p.id)?.draft ?? 0)]));
 
   const lines = inv.lines.map((l) => ({
     ...l,
@@ -192,6 +203,7 @@ export async function invoiceDetail(id: string, access: StaffAccess) {
     image: l.productId ? byProduct.get(l.productId)?.image ?? null : null,
     account: l.accountId ? byAccount.get(l.accountId) ?? null : null,
     returnedQty: returned.get(l.id) ?? 0,
+    poLeft: l.poLineId ? poLeft.get(l.poLineId) ?? 0 : null,
     ...(withCost && l.productId ? { cost: costByLine.get(l.id) ?? 0n } : {}),
   }));
   // تسویه — دریافت/پرداخت‌های تخصیص‌یافته و مانده‌ی باز (فاز ۵)
@@ -214,6 +226,7 @@ export async function invoiceDetail(id: string, access: StaffAccess) {
     convertedFrom,
     voucher,
     order,
+    purchaseOrder,
     profit: cost !== null && inv.status === "ISSUED" ? { cost, gross: productNet - cost } : null,
     settlement: {
       allocations: allocations.map((a) => ({ amount: a.amount, ...a.moneyDoc })),

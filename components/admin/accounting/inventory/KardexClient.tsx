@@ -56,6 +56,7 @@ interface Data {
   product: { id: string; title: string; sku: string; unit: string; mainImage: string | null; isActive: boolean; hasProduct: boolean; link: { productId: string; product: string; variant: string | null } | null; stock: number | null; lowStockThreshold: number };
   stocks: { warehouseId: string; qty: number }[];
   places: { warehouseId: string; zone: string | null; aisle: string | null; shelf: string | null; level: string | null }[];
+  onOrder: number;
   transit: { id: string; number: number; toWarehouseId: string; qty: number }[];
   warehouses: { id: string; name: string; sellable: boolean }[];
   opening: number;
@@ -138,6 +139,15 @@ export default function KardexClient({ productId }: { productId: string }) {
         {data.cost && <Stat label="میانگین بها" value={<Money value={data.cost.avgCost} />} />}
         {data.cost && <Stat label="ارزش موجودی" value={<Money value={data.cost.totalValue} />} />}
       </div>
+
+      {data.onOrder > 0 && (
+        <Link href={`/admin/accounting/purchases/orders?productId=${data.product.id}`} className="block">
+          <Card className="flex items-center gap-2 p-3 text-xs hover:opacity-80">
+            <span className="font-bold text-gray-500">📋 در سفارش خرید:</span>
+            <Badge tone="blue">{faNum(data.onOrder)} عدد در راه</Badge>
+          </Card>
+        </Link>
+      )}
 
       {data.places.length > 0 && (
         <Card className="p-3 flex flex-wrap items-center gap-2 text-xs">

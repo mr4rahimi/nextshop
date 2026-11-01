@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { faNum } from "@/lib/accounting/money";
 import { api, Badge, btn, ErrorText, Field, inputCls, Sheet } from "../ui";
 
-type UseKey = "moves" | "invoices" | "transfers" | "adjusts" | "counts" | "stock" | "product" | "legacy" | "relabel";
+type UseKey = "moves" | "invoices" | "transfers" | "adjusts" | "counts" | "stock" | "product" | "legacy" | "relabel" | "orders";
 const USE_LABEL: Record<UseKey, string> = {
   moves: "کاردکس",
   invoices: "فاکتور",
@@ -22,6 +22,7 @@ const USE_LABEL: Record<UseKey, string> = {
   product: "محصول سایت",
   legacy: "کد قبلی",
   relabel: "برچسب‌زنی",
+  orders: "سفارش خرید",
 };
 interface Plan {
   free: { id: string; code: string; title: string }[];

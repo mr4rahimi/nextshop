@@ -8,6 +8,7 @@ import { itemCards } from "@/lib/accounting/inventory/items";
 import { itemLinks } from "@/lib/accounting/inventory/to-product";
 import { IN_TRANSIT } from "@/lib/accounting/inventory/docs";
 import { itemPlaces } from "@/lib/accounting/inventory/places";
+import { onOrderQty } from "@/lib/accounting/purchases/orders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -75,12 +76,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ productI
     };
   });
 
-  const places = await itemPlaces(prisma, product.id);
+  const [places, onOrder] = await Promise.all([itemPlaces(prisma, product.id), onOrderQty(prisma, [product.id])]);
   return NextResponse.json(
     serialize({
       product,
       stocks,
       places,
+      /** مانده‌ی سفارش‌های خرید باز (webhesab-parity.md بخش ۱۳) */
+      onOrder: onOrder.get(product.id) ?? 0,
       transit: transit.map((l) => ({ ...l.transfer, qty: l.qty })),
       warehouses,
       opening: openingQty?._sum.qty ?? 0,
