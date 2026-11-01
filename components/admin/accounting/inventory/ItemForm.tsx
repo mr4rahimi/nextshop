@@ -7,6 +7,7 @@
  */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { faNum, formatAmount } from "@/lib/accounting/money";
 import AmountInput from "../AmountInput";
@@ -98,6 +99,8 @@ export default function ItemForm({
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sure, setSure] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (!itemId) {
@@ -153,6 +156,22 @@ export default function ItemForm({
     }
   }
 
+  /** فقط کالای بی‌گردش (webhesab-parity.md بخش ۱۲)؛ گردش‌دار ← خطای ۴۰۹ با دلیل */
+  async function remove() {
+    if (!sure) return setSure(true);
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/api/admin/accounting/items/status", { method: "POST", json: { action: "delete", ids: [itemId], strict: true } });
+      router.push("/admin/accounting/inventory?filter=all");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "پاک نشد");
+      setSure(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   // کپی: فرم تازه با همه‌چیز جز کد و بارکد (یکتا هستند)
   if (copyOf) return <ItemForm itemId={null} initial={copyOf} onClose={onClose} onSaved={onSaved} />;
 
@@ -184,6 +203,11 @@ export default function ItemForm({
               <Link href={`/admin/accounting/inventory/labels/print?items=${itemId}:1`} target="_blank" className={btn.soft}>
                 برچسب
               </Link>
+              {!product && (
+                <button type="button" onClick={remove} disabled={busy} className={btn.danger}>
+                  {sure ? "پاک شود؟" : "حذف"}
+                </button>
+              )}
             </>
           )}
         </div>

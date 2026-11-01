@@ -8,10 +8,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
+import { CalendarDays, ListChecks, Plus } from "lucide-react";
+import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import { faNum } from "@/lib/accounting/money";
+import { formatJalali } from "@/lib/club/jalali";
 import InventoryTabs from "./InventoryTabs";
 import ItemForm, { useItemGroups } from "./ItemForm";
+import ItemStatusSheet from "./ItemStatusSheet";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, inputCls, Money, PageHeader, Stat } from "../ui";
 
 interface Warehouse {
@@ -30,6 +33,7 @@ interface Item {
   link: { productId: string; product: string; variant: string | null } | null;
   sellOnline: boolean;
   isActive: boolean;
+  createdAt: string;
   siteStock: number | null;
   lowStockThreshold: number;
   qty: number;
@@ -41,10 +45,12 @@ interface Data {
   items: Item[];
   warehouses: Warehouse[];
   summary: { value: string | null; products: number; negative: number };
+  more: boolean;
   can: { cost: boolean; manage: boolean };
 }
 
 type Filter = "instock" | "all" | "low" | "negative" | "noproduct" | "inactive";
+const PAGE = 100;
 
 export default function InventoryClient() {
   const [q, setQ] = useState("");
@@ -58,19 +64,30 @@ export default function InventoryClient() {
   const [wh, setWh] = useState("");
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // تاریخ تعریف (webhesab-parity.md بخش ۱۲) — `?from=` از جای دیگر هم می‌آید
+  const [dates, setDates] = useState(() => !!(sp.get("from") || sp.get("to")));
+  const [from, setFrom] = useState(sp.get("from") ?? "");
+  const [to, setTo] = useState(sp.get("to") ?? "");
+  const [take, setTake] = useState(PAGE);
+  const [picked, setPicked] = useState<Set<string> | null>(null);
+  const [status, setStatus] = useState<string[] | null | undefined>(undefined);
+
+  useEffect(() => setTake(PAGE), [q, filter, wh, groupId, from, to]);
 
   const load = useCallback(() => {
-    const p = new URLSearchParams({ filter });
+    const p = new URLSearchParams({ filter, take: String(take) });
     if (q.trim()) p.set("q", q.trim());
     if (wh) p.set("warehouseId", wh);
     if (groupId) p.set("groupId", groupId);
+    if (dates && from) p.set("from", from);
+    if (dates && to) p.set("to", to);
     api<Data>(`/api/admin/accounting/inventory?${p}`)
       .then((d) => {
         setData(d);
         setError(null);
       })
       .catch((e) => setError(e.message));
-  }, [q, filter, wh, groupId]);
+  }, [q, filter, wh, groupId, dates, from, to, take]);
   useEffect(() => {
     const h = setTimeout(load, q ? 250 : 0);
     return () => clearTimeout(h);
@@ -78,6 +95,14 @@ export default function InventoryClient() {
 
   const active = data?.warehouses.filter((w) => w.isActive) ?? [];
   const multi = active.length > 1;
+  const toggle = (id: string) =>
+    setPicked((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const allPicked = !!data?.items.length && data.items.every((i) => picked?.has(i.id));
 
   return (
     <div className="space-y-4">
@@ -87,13 +112,29 @@ export default function InventoryClient() {
         desc="موجودی هر کالا در هر انبار، با کاردکس کامل ورود و خروج."
         actions={
           data?.can.manage && (
-            <button onClick={() => setCreating(true)} className={btn.primary}>
-              <Plus className="h-4 w-4" aria-hidden />
-              کالای تازه
-            </button>
+            <>
+              <button onClick={() => setPicked(picked ? null : new Set())} className={btn.soft} aria-pressed={!!picked}>
+                <ListChecks className="h-4 w-4" aria-hidden />
+                {picked ? "پایان انتخاب" : "انتخاب"}
+              </button>
+              <button onClick={() => setCreating(true)} className={btn.primary}>
+                <Plus className="h-4 w-4" aria-hidden />
+                کالای تازه
+              </button>
+            </>
           )
         }
       />
+      {status !== undefined && (
+        <ItemStatusSheet
+          ids={status}
+          onClose={() => setStatus(undefined)}
+          onDone={() => {
+            setPicked((s) => (s ? new Set() : s));
+            load();
+          }}
+        />
+      )}
       {creating && <ItemForm itemId={null} onClose={() => setCreating(false)} onSaved={(id) => router.push(`/admin/accounting/inventory/${id}`)} />}
       <InventoryTabs />
 
@@ -136,15 +177,26 @@ export default function InventoryClient() {
             options={[{ value: "", label: "همه‌ی انبارها" }, ...active.map((w) => ({ value: w.id, label: w.name }))]}
           />
         )}
+        <button onClick={() => setDates(!dates)} className={`${btn.small} ${dates ? "!bg-blue-50 !text-blue-700 dark:!bg-blue-500/15 dark:!text-blue-300" : ""}`} aria-pressed={dates}>
+          <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+          تاریخ تعریف
+        </button>
       </div>
+      {dates && (
+        <div className="grid grid-cols-2 gap-2 sm:max-w-md">
+          <JalaliDatePicker value={from} onChange={(v: string) => setFrom(v)} placeholder="از تاریخ" />
+          <JalaliDatePicker value={to} onChange={(v: string) => setTo(v)} placeholder="تا تاریخ" />
+        </div>
+      )}
       <ErrorText>{error}</ErrorText>
 
       <Card className="overflow-hidden divide-y divide-gray-100 dark:divide-white/5">
         {data?.items.map((i) => {
           const qty = wh ? i.byWarehouse[wh] ?? 0 : i.qty;
           const low = qty <= i.lowStockThreshold;
-          return (
-            <Link key={i.id} href={`/admin/accounting/inventory/${i.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5">
+          const body = (
+            <>
+              {picked && <input type="checkbox" checked={picked.has(i.id)} onChange={() => toggle(i.id)} className="h-4 w-4 shrink-0" aria-label={`انتخاب ${i.title}`} />}
               {i.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={i.image} alt="" className="w-11 h-11 rounded-xl object-cover bg-gray-100 shrink-0" />
@@ -157,6 +209,8 @@ export default function InventoryClient() {
                   <span>
                     کد <span dir="ltr">{faNum(i.sku)}</span>
                   </span>
+                  {!i.isActive && <Badge>غیرفعال</Badge>}
+                  {dates && <span>تعریف {formatJalali(new Date(i.createdAt))}</span>}
                   {i.link?.variant && <span className="text-emerald-600">تنوع «{i.link.variant}» در {i.link.product}</span>}
                   {!i.hasProduct && (i.sellOnline ? <span className="text-amber-600">بی‌محصول</span> : <span>فروش آنلاین ندارد</span>)}
                   {multi &&
@@ -179,6 +233,16 @@ export default function InventoryClient() {
                 <span className={`block text-lg font-black tabular-nums ${qty < 0 ? "text-red-600" : low ? "text-amber-600" : ""}`}>{faNum(qty)}</span>
                 {qty < 0 ? <Badge tone="red">منفی</Badge> : low && qty >= 0 ? <Badge tone="amber">رو به اتمام</Badge> : null}
               </span>
+            </>
+          );
+          const row = "flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5";
+          return picked ? (
+            <label key={i.id} className={`${row} cursor-pointer`}>
+              {body}
+            </label>
+          ) : (
+            <Link key={i.id} href={`/admin/accounting/inventory/${i.id}`} className={row}>
+              {body}
             </Link>
           );
         })}
@@ -196,6 +260,32 @@ export default function InventoryClient() {
           />
         )}
       </Card>
+      {data?.more && (
+        <button onClick={() => setTake((t) => t + PAGE * 2)} className={`${btn.soft} w-full`}>
+          نمایش بیشتر
+        </button>
+      )}
+
+      {picked && (
+        <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--adm-border)] bg-white/95 p-3 shadow-lg backdrop-blur dark:bg-[#111620]/95">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={allPicked}
+              onChange={() => setPicked(allPicked ? new Set() : new Set(data?.items.map((i) => i.id)))}
+              className="h-4 w-4"
+            />
+            همه‌ی این فهرست ({faNum(data?.items.length ?? 0)})
+          </label>
+          <span className="flex-1 text-sm font-bold">{faNum(picked.size)} انتخاب‌شده</span>
+          <button onClick={() => setStatus(null)} className={btn.small}>
+            با فهرست کد
+          </button>
+          <button onClick={() => setStatus([...picked])} disabled={!picked.size} className={`${btn.small} !bg-gray-900 !text-white dark:!bg-white dark:!text-gray-900`}>
+            فعال / غیرفعال / حذف…
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,13 +8,15 @@ import { itemCards, itemSearchWhere } from "@/lib/accounting/inventory/items";
 import { listGroups } from "@/lib/accounting/inventory/catalog";
 import { ensureDefaultWarehouse } from "@/lib/accounting/inventory/docs";
 import { itemLinks } from "@/lib/accounting/inventory/to-product";
+import { rangeFrom } from "@/lib/accounting/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET ?q&filter=all|instock|negative|low|noproduct|inactive&warehouseId&groupId&take — موجودی کالاها
+ * GET ?q&filter=all|instock|negative|low|noproduct|inactive&warehouseId&groupId&from&to&take — موجودی کالاها
  * (`AccItem`، docs/plans/inventory-items.md). «همه» یعنی کالاهای فعال.
+ * from/to = تاریخ تعریف کالا (روز تهران)؛ با آن ترتیب «تازه‌ترین اول» (webhesab-parity.md بخش ۱۲).
  * بها و ارزش فقط با ACC_COST_VIEW.
  */
 export async function GET(req: Request) {
@@ -23,7 +25,8 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const filter = url.searchParams.get("filter") ?? "instock";
   const warehouseId = url.searchParams.get("warehouseId");
-  const take = Math.min(Number(url.searchParams.get("take")) || 100, 300);
+  const take = Math.min(Number(url.searchParams.get("take")) || 100, 1000);
+  const { from, to } = rangeFrom(url);
   const withCost = can(guard.access, "ACC_COST_VIEW");
 
   await prisma.$transaction((tx) => ensureDefaultWarehouse(tx));
@@ -57,6 +60,11 @@ export async function GET(req: Request) {
     }
     where.groupId = { in: [...ids] };
   }
+  if (from || to) {
+    // روز تهران ← لحظه: نیمه‌شب تهران = ۰۰:۰۰ UTC همان روز منهای ۳:۳۰
+    const at = (d: Date) => new Date(d.getTime() - 3.5 * 3_600_000);
+    where.createdAt = { ...(from ? { gte: at(from) } : {}), ...(to ? { lt: at(new Date(to.getTime() + 86_400_000)) } : {}) };
+  }
   if (filter === "noproduct") {
     // نه محصول هم‌شناسه، نه تنوعی که به کالا وصل باشد (فاز ۵)
     const bare = await prisma.$queryRaw<{ id: string }[]>`SELECT i.id FROM "AccItem" i WHERE NOT EXISTS (SELECT 1 FROM "Product" p WHERE p.id = i.id)
@@ -66,11 +74,12 @@ export async function GET(req: Request) {
 
   const found = await prisma.accItem.findMany({
     where,
-    orderBy: { title: "asc" },
-    take: filter === "low" ? 1000 : take,
-    select: { id: true },
+    orderBy: from || to ? [{ createdAt: "desc" }, { code: "asc" }] : { title: "asc" },
+    take: filter === "low" ? Math.max(1000, take) : take,
+    select: { id: true, createdAt: true },
   });
   const ids = found.map((i) => i.id);
+  const created = new Map(found.map((i) => [i.id, i.createdAt]));
   const [cards, rows, links, flags] = await Promise.all([
     itemCards(ids),
     stockRows(ids, withCost),
@@ -91,6 +100,7 @@ export async function GET(req: Request) {
       link: links.get(id) ?? null,
       sellOnline: !offline.has(id),
       isActive: c.isActive,
+      createdAt: created.get(id)!,
       siteStock: c.siteStock,
       lowStockThreshold: c.lowStockThreshold,
       ...rows.get(id)!,
@@ -111,6 +121,7 @@ export async function GET(req: Request) {
       items,
       warehouses,
       summary: { value: totals?._sum.totalValue ?? null, products: kinds.length, negative: negative.length },
+      more: filter !== "low" && found.length === take,
       can: { cost: withCost, manage: can(guard.access, "ACC_INVENTORY") },
     }),
   );
