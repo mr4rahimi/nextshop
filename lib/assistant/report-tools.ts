@@ -446,7 +446,7 @@ const TEAM_TOOLS: AssistantTool[] = [
     label: "خواندن عملکرد تیم کارتابل",
     topic: "عملکرد تیم در کارتابل (کار بسته‌شده، عقب‌افتاده، ثبت نتیجه)",
     description:
-      "عملکرد تیم در کارتابل در یک بازه: کار بسته‌شده، ثبت‌شده، نرخ ثبت نتیجه، عقب‌افتاده‌ی همین حالا، مستندسازی و کار خودکار، " +
+      "عملکرد تیم در کارتابل در یک بازه: کار بسته‌شده، ثبت‌شده، نرخ ثبت نتیجه، بستن به‌موقع، نتیجه‌ی موفق، میانه‌ی زمان بستن، تماس، ساعت حضور، فروش، عقب‌افتاده‌ی همین حالا، مستندسازی و کار خودکار، " +
       "به تفکیک حوزه، نوع کار و هر کارمند. کار سئو و محتوا اینجا نیست (report_marketing_team).",
     parameters: periodParams,
     available: teamGuard,
@@ -464,6 +464,12 @@ const TEAM_TOOLS: AssistantTool[] = [
         overdueNow: cur.kpi.overdue,
         documented: cur.kpi.documented,
         automaticWork: cur.kpi.system,
+        onTimeRate: cur.kpi.onTimeRate === null ? null : `${cur.kpi.onTimeRate}٪ (${cur.kpi.onTime} از ${cur.kpi.withDue})`,
+        successRate: cur.kpi.successRate === null ? null : `${cur.kpi.successRate}٪ (${cur.kpi.success} از ${cur.kpi.rated})`,
+        medianCloseMinutes: cur.kpi.closeMin === null ? null : Math.round(cur.kpi.closeMin),
+        calls: cur.kpi.calls,
+        activeHours: Math.round(cur.kpi.activeMin / 60),
+        dealsRevenue: cur.kpi.revenue,
         byDomain: cur.byDomain.map((d) => `${d.label}: ${d.value}`),
         byType: cur.byType.map((d) => `${d.label}: ${d.value}`),
         staff: cur.staff.slice(0, 15).map((s) => ({
@@ -474,6 +480,12 @@ const TEAM_TOOLS: AssistantTool[] = [
           documented: s.documented,
           overdueNow: s.overdue,
           automaticWork: s.system,
+          onTime: `${s.onTime}/${s.withDue}`,
+          success: `${s.success}/${s.rated}`,
+          medianCloseMinutes: s.closeMin === null ? null : Math.round(s.closeMin),
+          calls: s.calls,
+          activeHours: Math.round(s.activeMin / 60),
+          dealsRevenue: s.revenue,
         })),
         notes: [
           "done = بسته‌شده در بازه؛ created و نرخ ثبت نتیجه = ثبت‌شده در بازه؛ overdueNow = وضعیت همین حالا",

@@ -1027,11 +1027,25 @@ model StaffRole {
 | `GET /api/admin/worklist/summary` | KPI، سری زمانی، تفکیک — الگوی `reports/summary` موجود |
 | `GET /api/admin/worklist/attendance` | تقویم حضور ماه |
 
+`GET /api/admin/worklist/summary?detail=<معیار>&ownerId=` به‌جای گزارش، کارهای پشت
+یک عدد را برمی‌گرداند (پنجره‌ی جزئیات). معیارها: `done`، `created`، `late`،
+`noOutcome`، `overdue`، `calls`، `success` — `DRILL_METRICS` در
+`lib/worklist/team-report.ts`. شرط‌ها عمداً همان شرط‌های `teamReport` است؛
+`scripts/smoke-team-report.ts` (فقط خواندنی، روی سرور هم بی‌خطر) برابری عدد پنجره با
+عدد کارنامه، و جمع سری‌ها و نقشه‌ی ساعت با کارت‌ها را می‌آزماید.
+
 ### نمودارها
 
-از همان `components/admin/reports/charts.tsx` استفاده می‌شود: `MultiLineChart`،
-`DonutChart`، `HBarChart`. همه SVG خالص، **بدون کتابخانه‌ی نموداری**. کتابخانه‌ی
-تازه به پروژه اضافه نمی‌شود.
+`DonutChart` و `HBarChart` از `components/admin/reports/charts.tsx`، و از ۲.۱۱۷.۰
+نمودارهای مخصوص این صفحه در `components/admin/worklist/team-charts.tsx`:
+`Sparkline`، `RingGauge`، `ComboChart` (ستون انباشته + خط)، `ColumnChart`،
+`Heatmap` (روز هفته × ساعت تهران)، `RadarChart`، `ScatterChart` (حجم × به‌موقع،
+اندازه = ساعت حضور)، `StackedRows` (حوزه‌های هر کارمند)، `ShareBar`. همه SVG خالص،
+**بدون کتابخانه‌ی نموداری**. کتابخانه‌ی تازه به پروژه اضافه نمی‌شود.
+
+> ⚠️ **`ownerId` فقط کارت‌ها و نمودارها را ریز می‌کند؛ `staff` (کارنامه) همیشه کل
+> تیم است** — رادار «او در برابر تیم» و رتبه‌ی او بدون آن ممکن نیست. ابزار
+> `report_team` دستیار بی `ownerId` صدا می‌زند و تغییری ندید.
 
 ### چه چیزی شمرده می‌شود
 
@@ -1042,6 +1056,14 @@ model StaffRole {
 | نرخ ثبت نتیجه | درصد کارهای خودش که `outcome` دارند |
 | عقب‌افتاده | کارهایی که `dueAt` گذشته و `DONE` نشده |
 | کار سیستمی | از `ActivityLog` بر اساس نگاشت `systemKey` |
+| به‌موقع | بسته‌شده‌های بازه با `dueAt`، که `doneAt ≤ dueAt` — کار بی‌مهلت در مخرج نیست |
+| نتیجه‌ی موفق | بسته‌شده‌های نتیجه‌دار که نتیجه‌شان در `outcomes` نوع `isSuccess` است |
+| زمان بستن | **میانه**‌ی `doneAt − createdAt` بسته‌شده‌ها (میانگین با یک کار فراموش‌شده خراب می‌شود) |
+| تماس | بسته‌شده با کانال `CALL_IN`/`CALL_OUT` |
+| حضور | جمع `StaffWorkDay.activeMin` و تعداد روزهای حضور در بازه |
+| کار در ساعت | حجم کار ÷ ساعت حضور — بی حضور ثبت‌شده «—» |
+| فروش و سود | `StaffDeal` غیر `VOID` با `occurredAt` در بازه، به نام `ownerId` |
+| نسبت به قبل | دوره‌ی هم‌طولِ درست پیش از بازه — بسته‌شده، ثبت‌شده، به‌موقع، فروش |
 
 **مستندسازی عمداً کارِ متمایز می‌شمارد نه تعداد یادداشت**، وگرنه ده یادداشت روی
 یک کار امتیاز می‌آورد. مبنای زمانش `createdAt` یادداشت است نه `occurredAt` کار.
