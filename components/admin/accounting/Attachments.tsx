@@ -35,7 +35,9 @@ interface Row {
   createdAt: string;
 }
 
-export const fileSize = (n: number) => (n < 1024 * 1024 ? `${faNum(Math.max(1, Math.round(n / 1024)))} کیلوبایت` : `${faNum(Math.round((n / 1024 / 1024) * 10) / 10)} مگابایت`);
+const MAX_SIZE = 10 * 1024 * 1024;
+
+export const fileSize =(n: number) => (n < 1024 * 1024 ? `${faNum(Math.max(1, Math.round(n / 1024)))} کیلوبایت` : `${faNum(Math.round((n / 1024 / 1024) * 10) / 10)} مگابایت`);
 
 export function fileIcon(name: string, mime: string): string {
   if (mime === "application/pdf") return "📕";
@@ -73,17 +75,24 @@ export default function Attachments({ docType, docId, title = "پیوست‌ها
     if (!files.length || busy) return;
     setBusy(true);
     setError(null);
+    // یکی‌یکی: سقف بدنه‌ی nginx (۵۰ مگابایت) با ده فایل ۱۰ مگابایتی پر می‌شد و پاسخ ۴۱۳ پیام خوانا نداشت
+    const errors: string[] = [];
     try {
-      const fd = new FormData();
-      fd.set("docType", docType);
-      fd.set("docId", docId);
-      if (note.trim()) fd.set("title", note.trim());
-      for (const f of files.slice(0, 10)) fd.append("file", f);
-      await api("/api/admin/accounting/attachments", { method: "POST", body: fd });
-      setNote("");
-      if (files.length > 10) setError("هر بار حداکثر ۱۰ فایل؛ بقیه را دوباره بفرستید.");
-    } catch (e) {
-      setError((e as Error).message);
+      for (const f of files.slice(0, 10)) {
+        if (f.size > MAX_SIZE) {
+          errors.push(`«${f.name}» بیش از ۱۰ مگابایت است`);
+          continue;
+        }
+        const fd = new FormData();
+        fd.set("docType", docType);
+        fd.set("docId", docId);
+        if (note.trim()) fd.set("title", note.trim());
+        fd.append("file", f);
+        await api("/api/admin/accounting/attachments", { method: "POST", body: fd }).catch((e: Error) => errors.push(`«${f.name}»: ${e.message}`));
+      }
+      if (!errors.length) setNote("");
+      if (files.length > 10) errors.push("هر بار حداکثر ۱۰ فایل؛ بقیه را دوباره بفرستید.");
+      if (errors.length) setError(errors.join(" — "));
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
