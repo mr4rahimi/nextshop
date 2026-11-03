@@ -187,6 +187,7 @@ model Product {
   stockAlerts        StockAlert[]
   variants           ProductVariant[]
   variantAxes        ProductVariantAxis[]
+  sizeChart          ProductSizeChart?
 
   @@index([categoryId])
   @@index([brandId])
@@ -244,6 +245,25 @@ model ProductVariantOption {
 
   @@id([variantId, attributeId])
   @@index([attributeValueId])
+}
+
+/// راهنمای سایز پوشاک — docs/features/size-guide.md. اندازه‌ها روی لباس پهن‌شده، سانتی‌متر.
+/// شکل `columns`/`rows` در `lib/size-guide.ts` (همیشه با `normalizeChart` خوانده شود)
+model ProductSizeChart {
+  productId String   @id
+  /// shirt | tshirt | outer | pants | manto | custom — طرح لباس و راهنمای اندازه‌گیری
+  kind      String   @default("shirt")
+  /// [{key, label}]
+  columns   Json     @default("[]")
+  /// [{size, values: {key: cm|null}}]
+  rows      Json     @default("[]")
+  /// slim | regular | loose
+  fit       String?
+  /// true | small | large — قالب سایز
+  sizing    String?
+  note      String?
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model ProductImage {
@@ -883,6 +903,8 @@ model StoreSettings {
   walletEnabled            Boolean  @default(false)
   /// تنوع محصول (رنگ، سایز…) — docs/plans/inventory-items.md فاز ۴. خاموش = فروشگاه دقیقاً مثل قبل
   variantsEnabled          Boolean  @default(false)
+  /// راهنمای سایز پوشاک — docs/features/size-guide.md. خاموش = نه بخشی در فرم محصول، نه دکمه‌ای در سایت
+  sizeGuideEnabled         Boolean  @default(false)
   themeConfig              Json?
   homeHeaderVariant        String   @default("DEFAULT")
   mobileMenuGlass          Boolean  @default(false)

@@ -43,6 +43,7 @@ interface SiteSettings {
   smsPatternOrderCancel: string;
   walletEnabled: boolean;
   variantsEnabled: boolean;
+  sizeGuideEnabled: boolean;
   homeHeaderVariant: string;
   mobileMenuGlass: boolean;
   headerGlassConfig: GlassHeaderConfig;
@@ -71,6 +72,7 @@ const EMPTY: SiteSettings = {
   smsPatternOrderCancel: "",
   walletEnabled: false,
   variantsEnabled: false,
+  sizeGuideEnabled: false,
   homeHeaderVariant: "DEFAULT",
   mobileMenuGlass: false,
   headerGlassConfig: { ...DEFAULT_GLASS_CONFIG },
@@ -132,6 +134,7 @@ export default function AdminSiteSettingsPage() {
         smsPatternOrderCancel: d.smsPatternOrderCancel ?? "",
         walletEnabled: d.walletEnabled ?? false,
         variantsEnabled: d.variantsEnabled ?? false,
+        sizeGuideEnabled: d.sizeGuideEnabled ?? false,
         homeHeaderVariant: d.homeHeaderVariant ?? "DEFAULT",
         mobileMenuGlass: d.mobileMenuGlass ?? false,
         headerGlassConfig: normalizeGlassConfig(d.headerGlassConfig),
@@ -1141,6 +1144,20 @@ export default function AdminSiteSettingsPage() {
             <button type="button" onClick={() => set("variantsEnabled", !settings.variantsEnabled)} aria-label="تنوع محصول"
               className={`w-12 h-7 shrink-0 rounded-full transition-colors relative ${settings.variantsEnabled ? "bg-blue-600" : "bg-gray-200 dark:bg-white/10"}`}>
               <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${settings.variantsEnabled ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </div>
+          {/* راهنمای سایز پوشاک — docs/features/size-guide.md */}
+          <div className={`flex items-center justify-between gap-4 p-5 rounded-2xl border-2 transition-all ${settings.sizeGuideEnabled ? "border-blue-400 bg-blue-50 dark:bg-blue-900/10" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"}`}>
+            <div>
+              <p className={`font-black text-sm ${settings.sizeGuideEnabled ? "text-blue-700 dark:text-blue-400" : "text-gray-700 dark:text-gray-300"}`}>راهنمای سایز (پوشاک)</p>
+              <p className="text-xs text-gray-500 mt-1 leading-5">
+                روشن: در ویرایش محصول بخش «راهنمای سایز» می‌آید تا اندازه‌های هر سایز (عرض سینه، قد…) وارد شود؛ محصولی که جدول دارد روی صفحه‌اش دکمه‌ی «راهنمای سایز» با طرح لباس و جدول نشان می‌دهد.
+                برای فروشگاه‌هایی که پوشاک ندارند خاموش بماند.
+              </p>
+            </div>
+            <button type="button" onClick={() => set("sizeGuideEnabled", !settings.sizeGuideEnabled)} aria-label="راهنمای سایز"
+              className={`w-12 h-7 shrink-0 rounded-full transition-colors relative ${settings.sizeGuideEnabled ? "bg-blue-600" : "bg-gray-200 dark:bg-white/10"}`}>
+              <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${settings.sizeGuideEnabled ? "translate-x-6" : "translate-x-1"}`} />
             </button>
           </div>
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">

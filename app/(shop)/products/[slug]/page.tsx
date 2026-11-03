@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import ProductDetailClient from "@/components/store/product/ProductDetailClient";
 import { loadVariantView } from "@/lib/variants";
+import { loadSizeChart } from "@/lib/size-guide-server";
 import {
   SITE_URL,
   canonicalUrl,
@@ -138,7 +139,7 @@ async function getProduct(slug: string) {
 
     // تنوع (فاز ۴، docs/plans/inventory-items.md): فقط با کلید روشن و تنوع فعال؛ آن وقت
     // همه‌ی عکس‌ها با رنگشان (بقیه‌ی محصولات همان ۱۰ عکس قبلی را می‌گیرند)
-    const variants = await loadVariantView(product);
+    const [variants, sizeChart] = await Promise.all([loadVariantView(product), loadSizeChart(product.id)]);
     const variantImages = variants
       ? await prisma.productImage.findMany({
           where: { productId: product.id },
@@ -313,6 +314,7 @@ async function getProduct(slug: string) {
       ...serialize(product),
       ...(variantImages ? { images: variantImages } : {}),
       variants: variants ? serialize(variants) : null,
+      sizeChart,
       categoryRelated,
       brandRelated,
       manualRelated,
@@ -657,6 +659,7 @@ export default async function ProductDetailPage({
       <ProductDetailClient
         product={product}
         variants={product.variants}
+        sizeChart={product.sizeChart}
         reviewStats={
           product.reviewStats
         }

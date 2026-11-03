@@ -50,6 +50,7 @@ const TOPIC_PAGES: Record<string, string> = {
   staffScore: "/admin/worklist/score",
   aiTextBulk: "/admin/products/ai-text",
   aiSettings: "/admin/ai-settings",
+  sizeGuide: "/admin/products",
   baleBot: "/admin/integration/bale-bot",
   integration: "/admin/integration",
   integrationConnections: "/admin/integration/connections",

@@ -8,6 +8,8 @@ import LinkedText from "@/components/store/LinkedText";
 import CallForPriceBox from "@/components/store/product/CallForPriceBox";
 import AddToCartButton from "@/components/store/cart/AddToCartButton";
 import VariantPicker, { useVariantSelection } from "@/components/store/product/VariantPicker";
+import SizeGuide from "@/components/store/product/SizeGuide";
+import type { SizeChart } from "@/lib/size-guide";
 import type { VariantView } from "@/lib/variants";
 import StockAlertBox from "@/components/store/product/StockAlertBox";
 import { useWishlist } from "@/components/store/wishlist/WishlistContext";
@@ -89,6 +91,8 @@ interface Props {
   product: Product;
   /** تنوع (رنگ/سایز) — null یعنی محصول ساده، دقیقاً مثل قبل */
   variants?: VariantView | null;
+  /** راهنمای سایز پوشاک — null یعنی دکمه نمی‌آید (docs/features/size-guide.md) */
+  sizeChart?: SizeChart | null;
   reviewStats?: ReviewStats;
   categoryRelated?: RelatedProduct[];
   brandRelated?: RelatedProduct[];
@@ -220,7 +224,7 @@ function RelatedSection({ title, products }: { title: string; products: RelatedP
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function ProductDetailClient({ product: base, variants, reviewStats, categoryRelated = [], brandRelated = [], manualRelated = [], sitePhone = null }: Props) {
+export default function ProductDetailClient({ product: base, variants, sizeChart = null, reviewStats, categoryRelated = [], brandRelated = [], manualRelated = [], sitePhone = null }: Props) {
   // تنوع انتخاب‌شده قیمت، موجودی و عکس‌ها را عوض می‌کند؛ بی‌تنوع `product` همان `base` است
   const { current: variant, choose } = useVariantSelection(variants);
   const product = useMemo(() => {
@@ -540,9 +544,17 @@ export default function ProductDetailClient({ product: base, variants, reviewSta
                       </div>
                     )}
 
-                    {variants && variant && (
-                      <div className="pt-4 border-t border-gray-200 dark:border-white/5">
-                        <VariantPicker view={variants} current={variant} onChoose={choose} />
+                    {((variants && variant) || sizeChart) && (
+                      <div className="pt-4 border-t border-gray-200 dark:border-white/5 space-y-3">
+                        {sizeChart && (
+                          <div className="flex justify-end">
+                            <SizeGuide
+                              chart={sizeChart}
+                              selected={variants && variant ? variants.axes.flatMap((a) => a.values.filter((v) => v.id === variant.options[a.attributeId]).map((v) => v.value)) : []}
+                            />
+                          </div>
+                        )}
+                        {variants && variant && <VariantPicker view={variants} current={variant} onChoose={choose} />}
                       </div>
                     )}
 
