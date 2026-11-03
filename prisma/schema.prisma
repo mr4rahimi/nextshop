@@ -262,6 +262,8 @@ model ProductSizeChart {
   /// true | small | large — قالب سایز
   sizing    String?
   note      String?
+  /// عکس ساخته‌شده‌ی جدول که آخر گالری است (فاز ۲) — با ساخت دوباره جای همین عوض می‌شود
+  imageUrl  String?
   updatedAt DateTime @updatedAt
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }

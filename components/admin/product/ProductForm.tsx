@@ -994,7 +994,14 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
 
         {/* تنوع رنگ/سایز — فقط با «تنوع محصول» روشن در تنظیمات (docs/plans/inventory-items.md فاز ۴) */}
         {productId && <VariantsSection productId={productId} />}
-        {productId && <SizeChartSection productId={productId} />}
+        {productId && (
+          <SizeChartSection
+            productId={productId}
+            onGalleryChange={(oldUrl, newUrl) =>
+              setForm(prev => ({ ...prev, images: [...prev.images.filter(u => u !== oldUrl), ...(newUrl ? [newUrl] : [])] }))
+            }
+          />
+        )}
 
         {}
         <Section title="سوالات متداول (FAQ)" icon="❓" defaultOpen={false}>

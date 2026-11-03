@@ -18,11 +18,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const n = normalizeChart(await req.json().catch(() => null));
   if ("error" in n) return NextResponse.json({ error: n.error }, { status: 400 });
+  let removedImage: string | null;
   try {
-    await saveSizeChart(id, n.chart);
+    removedImage = await saveSizeChart(id, n.chart);
   } catch (e) {
     console.error("[size-chart]", e);
     return NextResponse.json({ error: "ذخیره نشد" }, { status: 500 });
   }
-  return NextResponse.json(await loadSizeChartAdmin(id));
+  return NextResponse.json({ ...(await loadSizeChartAdmin(id)), removedImage });
 }

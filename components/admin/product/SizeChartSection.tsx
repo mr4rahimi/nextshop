@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react";
 import SizeGuideDiagram from "@/components/store/product/SizeGuideDiagram";
 import HelpButton from "@/components/admin/worklist/HelpButton";
+import { renderSizeGuideImage } from "@/lib/size-guide-image";
 import {
   FIT_LABEL,
   MAX_SIZE_COLUMNS,
@@ -33,6 +34,10 @@ interface Data {
   guessKind: SizeGuideKind;
   variantSizes: string[];
   suggest: { productId: string; title: string } | null;
+  productTitle: string;
+  storeName: string | null;
+  imageUrl: string | null;
+  removedImage?: string | null;
 }
 type Row = { size: string; values: Record<string, string> };
 
@@ -46,7 +51,11 @@ const parse = (v: string): number | null => {
   return v.trim() && Number.isFinite(n) && n > 0 ? n : null;
 };
 
-export default function SizeChartSection({ productId }: { productId: string }) {
+/**
+ * `onGalleryChange` — عکس جدول در گالری عوض شد (فاز ۲)؛ فرم محصول فهرست عکس‌هایش را
+ * هم‌سو می‌کند، وگرنه «بروزرسانی» فرم با فهرست کهنه عکس تازه را پاک می‌کرد.
+ */
+export default function SizeChartSection({ productId, onGalleryChange }: { productId: string; onGalleryChange?: (oldUrl: string | null, newUrl: string | null) => void }) {
   const [data, setData] = useState<Data | null>(null);
   const [kind, setKind] = useState<SizeGuideKind>("shirt");
   const [columns, setColumns] = useState<SizeColumn[]>([]);
@@ -63,6 +72,7 @@ export default function SizeChartSection({ productId }: { productId: string }) {
   const [copyList, setCopyList] = useState<{ productId: string; title: string; kind: string; sizes: string[] }[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [withImage, setWithImage] = useState(true);
 
   function applyChart(c: SizeChart) {
     setKind(c.kind);
@@ -75,6 +85,7 @@ export default function SizeChartSection({ productId }: { productId: string }) {
 
   function apply(d: Data) {
     setData(d);
+    setWithImage(!d.chart || !!d.imageUrl);
     if (d.chart) applyChart(d.chart);
     else {
       setKind(d.guessKind);
@@ -172,6 +183,27 @@ export default function SizeChartSection({ productId }: { productId: string }) {
     setMsg({ ok: true, text: "جدول کپی شد — بعد از بررسی ذخیره کنید" });
   }
 
+  async function uploadImage(chart: SizeChart, d: Data): Promise<string> {
+    const file = await renderSizeGuideImage(chart, { productTitle: d.productTitle, storeName: d.storeName });
+    const fd = new FormData();
+    fd.append("file", file);
+    const r = await fetch("/api/admin/upload", { method: "POST", body: fd });
+    const u = await r.json().catch(() => ({}));
+    if (!r.ok || !u.url) throw new Error(`جدول ذخیره شد ولی عکسش بالا نرفت: ${u.error ?? r.status}`);
+    return u.url;
+  }
+
+  async function putImage(url: string | null): Promise<string | null> {
+    const r = await fetch(`/api/admin/products/${productId}/size-chart/image`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error ?? "عکس در گالری ثبت نشد");
+    return d.old ?? null;
+  }
+
   async function save(clear = false) {
     if (clear && !confirm("جدول سایز این محصول حذف شود؟")) return;
     setBusy(true);
@@ -182,10 +214,30 @@ export default function SizeChartSection({ productId }: { productId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(clear ? { kind, columns, rows: [] } : { kind, columns, rows, fit: fit || null, sizing: sizing || null, note }),
       });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error ?? "ذخیره نشد");
+      const d: Data = await r.json();
+      if (!r.ok) throw new Error((d as unknown as { error?: string }).error ?? "ذخیره نشد");
+      const keepImage = withImage;
       apply(d);
-      setMsg({ ok: true, text: clear ? "جدول سایز حذف شد" : `جدول سایز ذخیره شد (${faNum(rows.length)} سایز)` });
+      if (clear || !d.chart) {
+        if (d.removedImage) onGalleryChange?.(d.removedImage, null);
+        setMsg({ ok: true, text: "جدول سایز حذف شد" });
+        return;
+      }
+      let imageText = "";
+      if (keepImage) {
+        const url = await uploadImage(d.chart, d);
+        const old = await putImage(url);
+        onGalleryChange?.(old, url);
+        setData((x) => x && { ...x, imageUrl: url });
+        imageText = " و عکسش آخر گالری گذاشته شد";
+      } else if (d.imageUrl) {
+        const old = await putImage(null);
+        onGalleryChange?.(old, null);
+        setData((x) => x && { ...x, imageUrl: null });
+        imageText = " و عکسش از گالری برداشته شد";
+      }
+      setWithImage(keepImage);
+      setMsg({ ok: true, text: `جدول سایز ذخیره شد (${faNum(rows.length)} سایز)${imageText}` });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : "ذخیره نشد" });
     } finally {
@@ -432,6 +484,20 @@ export default function SizeChartSection({ productId }: { productId: string }) {
             ))}
           </select>
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={inp + " sm:col-span-2 leading-5"} placeholder="یادداشت برای مشتری (اختیاری) — مثلاً «پارچه کمی کش دارد»" maxLength={300} />
+        </div>
+      )}
+
+      {rows.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-1.5 text-[11px] text-gray-600 dark:text-gray-400 cursor-pointer">
+            <input type="checkbox" checked={withImage} onChange={(e) => setWithImage(e.target.checked)} />
+            عکس راهنمای سایز آخر گالری باشد (با هر ذخیره دوباره ساخته می‌شود)
+          </label>
+          {data.imageUrl && (
+            <a href={data.imageUrl} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-primary-600 hover:underline">
+              دیدن عکس فعلی
+            </a>
+          )}
         </div>
       )}
 

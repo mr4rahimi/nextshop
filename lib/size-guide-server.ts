@@ -41,7 +41,11 @@ export async function loadSizeChartAdmin(productId: string) {
     select: { id: true, title: true, categoryId: true, category: { select: { title: true, parent: { select: { title: true, parent: { select: { title: true } } } } } } },
   });
   if (!product) return null;
-  const [row, sizes] = await Promise.all([prisma.productSizeChart.findUnique({ where: { productId } }), variantSizes(productId)]);
+  const [row, sizes, settings] = await Promise.all([
+    prisma.productSizeChart.findUnique({ where: { productId } }),
+    variantSizes(productId),
+    prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { storeName: true } }),
+  ]);
   const c = product.category;
   const guess = guessKind([product.title, c?.title, c?.parent?.title, c?.parent?.parent?.title].filter(Boolean).join(" "));
   // محصول بی‌جدول: آخرین جدولِ همین دسته برای «کپی با یک کلیک»
@@ -58,16 +62,42 @@ export async function loadSizeChartAdmin(productId: string) {
     guessKind: guess,
     variantSizes: sizes,
     suggest: suggest ? { productId: suggest.productId, title: suggest.product.title } : null,
+    productTitle: product.title,
+    storeName: settings?.storeName ?? null,
+    imageUrl: row?.imageUrl ?? null,
   };
 }
 
-export async function saveSizeChart(productId: string, chart: SizeChart) {
+/** ذخیره؛ جدول بی‌ردیف حذف می‌شود و عکسش هم از گالری می‌رود — خروجی: نشانی عکسِ برداشته‌شده */
+export async function saveSizeChart(productId: string, chart: SizeChart): Promise<string | null> {
   if (!chart.rows.length) {
+    const removed = await setSizeChartImage(productId, null);
     await prisma.productSizeChart.deleteMany({ where: { productId } });
-    return;
+    return removed;
   }
   const data = { kind: chart.kind, columns: chart.columns as object[], rows: chart.rows as object[], fit: chart.fit, sizing: chart.sizing, note: chart.note };
   await prisma.productSizeChart.upsert({ where: { productId }, update: data, create: { productId, ...data } });
+  return null;
+}
+
+/**
+ * عکس جدول در گالری (فاز ۲): عکس قبلی از گالری برداشته و تازه آخر گالری گذاشته می‌شود.
+ * `null` = فقط برداشتن. خروجی: نشانی عکس قبلی تا فرم محصول هم از فهرستش بردارد.
+ * فایل قبلی روی دیسک می‌ماند (ممکن است جای دیگری کپی شده باشد).
+ */
+export async function setSizeChartImage(productId: string, url: string | null): Promise<string | null> {
+  return prisma.$transaction(async (tx) => {
+    const row = await tx.productSizeChart.findUnique({ where: { productId }, select: { imageUrl: true } });
+    if (!row) return null;
+    const old = row.imageUrl;
+    if (old) await tx.productImage.deleteMany({ where: { productId, url: old } });
+    if (url) {
+      const last = await tx.productImage.aggregate({ where: { productId }, _max: { sortOrder: true } });
+      await tx.productImage.create({ data: { productId, url, sortOrder: (last._max.sortOrder ?? -1) + 1, alt: "راهنمای سایز" } });
+    }
+    await tx.productSizeChart.update({ where: { productId }, data: { imageUrl: url } });
+    return old;
+  });
 }
 
 /** محصولاتی که جدول دارند — برای «کپی از محصول دیگر» */
