@@ -14,6 +14,7 @@ import { CHANNEL_LABELS, INVOICE_TYPE_LABELS, type InvoiceTypeKey } from "@/lib/
 import { api, Badge, btn, Card, ErrorText, Money, PageHeader, SectionTitle } from "../ui";
 import InstallmentsPanel from "../installments/InstallmentsPanel";
 import { invoiceTitle, isExpired, StatusBadge } from "./InvoicesList";
+import Attachments from "../Attachments";
 
 interface Line {
   id: string;
@@ -509,6 +510,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
           )}
         </Card>
       )}
+      <Attachments docType="AccInvoice" docId={id} />
     </div>
   );
 }

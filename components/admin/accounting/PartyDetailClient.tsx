@@ -14,6 +14,7 @@ import { api, Badge, BalanceLabel, btn, Card, ErrorText, Money, PageHeader, Segm
 import Link from "next/link";
 import { formatJalali } from "@/lib/club/jalali";
 import { invoiceTitle, StatusBadge, type InvoiceRow } from "./invoices/InvoicesList";
+import Attachments from "./Attachments";
 
 export interface PartySummary {
   opening: string;
@@ -172,6 +173,7 @@ export default function PartyDetailClient({ id }: { id: string }) {
           }}
         />
       )}
+      <Attachments docType="AccParty" docId={id} />
     </div>
   );
 }

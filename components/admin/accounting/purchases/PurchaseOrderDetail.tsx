@@ -13,6 +13,7 @@ import { formatJalali } from "@/lib/club/jalali";
 import { faNum } from "@/lib/accounting/money";
 import { api, Badge, btn, Card, ErrorText, Money, PageHeader, SectionTitle } from "../ui";
 import { PO_STATE, type PoState } from "./PurchaseOrdersList";
+import Attachments from "../Attachments";
 
 export interface PoLine {
   id: string;
@@ -265,6 +266,7 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
           )}
         </div>
       )}
+      <Attachments docType="AccPurchaseOrder" docId={id} />
     </div>
   );
 }

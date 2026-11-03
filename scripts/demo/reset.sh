@@ -41,6 +41,8 @@ npx prisma migrate deploy >/dev/null
 
 # آپلودهای بازدیدکننده‌ها — سید تصویرهای خودش را دوباره کپی می‌کند
 find public/uploads -mindepth 1 -delete 2>/dev/null || true
+# پیوست‌های حسابداری بازدیدکننده‌ها (فایل خصوصی، بیرون از public)
+rm -rf storage/accounting
 # کش صفحه‌ها شناسه‌های دیروز را دارد
 rm -rf .next/cache
 

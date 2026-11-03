@@ -16,6 +16,7 @@ import ProductPicker, { type ProductOption } from "../ProductPicker";
 import SerialField from "./SerialField";
 import InventoryTabs from "./InventoryTabs";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, Field, inputCls, Money, PageHeader, Segmented, Sheet } from "../ui";
+import Attachments from "../Attachments";
 import { Plus } from "lucide-react";
 
 interface W {
@@ -255,7 +256,7 @@ export default function TransfersClient() {
       ) : (
         <Card className="overflow-hidden divide-y divide-gray-100 dark:divide-white/5">
           {data?.items.map((t) => (
-            <TransferRow key={t.id} t={t} data={data} name={name} onVoid={() => voidIt(t)} onReceive={() => setReceiving(t)} />
+            <TransferRow key={t.id} t={t} data={data} name={name} single={!!one} onVoid={() => voidIt(t)} onReceive={() => setReceiving(t)} />
           ))}
           {data && !data.items.length && <Empty title={view === "transit" ? "حواله‌ای در راه نیست" : "حواله‌ای پیدا نشد"} />}
         </Card>
@@ -288,7 +289,9 @@ export default function TransfersClient() {
   );
 }
 
-function TransferRow({ t, data, name, onVoid, onReceive }: { t: T; data: Data; name: (id: string) => string; onVoid: () => void; onReceive: () => void }) {
+function TransferRow({ t, data, name, single, onVoid, onReceive }: { t: T; data: Data; name: (id: string) => string; single: boolean; onVoid: () => void; onReceive: () => void }) {
+  // پیوست فقط با باز کردن — فهرست حواله‌ها برای هر ردیف درخواست جدا نمی‌فرستد؛ حواله‌ی تکی (`?id`) باز می‌آید
+  const [files, setFiles] = useState(single);
   const qty = t.lines.reduce((s, l) => s + l.qty, 0);
   const got = t.lines.reduce((s, l) => s + (l.receivedQty ?? l.qty), 0);
   const pending = inTransit(t);
@@ -340,6 +343,9 @@ function TransferRow({ t, data, name, onVoid, onReceive }: { t: T; data: Data; n
               ابطال
             </button>
           )}
+          <button onClick={() => setFiles((x) => !x)} className={btn.small} title="پیوست مدارک">
+            📎
+          </button>
         </div>
       </div>
       <div className="flex flex-wrap gap-1.5 mt-2">
@@ -353,6 +359,7 @@ function TransferRow({ t, data, name, onVoid, onReceive }: { t: T; data: Data; n
           </Link>
         ))}
       </div>
+      {files && <Attachments docType="AccTransfer" docId={t.id} className="mt-3" />}
     </div>
   );
 }

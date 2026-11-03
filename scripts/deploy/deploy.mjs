@@ -34,6 +34,8 @@ if (!selected.length) {
 const EXCLUDES = [
   ".git", ".env", ".env.*", "logs", ".next/cache",
   "public/uploads", "public/upload", "public/products",
+  // فایل‌های خصوصی سرور (پیوست مدارک حسابداری) — rsync --delete پاکشان می‌کرد
+  "storage",
   "public/banners", "public/brands", "public/categories", "public/mid-banners",
   "release-keys", "release-out", "scripts/deploy/targets.json",
   // فقط روی سرور ساخته می‌شود و مبنای تصمیم انتقال node_modules است.
@@ -161,7 +163,7 @@ async function deployOne(t) {
   // ۳) بکاپ کد
   console.log(`${tag} بکاپ کد فعلی...`);
   sh(ssh(t, `cd ${t.path} && tar -czf /var/backups/mymonta/${t.name}-code-${ts}.tar.gz ` +
-    `--exclude=node_modules --exclude=public --exclude=.next --exclude=logs . 2>/dev/null || true`));
+    `--exclude=node_modules --exclude=public --exclude=.next --exclude=logs --exclude=storage . 2>/dev/null || true`));
 
   // ۴) انتقال فایل‌ها
   console.log(`${tag} انتقال فایل‌ها...`);

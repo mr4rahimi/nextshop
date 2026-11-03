@@ -15,6 +15,7 @@ import { api, Badge, btn, Card, ErrorText, Money, PageHeader, SectionTitle } fro
 import { KIND_LABELS } from "./MoneyForm";
 import { METHOD_FA } from "./MoneyList";
 import { CHEQUE_LABEL } from "./ChequesList";
+import Attachments from "../Attachments";
 
 interface Data {
   doc: {
@@ -306,6 +307,7 @@ export default function MoneyDetail({ id }: { id: string }) {
           )}
         </Card>
       )}
+      <Attachments docType="AccMoneyDoc" docId={id} />
     </div>
   );
 }

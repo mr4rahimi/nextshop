@@ -8,6 +8,7 @@ import { formatJalali } from "@/lib/club/jalali";
 import { faNum } from "@/lib/accounting/money";
 import { api, Badge, btn, Card, ErrorText, PageHeader } from "../ui";
 import { Amt } from "../reports/kit";
+import Attachments from "../Attachments";
 
 interface Data {
   doc: {
@@ -146,6 +147,7 @@ export default function AdjustmentDetail({ id }: { id: string }) {
           ابطال
         </button>
       )}
+      <Attachments docType="AccStockAdjust" docId={id} />
     </div>
   );
 }

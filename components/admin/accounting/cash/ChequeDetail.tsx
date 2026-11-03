@@ -11,6 +11,7 @@ import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import { api, Badge, btn, Card, ErrorText, Field, inputCls, Money, PageHeader, SectionTitle, Sheet } from "../ui";
 import { CHEQUE_LABEL, chequeTone } from "./ChequesList";
 import { KIND_LABELS } from "./MoneyForm";
+import Attachments from "../Attachments";
 
 type Dir = "RECEIVED" | "ISSUED";
 interface Data {
@@ -223,6 +224,7 @@ export default function ChequeDetail({ id }: { id: string }) {
           </div>
         </Sheet>
       )}
+      <Attachments docType="AccCheque" docId={id} />
     </div>
   );
 }

@@ -19,7 +19,7 @@ const EXCLUDE = [
   ".git", ".next/cache", "release-keys", "release-out",
   "node_modules/.cache", "logs", "backups",
   ".env", ".env.local", ".env.production",
-  "public/uploads", "*.zip", "*.tar.gz", "__pycache__",
+  "public/uploads", "storage", "*.zip", "*.tar.gz", "__pycache__",
 ];
 
 console.log(`📦 ساخت بسته نسخه ${version}\n`);

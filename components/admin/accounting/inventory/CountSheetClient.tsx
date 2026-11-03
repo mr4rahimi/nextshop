@@ -17,6 +17,7 @@ import { faNum, formatAmount, toLatinDigits } from "@/lib/accounting/money";
 import ModelPicker from "../pos/ModelPicker";
 import { beep, local, type ModelPick, type PosItem } from "../pos/shared";
 import { api, Badge, btn, Card, Chips, ErrorText, Field, inputCls, PageHeader, Segmented, Sheet, Stat } from "../ui";
+import Attachments from "../Attachments";
 
 interface Row {
   productId: string;
@@ -265,6 +266,7 @@ export default function CountSheetClient({ id }: { id: string }) {
         </div>
       )}
 
+      <Attachments docType="AccStockCount" docId={id} title="پیوست‌ها (برگه‌ی شمارش، صورت‌جلسه)" />
       {posting && <PostSheet data={data} id={id} onClose={() => setPosting(false)} onDone={load} />}
     </div>
   );

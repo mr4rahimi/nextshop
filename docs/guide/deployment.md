@@ -38,7 +38,7 @@ node scripts/deploy/deploy.mjs uniqquestar
 ```
 
 اسکریپت به‌ترتیب: اتصال را چک می‌کند → از دیتابیس `pg_dump` می‌گیرد → از کد فعلی
-`tar` می‌گیرد → rsync می‌کند (`--delete` ولی `.env`، `public/uploads`، `docs`،
+`tar` می‌گیرد → rsync می‌کند (`--delete` ولی `.env`، `public/uploads`، `storage` (پیوست مدارک حسابداری — خصوصی)، `docs`،
 `node_modules` و `ecosystem.config.js` مستثنا) → اگر `pnpm-lock.yaml` تغییر کرده
 `node_modules` را منتقل می‌کند → `prisma generate` + `migrate deploy` + `next build`
 → `pm2 restart` → health check؛ و اگر سایت بالا نیامد خودکار به بکاپ برمی‌گردد.
@@ -544,7 +544,7 @@ certbot renew --dry-run
 ```bash
 # کد (همان excludes اسکریپت)
 rsync -az --exclude=.git --exclude=.env --exclude=node_modules --exclude=.next \
-      --exclude=docs --exclude='*.md' --exclude=public/uploads \
+      --exclude=docs --exclude='*.md' --exclude=public/uploads --exclude=storage \
       ./ root@<IP>:/var/www/<name>/
 
 # وابستگی‌ها — rsync نه tar، چون قابل ادامه است اگر اینترنت قطع شد

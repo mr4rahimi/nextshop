@@ -10,6 +10,7 @@ import { faNum, formatAmount } from "@/lib/accounting/money";
 import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import { rowHref, SOURCE_LABELS } from "./Statement";
 import { api, Badge, btn, Card, ErrorText, Field, inputCls, Money, PageHeader, Sheet } from "./ui";
+import Attachments from "./Attachments";
 
 interface Line {
   id: string;
@@ -207,6 +208,7 @@ export default function VoucherDetailClient({ id }: { id: string }) {
           <ErrorText>{error}</ErrorText>
         </div>
       </Sheet>
+      <Attachments docType="AccVoucher" docId={id} />
     </div>
   );
 }

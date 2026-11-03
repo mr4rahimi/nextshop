@@ -114,6 +114,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/parties", label: "اشخاص", icon: fx("Busts in silhouette") },
       { href: "/admin/accounting/treasury", label: "صندوق و بانک", icon: fx("Bank") },
       { href: "/admin/accounting/vouchers", label: "اسناد", icon: fx("Notebook") },
+      { href: "/admin/accounting/attachments", label: "پیوست مدارک", icon: fx("Linked paperclips"), keywords: "پیوست فایل عکس رسید اسکن مدرک ضمیمه" },
       { href: "/admin/accounting/accounts", label: "سرفصل حساب‌ها", icon: fx("Books") },
       { href: "/admin/accounting/events", label: "رویدادهای مالی", icon: fx("Satellite antenna") },
       { href: "/admin/accounting/import", label: "ورود از اکسل", icon: fx("Green book") },

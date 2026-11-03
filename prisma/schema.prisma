@@ -4270,6 +4270,31 @@ enum AccEventStatus {
   SKIPPED // چیزی برای ثبت نماند (مثلاً همه‌ی اقلام لغو شدند)
 }
 
+/// پیوست مدرک به سند حسابداری — webhesab-parity.md بخش ۱۶. فایل **خصوصی** است: زیر `storage/accounting`
+/// (نه `public/`) و فقط از `GET /api/admin/accounting/attachments/<id>` با مجوز دیدن همان سند خوانده می‌شود.
+/// حذف نرم است (`deletedAt`) و فایل روی دیسک می‌ماند — سابقه‌ی مالی پاک نمی‌شود.
+model AccAttachment {
+  id             String    @id @default(cuid())
+  /// AccInvoice | AccMoneyDoc | AccVoucher | AccStockAdjust | AccTransfer | AccStockCount | AccPurchaseOrder | AccCheque | AccParty
+  docType        String
+  docId          String
+  /// شرح — «رسید واریز»، «کارت ملی»، …
+  title          String?
+  fileName       String
+  mimeType       String
+  size           Int
+  /// مسیر نسبی زیر ریشه‌ی فایل‌ها: `2026/11/<random>.pdf`
+  path           String    @unique
+  uploadedById   String?
+  uploadedByName String
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
+  deletedByName  String?
+
+  @@index([docType, docId])
+  @@index([createdAt])
+}
+
 /// دفتر ابطال و ویرایش اسناد — webhesab-parity.md بخش ۱۵. هر ابطال و هر ویرایش سند **ثبت‌شده**
 /// یک ردیف (پیش‌نویس نه). فقط `lib/accounting/doc-log.ts` می‌نویسد؛ از داخل همان تابع ابطال/ویرایش.
 model AccDocLog {

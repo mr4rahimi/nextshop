@@ -55,3 +55,6 @@ aghayepardakht.md
 tapci.mdlogs/
 release-keys/
 scripts/deploy/targets.json
+
+# پیوست مدارک حسابداری — فایل خصوصی سرور (lib/accounting/attachments.ts)
+/storage
