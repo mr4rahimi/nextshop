@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { WORK_MODE_LABELS } from "@/lib/worklist/work-hours";
+import { useAdminMe } from "@/components/admin/useAdminMe";
 
 interface AdminUser {
   id: string;
@@ -36,6 +37,12 @@ export default function AdminsPage() {
   const [form, setForm] = useState({ phone: "", firstName: "", lastName: "", password: "", confirmPassword: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null);
+  // غیرفعال‌کردن و حذف فقط برای ادمین با دسترسی کامل — مرز واقعی در API است
+  const me = useAdminMe();
+  const canRemove = me?.isUnrestricted === true;
 
   async function fetchAdmins() {
     setLoading(true);
@@ -140,8 +147,6 @@ export default function AdminsPage() {
           body: JSON.stringify({
             firstName: form.firstName || null,
             lastName: form.lastName || null,
-            isActive: true,
-            role: "ADMIN",
             ...(form.password ? { password: form.password } : {}),
           }),
         });
@@ -172,13 +177,49 @@ export default function AdminsPage() {
     }
   }
 
+  const nameOf = (a: AdminUser) => [a.firstName, a.lastName].filter(Boolean).join(" ") || a.phone;
+
   async function handleToggleActive(admin: AdminUser) {
-    await fetch(`/api/admin/users/${admin.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...admin, isActive: !admin.isActive, role: "ADMIN" }),
-    });
-    fetchAdmins();
+    setBusy(admin.id);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/admin/admins/${admin.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !admin.isActive }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error ?? "انجام نشد");
+      setNotice({ ok: true, text: `${nameOf(admin)} ${admin.isActive ? "غیرفعال شد و دیگر نمی‌تواند وارد پنل شود" : "دوباره فعال شد"}.` });
+      fetchAdmins();
+    } catch (e) {
+      setNotice({ ok: false, text: e instanceof Error ? e.message : "انجام نشد" });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleDelete(admin: AdminUser) {
+    setBusy(admin.id);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/admin/admins/${admin.id}`, { method: "DELETE" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error ?? "حذف نشد");
+      setNotice({
+        ok: true,
+        text: d.mode === "demoted"
+          ? `${nameOf(admin)} از ادمین‌ها برداشته شد. چون سابقه (مثل سفارش) داشت، حسابش به کاربر عادی تبدیل شد و سوابقش ماند.`
+          : `${nameOf(admin)} حذف شد.`,
+      });
+      setConfirmDelete(null);
+      fetchAdmins();
+    } catch (e) {
+      setNotice({ ok: false, text: e instanceof Error ? e.message : "حذف نشد" });
+      setConfirmDelete(null);
+    } finally {
+      setBusy(null);
+    }
   }
 
   return (
@@ -198,6 +239,13 @@ export default function AdminsPage() {
           ادمین جدید
         </button>
       </div>
+
+      {notice && (
+        <div className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold ${notice.ok ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"}`}>
+          <span className="flex-1">{notice.text}</span>
+          <button onClick={() => setNotice(null)} className="text-lg leading-none opacity-60 hover:opacity-100">×</button>
+        </div>
+      )}
 
       {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
@@ -231,7 +279,10 @@ export default function AdminsPage() {
                           {(admin.firstName?.[0] || admin.phone[2]).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-black text-gray-900 dark:text-white">{name}</p>
+                          <p className="text-sm font-black text-gray-900 dark:text-white">
+                            {name}
+                            {me?.userId === admin.id && <span className="mr-1.5 text-[10px] font-bold text-blue-500">(شما)</span>}
+                          </p>
                           {admin.email && <p className="text-xs text-gray-400">{admin.email}</p>}
                         </div>
                       </div>
@@ -284,12 +335,24 @@ export default function AdminsPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
                         </button>
-                        <button onClick={() => handleToggleActive(admin)}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-amber-500 transition-all">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={admin.isActive ? "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" : "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"} />
-                          </svg>
-                        </button>
+                        {canRemove && me?.userId !== admin.id && (
+                          <>
+                            <button onClick={() => handleToggleActive(admin)} disabled={busy === admin.id}
+                              title={admin.isActive ? "غیرفعال کردن" : "فعال کردن"}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-amber-500 transition-all disabled:opacity-40">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={admin.isActive ? "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" : "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"} />
+                              </svg>
+                            </button>
+                            <button onClick={() => setConfirmDelete(admin)} disabled={busy === admin.id}
+                              title="حذف ادمین"
+                              className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-all disabled:opacity-40">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -299,6 +362,29 @@ export default function AdminsPage() {
           </table>
         )}
       </div>
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => busy || setConfirmDelete(null)}>
+          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-black text-gray-900 dark:text-white">حذف {nameOf(confirmDelete)}؟</h2>
+            <p className="mt-2 text-sm leading-7 text-gray-500">
+              دیگر نمی‌تواند وارد پنل شود. اگر این حساب سابقه داشته باشد (مثل سفارش)، حذف کامل نمی‌شود و فقط از
+              ادمین‌ها برداشته و کاربر عادی می‌شود تا سوابق بماند. کارهای کارتابلش با نام او سر جایش می‌ماند.
+            </p>
+            <p className="mt-2 text-xs text-gray-400">اگر فقط می‌خواهید موقتاً وارد نشود، «غیرفعال کردن» بهتر است.</p>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => handleDelete(confirmDelete)} disabled={busy === confirmDelete.id}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl font-black text-sm">
+                {busy === confirmDelete.id ? "در حال حذف…" : "حذف شود"}
+              </button>
+              <button onClick={() => setConfirmDelete(null)} disabled={busy === confirmDelete.id}
+                className="flex-1 py-2.5 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-xl font-black text-sm">
+                انصراف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {}
       {showModal && (

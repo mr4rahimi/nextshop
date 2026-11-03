@@ -1029,8 +1029,14 @@ model StaffRole {
 
 `GET /api/admin/worklist/summary?detail=<معیار>&ownerId=` به‌جای گزارش، کارهای پشت
 یک عدد را برمی‌گرداند (پنجره‌ی جزئیات). معیارها: `done`، `created`، `late`،
-`noOutcome`، `overdue`، `calls`، `success` — `DRILL_METRICS` در
-`lib/worklist/team-report.ts`. شرط‌ها عمداً همان شرط‌های `teamReport` است؛
+`noOutcome`، `overdue`، `calls`، `success`، و از ۲.۱۱۸.۰ `documented`، `deals`
+(معامله‌ها)، `attendance` (روزهای حضور) و `system` (کار خودکار با `systemKey`) —
+`DRILL_METRICS` در `lib/worklist/team-report.ts`. ریزکننده‌ها (`DrillFilter`، همه
+اختیاری و جمع‌شدنی): `typeId`، `outcome` (`typeId:value`)، `domain`، `channel`،
+`priority`، `source`، `day` (YYYY-MM-DD)، `wd` و `hour` (ساعت تهران)، `bucket`
+(سطل «از ثبت تا بستن»). هر ردیف نمودار تفکیکی `key` دارد که همین پارامتر است؛
+«سایر» کلید ندارد و کلیک نمی‌خورد. خروجی `kind` دارد: `tasks`، `deals`، `days`،
+`activity`، با `byOwner` برای دکمه‌های کارمند در پنجره. شرط‌ها عمداً همان شرط‌های `teamReport` است؛
 `scripts/smoke-team-report.ts` (فقط خواندنی، روی سرور هم بی‌خطر) برابری عدد پنجره با
 عدد کارنامه، و جمع سری‌ها و نقشه‌ی ساعت با کارت‌ها را می‌آزماید.
 

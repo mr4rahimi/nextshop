@@ -84,13 +84,15 @@ export interface ComboLine { key: string; label: string; color: string; data: nu
  * ساعت حضور). خطی که `ownAxis` نیست با ستون‌ها هم‌مقیاس است.
  */
 export function ComboChart({
-  labels, bars, lines, height = 260, labelOf,
+  labels, bars, lines, height = 260, labelOf, onPick,
 }: {
   labels: string[];
   bars: ComboBar[];
   lines: ComboLine[];
   height?: number;
   labelOf: (k: string) => string;
+  /** کلیک روی یک روز */
+  onPick?: (index: number) => void;
 }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [hover, setHover] = useState<number | null>(null);
@@ -159,7 +161,9 @@ export function ComboChart({
             );
           })}
           {labels.map((_, i) => (
-            <rect key={i} x={PL + slot * i} y={PT} width={slot} height={ph} fill="transparent" onMouseEnter={() => setHover(i)} />
+            <rect key={i} x={PL + slot * i} y={PT} width={slot} height={ph} fill="transparent"
+              style={{ cursor: onPick ? "pointer" : undefined }}
+              onMouseEnter={() => setHover(i)} onClick={onPick ? () => onPick(i) : undefined} />
           ))}
         </svg>
       </div>
@@ -188,8 +192,8 @@ export function ComboChart({
 
 // ── ستونی ساده (هیستوگرام) ──────────────────────────────────────────────────
 export function ColumnChart({
-  items, height = 190, colors,
-}: { items: { label: string; value: number }[]; height?: number; colors?: string[] }) {
+  items, height = 190, colors, onPick,
+}: { items: { label: string; value: number }[]; height?: number; colors?: string[]; onPick?: (index: number) => void }) {
   const total = items.reduce((s, i) => s + i.value, 0);
   if (!total) return <Empty />;
   const max = Math.max(...items.map((i) => i.value), 1);
@@ -199,7 +203,8 @@ export function ColumnChart({
         const h = (it.value / max) * (height - 46);
         const c = colors?.[i] ?? "#6366f1";
         return (
-          <div key={it.label} className="group flex-1 min-w-0 flex flex-col items-center justify-end h-full">
+          <div key={it.label} onClick={onPick && it.value ? () => onPick(i) : undefined}
+            className={`group flex-1 min-w-0 flex flex-col items-center justify-end h-full ${onPick && it.value ? "cursor-pointer" : ""}`}>
             <span className="text-[11px] font-black tabular-nums text-gray-700 dark:text-gray-200">{fa(it.value)}</span>
             <span className="text-[9.5px] tabular-nums text-gray-400 mb-1">{fa((it.value / total) * 100)}٪</span>
             <div className="w-full max-w-[52px] rounded-t-lg transition-all duration-500 group-hover:opacity-80"
@@ -215,7 +220,9 @@ export function ColumnChart({
 // ── نقشه‌ی حرارتی روز × ساعت ────────────────────────────────────────────────
 const WEEKDAYS = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 
-export function Heatmap({ grid, color = "99,102,241" }: { grid: number[][]; color?: string }) {
+export function Heatmap({
+  grid, color = "99,102,241", onPick,
+}: { grid: number[][]; color?: string; onPick?: (weekday: number | undefined, hour: number | undefined) => void }) {
   const [hover, setHover] = useState<{ d: number; h: number } | null>(null);
   const max = Math.max(...grid.flat(), 0);
   if (!max) return <Empty />;
@@ -236,14 +243,16 @@ export function Heatmap({ grid, color = "99,102,241" }: { grid: number[][]; colo
         <div className="min-w-[520px]">
           <div className="flex gap-[3px] mb-1 pr-16" style={{ direction: "ltr" }}>
             {hours.map((h) => (
-              <span key={h} className="flex-1 text-center text-[9px] tabular-nums text-gray-400">
+              <span key={h} onClick={onPick ? () => onPick(undefined, h) : undefined}
+                className={`flex-1 text-center text-[9px] tabular-nums text-gray-400 ${onPick ? "cursor-pointer hover:text-indigo-500" : ""}`}>
                 {h % 2 === 0 ? fa(h) : ""}
               </span>
             ))}
           </div>
           {grid.map((row, d) => (
             <div key={d} className="flex items-center gap-2 mb-[3px]">
-              <span className="w-14 flex-shrink-0 text-[10px] font-bold text-gray-500 text-left">{WEEKDAYS[d]}</span>
+              <span onClick={onPick ? () => onPick(d, undefined) : undefined}
+                className={`w-14 flex-shrink-0 text-[10px] font-bold text-gray-500 text-left ${onPick ? "cursor-pointer hover:text-indigo-500" : ""}`}>{WEEKDAYS[d]}</span>
               <div className="flex-1 flex gap-[3px]" style={{ direction: "ltr" }}>
                 {hours.map((h) => {
                   const v = row[h];
@@ -252,7 +261,8 @@ export function Heatmap({ grid, color = "99,102,241" }: { grid: number[][]; colo
                   return (
                     <div key={h}
                       onMouseEnter={() => setHover({ d, h })} onMouseLeave={() => setHover(null)}
-                      className={`flex-1 h-6 rounded-[5px] transition-transform ${v ? "" : "bg-gray-100 dark:bg-white/[0.04]"} ${on ? "scale-110 ring-2 ring-indigo-400/60" : ""}`}
+                      onClick={onPick && v ? () => onPick(d, h) : undefined}
+                      className={`flex-1 h-6 rounded-[5px] transition-transform ${onPick && v ? "cursor-pointer" : ""} ${v ? "" : "bg-gray-100 dark:bg-white/[0.04]"} ${on ? "scale-110 ring-2 ring-indigo-400/60" : ""}`}
                       style={v ? { background: `rgba(${color},${a})` } : undefined}
                       title={`${WEEKDAYS[d]} ساعت ${fa(h)} — ${fa(v)} کار`} />
                   );
@@ -289,7 +299,9 @@ export function Heatmap({ grid, color = "99,102,241" }: { grid: number[][]; colo
 export interface RadarSeries { key: string; label: string; color: string; values: number[]; dashed?: boolean }
 
 /** مقادیر ۰ تا ۱۰۰ — هر محور جداگانه نسبت به بهترینِ تیم نرمال می‌شود */
-export function RadarChart({ axes, series, size = 300 }: { axes: string[]; series: RadarSeries[]; size?: number }) {
+export function RadarChart({
+  axes, series, size = 300, onAxis,
+}: { axes: string[]; series: RadarSeries[]; size?: number; onAxis?: (index: number) => void }) {
   const n = axes.length;
   if (n < 3 || !series.length) return <Empty />;
   const cx = size / 2, cy = size / 2, R = size / 2 - 52;
@@ -311,7 +323,9 @@ export function RadarChart({ axes, series, size = 300 }: { axes: string[]; serie
           return (
             <g key={ax}>
               <line x1={cx} y1={cy} x2={x} y2={y} stroke="#94a3b8" strokeOpacity=".22" />
-              <text x={lx} y={ly + 3} fontSize="10.5" fontWeight="700" fill="#64748b" textAnchor="middle">{ax}</text>
+              <text x={lx} y={ly + 3} fontSize="10.5" fontWeight="700" fill="#64748b" textAnchor="middle"
+                style={{ cursor: onAxis ? "pointer" : undefined, textDecoration: onAxis ? "underline dotted" : undefined }}
+                onClick={onAxis ? () => onAxis(i) : undefined}>{ax}</text>
             </g>
           );
         })}
@@ -413,11 +427,14 @@ export function ScatterChart({
 
 // ── میله‌ی انباشته‌ی افقی برای هر کارمند ───────────────────────────────────────
 export function StackedRows({
-  rows, keys, onPick, activeId,
+  rows, keys, onPick, onSegment, activeId,
 }: {
   rows: { id: string; label: string; values: Partial<Record<string, number>> }[];
   keys: { key: string; label: string; color: string }[];
+  /** کلیک روی نام */
   onPick?: (id: string) => void;
+  /** کلیک روی یک تکه‌ی رنگی — همان کارمند، همان حوزه */
+  onSegment?: (id: string, key: string) => void;
   activeId?: string | null;
 }) {
   const totals = rows.map((r) => keys.reduce((s, k) => s + (r.values[k.key] ?? 0), 0));
@@ -428,24 +445,27 @@ export function StackedRows({
     <div>
       <div className="space-y-2">
         {rows.map((r, i) => totals[i] > 0 && (
-          <button key={r.id} type="button" onClick={() => onPick?.(r.id)}
+          <div key={r.id}
             className={`w-full flex items-center gap-3 rounded-xl px-2 py-1 text-right transition-colors ${
               activeId === r.id ? "bg-indigo-500/10" : "hover:bg-gray-50 dark:hover:bg-white/5"
             }`}>
-            <span className="w-24 flex-shrink-0 truncate text-xs font-bold text-gray-700 dark:text-gray-200">{r.label}</span>
+            <button type="button" onClick={() => onPick?.(r.id)}
+              className="w-24 flex-shrink-0 truncate text-right text-xs font-bold text-gray-700 dark:text-gray-200 hover:text-indigo-600">{r.label}</button>
             <span className="flex-1 flex h-3.5 rounded-full overflow-hidden bg-gray-100 dark:bg-white/5">
               <span className="flex h-full" style={{ width: `${(totals[i] / max) * 100}%` }}>
                 {used.map((k) => {
                   const v = r.values[k.key] ?? 0;
                   return v ? (
-                    <span key={k.key} title={`${k.label}: ${fa(v)}`} className="h-full first:rounded-r-full last:rounded-l-full"
+                    <span key={k.key} title={`${k.label}: ${fa(v)}`}
+                      onClick={onSegment ? () => onSegment(r.id, k.key) : undefined}
+                      className={`h-full first:rounded-r-full last:rounded-l-full ${onSegment ? "cursor-pointer hover:brightness-110 hover:saturate-150" : ""}`}
                       style={{ width: `${(v / totals[i]) * 100}%`, background: k.color }} />
                   ) : null;
                 })}
               </span>
             </span>
             <span className="w-10 flex-shrink-0 text-left text-xs font-black tabular-nums text-gray-500">{fa(totals[i])}</span>
-          </button>
+          </div>
         ))}
       </div>
       <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5">
@@ -461,20 +481,25 @@ export function StackedRows({
 }
 
 // ── نوار سهم یک‌تکه ───────────────────────────────────────────────────────────
-export function ShareBar({ items }: { items: { label: string; value: number; color: string }[] }) {
+export function ShareBar({
+  items, onPick,
+}: { items: { label: string; value: number; color: string }[]; onPick?: (index: number) => void }) {
   const total = items.reduce((s, i) => s + i.value, 0);
   if (!total) return <Empty h="h-16" />;
   return (
     <div>
       <div className="flex h-4 rounded-full overflow-hidden gap-[2px]">
-        {items.map((it) => (
+        {items.map((it, i) => (
           <span key={it.label} title={`${it.label}: ${fa(it.value)}`}
+            onClick={onPick ? () => onPick(i) : undefined}
+            className={onPick ? "cursor-pointer hover:brightness-110" : undefined}
             style={{ width: `${(it.value / total) * 100}%`, background: it.color }} />
         ))}
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        {items.map((it) => (
-          <div key={it.label} className="flex items-center gap-2 rounded-xl bg-gray-50 dark:bg-white/[0.03] px-2.5 py-2">
+        {items.map((it, i) => (
+          <div key={it.label} onClick={onPick ? () => onPick(i) : undefined}
+            className={`flex items-center gap-2 rounded-xl bg-gray-50 dark:bg-white/[0.03] px-2.5 py-2 ${onPick ? "cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-500/10" : ""}`}>
             <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: it.color }} />
             <span className="flex-1 text-[11px] font-bold text-gray-600 dark:text-gray-300 truncate">{it.label}</span>
             <span className="text-xs font-black tabular-nums text-gray-800 dark:text-gray-100">{fa(it.value)}</span>

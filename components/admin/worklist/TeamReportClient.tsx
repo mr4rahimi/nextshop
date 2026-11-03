@@ -36,7 +36,14 @@ const PRESETS: { key: Preset; label: string }[] = [
   { key: "custom", label: "بازه‌ی دلخواه" },
 ];
 
-type Drill = "done" | "created" | "late" | "noOutcome" | "overdue" | "calls" | "success";
+type Drill =
+  | "done" | "created" | "late" | "noOutcome" | "overdue" | "calls" | "success"
+  | "documented" | "deals" | "attendance" | "system";
+
+/** ریزکننده‌های پنجره — همان پارامترهای `DrillFilter` در lib/worklist/team-report.ts */
+type DrillExtra = Partial<Record<"typeId" | "outcome" | "domain" | "channel" | "priority" | "source" | "day" | "wd" | "hour" | "bucket" | "systemKey", string>>;
+
+interface DrillState { metric: Drill; title: string; ownerId: string | null; extra?: DrillExtra }
 
 interface StaffRow {
   userId: string;
@@ -65,7 +72,7 @@ interface StaffRow {
   byDomain: Record<string, number>;
 }
 
-type Item = { label: string; value: number; color: string };
+type Item = { key?: string; label: string; value: number; color: string };
 
 interface Summary {
   days: string[];
@@ -104,7 +111,7 @@ interface Summary {
   byPriority: Item[];
   bySource: Item[];
   byOutcome: Item[];
-  closeTime: { label: string; value: number }[];
+  closeTime: { key: string; label: string; value: number }[];
   heatmap: number[][];
   system: { key: string; label: string; value: number }[];
   staff: StaffRow[];
@@ -135,7 +142,7 @@ export default function TeamReportClient() {
   const [data, setData] = useState<Summary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("done");
-  const [drill, setDrill] = useState<{ metric: Drill; ownerId: string | null; title: string } | null>(null);
+  const [drill, setDrill] = useState<DrillState | null>(null);
 
   const query = useMemo(() => {
     const qs = new URLSearchParams();
@@ -268,7 +275,14 @@ export default function TeamReportClient() {
     URL.revokeObjectURL(a.href);
   }
 
-  const open = (metric: Drill, title: string, who: string | null = ownerId) => setDrill({ metric, title, ownerId: who });
+  const who = focused ? ` — ${focused.name}` : "";
+  const open = (metric: Drill, title: string, owner: string | null = ownerId, extra?: DrillExtra) =>
+    setDrill({ metric, title: owner === ownerId ? title + who : title, ownerId: owner, extra });
+  /** کلیک روی ردیف یک نمودار تفکیکی — ردیف بی‌کلید («سایر») کاری نمی‌کند */
+  const openItem = (items: Item[], field: keyof DrillExtra, metric: Drill = "done", prefix = "") => (i: number) => {
+    const it = items[i];
+    if (it?.key) open(metric, `${prefix}${it.label}`, ownerId, { [field]: it.key });
+  };
 
   const k = data?.kpi;
   const ownerPill = focused ? { name: focused.name, color: avatarColor(focused.userId) } : null;
@@ -353,7 +367,7 @@ export default function TeamReportClient() {
       {data && k && (
         <div className={`space-y-5 transition-opacity ${loading ? "opacity-60" : ""}`}>
           {/* ── قهرمان صفحه ────────────────────────────────────────── */}
-          <Hero data={data} focused={focused} rankOf={(id) => sorted.findIndex((s) => s.userId === id) + 1} sortLabel={SORT_LABELS[sort]} />
+          <Hero data={data} focused={focused} rankOf={(id) => sorted.findIndex((s) => s.userId === id) + 1} sortLabel={SORT_LABELS[sort]} onOpen={open} />
 
           {/* ── کارت‌های KPI ───────────────────────────────────────── */}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -370,27 +384,29 @@ export default function TeamReportClient() {
               onClick={() => open("success", "بسته‌شده با نتیجه‌ی موفق")} action="موفق‌ها" />
             <KpiRing label="ثبت نتیجه" value={k.outcomeRate} hint={`از ${fa(k.created)} کارِ ثبت‌شده`}
               onClick={() => open("noOutcome", "ثبت‌شده بدون نتیجه")} action="بی‌نتیجه‌ها" />
-            <Kpi icon="⏳" label="میانه‌ی زمان بستن" value={duration(k.closeMin)} hint="از ثبت تا بستن" color="#06b6d4" />
+            <Kpi icon="⏳" label="میانه‌ی زمان بستن" value={duration(k.closeMin)} hint="از ثبت تا بستن" color="#06b6d4"
+              onClick={() => open("done", "کارهای بسته‌شده با زمان بستن")} />
             <Kpi icon="🚨" label="عقب‌افتاده" value={fa(k.overdue)} tone={k.overdue ? "bad" : "good"}
               hint={k.overdueUrgent ? `${fa(k.overdueUrgent)} تا فوری یا مهم` : "همین حالا، نه در بازه"}
               onClick={() => open("overdue", "عقب‌افتاده‌ی همین حالا")} />
             <Kpi icon="📞" label="تماس انجام‌شده" value={fa(k.calls)} hint="ورودی و خروجی، بسته‌شده"
               color="#f59e0b" onClick={() => open("calls", "تماس‌های انجام‌شده")} />
             <Kpi icon="🕒" label="حضور در سیستم" value={hours(k.activeMin)} spark={data.series.hours} color="#8b5cf6"
-              hint={`${fa(k.presentDays)} روز‌نفر حضور`} />
+              hint={`${fa(k.presentDays)} روز‌نفر حضور`} onClick={() => open("attendance", "روزهای حضور")} />
             <Kpi icon="⚙️" label="بهره‌وری" value={k.perHour === null ? "—" : `${k.perHour.toLocaleString("fa-IR")}`}
-              hint="کار بسته‌شده در هر ساعت حضور" color="#ec4899" />
+              hint="کار بسته‌شده در هر ساعت حضور" color="#ec4899" onClick={() => open("attendance", "روزهای حضور (مخرج بهره‌وری)")} />
             <Kpi icon="💰" label="فروش ثبت‌شده" value={`${faShort(k.revenue)}`} delta={[k.revenue, data.prev.revenue]}
-              hint={`${fa(k.deals)} معامله · سود ${faShort(k.profit)} تومان`} color="#10b981" />
+              hint={`${fa(k.deals)} معامله · سود ${faShort(k.profit)} تومان`} color="#10b981" onClick={() => open("deals", "معامله‌ها و فروش")} />
             <Kpi icon="🗂️" label="مستندسازی و ارجاع" value={fa(k.documented)}
-              hint={`${fa(k.referrals)} ارجاع · ${fa(k.system)} کار خودکار`} color="#64748b" />
+              hint={`${fa(k.referrals)} ارجاع · ${fa(k.system)} کار خودکار`} color="#64748b" onClick={() => open("documented", "کارهای مستندشده")} />
           </div>
 
           {/* ── روند روزانه ─────────────────────────────────────────── */}
-          <Card title="روند روزانه" sub="ستون‌ها کار بسته‌شده‌ی هر روز است (قرمز یعنی بعد از مهلت). خط‌ها کار ثبت‌شده و ساعت حضور. روی راهنما بزنید تا هر سری خاموش شود.">
+          <Card title="روند روزانه" sub="ستون‌ها کار بسته‌شده‌ی هر روز است (قرمز یعنی بعد از مهلت). خط‌ها کار ثبت‌شده و ساعت حضور. روی هر روز بزنید تا کارهایش باز شود؛ روی راهنما بزنید تا هر سری خاموش شود.">
             <ComboChart
               labels={data.days}
               labelOf={dayLabel}
+              onPick={(i) => open("done", `بسته‌شده‌ی ${dayLabel(data.days[i])}`, ownerId, { day: data.days[i] })}
               bars={[
                 { key: "ontime", label: "بسته‌شده", color: "#10b981", data: data.series.done.map((v, i) => v - data.series.late[i]) },
                 { key: "late", label: "با تأخیر", color: "#f43f5e", data: data.series.late },
@@ -444,55 +460,73 @@ export default function TeamReportClient() {
               />
             </Card>
             <Card className="xl:col-span-2" title={focused ? `${focused.name} در برابر تیم` : "سه نفر اول در برابر میانگین"}
-              sub="هر محور نسبت به بهترینِ تیم در همین بازه سنجیده می‌شود (۱۰۰ = بهترین).">
-              {radar ? <RadarChart axes={radar.axes} series={radar.series} /> : <p className="py-10 text-center text-xs text-gray-400">کاری بسته نشده</p>}
+              sub="هر محور نسبت به بهترینِ تیم در همین بازه سنجیده می‌شود (۱۰۰ = بهترین). روی نام هر محور بزنید تا کارهایش باز شود.">
+              {radar ? <RadarChart axes={radar.axes} series={radar.series} onAxis={(i) => {
+                const [m, t] = RADAR_DRILL[i];
+                open(m, t);
+              }} /> : <p className="py-10 text-center text-xs text-gray-400">کاری بسته نشده</p>}
             </Card>
           </div>
 
-          <Card title="سهم هر کارمند از حوزه‌ها" sub="طول میله تعداد کار بسته‌شده و رنگ‌ها حوزه‌ی کار است. روی هر ردیف بزنید تا گزارش فقط برای او باز شود.">
+          <Card title="سهم هر کارمند از حوزه‌ها" sub="طول میله تعداد کار بسته‌شده و رنگ‌ها حوزه‌ی کار است. روی هر تکه‌ی رنگی بزنید تا کارهای همان حوزه‌ی همان نفر باز شود؛ روی نام بزنید تا گزارش فقط برای او شود.">
             <StackedRows
               rows={[...data.staff].sort((a, b) => b.done - a.done).map((s) => ({ id: s.userId, label: s.name, values: s.byDomain }))}
               keys={data.domains}
               onPick={pick}
+              onSegment={(id, key) => {
+                const st = data.staff.find((x) => x.userId === id);
+                const dom = data.domains.find((x) => x.key === key);
+                open("done", `حوزه‌ی ${dom?.label ?? key} — ${st?.name ?? ""}`, id, { domain: key });
+              }}
               activeId={ownerId}
             />
           </Card>
 
           {/* ── الگوی کار ───────────────────────────────────────────── */}
           <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-            <Card className="xl:col-span-3" title="نقشه‌ی ساعت کاری" sub="هر خانه تعداد کارهایی است که در آن روز هفته و آن ساعت (به وقت تهران) بسته شده.">
-              <Heatmap grid={data.heatmap} />
+            <Card className="xl:col-span-3" title="نقشه‌ی ساعت کاری" sub="هر خانه تعداد کارهایی است که در آن روز هفته و آن ساعت (به وقت تهران) بسته شده. روی خانه، نام روز یا عدد ساعت بزنید.">
+              <Heatmap grid={data.heatmap} onPick={(wd, hour) => open(
+                "done",
+                wd !== undefined && hour !== undefined ? `بسته‌شده ${WEEKDAY_NAMES[wd]} ساعت ${fa(hour)}`
+                  : wd !== undefined ? `بسته‌شده در ${WEEKDAY_NAMES[wd]}‌ها` : `بسته‌شده ساعت ${fa(hour ?? 0)} تا ${fa((hour ?? 0) + 1)}`,
+                ownerId,
+                { ...(wd !== undefined ? { wd: String(wd) } : {}), ...(hour !== undefined ? { hour: String(hour) } : {}) },
+              )} />
             </Card>
             <Card className="xl:col-span-2" title="از ثبت تا بستن" sub="هر کار چقدر طول کشید تا بسته شود.">
-              <ColumnChart items={data.closeTime} colors={["#10b981", "#22c55e", "#84cc16", "#f59e0b", "#f97316", "#ef4444"]} />
+              <ColumnChart items={data.closeTime} colors={["#10b981", "#22c55e", "#84cc16", "#f59e0b", "#f97316", "#ef4444"]}
+                onPick={openItem(data.closeTime.map((c) => ({ ...c, color: "" })), "bucket", "done", "بسته‌شده در ")} />
             </Card>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Card title="تفکیک حوزه">
-              <DonutChart items={data.byDomain} size={150} />
+              <DonutChart items={data.byDomain} size={150} onPick={openItem(data.byDomain, "domain", "done", "حوزه‌ی ")} />
             </Card>
             <Card title="کانال ارتباط">
-              {data.byChannel.length ? <DonutChart items={data.byChannel} size={150} /> : <p className="py-10 text-center text-xs text-gray-400">کار کانال‌دار بسته نشده</p>}
+              {data.byChannel.length ? <DonutChart items={data.byChannel} size={150} onPick={openItem(data.byChannel, "channel")} /> : <p className="py-10 text-center text-xs text-gray-400">کار کانال‌دار بسته نشده</p>}
             </Card>
             <div className="space-y-4">
-              <Card title="اولویت کارهای بسته‌شده"><ShareBar items={data.byPriority} /></Card>
-              <Card title="منشأ کار"><ShareBar items={data.bySource} /></Card>
+              <Card title="اولویت کارهای بسته‌شده"><ShareBar items={data.byPriority} onPick={openItem(data.byPriority, "priority", "done", "اولویت ")} /></Card>
+              <Card title="منشأ کار"><ShareBar items={data.bySource} onPick={openItem(data.bySource, "source")} /></Card>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card title="پرکارترین نوع‌ها">
-              <HBarChart items={data.byType} />
+              <HBarChart items={data.byType} onPick={openItem(data.byType, "typeId")} />
             </Card>
             <Card title="نتیجه‌ی کارها" sub="سبز یعنی نتیجه‌ی موفقِ همان نوع کار. این همان چیزی است که نرخ تبدیل از رویش درمی‌آید.">
-              <HBarChart items={data.byOutcome} />
+              <HBarChart items={data.byOutcome} onPick={openItem(data.byOutcome, "outcome")} />
             </Card>
           </div>
 
           {data.system.length > 0 && (
             <Card title="کار خودکار" sub="این‌ها از خودِ نوشتن در پنل استخراج می‌شوند و کسی ثبتشان نکرده. عمداً با کار دستی جمع نمی‌شوند.">
-              <HBarChart items={data.system.map((s, i) => ({ label: s.label, value: s.value, color: ["#06b6d4", "#8b5cf6", "#f59e0b", "#ec4899", "#10b981", "#6366f1", "#84cc16"][i % 7] }))} />
+              <HBarChart
+                items={data.system.map((s, i) => ({ label: s.label, value: s.value, color: ["#06b6d4", "#8b5cf6", "#f59e0b", "#ec4899", "#10b981", "#6366f1", "#84cc16"][i % 7] }))}
+                onPick={(i) => open("system", data.system[i].label, ownerId, { systemKey: data.system[i].key })}
+              />
             </Card>
           )}
 
@@ -544,32 +578,41 @@ export default function TeamReportClient() {
                             <span>
                               <span className="block font-black text-gray-800 dark:text-gray-100 group-hover:text-indigo-600">{s.name}</span>
                               <span className="block text-[10px] text-gray-400">
-                                {fa(s.created)} ثبت · {fa(s.presentDays)} روز حضور
+                                {fa(s.presentDays)} روز حضور · {fa(s.notes)} یادداشت
                               </span>
                             </span>
                           </button>
                         </td>
-                        <td className="px-2"><div className="flex justify-center"><Sparkline data={s.spark} color={avatarColor(s.userId)} width={72} height={24} /></div></td>
-                        <NumTd onClick={d("done", "بسته‌شده")} strong>{fa(s.done)}</NumTd>
+                        <td className="px-2">
+                          <button onClick={d("done", "بسته‌شده")} className="flex justify-center w-full rounded-lg hover:bg-indigo-500/10 py-1" title="کارهای بسته‌شده">
+                            <Sparkline data={s.spark} color={avatarColor(s.userId)} width={72} height={24} />
+                          </button>
+                        </td>
+                        <NumTd onClick={d("done", "بسته‌شده")} strong>
+                          {fa(s.done)}
+                          <span className="block text-[9.5px] font-normal text-gray-400" onClick={(e) => { e.stopPropagation(); d("created", "ثبت‌شده")(); }}>
+                            {fa(s.created)} ثبت
+                          </span>
+                        </NumTd>
                         <RateTd value={on} num={s.onTime} den={s.withDue} onClick={d("late", "بعد از مهلت")} />
                         <RateTd value={sc} num={s.success} den={s.rated} onClick={d("success", "نتیجه‌ی موفق")} />
                         <RateTd value={oc} num={s.withOutcome} den={s.created} onClick={d("noOutcome", "بدون نتیجه")} />
-                        <Td>{duration(s.closeMin)}</Td>
+                        <NumTd onClick={d("done", "زمان بستن")}>{duration(s.closeMin)}</NumTd>
                         <NumTd onClick={d("calls", "تماس‌ها")}>{fa(s.calls)}</NumTd>
-                        <Td>
+                        <NumTd onClick={d("documented", "مستندشده")}>
                           {fa(s.documented)}
                           {s.referralsOut + s.referralsIn > 0 && (
-                            <span className="block text-[9.5px] text-gray-400">↗{fa(s.referralsOut)} ↙{fa(s.referralsIn)}</span>
+                            <span className="block text-[9.5px] font-normal text-gray-400">↗{fa(s.referralsOut)} ↙{fa(s.referralsIn)}</span>
                           )}
-                        </Td>
+                        </NumTd>
                         <NumTd onClick={d("overdue", "عقب‌افتاده")} tone={s.overdue ? "bad" : "muted"}>{fa(s.overdue)}</NumTd>
-                        <Td>{s.activeMin ? hours(s.activeMin) : "—"}</Td>
-                        <Td>{ph === null ? "—" : ph.toLocaleString("fa-IR", { maximumFractionDigits: 1 })}</Td>
-                        <Td>
+                        <NumTd onClick={d("attendance", "روزهای حضور")}>{s.activeMin ? hours(s.activeMin) : "—"}</NumTd>
+                        <NumTd onClick={d("attendance", "روزهای حضور")}>{ph === null ? "—" : ph.toLocaleString("fa-IR", { maximumFractionDigits: 1 })}</NumTd>
+                        <NumTd onClick={d("deals", "معامله‌ها")}>
                           {s.revenue ? faShort(s.revenue) : "—"}
-                          {s.deals > 0 && <span className="block text-[9.5px] text-gray-400">{fa(s.deals)} معامله</span>}
-                        </Td>
-                        <Td>{fa(s.system)}</Td>
+                          {s.deals > 0 && <span className="block text-[9.5px] font-normal text-gray-400">{fa(s.deals)} معامله</span>}
+                        </NumTd>
+                        <NumTd onClick={d("system", "کار خودکار")}>{fa(s.system)}</NumTd>
                       </tr>
                     );
                   })}
@@ -593,6 +636,7 @@ export default function TeamReportClient() {
           query={query}
           metric={drill.metric}
           ownerId={drill.ownerId}
+          extra={drill.extra}
           title={drill.title}
           onClose={() => setDrill(null)}
         />
@@ -606,14 +650,28 @@ const SORT_LABELS: Record<SortKey, string> = {
   calls: "تماس", activeMin: "حضور", perHour: "بهره‌وری", revenue: "فروش", overdue: "عقب‌افتاده", documented: "مستندسازی",
 };
 
+const WEEKDAY_NAMES = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
+
+/** محورهای رادار به ترتیب `radar.axes` ← پنجره‌ی همان معیار */
+const RADAR_DRILL: [Drill, string][] = [
+  ["done", "کارهای بسته‌شده"],
+  ["late", "بسته‌شده بعد از مهلت"],
+  ["success", "بسته‌شده با نتیجه‌ی موفق"],
+  ["noOutcome", "ثبت‌شده بدون نتیجه"],
+  ["documented", "کارهای مستندشده"],
+  ["done", "کارهای بسته‌شده با زمان بستن"],
+  ["attendance", "روزهای حضور"],
+];
+
 // ── سربرگ: تیم یا کارمند انتخاب‌شده ───────────────────────────────────────────
 function Hero({
-  data, focused, rankOf, sortLabel,
+  data, focused, rankOf, sortLabel, onOpen,
 }: {
   data: Summary;
   focused: StaffRow | null;
   rankOf: (id: string) => number;
   sortLabel: string;
+  onOpen: (metric: Drill, title: string) => void;
 }) {
   const k = data.kpi;
   if (focused) {
@@ -633,13 +691,13 @@ function Hero({
           </div>
           <div className="flex gap-4">
             {[
-              { l: "به‌موقع", v: rate(focused.onTime, focused.withDue) },
-              { l: "موفق", v: rate(focused.success, focused.rated) },
-              { l: "نتیجه", v: rate(focused.withOutcome, focused.created) },
+              { l: "به‌موقع", v: rate(focused.onTime, focused.withDue), m: "late" as Drill, t: "بسته‌شده بعد از مهلت" },
+              { l: "موفق", v: rate(focused.success, focused.rated), m: "success" as Drill, t: "بسته‌شده با نتیجه‌ی موفق" },
+              { l: "نتیجه", v: rate(focused.withOutcome, focused.created), m: "noOutcome" as Drill, t: "ثبت‌شده بدون نتیجه" },
             ].map((x) => (
-              <div key={x.l} className="text-center [&_span]:!text-white [&_circle:first-child]:!text-white/20">
+              <button key={x.l} onClick={() => onOpen(x.m, x.t)} className="text-center rounded-2xl p-1 hover:bg-white/10 [&_span]:!text-white [&_circle:first-child]:!text-white/20">
                 <RingGauge value={x.v} label={x.l} color="#ffffff" size={68} />
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -661,22 +719,22 @@ function Hero({
           </p>
         </div>
         <div className="flex gap-3 flex-wrap">
-          <HeroStat label="به‌موقع" value={k.onTimeRate === null ? "—" : `${fa(k.onTimeRate)}٪`} />
-          <HeroStat label="موفق" value={k.successRate === null ? "—" : `${fa(k.successRate)}٪`} />
-          <HeroStat label="فروش" value={faShort(k.revenue)} />
-          <HeroStat label="عقب‌افتاده" value={fa(k.overdue)} warn={k.overdue > 0} />
+          <HeroStat label="به‌موقع" value={k.onTimeRate === null ? "—" : `${fa(k.onTimeRate)}٪`} onClick={() => onOpen("late", "بسته‌شده بعد از مهلت")} />
+          <HeroStat label="موفق" value={k.successRate === null ? "—" : `${fa(k.successRate)}٪`} onClick={() => onOpen("success", "بسته‌شده با نتیجه‌ی موفق")} />
+          <HeroStat label="فروش" value={faShort(k.revenue)} onClick={() => onOpen("deals", "معامله‌ها و فروش")} />
+          <HeroStat label="عقب‌افتاده" value={fa(k.overdue)} warn={k.overdue > 0} onClick={() => onOpen("overdue", "عقب‌افتاده‌ی همین حالا")} />
         </div>
       </div>
     </div>
   );
 }
 
-function HeroStat({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
+function HeroStat({ label, value, warn, onClick }: { label: string; value: string; warn?: boolean; onClick?: () => void }) {
   return (
-    <div className={`px-4 py-2.5 rounded-2xl backdrop-blur ${warn ? "bg-red-500/30" : "bg-white/15"}`}>
+    <button onClick={onClick} className={`text-right px-4 py-2.5 rounded-2xl backdrop-blur transition-colors ${warn ? "bg-red-500/30 hover:bg-red-500/40" : "bg-white/15 hover:bg-white/25"}`}>
       <span className="block text-[10.5px] font-bold text-white/70">{label}</span>
       <span className="block text-lg font-black tabular-nums">{value}</span>
-    </div>
+    </button>
   );
 }
 
@@ -817,7 +875,7 @@ function RateTd({ value, num, den, onClick }: { value: number | null; num: numbe
 }
 
 // ── پنجره‌ی جزئیات ──────────────────────────────────────────────────────────────
-interface DrillRow {
+interface TaskRow {
   id: string;
   title: string;
   type: string;
@@ -828,31 +886,54 @@ interface DrillRow {
   owner: string;
   contact: string | null;
   linkUrl: string | null;
+  note: string | null;
+  amount: number | null;
   outcome: string | null;
   isSuccess: boolean;
   createdAt: string;
   dueAt: string | null;
   doneAt: string | null;
+  closeMin: number | null;
   late: boolean;
 }
+interface DealRow { id: string; title: string; owner: string; customer: string | null; revenue: number; profit: number | null; status: string; at: string; href: string | null }
+interface DayRow { id: string; owner: string; day: string; firstIn: string; lastOut: string; activeMin: number; grossMin: number; edited: string | null }
+interface ActRow { id: string; owner: string; label: string; title: string; at: string; href: string | null }
+
+type DrillData =
+  | { kind: "tasks"; total: number; byOwner: OwnerCount[]; stats: { late: number; success: number; closeMin: number | null }; rows: TaskRow[] }
+  | { kind: "deals"; total: number; byOwner: OwnerCount[]; sum: { revenue: number; profit: number }; rows: DealRow[] }
+  | { kind: "days"; total: number; byOwner: OwnerCount[]; sum: { activeMin: number }; rows: DayRow[] }
+  | { kind: "activity"; total: number; byOwner: OwnerCount[]; rows: ActRow[] };
+type OwnerCount = { name: string; count: number };
+
+type TaskSort = "recent" | "slow" | "fast";
+
+const jDate = (iso: string) => new Date(iso).toLocaleDateString("fa-IR", { weekday: "short", month: "long", day: "numeric" });
+const jTime = (iso: string) => new Date(iso).toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
 
 function DrillSheet({
-  query, metric, ownerId, title, onClose,
+  query, metric, ownerId, extra, title, onClose,
 }: {
   query: URLSearchParams;
   metric: Drill;
   ownerId: string | null;
+  extra?: DrillExtra;
   title: string;
   onClose: () => void;
 }) {
-  const [data, setData] = useState<{ total: number; rows: DrillRow[] } | null>(null);
+  const [data, setData] = useState<DrillData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [who, setWho] = useState<string | null>(null);
+  const [taskSort, setTaskSort] = useState<TaskSort>(title.includes("زمان بستن") ? "slow" : "recent");
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     const qs = new URLSearchParams(query);
     qs.set("detail", metric);
     if (ownerId) qs.set("ownerId", ownerId);
+    for (const [k, v] of Object.entries(extra ?? {})) if (v !== undefined) qs.set(k, v);
     fetch(`/api/admin/worklist/summary?${qs}`)
       .then(async (r) => {
         const d = await r.json();
@@ -860,64 +941,215 @@ function DrillSheet({
         setData(d);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "بارگذاری ناموفق بود"));
-  }, [query, metric, ownerId]);
+  }, [query, metric, ownerId, extra]);
+
+  const match = (fields: (string | null | undefined)[]) => {
+    const t = q.trim();
+    return !t || fields.some((x) => x?.includes(t));
+  };
 
   const rows = useMemo(() => {
     if (!data) return [];
-    const t = q.trim();
-    if (!t) return data.rows;
-    return data.rows.filter((r) => [r.title, r.type, r.owner, r.contact, r.outcome].some((x) => x?.includes(t)));
-  }, [data, q]);
+    switch (data.kind) {
+      case "tasks": {
+        const r = data.rows.filter((x) => (!who || x.owner === who) && match([x.title, x.type, x.owner, x.contact, x.outcome, x.note]));
+        if (taskSort === "slow") r.sort((a, b) => (b.closeMin ?? -1) - (a.closeMin ?? -1));
+        if (taskSort === "fast") r.sort((a, b) => (a.closeMin ?? Infinity) - (b.closeMin ?? Infinity));
+        return r;
+      }
+      case "deals": return data.rows.filter((x) => (!who || x.owner === who) && match([x.title, x.owner, x.customer]));
+      case "days": return data.rows.filter((x) => (!who || x.owner === who) && match([x.owner]));
+      case "activity": return data.rows.filter((x) => (!who || x.owner === who) && match([x.title, x.owner, x.label]));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, q, who, taskSort]);
+
+  const box = "divide-y divide-gray-100 dark:divide-white/5 rounded-2xl border border-gray-200 dark:border-white/10";
 
   return (
     <Sheet open wide onClose={onClose} title={data ? `${title} (${fa(data.total)})` : title}>
       {error && <p className="text-xs font-bold text-red-600">{error}</p>}
-      {!data && !error && <p className="py-6 text-center text-xs text-gray-400">در حال بارگذاری…</p>}
+      {!data && !error && (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-14 rounded-2xl bg-gray-100 dark:bg-white/5 animate-pulse" />)}
+        </div>
+      )}
       {data && (
         <div className="space-y-3">
-          {data.rows.length > 8 && (
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="جستجو در عنوان، نوع، کارمند، طرف حساب…"
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-xs focus:outline-none focus:border-indigo-400" />
+          {/* ── خلاصه ─────────────────────────────────────── */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <MiniStat label="تعداد" value={fa(data.total)} />
+            {data.kind === "tasks" && (
+              <>
+                <MiniStat label="بعد از مهلت" value={fa(data.stats.late)} tone={data.stats.late ? "bad" : undefined} />
+                <MiniStat label="نتیجه‌ی موفق" value={fa(data.stats.success)} tone="good" />
+                <MiniStat label="میانه‌ی زمان بستن" value={duration(data.stats.closeMin)} />
+              </>
+            )}
+            {data.kind === "deals" && (
+              <>
+                <MiniStat label="فروش (تومان)" value={fa(data.sum.revenue)} tone="good" />
+                <MiniStat label="سود (تومان)" value={fa(data.sum.profit)} />
+              </>
+            )}
+            {data.kind === "days" && <MiniStat label="جمع حضور" value={hours(data.sum.activeMin)} />}
+          </div>
+
+          {/* ── تفکیک کارمند ──────────────────────────────── */}
+          {data.byOwner.length > 1 && (
+            <div className="flex flex-wrap gap-1.5">
+              <Chip on={!who} onClick={() => setWho(null)}>همه ({fa(data.total)})</Chip>
+              {data.byOwner.map((o) => (
+                <Chip key={o.name} on={who === o.name} onClick={() => setWho(who === o.name ? null : o.name)}>
+                  {o.name} ({fa(o.count)})
+                </Chip>
+              ))}
+            </div>
           )}
+
+          <div className="flex gap-2">
+            {data.rows.length > 6 && (
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="جستجو…"
+                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-xs focus:outline-none focus:border-indigo-400" />
+            )}
+            {data.kind === "tasks" && data.rows.some((r) => r.closeMin !== null) && (
+              <select value={taskSort} onChange={(e) => setTaskSort(e.target.value as TaskSort)}
+                className="px-2 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-xs font-bold">
+                <option value="recent">تازه‌ترین</option>
+                <option value="slow">دیرترین بستن</option>
+                <option value="fast">سریع‌ترین بستن</option>
+              </select>
+            )}
+          </div>
+
           {rows.length === 0 && <p className="py-6 text-center text-xs text-gray-400">موردی نیست.</p>}
-          <div className="divide-y divide-gray-100 dark:divide-white/5 rounded-2xl border border-gray-200 dark:border-white/10">
-            {rows.map((r) => (
-              <div key={r.id} className="px-3 py-2.5">
-                <div className="flex items-start gap-2">
+
+          {data.kind === "tasks" && rows.length > 0 && (
+            <div className={box}>
+              {(rows as TaskRow[]).map((r) => (
+                <div key={r.id} className="px-3 py-2.5">
+                  <button onClick={() => setOpenId(openId === r.id ? null : r.id)} className="w-full text-right">
+                    <div className="flex items-start gap-2">
+                      <span className="flex-1 min-w-0">
+                        <span className="block truncate text-sm font-bold text-gray-800 dark:text-gray-100">{r.title}</span>
+                        <span className="block mt-0.5 text-[11px] text-gray-400">
+                          {r.type} · {r.domain} · <b className="text-gray-500">{r.owner}</b>
+                          {r.contact && <> · {r.contact}</>}
+                          {r.channel !== "NONE" && <> · {CHANNEL_LABELS[r.channel]}</>}
+                        </span>
+                      </span>
+                      <span className={`flex-shrink-0 px-2 py-0.5 rounded-lg text-[10px] font-bold ${STATUS_COLORS[r.status]}`}>{STATUS_LABELS[r.status]}</span>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10.5px]">
+                      {r.outcome && (
+                        <span className={`px-2 py-0.5 rounded-lg font-bold ${r.isSuccess ? "bg-emerald-500/10 text-emerald-600" : "bg-gray-100 dark:bg-white/5 text-gray-500"}`}>{r.outcome}</span>
+                      )}
+                      {(r.priority === "HIGH" || r.priority === "URGENT") && (
+                        <span className="px-2 py-0.5 rounded-lg font-bold bg-orange-500/10 text-orange-600">{PRIORITY_LABELS[r.priority]}</span>
+                      )}
+                      {r.late && <span className="px-2 py-0.5 rounded-lg font-bold bg-rose-500/10 text-rose-600">بعد از مهلت</span>}
+                      {r.closeMin !== null && <span className="px-2 py-0.5 rounded-lg font-bold bg-cyan-500/10 text-cyan-700 dark:text-cyan-400">⏳ {duration(r.closeMin)}</span>}
+                      <span className="text-gray-400">ثبت {formatDateTime(r.createdAt)}</span>
+                      {r.doneAt && <span className="text-gray-400">· بسته {formatDateTime(r.doneAt)}</span>}
+                    </div>
+                  </button>
+                  {openId === r.id && (
+                    <div className="mt-2 rounded-xl bg-gray-50 dark:bg-white/[0.03] p-3 text-[11px] leading-6 text-gray-600 dark:text-gray-300 space-y-0.5">
+                      <div>اولویت: {PRIORITY_LABELS[r.priority]} · وضعیت: {STATUS_LABELS[r.status]}</div>
+                      <div>ثبت: {formatDateTime(r.createdAt)}{r.dueAt && <> · مهلت: {formatDateTime(r.dueAt)}</>}{r.doneAt && <> · بسته: {formatDateTime(r.doneAt)}</>}</div>
+                      {r.amount !== null && <div>مبلغ: {fa(r.amount)} تومان</div>}
+                      {r.note && <div className="whitespace-pre-line">یادداشت: {r.note}</div>}
+                      {r.linkUrl && <a href={r.linkUrl} target="_blank" rel="noreferrer" className="font-bold text-indigo-600 hover:underline">باز کردن لینک کار ←</a>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {data.kind === "deals" && rows.length > 0 && (
+            <div className={box}>
+              {(rows as DealRow[]).map((r) => (
+                <div key={r.id} className="flex items-center gap-3 px-3 py-2.5">
                   <span className="flex-1 min-w-0">
-                    {r.linkUrl ? (
-                      <a href={r.linkUrl} target="_blank" rel="noreferrer" className="block truncate text-sm font-bold text-blue-700 dark:text-blue-300 hover:underline">{r.title}</a>
-                    ) : (
-                      <span className="block truncate text-sm font-bold text-gray-800 dark:text-gray-100">{r.title}</span>
-                    )}
-                    <span className="block mt-0.5 text-[11px] text-gray-400">
-                      {r.type} · {r.domain} · {r.owner}
-                      {r.contact && <> · {r.contact}</>}
-                      {r.channel !== "NONE" && <> · {CHANNEL_LABELS[r.channel]}</>}
+                    {r.href ? (
+                      <a href={r.href} className="block truncate text-sm font-bold text-blue-700 dark:text-blue-300 hover:underline">{r.title}</a>
+                    ) : <span className="block truncate text-sm font-bold">{r.title}</span>}
+                    <span className="block text-[11px] text-gray-400">
+                      <b className="text-gray-500">{r.owner}</b>{r.customer && <> · {r.customer}</>} · {jDate(r.at)}
+                      {r.status === "PENDING" && <> · <span className="text-amber-600">در انتظار قیمت خرید</span></>}
                     </span>
                   </span>
-                  <span className={`flex-shrink-0 px-2 py-0.5 rounded-lg text-[10px] font-bold ${STATUS_COLORS[r.status]}`}>{STATUS_LABELS[r.status]}</span>
+                  <span className="text-left">
+                    <span className="block text-sm font-black tabular-nums">{fa(r.revenue)}</span>
+                    {r.profit !== null && <span className="block text-[10.5px] tabular-nums text-emerald-600">سود {fa(r.profit)}</span>}
+                  </span>
                 </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10.5px]">
-                  {r.outcome && (
-                    <span className={`px-2 py-0.5 rounded-lg font-bold ${r.isSuccess ? "bg-emerald-500/10 text-emerald-600" : "bg-gray-100 dark:bg-white/5 text-gray-500"}`}>{r.outcome}</span>
-                  )}
-                  {(r.priority === "HIGH" || r.priority === "URGENT") && (
-                    <span className="px-2 py-0.5 rounded-lg font-bold bg-orange-500/10 text-orange-600">{PRIORITY_LABELS[r.priority]}</span>
-                  )}
-                  {r.late && <span className="px-2 py-0.5 rounded-lg font-bold bg-rose-500/10 text-rose-600">بعد از مهلت</span>}
-                  <span className="text-gray-400">ثبت {formatDateTime(r.createdAt)}</span>
-                  {r.dueAt && <span className="text-gray-400">· مهلت {formatDateTime(r.dueAt)}</span>}
-                  {r.doneAt && <span className="text-gray-400">· بسته {formatDateTime(r.doneAt)}</span>}
+              ))}
+            </div>
+          )}
+
+          {data.kind === "days" && rows.length > 0 && (
+            <div className={box}>
+              {(rows as DayRow[]).map((r) => (
+                <div key={r.id} className="flex items-center gap-3 px-3 py-2.5">
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-bold">{jDate(r.day)}</span>
+                    <span className="block text-[11px] text-gray-400">
+                      <b className="text-gray-500">{r.owner}</b> · ورود {jTime(r.firstIn)} · آخرین حضور {jTime(r.lastOut)}
+                      {r.edited && <> · اصلاح‌شده توسط {r.edited}</>}
+                    </span>
+                  </span>
+                  <span className="text-left">
+                    <span className="block text-sm font-black tabular-nums">{hours(r.activeMin)}</span>
+                    <span className="block h-1.5 w-20 mt-1 rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden">
+                      <span className="block h-full bg-violet-500" style={{ width: `${Math.min(100, (r.activeMin / 480) * 100)}%` }} />
+                    </span>
+                  </span>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {data.kind === "activity" && rows.length > 0 && (
+            <div className={box}>
+              {(rows as ActRow[]).map((r) => (
+                <div key={r.id} className="flex items-center gap-3 px-3 py-2.5">
+                  <span className="flex-1 min-w-0">
+                    {r.href ? (
+                      <a href={r.href} className="block truncate text-sm font-bold text-blue-700 dark:text-blue-300 hover:underline">{r.title}</a>
+                    ) : <span className="block truncate text-sm font-bold">{r.title}</span>}
+                    <span className="block text-[11px] text-gray-400"><b className="text-gray-500">{r.owner}</b> · {r.label} · {formatDateTime(r.at)}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {data.total > data.rows.length && (
             <p className="text-center text-[11px] text-gray-400">{fa(data.rows.length)} مورد از {fa(data.total)} نشان داده شد.</p>
           )}
         </div>
       )}
     </Sheet>
+  );
+}
+
+function MiniStat({ label, value, tone }: { label: string; value: string; tone?: "good" | "bad" }) {
+  const c = tone === "good" ? "text-emerald-600" : tone === "bad" ? "text-rose-500" : "text-gray-900 dark:text-white";
+  return (
+    <div className="rounded-2xl bg-gray-50 dark:bg-white/[0.04] px-3 py-2">
+      <span className="block text-[10px] font-bold text-gray-400">{label}</span>
+      <span className={`block text-sm font-black tabular-nums ${c}`}>{value}</span>
+    </div>
+  );
+}
+
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick}
+      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors ${on ? "bg-indigo-500 text-white" : "bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10"}`}>
+      {children}
+    </button>
   );
 }

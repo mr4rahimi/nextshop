@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { hashPassword } from "@/lib/auth";
 import type { Prisma } from "@prisma/client";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission, getStaffAccess } from "@/lib/permissions";
 import { clearAdminGateCache } from "@/lib/admin-gate";
 import { seatError } from "@/lib/plan/license";
 
@@ -60,6 +60,12 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
     if (!guard.ok) {
       return NextResponse.json({ error: "تغییر نقش فقط با مجوز مدیریت نقش‌ها" }, { status: guard.status });
     }
+  }
+
+  // ⚠️ غیرفعال‌کردن ادمین فقط با دسترسی کامل و از `/api/admin/admins/[id]` با
+  // محافظ‌هایش (نه خودش، نه آخرین ادمین کامل). فعال ماندن (`true`) مانعی ندارد.
+  if (has("isActive") && data.isActive === false && (await isAdmin(id))) {
+    return NextResponse.json({ error: "غیرفعال‌کردن ادمین از صفحه‌ی «مدیریت ادمین‌ها» انجام می‌شود" }, { status: 403 });
   }
 
   // ⚠️ فقط فیلدهایی نوشته می‌شوند که واقعاً در بدنه آمده‌اند. پیش‌تر یک
@@ -122,8 +128,21 @@ export async function PUT(_req: Request, ctx: { params: Promise<{ id: string }> 
   }
 }
 
+async function isAdmin(id: string) {
+  const u = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+  return u?.role === "ADMIN";
+}
+
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
+  // حذف ادمین فقط از `/api/admin/admins/[id]` — با دسترسی کامل و محافظ آخرین ادمین
+  if (await isAdmin(id)) {
+    const access = await getStaffAccess();
+    return NextResponse.json(
+      { error: access?.isUnrestricted ? "حذف ادمین از صفحه‌ی «مدیریت ادمین‌ها» انجام می‌شود" : "حذف ادمین فقط با دسترسی کامل" },
+      { status: 403 },
+    );
+  }
   await prisma.user.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

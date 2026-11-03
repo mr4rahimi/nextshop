@@ -180,10 +180,12 @@ export function MultiLineChart({
 
 // ── نمودار دونات ─────────────────────────────────────────────────────────────
 export function DonutChart({
-  items, size = 168,
+  items, size = 168, onPick,
 }: {
   items: { label: string; value: number; color: string }[];
   size?: number;
+  /** کلیک روی برش یا ردیف راهنما — برای پنجره‌ی جزئیات */
+  onPick?: (index: number) => void;
 }) {
   const [active, setActive] = useState<number | null>(null);
   const total = items.reduce((s, i) => s + i.value, 0);
@@ -191,7 +193,8 @@ export function DonutChart({
 
   const r = size / 2 - 14;
   const c = 2 * Math.PI * r;
-  let offset = 0;
+  // شروع هر برش — از پیش حساب می‌شود، نه با متغیر جهشی داخل map
+  const starts = items.map((_, i) => items.slice(0, i).reduce((s, x) => s + (x.value / total) * c, 0));
 
   return (
     <div className="flex items-center gap-5 flex-wrap">
@@ -205,12 +208,12 @@ export function DonutChart({
                 fill="none" stroke={it.color}
                 strokeWidth={active === i ? 20 : 15}
                 strokeDasharray={`${dash} ${c - dash}`}
-                strokeDashoffset={-offset}
-                style={{ transition: "stroke-width .15s" }}
+                strokeDashoffset={-starts[i]}
+                style={{ transition: "stroke-width .15s", cursor: onPick ? "pointer" : undefined }}
+                onClick={onPick ? () => onPick(i) : undefined}
                 onMouseEnter={() => setActive(i)}
                 onMouseLeave={() => setActive(null)} />
             );
-            offset += dash;
             return el;
           })}
         </svg>
@@ -228,9 +231,10 @@ export function DonutChart({
         {items.map((it, i) => (
           <div key={i}
             onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)}
+            onClick={onPick ? () => onPick(i) : undefined}
             className={`flex items-center gap-2 text-xs rounded-lg px-2 py-1 transition-colors ${
               active === i ? "bg-gray-100 dark:bg-white/5" : ""
-            }`}>
+            } ${onPick ? "cursor-pointer" : ""}`}>
             <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: it.color }} />
             <span className="flex-1 font-bold text-gray-600 dark:text-gray-300 truncate">{it.label}</span>
             <span className="tabular-nums text-gray-400">{fa(it.value)}</span>
@@ -246,9 +250,11 @@ export function DonutChart({
 
 // ── نمودار میله‌ای افقی ──────────────────────────────────────────────────────
 export function HBarChart({
-  items,
+  items, onPick,
 }: {
   items: { label: string; value: number; color?: string; sub?: string }[];
+  /** کلیک روی ردیف — برای پنجره‌ی جزئیات */
+  onPick?: (index: number) => void;
 }) {
   if (items.length === 0) return <Empty />;
   const max = Math.max(...items.map((i) => i.value), 1);
@@ -256,9 +262,11 @@ export function HBarChart({
   return (
     <div className="space-y-3">
       {items.map((it, i) => (
-        <div key={i}>
+        <div key={i}
+          onClick={onPick ? () => onPick(i) : undefined}
+          className={onPick ? "group cursor-pointer rounded-lg -mx-1.5 px-1.5 py-1 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04]" : undefined}>
           <div className="flex items-baseline justify-between mb-1.5 gap-2">
-            <span className="text-xs font-bold text-gray-700 dark:text-gray-200 truncate">{it.label}</span>
+            <span className={`text-xs font-bold text-gray-700 dark:text-gray-200 truncate ${onPick ? "group-hover:text-indigo-600" : ""}`}>{it.label}</span>
             <span className="text-xs tabular-nums text-gray-400 flex-shrink-0">{fa(it.value)}</span>
           </div>
           <div className="h-2 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
