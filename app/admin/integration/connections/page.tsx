@@ -5,11 +5,14 @@ import HelpButton from "@/components/admin/worklist/HelpButton";
 export const dynamic = "force-dynamic";
 
 export default async function ConnectionsPage() {
-  const platforms = await prisma.integPlatform.findMany({
-    where:   { isActive: true },
-    include: { connections: true },
-    orderBy: { type: "asc" },
-  });
+  const [platforms, acc] = await Promise.all([
+    prisma.integPlatform.findMany({
+      where:   { isActive: true },
+      include: { connections: true },
+      orderBy: { type: "asc" },
+    }),
+    prisma.accSettings.findUnique({ where: { id: "singleton" }, select: { mode: true } }),
+  ]);
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6" dir="rtl">
@@ -20,6 +23,24 @@ export default async function ConnectionsPage() {
         </div>
         <p className="text-sm text-gray-500 mt-1">اتصال به حسابداری و مارکت‌پلیس‌ها</p>
       </div>
+
+      {/* حسابداری داخلی سرویس بیرونی نیست و در فهرست پایین نمی‌آید — موجودی سایت را کاردکس می‌نویسد */}
+      {acc?.mode === "INTERNAL" && (
+        <Link href="/admin/accounting/inventory"
+          className="flex items-center gap-4 p-4 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-200 dark:border-green-500/20">
+          <div className="flex-1">
+            <p className="font-bold text-sm text-gray-900 dark:text-white">حسابداری داخلی</p>
+            <p className="text-xs text-gray-500 mt-0.5">موجودی سایت از کاردکس انبارهای فروش به‌روز می‌شود — اتصال جداگانه لازم نیست</p>
+          </div>
+          <span className="text-[10px] font-black px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400">فعال</span>
+        </Link>
+      )}
+
+      {!platforms.length && (
+        <p className="text-sm text-gray-500 p-4 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
+          هیچ سرویسی تعریف نشده است.
+        </p>
+      )}
 
       {["ACCOUNTING", "MARKETPLACE"].map(type => {
         const list = platforms.filter(p => p.type === type);
