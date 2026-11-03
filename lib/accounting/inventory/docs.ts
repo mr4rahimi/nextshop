@@ -8,6 +8,7 @@
  */
 
 import type { AccWarehouse, Prisma } from "@prisma/client";
+import { logDoc } from "../doc-log";
 import { AccError } from "../errors";
 import { assertPostable } from "../ledger/fiscal-year";
 import { GLOBAL_SEQ, nextNumber } from "../ledger/sequence";
@@ -273,6 +274,7 @@ export async function voidTransfer(tx: Tx, id: string, reason: string, actor: Ac
   }
   await removeMoves(tx, "AccTransfer", t.id, actor);
   await clearSerials(tx, "AccTransfer", t.id, actor);
+  await logDoc(tx, { docType: "AccTransfer", docId: t.id, number: t.number, docDate: t.date, action: "VOID", reason }, actor);
   return tx.accTransfer.update({ where: { id }, data: { status: "VOID", voidReason: `${reason.trim()} — ${actor.name}` } });
 }
 

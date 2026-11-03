@@ -16,6 +16,7 @@ import { AccError } from "../errors";
 import { assertPostable } from "./fiscal-year";
 import { nextNumber } from "./sequence";
 import { faNum, formatAmount } from "../money";
+import { logDoc } from "../doc-log";
 
 export interface LineInput {
   accountId?: string;
@@ -202,6 +203,10 @@ export async function voidVoucher(
   if (!reason.trim()) throw new AccError("دلیل ابطال را بنویسید");
   await assertPostable(tx, v.date);
   await tx.accVoucherLine.updateMany({ where: { voucherId: id }, data: { isVoid: true } });
+  // سند خودکار با سند منبعش ثبت می‌شود (فاکتور، دریافت، …)
+  if (v.source === "MANUAL" && !opts.fromSource) {
+    await logDoc(tx, { docType: "AccVoucher", docId: v.id, number: v.number, docDate: v.date, action: "VOID", reason, totalBefore: v.totalDebit }, actor);
+  }
   return tx.accVoucher.update({
     where: { id },
     data: { status: "VOID", voidReason: `${reason.trim()} — ${actor.name}` },

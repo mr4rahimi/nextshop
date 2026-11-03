@@ -24,6 +24,7 @@ import { AccError } from "./errors";
 import { faNum, formatAmount } from "./money";
 import { todayKey } from "./dates";
 import { postVoucher, rebuildVoucher, voidVoucher, type Actor } from "./ledger/post";
+import { logDoc } from "./doc-log";
 import { invoiceOpenAmounts } from "./cash/allocation";
 import { createMoneyDoc } from "./cash/docs";
 import { calcFee, coverInstallments, type FeeMode } from "./installments-calc";
@@ -208,6 +209,7 @@ export async function voidPlan(tx: Tx, planId: string, reason: string, actor: Ac
     );
   }
   if (plan.voucherId) await voidVoucher(tx, plan.voucherId, `ابطال برنامه‌ی اقساط: ${reason.trim()}`, actor, { fromSource: true });
+  await logDoc(tx, { docType: "AccInstallmentPlan", docId: plan.invoiceId, kind: plan.invoice.type, number: plan.invoice.number, docDate: plan.invoice.date, partyName: plan.invoice.partyName, action: "VOID", reason, totalBefore: plan.feeAmount }, actor);
   await tx.accInstallmentPlan.delete({ where: { id: planId } });
   return plan;
 }

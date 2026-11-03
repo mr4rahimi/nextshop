@@ -25,6 +25,7 @@
  */
 
 import type { AccMoneyDoc, AccMoneyKind, AccMoneyMethod, AccTreasury, AccTreasuryKind, Prisma } from "@prisma/client";
+import { logDoc } from "../doc-log";
 import { AccError } from "../errors";
 import { assertPostable } from "../ledger/fiscal-year";
 import { postVoucher, voidVoucher, type Actor, type LineInput } from "../ledger/post";
@@ -372,6 +373,8 @@ export async function voidMoneyDoc(tx: Tx, id: string, reason: string, actor: Ac
   if (doc.voucherId) await voidVoucher(tx, doc.voucherId, `ابطال ${MONEY_KIND_LABELS[doc.kind]}: ${reason.trim()}`, actor, { fromSource: true });
   const invoiceIds = doc.allocations.map((a) => a.invoiceId);
   await tx.accAllocation.deleteMany({ where: { moneyDocId: doc.id } });
+  const party = doc.partyId ? await tx.accParty.findUnique({ where: { id: doc.partyId }, select: { name: true } }) : null;
+  await logDoc(tx, { docType: "AccMoneyDoc", docId: doc.id, kind: doc.kind, number: doc.number, docDate: doc.date, partyName: party?.name, action: "VOID", reason, totalBefore: doc.total }, actor);
   const out = await tx.accMoneyDoc.update({ where: { id }, data: { status: "VOID", voidReason: `${reason.trim()} — ${actor.name}` } });
   await recalcPaid(tx, invoiceIds);
   return out;

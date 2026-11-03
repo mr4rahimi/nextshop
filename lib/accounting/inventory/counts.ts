@@ -15,6 +15,7 @@ import { AccError } from "../errors";
 import { assertPostable, firstYear } from "../ledger/fiscal-year";
 import { nextNumber } from "../ledger/sequence";
 import { postVoucher, rebuildVoucher, voidVoucher, type Actor, type LineInput } from "../ledger/post";
+import { logDoc } from "../doc-log";
 import { hasCarriedOpening } from "../ledger/closing";
 import { scanCode, type ScanResult } from "../pos/scan";
 import { applyMoves, qtyAt, registerCostRebuilder, removeMoves } from "./stock";
@@ -616,6 +617,7 @@ export async function voidCount(tx: Tx, countId: string, reason: string, actor: 
   }
   await removeMoves(tx, "AccStockCount", c.id, actor);
   if (c.voucherId) await voidVoucher(tx, c.voucherId, `ابطال انبارگردانی: ${reason.trim()}`, actor, { fromSource: true });
+  await logDoc(tx, { docType: "AccStockCount", docId: c.id, number: c.number, docDate: c.date, action: "VOID", reason }, actor);
   await tx.accStockCount.update({ where: { id: countId }, data: { status: "VOID", voucherId: null, voidReason: `${reason.trim()} — ${actor.name}` } });
 }
 

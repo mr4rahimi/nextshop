@@ -12,6 +12,7 @@ import { AccError } from "../errors";
 import { assertPostable } from "../ledger/fiscal-year";
 import { nextNumber } from "../ledger/sequence";
 import { postVoucher, rebuildVoucher, voidVoucher, type Actor, type LineInput } from "../ledger/post";
+import { logDoc } from "../doc-log";
 import { applyMoves, assertAvailable, registerCostRebuilder, removeMoves } from "./stock";
 import { exactItem, itemTitles, normalizeItemCode } from "./items";
 import { faNum } from "../money";
@@ -189,6 +190,11 @@ export async function voidAdjust(tx: Tx, id: string, reason: string, actor: Acto
   await removeMoves(tx, ADJUST_SOURCE, doc.id, actor);
   await clearSerials(tx, ADJUST_SOURCE, doc.id, actor);
   if (doc.voucherId) await voidVoucher(tx, doc.voucherId, `ابطال ${doc.direction === "IN" ? "ورود" : "خروج"} کالا: ${reason.trim()}`, actor, { fromSource: true });
+  // کسری حواله با خود حواله ثبت می‌شود
+  if (!opts.fromTransfer) {
+    const party = doc.partyId ? await tx.accParty.findUnique({ where: { id: doc.partyId }, select: { name: true } }) : null;
+    await logDoc(tx, { docType: "AccStockAdjust", docId: doc.id, kind: doc.direction, number: doc.number, docDate: doc.date, partyName: party?.name, action: "VOID", reason }, actor);
+  }
   return tx.accStockAdjust.update({ where: { id }, data: { status: "VOID", voucherId: null, voidReason: `${reason.trim()} — ${actor.name}` } });
 }
 

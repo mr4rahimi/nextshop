@@ -134,6 +134,8 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/reports/movers", label: "راکد و پرفروش", icon: fx("Fire") },
       { href: "/admin/accounting/reports/profit", label: "سود کالا و کانال", icon: fx("Trophy") },
       { href: "/admin/accounting/reports/trend", label: "روند ماهانه", icon: fx("Chart decreasing") },
+      { href: "/admin/accounting/reports/health", label: "سلامت دفتر", icon: fx("Check box with check"), keywords: "چک کردن تراکنش خطا تراز نبودن سند کاردکس منفی" },
+      { href: "/admin/accounting/reports/doc-log", label: "باطل و ویرایش‌شده", icon: fx("Memo"), keywords: "ابطال باطل شده ویرایش شده سابقه کاربر" },
       { href: "/admin/accounting/reports/parties", label: "حساب اشخاص", icon: fx("Card index") },
       { href: "/admin/accounting/reports/aging", label: "سنی بدهی", icon: fx("Hourglass done") },
       { href: "/admin/accounting/reports/treasury", label: "گردش صندوق و بانک", icon: fx("Dollar banknote") },

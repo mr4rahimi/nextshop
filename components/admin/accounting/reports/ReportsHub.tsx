@@ -46,6 +46,14 @@ const GROUPS: { title: string; items: Item[] }[] = [
     ],
   },
   {
+    title: "کنترل و بازبینی",
+    items: [
+      { href: "/admin/accounting/reports/health", icon: "🩺", title: "سلامت دفتر", desc: "سند تراز نشده، فاکتور بی سند، موجودی منفی، بهای صفر و رویداد مسدود — با لینک به هر مورد", perm: ["ACC_REPORTS"] },
+      { href: "/admin/accounting/reports/doc-log", icon: "🗑", title: "اسناد باطل‌شده", desc: "چه کسی، کی و چرا سندی را باطل کرد", perm: ["ACC_REPORTS"] },
+      { href: "/admin/accounting/reports/doc-log?action=EDIT", icon: "✏️", title: "اسناد ویرایش‌شده", desc: "فاکتورهای صادرشده‌ای که بعداً عوض شدند، با ریز قبل و بعد", perm: ["ACC_REPORTS"] },
+    ],
+  },
+  {
     title: "گردش‌ها (در بخش خودشان)",
     items: [
       { href: "/admin/accounting/parties", icon: "👤", title: "صورت‌حساب ریز هر شخص", desc: "گردش و مانده‌ی هر شخص، ریز یا کل — از صفحه‌ی همان شخص", perm: ["ACC_VIEW"] },

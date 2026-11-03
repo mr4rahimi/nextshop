@@ -26,6 +26,7 @@ import { calcInvoice, CalcError, divRound, INVOICE_TYPE_LABELS, allocate } from 
 import { ensureItems } from "../inventory/items";
 import { poLineProgress } from "../purchases/progress";
 import { cleanSerialList, clearSerials, postSerials, type SerialEntry, type SerialMoveType } from "../inventory/serials";
+import { diff, fmtAmount, logDoc, type DocChange } from "../doc-log";
 
 type Tx = Prisma.TransactionClient;
 
@@ -171,6 +172,7 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
       await assertPostable(tx, current.date);
     }
   }
+  const before = current?.status === "ISSUED" ? await invoiceSnapshot(tx, current.id) : null;
   const type = input.type;
   const salesSide = SALES_SIDE.includes(type);
   const issue = !!opts.issue || current?.status === "ISSUED";
@@ -428,7 +430,63 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
     if (!opts.skipSerials) await postSerials(tx, { sourceType: INVOICE_SOURCE, sourceId: inv.id, date: inv.date }, await invoiceSerials(tx, inv.id), actor);
     await buildInvoiceVoucher(tx, inv.id, actor);
   }
+  if (before) {
+    const after = await invoiceSnapshot(tx, inv.id);
+    const changes = [
+      diff("تاریخ", before.date, after.date),
+      diff("طرف حساب", before.party, after.party),
+      diff("انبار", before.warehouse, after.warehouse),
+      diff("ردیف‌ها", before.lines, after.lines),
+      ...itemChanges(before.items, after.items),
+      diff("تخفیف", before.discount, after.discount, fmtAmount),
+      diff("مالیات", before.vat, after.vat, fmtAmount),
+      diff("مبلغ کل", before.total, after.total, fmtAmount),
+    ].filter((c): c is DocChange => !!c);
+    const out = await tx.accInvoice.findUniqueOrThrow({ where: { id: inv.id } });
+    await logDoc(tx, {
+      docType: "AccInvoice",
+      docId: out.id,
+      kind: out.type,
+      number: out.number,
+      docDate: out.date,
+      partyName: out.partyName,
+      action: "EDIT",
+      totalBefore: before.total,
+      totalAfter: out.total,
+      changes: changes.length ? changes : [{ label: "ذخیره بدون تغییر در مبلغ و ردیف‌ها", before: "—", after: "—" }],
+    }, actor);
+    return out;
+  }
   return tx.accInvoice.findUniqueOrThrow({ where: { id: inv.id } });
+}
+
+/** خلاصه‌ی خوانای فاکتور برای مقایسه‌ی پیش و پس از ویرایش (دفتر ویرایش‌ها) */
+async function invoiceSnapshot(tx: Tx, id: string) {
+  const inv = await tx.accInvoice.findUniqueOrThrow({ where: { id }, include: { lines: { orderBy: { seq: "asc" } } } });
+  const wh = inv.warehouseId ? await tx.accWarehouse.findUnique({ where: { id: inv.warehouseId }, select: { name: true } }) : null;
+  const items = new Map<string, string>();
+  for (const l of inv.lines) items.set(l.title, `${items.has(l.title) ? `${items.get(l.title)} + ` : ""}${faNum(l.qty)} × ${formatAmount(l.unitPrice)}`);
+  return {
+    date: inv.date.toISOString().slice(0, 10),
+    party: inv.partyName,
+    warehouse: wh?.name ?? "—",
+    lines: `${faNum(inv.lines.length)} ردیف، ${faNum(inv.lines.reduce((s, l) => s + l.qty, 0))} عدد`,
+    items,
+    discount: inv.lineDiscount + inv.invoiceDiscount,
+    vat: inv.vatTotal,
+    total: inv.total,
+  };
+}
+
+/** ردیف‌هایی که تعداد یا فی‌شان عوض شد، اضافه یا حذف شدند — حداکثر ۱۰ تا */
+function itemChanges(before: Map<string, string>, after: Map<string, string>): DocChange[] {
+  const out: DocChange[] = [];
+  for (const title of new Set([...before.keys(), ...after.keys()])) {
+    const a = before.get(title) ?? "—";
+    const b = after.get(title) ?? "—";
+    if (a !== b) out.push({ label: title, before: a, after: b });
+  }
+  return out.length > 10 ? [...out.slice(0, 10), { label: `و ${faNum(out.length - 10)} ردیف دیگر`, before: "", after: "" }] : out;
 }
 
 /** گردش سریال‌های یک فاکتور صادرشده — برگشتی فقط سریال‌های ردیف مرجع (اگر داشت) */
@@ -616,6 +674,7 @@ export async function voidInvoice(tx: Tx, id: string, reason: string, actor: Act
   if (inv.convertedFromId) {
     await tx.accInvoice.update({ where: { id: inv.convertedFromId }, data: { proformaState: "OPEN" } });
   }
+  await logDoc(tx, { docType: "AccInvoice", docId: inv.id, kind: inv.type, number: inv.number, docDate: inv.date, partyName: inv.partyName, action: "VOID", reason, totalBefore: inv.total }, actor);
   return tx.accInvoice.update({
     where: { id },
     data: { status: "VOID", voidReason: `${reason.trim()} — ${actor.name}` },

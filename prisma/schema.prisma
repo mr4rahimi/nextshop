@@ -4270,6 +4270,37 @@ enum AccEventStatus {
   SKIPPED // چیزی برای ثبت نماند (مثلاً همه‌ی اقلام لغو شدند)
 }
 
+/// دفتر ابطال و ویرایش اسناد — webhesab-parity.md بخش ۱۵. هر ابطال و هر ویرایش سند **ثبت‌شده**
+/// یک ردیف (پیش‌نویس نه). فقط `lib/accounting/doc-log.ts` می‌نویسد؛ از داخل همان تابع ابطال/ویرایش.
+model AccDocLog {
+  id          String   @id @default(cuid())
+  /// AccInvoice | AccMoneyDoc | AccVoucher | AccStockAdjust | AccTransfer | AccStockCount | AccInstallmentPlan
+  docType     String
+  /// برنامه‌ی اقساط = شناسه‌ی فاکتورش (برنامه با ابطال حذف می‌شود)
+  docId       String
+  /// نوع فاکتور، نوع دریافت/پرداخت، جهت سند انبار
+  kind        String?
+  number      Int?
+  docDate     DateTime @db.Date
+  partyName   String?
+  /// EDIT | VOID
+  action      String
+  reason      String?
+  totalBefore BigInt?
+  totalAfter  BigInt?
+  /// [{ label, before, after }]
+  changes     Json?
+  actorId     String?
+  actorName   String
+  /// ردیف ساخته‌شده از سندهای باطلِ پیش از این دفتر — زمان = آخرین تغییر سند، تقریبی
+  approx      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([docType, docId])
+  @@index([action, createdAt])
+}
+
 /// یک رویداد مالی — صف outbox.
 ///
 /// ⚠️ `dedupeKey` یکتاست: گذار تکراری یا webhook تکراری رویداد دوم نمی‌سازد.

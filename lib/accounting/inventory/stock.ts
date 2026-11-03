@@ -349,6 +349,17 @@ export async function removeMoves(tx: Tx, sourceType: string, sourceId: string, 
   await finish(tx, touched, deltas, absolute, actor, { sourceType, sourceId });
 }
 
+/**
+ * کش موجودی هر انبار (`AccStock`) از جمع کاردکس — اصلاح «سلامت دفتر». کاردکس، بها و موجودی
+ * سایت دست نمی‌خورند.
+ */
+export async function resyncStockRows(tx: Tx, productIds: string[]): Promise<void> {
+  const ids = [...new Set(productIds)];
+  if (!ids.length) return;
+  await lockProducts(tx, ids);
+  for (const id of ids) await syncStockRows(tx, id);
+}
+
 /** موجودی یک کالا در یک انبار تا پایان یک روز (شامل) */
 export async function qtyAt(tx: Tx, productId: string, warehouseId: string, day: Date): Promise<number> {
   const s = await tx.accStockMove.aggregate({ where: { productId, warehouseId, date: { lte: day } }, _sum: { qty: true } });
