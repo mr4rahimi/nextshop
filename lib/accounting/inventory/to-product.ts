@@ -36,6 +36,7 @@ export const normName = (s: string) =>
 
 const clean = (s: unknown) => String(s ?? "").replace(/\s+/g, " ").trim();
 const isColorAxis = (name: string) => ["رنگ", "رنگ بندی", "color", "colour"].includes(normName(name));
+const isSizeAxis = (name: string) => ["سایز", "اندازه", "size"].includes(normName(name));
 
 /** نمونه‌رنگ پیش‌فرض برای مقدار تازه‌ی رنگ در فروشگاه — بقیه بی‌نمونه (چیپ متنی) */
 const COLOR_HEX: Record<string, string> = {
@@ -302,6 +303,8 @@ export interface AxisPlan {
   candidates: { id: string; title: string; group: string }[];
   /** مقدارهایی که در ویژگی فروشگاه نیست و ساخته می‌شود */
   newValues: string[];
+  /** true = مشخصه‌ی محصول (`ProductAttribute`)، نه محور تنوع — فقط با `specAxes` */
+  spec?: boolean;
 }
 
 /** «new» = ویژگی تازه؛ شناسه = ویژگی موجود؛ خالی = هم‌نام یا تازه */
@@ -378,6 +381,8 @@ export interface FromModelInput {
   axisMap?: AxisMap;
   /** کالاهایی که تنوع نشوند */
   exclude?: string[];
+  /** محورِ غیر رنگ و سایز که در همه‌ی کالاهای مدل یک مقدار دارد (جنس «پنبه») ← مشخصه‌ی محصول، نه تنوع */
+  specAxes?: boolean;
 }
 
 /** پرتکرارترین قیمت فروش — قیمت پایه‌ی محصول؛ بقیه قیمت تنوع می‌گیرند */
@@ -413,6 +418,20 @@ export async function planFromModel(db: Db, input: FromModelInput) {
   const axes = await db.accAxis.findMany({ where: { id: { in: [...new Set(all.flatMap((i) => i.attrs.map((a) => a.axisId)))] } }, orderBy: { sortOrder: "asc" } });
   if (!axes.length) throw new AccError("کالاهای این مدل رنگ یا سایز ندارند — از «محصول ساده» بسازید یا در کالا ویژگی بگذارید");
 
+  // محور تک‌مقداری ← مشخصه؛ کالایی که آن را ندارد کنار نمی‌رود
+  const specIds = new Set<string>();
+  if (input.specAxes) {
+    const kept = all.filter((it) => !exclude.has(it.id));
+    for (const a of axes) {
+      if (isColorAxis(a.name) || isSizeAxis(a.name)) continue;
+      const vals = new Set(kept.flatMap((it) => it.attrs.filter((x) => x.axisId === a.id).map((x) => x.value.value)));
+      if (vals.size === 1) specIds.add(a.id);
+    }
+    // دست‌کم یک محور تنوع بماند
+    if (specIds.size === axes.length) specIds.clear();
+  }
+  const variantAxes = axes.filter((a) => !specIds.has(a.id));
+
   const skipped: { id: string; code: string; title: string; reason: string }[] = [];
   const used = new Map<string, Set<string>>();
   const ready: typeof all = [];
@@ -421,7 +440,7 @@ export async function planFromModel(db: Db, input: FromModelInput) {
       skipped.push({ id: it.id, code: it.code, title: it.title, reason: "کنار گذاشته شد" });
       continue;
     }
-    const missing = axes.filter((a) => !it.attrs.some((x) => x.axisId === a.id));
+    const missing = variantAxes.filter((a) => !it.attrs.some((x) => x.axisId === a.id));
     if (missing.length) {
       skipped.push({ id: it.id, code: it.code, title: it.title, reason: `${missing.map((m) => m.name).join(" و ")} ندارد` });
       continue;
@@ -433,8 +452,8 @@ export async function planFromModel(db: Db, input: FromModelInput) {
 
   const qty = await sellableQty(db, ready.map((i) => i.id));
   const basePrice = input.price !== undefined && input.price !== null ? input.price : basePriceOf(ready.map((i) => i.salePrice));
-  const axisPlan = planAxes(axes, used, await storeAttributes(db), input.axisMap);
-  const valueOrder = (it: (typeof ready)[number]) => axes.map((a) => it.attrs.find((x) => x.axisId === a.id)!.value);
+  const axisPlan = planAxes(axes, used, await storeAttributes(db), input.axisMap).map((p) => (specIds.has(p.axisId) ? { ...p, spec: true } : p));
+  const valueOrder = (it: (typeof ready)[number]) => variantAxes.map((a) => it.attrs.find((x) => x.axisId === a.id)!.value);
 
   const sortKey = (it: (typeof ready)[number]) => valueOrder(it).map((v) => String(v.sortOrder).padStart(6, "0")).join("|");
   const variants = [...ready]
@@ -446,17 +465,23 @@ export async function planFromModel(db: Db, input: FromModelInput) {
         code: it.code,
         title: it.title,
         label: vals.map((v) => v.value).join(" / "),
-        values: axes.map((a, i) => ({ axisId: a.id, value: vals[i].value })),
+        values: variantAxes.map((a, i) => ({ axisId: a.id, value: vals[i].value })),
         price: it.salePrice !== null && it.salePrice > 0n && it.salePrice !== basePrice ? it.salePrice : null,
         qty: qty.get(it.id) ?? 0,
       };
     });
+
+  const specs = axes
+    .filter((a) => specIds.has(a.id))
+    .map((a) => ({ axisId: a.id, axis: a.name, value: [...(used.get(a.id) ?? [])][0] }))
+    .filter((s) => s.value !== undefined);
 
   return {
     model: { id: model.id, title: model.title, groupId: model.groupId },
     title: clean(input.title) || model.title,
     basePrice,
     axes: axisPlan,
+    specs,
     variants,
     skipped,
   };
@@ -492,9 +517,11 @@ export async function createFromModel(tx: Tx, input: FromModelInput) {
   // کالای خود محصول را تریگر ساخت؛ محصول تنوع‌دار با کالای تنوع‌ها شمرده می‌شود (طرح، شروع فاز ۵ بند ۳)
   await tx.accItem.updateMany({ where: { id: product.id }, data: { isActive: false, sellOnline: false, groupId: plan.model.groupId } });
   await saveVariants(tx, product.id, {
-    axes: plan.axes.map((a) => ({ attributeId: attrOf.get(a.axisId)!, display: colorAxes.has(a.axisId) ? "SWATCH" : "CHIP" })),
+    axes: plan.axes.filter((a) => !a.spec).map((a) => ({ attributeId: attrOf.get(a.axisId)!, display: colorAxes.has(a.axisId) ? "SWATCH" : "CHIP" })),
     variants,
   });
+  for (const s of plan.specs)
+    await tx.productAttribute.create({ data: { productId: product.id, attributeId: attrOf.get(s.axisId)!, attributeValueId: await ensure(s.axisId, s.value, false) } });
   await tx.accItemModel.update({ where: { id: plan.model.id }, data: { productId: product.id } });
   // کلید قیمت آنلاین روشن ← قیمت تنوع‌ها از قاعده (docs/plans/inventory-items.md بخش ۱۴)
   if (input.price === undefined || input.price === null) await applyOnlinePrices(tx, plan.variants.map((v) => v.itemId));
