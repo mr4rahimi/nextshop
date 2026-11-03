@@ -157,7 +157,7 @@ export default function AiSettingsPage() {
         <Field label="کلید تازه" hint="از پنل gapgpt.app بگیرید. خالی بگذارید تا کلید فعلی عوض نشود. کلید فقط روی سرور استفاده می‌شود و دوباره نمایش داده نمی‌شود.">
           <div className="flex gap-2">
             <input type={showKey ? "text" : "password"} value={newKey} onChange={e => setNewKey(e.target.value)}
-              className={inputClass + " flex-1 font-mono text-xs"} dir="ltr" placeholder="sk-..." autoComplete="off" />
+              className={inputClass + " flex-1 font-mono text-xs"} dir="ltr" placeholder="sk-..." autoComplete="new-password" />
             <button type="button" onClick={() => setShowKey(v => !v)}
               className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition-all">
               {showKey ? "پنهان" : "نمایش"}

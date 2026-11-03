@@ -134,7 +134,7 @@ export default function HesabanForm({ existingConnection }: Props) {
             <span className="text-red-500 mr-1">*</span>
           </label>
           <input
-            type="password"
+            type="password" autoComplete="new-password"
             value={token}
             onChange={e => setToken(e.target.value)}
             placeholder="Bearer token از پنل وب‌حسابان"

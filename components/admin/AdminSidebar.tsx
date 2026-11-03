@@ -551,9 +551,16 @@ export default function AdminSidebar({
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === "Escape" && setQuery("")}
+              // مدیر رمز مرورگر در صفحه‌ای با فیلد رمز (کلید GapGPT، توکن بازارگاه) این جعبه را
+              // فیلد نام کاربری می‌گرفت و شماره‌ی ادمین را در آن می‌ریخت
+              type="search"
+              name="admin-nav-search"
+              autoComplete="off"
+              data-1p-ignore
+              data-lpignore="true"
               placeholder="جستجو در منو…"
               aria-label="جستجو در منو"
-              className="nav-search h-full w-full rounded-xl border border-gray-200 bg-gray-50 pr-11 pl-8 text-[13px] font-bold text-gray-900 placeholder:font-medium placeholder:text-gray-400 transition-[border-color,background-color,box-shadow] focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-white/[0.07] dark:bg-white/[0.04] dark:text-white dark:placeholder:text-gray-500 dark:focus:bg-white/[0.07]"
+              className="nav-search h-full w-full appearance-none rounded-xl [&::-webkit-search-cancel-button]:hidden border border-gray-200 bg-gray-50 pr-11 pl-8 text-[13px] font-bold text-gray-900 placeholder:font-medium placeholder:text-gray-400 transition-[border-color,background-color,box-shadow] focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-white/[0.07] dark:bg-white/[0.04] dark:text-white dark:placeholder:text-gray-500 dark:focus:bg-white/[0.07]"
             />
             {searching && (
               <button

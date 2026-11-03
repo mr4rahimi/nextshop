@@ -132,7 +132,7 @@ export default function SnappShopForm({ existingConnection }: Props) {
             توکن دسترسی<span className="text-red-500 mr-1">*</span>
           </label>
           <input
-            type="password" value={token} onChange={e => setToken(e.target.value)}
+            type="password" autoComplete="new-password" value={token} onChange={e => setToken(e.target.value)}
             placeholder={existingConnection ? "برای تغییر، توکن جدید وارد کنید" : "Bearer Token از پنل فروشندگان"}
             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono"
             dir="ltr"

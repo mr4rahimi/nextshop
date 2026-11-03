@@ -59,7 +59,8 @@ interface Skipped {
 interface ModelPlan {
   title: string;
   basePrice: string | null;
-  axes: { axisId: string; axis: string; attributeId: string | null; attribute: string; candidates: { id: string; title: string; group: string }[]; newValues: string[] }[];
+  axes: { axisId: string; axis: string; attributeId: string | null; attribute: string; candidates: { id: string; title: string; group: string }[]; newValues: string[]; spec?: boolean }[];
+  specs: { axisId: string; axis: string; value: string }[];
   variants: { itemId: string; code: string; title: string; label: string; price: string | null; qty: number }[];
   skipped: Skipped[];
 }
@@ -334,6 +335,8 @@ function CreateSheet({
   const [price, setPrice] = useState(isModel ? "" : (target.item.salePrice ?? ""));
   const [axisMap, setAxisMap] = useState<Record<string, string>>({});
   const [exclude, setExclude] = useState<string[]>([]);
+  // محور تک‌مقداری (جنس «پنبه» در همه‌ی کالاها) ← مشخصه‌ی محصول، نه انتخاب تنوع
+  const [specAxes, setSpecAxes] = useState(true);
   const [plan, setPlan] = useState<ModelPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -346,8 +349,8 @@ function CreateSheet({
   }, []);
 
   const body = useMemo(
-    () => (isModel ? { modelId: target.row.id, title, categoryId, brandId, price: price || null, axisMap, exclude } : { itemId: target.item.id, title, categoryId, brandId, price: price || null }),
-    [isModel, target, title, categoryId, brandId, price, axisMap, exclude],
+    () => (isModel ? { modelId: target.row.id, title, categoryId, brandId, price: price || null, axisMap, exclude, specAxes } : { itemId: target.item.id, title, categoryId, brandId, price: price || null }),
+    [isModel, target, title, categoryId, brandId, price, axisMap, exclude, specAxes],
   );
 
   // پیش‌نمایش زنده — هیچ چیزی نمی‌نویسد
@@ -442,6 +445,7 @@ function CreateSheet({
               {plan.axes.map((a) => (
                 <div key={a.axisId} className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="w-16 font-bold">{a.axis}</span>
+                  {a.spec && <Badge tone="blue">مشخصه: {plan.specs.find((x) => x.axisId === a.axisId)?.value}</Badge>}
                   <span className="text-gray-400">←</span>
                   <select
                     value={axisMap[a.axisId] ?? a.attributeId ?? "new"}
@@ -457,6 +461,10 @@ function CreateSheet({
                   </select>
                 </div>
               ))}
+              <label className="flex items-start gap-2 text-[11px] text-gray-500 cursor-pointer">
+                <input type="checkbox" checked={specAxes} onChange={(e) => setSpecAxes(e.target.checked)} className="mt-0.5" />
+                <span>ویژگی‌ای که در همه‌ی کالاهای این مدل یک مقدار دارد (مثل جنس «پنبه») مشخصه‌ی محصول شود، نه انتخاب تنوع — رنگ و سایز همیشه تنوع‌اند</span>
+              </label>
               {(newAttr.length > 0 || newVals.length > 0) && (
                 <p className="text-[11px] text-amber-700 bg-amber-50 dark:bg-amber-500/10 rounded-lg px-2.5 py-1.5 leading-5">
                   در فروشگاه ساخته می‌شود:{" "}

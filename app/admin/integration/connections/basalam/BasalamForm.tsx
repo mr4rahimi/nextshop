@@ -163,7 +163,7 @@ export default function BasalamForm({ existingConnection }: Props) {
             <span className="text-red-500 mr-1">*</span>
           </label>
           <input
-            type="password"
+            type="password" autoComplete="new-password"
             value={accessToken}
             onChange={e => setAccessToken(e.target.value)}
             placeholder="Personal Access Token از پنل باسلام"
@@ -188,7 +188,7 @@ export default function BasalamForm({ existingConnection }: Props) {
               Refresh Token
             </label>
             <input
-              type="password"
+              type="password" autoComplete="new-password"
               value={refreshToken}
               onChange={e => setRefreshToken(e.target.value)}
               placeholder="برای تجدید خودکار توکن"
@@ -216,7 +216,7 @@ export default function BasalamForm({ existingConnection }: Props) {
               Client Secret
             </label>
             <input
-              type="password"
+              type="password" autoComplete="new-password"
               value={clientSecret}
               onChange={e => setClientSecret(e.target.value)}
               placeholder="کلید محرمانه کلاینت"

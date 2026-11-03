@@ -429,7 +429,7 @@ export default function AdminsPage() {
                 <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-2">
                   {editingAdmin ? "رمز عبور جدید (خالی بگذارید اگر تغییر نمی‌دهید)" : "رمز عبور *"}
                 </label>
-                <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                <input type="password" autoComplete="new-password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   placeholder="••••••••" dir="ltr"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white text-sm font-bold focus:outline-none focus:border-blue-500 transition-all" />
               </div>
@@ -437,7 +437,7 @@ export default function AdminsPage() {
               {form.password && (
                 <div>
                   <label className="block text-xs font-black text-gray-700 dark:text-gray-300 mb-2">تکرار رمز عبور</label>
-                  <input type="password" value={form.confirmPassword} onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                  <input type="password" autoComplete="new-password" value={form.confirmPassword} onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
                     placeholder="••••••••" dir="ltr"
                     className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white text-sm font-bold focus:outline-none focus:border-blue-500 transition-all" />
                 </div>

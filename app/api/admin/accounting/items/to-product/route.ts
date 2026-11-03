@@ -41,7 +41,7 @@ const ids = (v: unknown) => (Array.isArray(v) ? v.map(String) : undefined);
 
 /**
  * POST { action, … }
- * - plan-model / create-model { modelId, title, categoryId, brandId, price, axisMap, exclude }
+ * - plan-model / create-model { modelId, title, categoryId, brandId, price, axisMap, exclude, specAxes }
  * - plan-add / add { productId, itemIds? }
  * - guess { title, items: [{ id, attrs: [{ axisId, value }] }] } — ساخت مدل از پیشنهاد
  * - simple { itemId, title, categoryId, brandId, price }
@@ -66,6 +66,7 @@ export async function POST(req: Request) {
       price: big(b.price, "قیمت"),
       axisMap: b.axisMap && typeof b.axisMap === "object" ? (Object.fromEntries(Object.entries(b.axisMap).map(([k, v]) => [k, String(v ?? "")]).filter(([, v]) => v)) as Record<string, string>) : undefined,
       exclude: ids(b.exclude),
+      specAxes: b.specAxes === true,
     });
 
     switch (action) {

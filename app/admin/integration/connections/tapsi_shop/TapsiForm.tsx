@@ -119,7 +119,7 @@ export default function TapsiForm({ existingConnection }: Props) {
             توکن تپسی‌شاپ<span className="text-red-500 mr-1">*</span>
           </label>
           <input
-            type="password"
+            type="password" autoComplete="new-password"
             value={token}
             onChange={e => setToken(e.target.value)}
             placeholder={existingConnection ? "برای تغییر، توکن جدید وارد کنید" : "توکن از پنل وندور → درخواست توکن"}
@@ -136,7 +136,7 @@ export default function TapsiForm({ existingConnection }: Props) {
             توکن وب‌هوک تپسی‌شاپ
           </label>
           <input
-            type="password"
+            type="password" autoComplete="new-password"
             value={webhookToken}
             onChange={e => setWebhookToken(e.target.value)}
             placeholder={existingConnection ? "برای تغییر، توکن جدید وارد کنید" : "اگر با توکن API فرق دارد اینجا وارد کنید"}
