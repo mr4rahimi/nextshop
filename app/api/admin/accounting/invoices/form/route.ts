@@ -16,7 +16,7 @@ export async function GET() {
   const guard = await requirePermission(["ACC_SALES", "ACC_PURCHASE"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   const [settings, warehouses, accounts, year] = await Promise.all([
-    prisma.accSettings.findUnique({ where: { id: "singleton" }, select: { mode: true, vatEnabled: true, vatRateBp: true, pricesIncludeVat: true } }),
+    prisma.accSettings.findUnique({ where: { id: "singleton" }, select: { mode: true, vatEnabled: true, vatRateBp: true, pricesIncludeVat: true, serialRequired: true } }),
     prisma.accWarehouse.findMany({ where: { isActive: true }, orderBy: { code: "asc" }, select: { id: true, name: true, isDefault: true, sellable: true } }),
     prisma.accAccount.findMany({
       where: { level: "SUBLEDGER", isActive: true, detailKind: "NONE", class: { in: ["REVENUE", "EXPENSE", "ASSET"] }, systemKey: { notIn: ["SALES", "SALES_RETURN", "SALES_DISCOUNT", "ROUNDING", "COGS", "INVENTORY", "INVENTORY_ADJUSTMENT", "VAT_PURCHASE"] } },
@@ -29,6 +29,7 @@ export async function GET() {
     serialize({
       mode: settings?.mode ?? "NONE",
       vatEnabled: settings?.vatEnabled ?? false,
+      serialRequired: settings?.serialRequired ?? true,
       vatRateBp: settings?.vatRateBp ?? 0,
       pricesIncludeVat: settings?.pricesIncludeVat ?? false,
       warehouses,

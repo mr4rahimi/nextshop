@@ -16,6 +16,7 @@ import { applyMoves, assertAvailable, removeMoves } from "./stock";
 import { itemTitles } from "./items";
 import { createAdjust, ensureReasons, voidAdjust } from "./adjust";
 import { faNum } from "../money";
+import { cleanSerialList, clearSerials, postSerials, type SerialEntry } from "./serials";
 
 type Tx = Prisma.TransactionClient;
 
@@ -85,11 +86,17 @@ export async function saveWarehouse(tx: Tx, id: string | null, input: WarehouseI
  */
 export async function createTransfer(
   tx: Tx,
-  input: { date: Date; fromWarehouseId: string; toWarehouseId: string; note?: string | null; lines: { productId: string; qty: number }[] },
+  input: { date: Date; fromWarehouseId: string; toWarehouseId: string; note?: string | null; lines: { productId: string; qty: number; serials?: string[] | null }[] },
   actor: Actor,
 ) {
   if (input.fromWarehouseId === input.toWarehouseId) throw new AccError("انبار مبدأ و مقصد یکی‌اند");
-  const lines = input.lines.filter((l) => l.qty > 0);
+  const lines = input.lines
+    .filter((l) => l.qty > 0)
+    .map((l, i) => {
+      const serials = cleanSerialList(l.serials, `ردیف ${faNum(i + 1)}: `);
+      if (serials.length > l.qty) throw new AccError(`ردیف ${faNum(i + 1)}: ${faNum(serials.length)} شماره سریال برای ${faNum(l.qty)} عدد زیاد است`);
+      return { productId: l.productId, qty: l.qty, serials };
+    });
   if (!lines.length) throw new AccError("دست‌کم یک کالا با تعداد وارد کنید");
   const year = await assertPostable(tx, input.date);
   const to = await tx.accWarehouse.findUnique({ where: { id: input.toWarehouseId } });
@@ -108,7 +115,7 @@ export async function createTransfer(
       note: input.note?.trim() || null,
       createdByName: actor.name,
       needsReceipt: to.receiveConfirm,
-      lines: { create: lines.map((l) => ({ productId: l.productId, qty: l.qty })) },
+      lines: { create: lines.map((l) => ({ productId: l.productId, qty: l.qty, serials: l.serials })) },
     },
     include: { lines: true },
   });
@@ -122,7 +129,28 @@ export async function createTransfer(
     ]),
     actor,
   );
+  await postSerials(tx, { sourceType: "AccTransfer", sourceId: t.id, date: t.date }, transferSerials(t, t.needsReceipt ? null : new Map()), actor);
   return t;
+}
+
+/**
+ * گردش سریال حواله: خروج از مبدأ، و اگر رسیده (`arrived` نه null) ورود هر سریال به مقصد —
+ * یا به مبدأ برای سریالی که در `arrived` «برگشت به مبدأ» خورده است.
+ */
+function transferSerials(
+  t: { fromWarehouseId: string; toWarehouseId: string; lines: { id: string; productId: string; serials: string[] }[] },
+  arrived: Map<string, "FROM"> | null,
+): SerialEntry[] {
+  const out: SerialEntry[] = [];
+  for (const l of t.lines.filter((x) => x.serials.length)) {
+    out.push({ productId: l.productId, warehouseId: t.fromWarehouseId, type: "TRANSFER_OUT", serials: l.serials, sourceLineId: l.id });
+    if (!arrived) continue;
+    const back = l.serials.filter((s) => arrived.get(`${l.id}|${s}`) === "FROM");
+    const dest = l.serials.filter((s) => !back.includes(s));
+    if (dest.length) out.push({ productId: l.productId, warehouseId: t.toWarehouseId, type: "TRANSFER_IN", serials: dest, sourceLineId: l.id });
+    if (back.length) out.push({ productId: l.productId, warehouseId: t.fromWarehouseId, type: "TRANSFER_IN", serials: back, sourceLineId: l.id });
+  }
+  return out;
 }
 
 /** حواله‌ی در راه: ارسال‌شده، هنوز تأیید دریافت نشده */
@@ -132,8 +160,8 @@ export type ShortageMode = "LOSS" | "RETURN";
 
 export interface ReceiveInput {
   date: Date;
-  /** تعداد رسیده‌ی هر ردیف؛ ردیفی که نیامده = همه رسیده */
-  lines: { lineId: string; qty: number }[];
+  /** تعداد رسیده‌ی هر ردیف؛ ردیفی که نیامده = همه رسیده. `missing` = سریال‌های نرسیده‌ی ردیف سریال‌دار */
+  lines: { lineId: string; qty: number; missing?: string[] | null }[];
   /** کسری: LOSS = خروج دستی از مقصد با دلیل (پیش‌فرض «کسری»)، RETURN = برگشت به مبدأ */
   shortage?: ShortageMode;
   reasonId?: string | null;
@@ -164,6 +192,20 @@ export async function receiveTransfer(tx: Tx, id: string, input: ReceiveInput, a
   const mode: ShortageMode | null = short.length ? (input.shortage ?? "LOSS") : null;
   if (mode && mode !== "LOSS" && mode !== "RETURN") throw new AccError("تکلیف کسری را انتخاب کنید");
 
+  // سریال‌های نرسیده — از سریال‌های همان ردیف؛ سریال‌های رسیده از تعداد رسیده بیشتر نمی‌شوند
+  const missingOf = new Map<string, string[]>();
+  for (const r of rows) {
+    const given = input.lines.find((l) => l.lineId === r.line.id)?.missing;
+    const missing = cleanSerialList(given);
+    for (const s of missing) if (!r.line.serials.includes(s)) throw new AccError(`سریال «${s}» در این حواله نیست`);
+    if (missing.length > r.short) throw new AccError(`${faNum(missing.length)} سریال نرسیده برای ${faNum(r.short)} عدد کسری زیاد است`);
+    if (r.line.serials.length - missing.length > r.received) {
+      const title = (await itemTitles([r.line.productId], tx)).get(r.line.productId) ?? "";
+      throw new AccError(`«${title}»: ${faNum(r.short)} عدد نرسیده؛ سریال‌های نرسیده را مشخص کنید (${faNum(r.line.serials.length - r.received - missing.length)} سریال دیگر)`);
+    }
+    missingOf.set(r.line.id, missing);
+  }
+
   const base = { date: input.date, type: "TRANSFER_IN" as const, sourceType: "AccTransfer", sourceId: t.id };
   await applyMoves(
     tx,
@@ -177,6 +219,10 @@ export async function receiveTransfer(tx: Tx, id: string, input: ReceiveInput, a
     }),
     actor,
   );
+  // سریال نرسیده: «از دست رفته» مثل کالا اول وارد مقصد می‌شود و با خروج دستی بیرون می‌رود؛ «برگشت» به مبدأ برمی‌گردد
+  const backTo = new Map<string, "FROM">();
+  if (mode === "RETURN") for (const [lineId, list] of missingOf) for (const s of list) backTo.set(`${lineId}|${s}`, "FROM");
+  await postSerials(tx, { sourceType: "AccTransfer", sourceId: t.id, date: input.date }, transferSerials(t, backTo), actor);
 
   let shortageAdjustId: string | null = null;
   if (mode === "LOSS") {
@@ -194,7 +240,7 @@ export async function receiveTransfer(tx: Tx, id: string, input: ReceiveInput, a
         reasonId: reason.id,
         warehouseId: t.toWarehouseId,
         note: `کسری دریافت حواله‌ی ${faNum(t.number)}`,
-        lines: short.map((r) => ({ productId: r.line.productId, qty: r.short })),
+        lines: short.map((r) => ({ productId: r.line.productId, qty: r.short, serials: missingOf.get(r.line.id) ?? [] })),
       },
       actor,
     );
@@ -226,6 +272,7 @@ export async function voidTransfer(tx: Tx, id: string, reason: string, actor: Ac
     });
   }
   await removeMoves(tx, "AccTransfer", t.id, actor);
+  await clearSerials(tx, "AccTransfer", t.id, actor);
   return tx.accTransfer.update({ where: { id }, data: { status: "VOID", voidReason: `${reason.trim()} — ${actor.name}` } });
 }
 

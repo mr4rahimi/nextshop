@@ -16,6 +16,7 @@ export interface PosItem {
   price: string;
   stock: number;
   modelId: string | null;
+  hasSerial: boolean;
 }
 
 export interface ModelPick {
@@ -28,7 +29,7 @@ export interface ModelPick {
 }
 
 export type ScanResult =
-  | { kind: "item"; item: PosItem }
+  | { kind: "item"; item: PosItem; serial?: string }
   | { kind: "model"; pick: ModelPick }
   | { kind: "ticket"; code: string }
   | { kind: "list"; items: PosItem[] };

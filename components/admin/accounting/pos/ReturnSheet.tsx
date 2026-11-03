@@ -20,7 +20,8 @@ export interface Returnable {
   partyId: string;
   partyName: string;
   walkIn: boolean;
-  lines: { refLineId: string; productId: string; title: string; qty: number; left: number; each: string }[];
+  /** `serials`: سریال‌های ردیف که هنوز برنگشته‌اند */
+  lines: { refLineId: string; productId: string; title: string; qty: number; left: number; each: string; serials: string[] }[];
 }
 
 export default function ReturnSheet({

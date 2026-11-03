@@ -8,6 +8,7 @@ import { itemCards } from "@/lib/accounting/inventory/items";
 import { itemLinks } from "@/lib/accounting/inventory/to-product";
 import { IN_TRANSIT } from "@/lib/accounting/inventory/docs";
 import { itemPlaces } from "@/lib/accounting/inventory/places";
+import { serialSummary } from "@/lib/accounting/inventory/serials";
 import { onOrderQty } from "@/lib/accounting/purchases/orders";
 
 export const runtime = "nodejs";
@@ -76,12 +77,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ productI
     };
   });
 
-  const [places, onOrder] = await Promise.all([itemPlaces(prisma, product.id), onOrderQty(prisma, [product.id])]);
+  const [places, onOrder, item] = await Promise.all([
+    itemPlaces(prisma, product.id),
+    onOrderQty(prisma, [product.id]),
+    prisma.accItem.findUnique({ where: { id: product.id }, select: { hasSerial: true } }),
+  ]);
+  const serials = item?.hasSerial ? await serialSummary(prisma, product.id) : null;
   return NextResponse.json(
     serialize({
       product,
       stocks,
       places,
+      /** کالای سریال‌دار (webhesab-parity.md بخش ۱۴) */
+      serials,
       /** مانده‌ی سفارش‌های خرید باز (webhesab-parity.md بخش ۱۳) */
       onOrder: onOrder.get(product.id) ?? 0,
       transit: transit.map((l) => ({ ...l.transfer, qty: l.qty })),

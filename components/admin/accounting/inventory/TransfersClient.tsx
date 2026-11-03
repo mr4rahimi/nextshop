@@ -13,6 +13,7 @@ import { dayValue, todayKey } from "@/lib/accounting/dates";
 import { faNum } from "@/lib/accounting/money";
 import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import ProductPicker, { type ProductOption } from "../ProductPicker";
+import SerialField from "./SerialField";
 import InventoryTabs from "./InventoryTabs";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, Field, inputCls, Money, PageHeader, Segmented, Sheet } from "../ui";
 import { Plus } from "lucide-react";
@@ -41,7 +42,7 @@ interface T {
   receiveNote: string | null;
   shortageMode: "LOSS" | "RETURN" | null;
   shortageAdjustId: string | null;
-  lines: { id: string; productId: string; qty: number; receivedQty: number | null }[];
+  lines: { id: string; productId: string; qty: number; receivedQty: number | null; serials: string[] }[];
 }
 interface Data {
   items: T[];
@@ -347,6 +348,7 @@ function TransferRow({ t, data, name, onVoid, onReceive }: { t: T; data: Data; n
             <Badge tone={l.receivedQty !== null && l.receivedQty < l.qty ? "red" : "gray"}>
               {data.titles[l.productId] ?? "کالا"} × {faNum(l.qty)}
               {l.receivedQty !== null && l.receivedQty < l.qty && ` (رسید ${faNum(l.receivedQty)})`}
+              {l.serials.length > 0 && <span className="mr-1 font-mono" dir="ltr">{l.serials.join("، ")}</span>}
             </Badge>
           </Link>
         ))}
@@ -375,6 +377,8 @@ function ReceiveForm({
   const [date, setDate] = useState(dayValue(todayKey()));
   const [got, setGot] = useState<Record<string, string>>(() => Object.fromEntries(t.lines.map((l) => [l.id, String(l.qty)])));
   const [shortage, setShortage] = useState<"LOSS" | "RETURN">("LOSS");
+  /** سریال‌های نرسیده‌ی هر ردیف سریال‌دار */
+  const [missing, setMissing] = useState<Record<string, string[]>>({});
   const [reasonId, setReasonId] = useState(reasons.find((r) => r.name === "کسری")?.id ?? reasons[0]?.id ?? "");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -389,7 +393,14 @@ function ReceiveForm({
     try {
       await api(`/api/admin/accounting/inventory/transfers/${t.id}`, {
         method: "POST",
-        json: { action: "receive", date, lines: t.lines.map((l) => ({ lineId: l.id, qty: Number(got[l.id] || 0) })), shortage, reasonId: shortage === "LOSS" ? reasonId : null, note },
+        json: {
+          action: "receive",
+          date,
+          lines: t.lines.map((l) => ({ lineId: l.id, qty: Number(got[l.id] || 0), missing: Number(got[l.id] || 0) < l.qty ? missing[l.id] ?? [] : [] })),
+          shortage,
+          reasonId: shortage === "LOSS" ? reasonId : null,
+          note,
+        },
       });
       onSaved();
     } catch (e) {
@@ -423,7 +434,7 @@ function ReceiveForm({
           {t.lines.map((l) => {
             const n = Number(got[l.id] || 0);
             return (
-              <div key={l.id} className="flex items-center gap-2 rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-2">
+              <div key={l.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-2">
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-bold truncate">{titles[l.productId] ?? "کالا"}</span>
                   <span className={`block text-[11px] ${n > l.qty ? "text-red-600 font-bold" : n < l.qty ? "text-amber-600 font-bold" : "text-gray-400"}`}>
@@ -439,6 +450,27 @@ function ReceiveForm({
                   aria-label="تعداد رسیده"
                   className="w-20 px-2 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 text-center font-bold"
                 />
+                {l.serials.length > 0 && n < l.qty && (
+                  <div className="basis-full">
+                    <p className="text-[11px] font-bold text-amber-600">سریال‌های نرسیده را بزنید ({faNum(Math.min(l.qty - n, l.serials.length))} تا):</p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {l.serials.map((s) => {
+                        const on = (missing[l.id] ?? []).includes(s);
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            dir="ltr"
+                            onClick={() => setMissing((m) => ({ ...m, [l.id]: on ? (m[l.id] ?? []).filter((x) => x !== s) : [...(m[l.id] ?? []), s] }))}
+                            className={`rounded-md px-1.5 py-0.5 font-mono text-[11px] font-bold ${on ? "bg-amber-600 text-white" : "bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200"}`}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -484,13 +516,17 @@ function TransferForm({ warehouses, onClose, onSaved }: { warehouses: W[]; onClo
   const [to, setTo] = useState(warehouses.find((w) => w.id !== def?.id)?.id ?? "");
   const [date, setDate] = useState(dayValue(todayKey()));
   const [note, setNote] = useState("");
-  const [lines, setLines] = useState<{ p: ProductOption; qty: string }[]>([]);
+  const [lines, setLines] = useState<{ p: ProductOption; qty: string; serials: string[] }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dest = warehouses.find((w) => w.id === to);
 
   function add(p: ProductOption) {
-    setLines((x) => (x.some((l) => l.p.id === p.id) ? x.map((l) => (l.p.id === p.id ? { ...l, qty: String(Number(l.qty || 0) + 1) } : l)) : [...x, { p, qty: "1" }]));
+    setLines((x) =>
+      x.some((l) => l.p.id === p.id)
+        ? x.map((l) => (l.p.id === p.id ? { ...l, qty: p.serial && l.serials.length < Number(l.qty || 0) ? l.qty : String(Number(l.qty || 0) + 1), serials: p.serial && !l.serials.includes(p.serial) ? [...l.serials, p.serial] : l.serials } : l))
+        : [...x, { p, qty: "1", serials: p.serial ? [p.serial] : [] }],
+    );
   }
   async function save() {
     setBusy(true);
@@ -498,7 +534,7 @@ function TransferForm({ warehouses, onClose, onSaved }: { warehouses: W[]; onClo
     try {
       await api("/api/admin/accounting/inventory/transfers", {
         method: "POST",
-        json: { date, fromWarehouseId: from, toWarehouseId: to, note, lines: lines.map((l) => ({ productId: l.p.id, qty: Number(l.qty) })) },
+        json: { date, fromWarehouseId: from, toWarehouseId: to, note, lines: lines.map((l) => ({ productId: l.p.id, qty: Number(l.qty), serials: l.p.hasSerial ? l.serials : [] })) },
       });
       onSaved();
     } catch (e) {
@@ -565,10 +601,20 @@ function TransferForm({ warehouses, onClose, onSaved }: { warehouses: W[]; onClo
             const avail = l.p.byWarehouse[from] ?? 0;
             const over = Number(l.qty || 0) > avail;
             return (
-              <div key={l.p.id} className="flex items-center gap-2 rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-2">
+              <div key={l.p.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-gray-50 dark:bg-white/5 px-3 py-2">
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-bold truncate">{l.p.title}</span>
                   <span className={`block text-[11px] ${over ? "text-red-600 font-bold" : "text-gray-400"}`}>موجودی مبدأ {faNum(avail)}</span>
+                  {l.p.hasSerial && (
+                    <SerialField
+                      value={l.serials}
+                      onChange={(serials) => setLines((x) => x.map((y) => (y.p.id === l.p.id ? { ...y, serials } : y)))}
+                      qty={Number(l.qty || 0)}
+                      itemId={l.p.id}
+                      warehouseId={from}
+                      pick="stock"
+                    />
+                  )}
                 </span>
                 <input
                   value={l.qty}

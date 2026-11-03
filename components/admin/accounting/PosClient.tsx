@@ -36,6 +36,9 @@ interface Line {
   unitPrice: string;
   vatRateBp: number;
   stock: number | null;
+  hasSerial: boolean;
+  /** متن سریال‌ها، هر خط یکی */
+  serials: string;
 }
 interface Pay {
   method: Method;
@@ -94,7 +97,7 @@ export default function PosClient() {
     setLast(null);
     setLines((x) => {
       const hit = x.find((l) => l.productId === p.id);
-      if (hit) return x.map((l) => (l === hit ? { ...l, qty: l.qty + 1 } : l));
+      if (hit) return x.map((l) => (l === hit ? { ...l, qty: l.qty + 1, serials: p.serial ? [l.serials.trim(), p.serial].filter(Boolean).join("\n") : l.serials } : l));
       return [
         ...x,
         {
@@ -105,6 +108,8 @@ export default function PosClient() {
           unitPrice: p.price && p.price !== "0" ? p.price : "",
           vatRateBp: p.vatRateBp ?? cfg?.vatRateBp ?? 0,
           stock: warehouseId ? p.byWarehouse[warehouseId] ?? 0 : null,
+          hasSerial: !!p.hasSerial,
+          serials: p.serial ?? "",
         },
       ];
     });
@@ -145,7 +150,7 @@ export default function PosClient() {
           warehouseId: warehouseId || null,
           invoiceDiscount: discount || "0",
           overrideCredit: override,
-          lines: lines.map((l) => ({ productId: l.productId, qty: l.qty, unitPrice: l.unitPrice || "0", vatRateBp: cfg?.vatEnabled ? l.vatRateBp : 0 })),
+          lines: lines.map((l) => ({ productId: l.productId, qty: l.qty, unitPrice: l.unitPrice || "0", vatRateBp: cfg?.vatEnabled ? l.vatRateBp : 0, serials: l.serials.split(/[\n,،]+/).map((s) => s.trim()).filter(Boolean) })),
           payments: cfg?.can.pay ? pays.map((p) => ({ method: p.method, treasuryId: p.treasuryId, amount: p.amount || "0" })) : [],
         },
       });
@@ -249,6 +254,16 @@ export default function PosClient() {
                           </div>
                           {short && <span className="text-[10px] font-bold text-amber-600">موجودی {faNum(l.stock ?? 0)}</span>}
                         </div>
+                        {l.hasSerial && (
+                          <textarea
+                            value={l.serials}
+                            onChange={(e) => setLines((x) => x.map((y) => (y.productId === l.productId ? { ...y, serials: e.target.value } : y)))}
+                            placeholder={`شماره سریال — ${faNum(l.qty)} عدد، هر خط یکی`}
+                            rows={Math.min(4, Math.max(1, l.qty))}
+                            dir="ltr"
+                            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-2 py-1 font-mono text-xs dark:border-white/10 dark:bg-white/5"
+                          />
+                        )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button onClick={() => setQty(l.productId, l.qty - 1)} className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center" aria-label="یکی کم">

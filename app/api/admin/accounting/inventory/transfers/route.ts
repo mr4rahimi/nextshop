@@ -67,9 +67,9 @@ export async function POST(req: Request) {
   const guard = await requirePermission("ACC_INVENTORY");
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   try {
-    const b = await readJson<{ date?: string; fromWarehouseId?: string; toWarehouseId?: string; note?: string; lines?: { productId: string; qty: unknown }[] }>(req);
+    const b = await readJson<{ date?: string; fromWarehouseId?: string; toWarehouseId?: string; note?: string; lines?: { productId: string; qty: unknown; serials?: unknown }[] }>(req);
     if (!b.fromWarehouseId || !b.toWarehouseId) throw new AccError("انبار مبدأ و مقصد را انتخاب کنید");
-    const lines = (b.lines ?? []).map((l) => ({ productId: String(l.productId), qty: Number(l.qty) }));
+    const lines = (b.lines ?? []).map((l) => ({ productId: String(l.productId), qty: Number(l.qty), serials: Array.isArray(l.serials) ? l.serials.map(String) : [] }));
     if (lines.some((l) => !Number.isInteger(l.qty) || l.qty < 0)) throw new AccError("تعداد باید عدد صحیح باشد");
     const t = await prisma.$transaction(
       (tx) => createTransfer(tx, { date: requireDay(b.date), fromWarehouseId: b.fromWarehouseId!, toWarehouseId: b.toWarehouseId!, note: b.note, lines }, actorOf(guard.access)),

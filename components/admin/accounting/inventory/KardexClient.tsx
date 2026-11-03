@@ -56,6 +56,7 @@ interface Data {
   product: { id: string; title: string; sku: string; unit: string; mainImage: string | null; isActive: boolean; hasProduct: boolean; link: { productId: string; product: string; variant: string | null } | null; stock: number | null; lowStockThreshold: number };
   stocks: { warehouseId: string; qty: number }[];
   places: { warehouseId: string; zone: string | null; aisle: string | null; shelf: string | null; level: string | null }[];
+  serials: { inStock: number; transit: number; out: number; warehouses: { warehouseId: string; qty: number; serials: number }[] } | null;
   onOrder: number;
   transit: { id: string; number: number; toWarehouseId: string; qty: number }[];
   warehouses: { id: string; name: string; sellable: boolean }[];
@@ -147,6 +148,31 @@ export default function KardexClient({ productId }: { productId: string }) {
             <Badge tone="blue">{faNum(data.onOrder)} عدد در راه</Badge>
           </Card>
         </Link>
+      )}
+
+      {data.serials && (
+        <Card className="p-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-bold text-gray-500">🔢 سریال:</span>
+          <Link href={`/admin/accounting/inventory/serials?itemId=${data.product.id}&status=IN_STOCK`} className="hover:opacity-80">
+            <Badge tone="green">{faNum(data.serials.inStock)} در انبار</Badge>
+          </Link>
+          {data.serials.transit > 0 && (
+            <Link href={`/admin/accounting/inventory/serials?itemId=${data.product.id}&status=TRANSIT`} className="hover:opacity-80">
+              <Badge tone="amber">{faNum(data.serials.transit)} در راه</Badge>
+            </Link>
+          )}
+          <Link href={`/admin/accounting/inventory/serials?itemId=${data.product.id}&status=OUT`} className="hover:opacity-80">
+            <Badge tone="gray">{faNum(data.serials.out)} فروخته / خارج‌شده</Badge>
+          </Link>
+          {(() => {
+            const gap = data.serials.warehouses.reduce((s, w) => s + Math.max(0, w.qty - w.serials), 0);
+            return gap > 0 ? (
+              <Link href={`/admin/accounting/inventory/serials?itemId=${data.product.id}`} className="font-bold text-amber-600 hover:underline">
+                {faNum(gap)} عدد بی‌سریال — ثبت سریال
+              </Link>
+            ) : null;
+          })()}
+        </Card>
       )}
 
       {data.places.length > 0 && (

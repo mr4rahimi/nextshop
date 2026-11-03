@@ -26,6 +26,8 @@ interface ItemData {
     isActive: boolean;
     groupId: string | null;
     supplierId: string | null;
+    hasSerial: boolean;
+    warrantyDays: number | null;
     barcodes: { barcode: string }[];
     aliases: { id: string; code: string; source: string }[];
     model: { id: string; title: string } | null;
@@ -96,6 +98,8 @@ export default function ItemForm({
     isActive: true,
     groupId: initial?.groupId ?? "",
     supplierId: "",
+    hasSerial: false,
+    warrantyDays: "",
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +127,8 @@ export default function ItemForm({
           isActive: i.isActive,
           groupId: i.groupId ?? "",
           supplierId: i.supplierId ?? "",
+          hasSerial: i.hasSerial,
+          warrantyDays: i.warrantyDays == null ? "" : String(i.warrantyDays),
         });
       })
       .catch((e) => setError(e.message));
@@ -142,6 +148,8 @@ export default function ItemForm({
         barcodes: f.barcodes.split(/[\s,،]+/).filter(Boolean),
         sellOnline: f.sellOnline,
         groupId: f.groupId || null,
+        hasSerial: f.hasSerial,
+        warrantyDays: f.hasSerial && f.warrantyDays.trim() ? f.warrantyDays : null,
         ...(suppliers.length || f.supplierId ? { supplierId: f.supplierId || null } : {}),
         ...(itemId ? { isActive: f.isActive } : {}),
       };
@@ -301,6 +309,27 @@ export default function ItemForm({
             <Field label="هشدار موجودی" hint={product ? "خالی = همان حد هشدار محصول" : "وقتی موجودی به این عدد برسد"}>
               <input value={f.reorderPoint} onChange={(e) => setF({ ...f, reorderPoint: e.target.value })} className={inputCls} inputMode="numeric" />
             </Field>
+          </div>
+          <div className="rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" className="mt-1" checked={f.hasSerial} onChange={(e) => setF({ ...f, hasSerial: e.target.checked })} />
+              <span>
+                سریال‌دار
+                <span className="block text-[11px] text-gray-400">هر واحد شماره سریال خودش را دارد (موبایل، لوازم برقی). در خرید ثبت و در فروش و صندوق انتخاب یا اسکن می‌شود.</span>
+              </span>
+            </label>
+            {f.hasSerial && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                <Field label="مدت گارانتی (روز)" hint="با فروش، گارانتی سایت با همان سریال برای مشتری ساخته می‌شود؛ خالی = بی‌گارانتی">
+                  <input value={f.warrantyDays} onChange={(e) => setF({ ...f, warrantyDays: e.target.value })} className={`${inputCls} w-28`} inputMode="numeric" placeholder="مثلاً ۳۶۵" />
+                </Field>
+                {itemId && (
+                  <Link href={`/admin/accounting/inventory/serials?itemId=${itemId}`} className="text-xs text-indigo-600 hover:underline">
+                    🔢 سریال‌های این کالا
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
           {!product && (
             <label className="flex items-start gap-2 text-sm">

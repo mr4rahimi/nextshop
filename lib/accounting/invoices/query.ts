@@ -45,6 +45,7 @@ interface LineBody {
   refLineId?: string | null;
   taxCode?: string | null;
   poLineId?: string | null;
+  serials?: unknown;
 }
 
 export interface InvoiceBody {
@@ -86,6 +87,7 @@ export function inputFromBody(b: InvoiceBody): InvoiceInput {
       refLineId: l.refLineId || null,
       taxCode: l.taxCode?.trim() || null,
       poLineId: l.poLineId || null,
+      serials: Array.isArray(l.serials) ? l.serials.map(String) : typeof l.serials === "string" ? l.serials.split(/\n/) : [],
     };
   });
   return {
@@ -204,6 +206,7 @@ export async function invoiceDetail(id: string, access: StaffAccess) {
     account: l.accountId ? byAccount.get(l.accountId) ?? null : null,
     returnedQty: returned.get(l.id) ?? 0,
     poLeft: l.poLineId ? poLeft.get(l.poLineId) ?? 0 : null,
+    hasSerial: l.productId ? byProduct.get(l.productId)?.hasSerial ?? false : false,
     ...(withCost && l.productId ? { cost: costByLine.get(l.id) ?? 0n } : {}),
   }));
   // تسویه — دریافت/پرداخت‌های تخصیص‌یافته و مانده‌ی باز (فاز ۵)

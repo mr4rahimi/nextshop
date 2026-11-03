@@ -125,6 +125,8 @@ export interface PosItem {
   /** موجودی انبار همین صندوق */
   stock: number;
   modelId: string | null;
+  /** سریال‌دار — صندوق برای هر عدد سریال می‌خواهد (webhesab-parity.md بخش ۱۴) */
+  hasSerial: boolean;
 }
 
 /**
@@ -135,7 +137,7 @@ export async function posItems(ids: string[], warehouseId: string | null, db: Db
   const uniq = [...new Set(ids)];
   if (!uniq.length) return new Map();
   const [items, products, variants, stocks] = await Promise.all([
-    db.accItem.findMany({ where: { id: { in: uniq } }, select: { id: true, code: true, title: true, unit: true, salePrice: true, modelId: true } }),
+    db.accItem.findMany({ where: { id: { in: uniq } }, select: { id: true, code: true, title: true, unit: true, salePrice: true, modelId: true, hasSerial: true } }),
     db.product.findMany({ where: { id: { in: uniq } }, select: { id: true, mainImage: true, price: true, salePrice: true } }),
     db.productVariant.findMany({
       where: { accItemId: { in: uniq } },
@@ -162,6 +164,7 @@ export async function posItems(ids: string[], warehouseId: string | null, db: Db
       price,
       stock: stock.get(i.id) ?? 0,
       modelId: i.modelId,
+      hasSerial: i.hasSerial,
     });
   }
   return out;

@@ -13,6 +13,7 @@ import { dayValue, todayKey } from "@/lib/accounting/dates";
 import { faNum, toLatinDigits } from "@/lib/accounting/money";
 import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import ProductPicker, { type ProductOption } from "../ProductPicker";
+import SerialField from "./SerialField";
 import PartyPicker, { type PartyOption } from "../PartyPicker";
 import AccountPicker, { type AccountOption } from "../AccountPicker";
 import InventoryTabs from "./InventoryTabs";
@@ -173,6 +174,9 @@ interface Line {
   qty: string;
   /** موجودی همین انبار — فقط برای کالای انتخابی (چسبانده‌ها ندارند) */
   byWarehouse: Record<string, number> | null;
+  /** کالای سریال‌دار (فقط انتخابی‌ها؛ سریال در ورود و خروج دستی اختیاری است) */
+  hasSerial?: boolean;
+  serials: string[];
 }
 
 function AdjustForm({
@@ -204,18 +208,22 @@ function AdjustForm({
   const needParty = reason?.account?.detailKind === "PARTY";
   const total = lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
 
-  function merge(add: { id: string; title: string; code: string; qty: number; byWarehouse: Record<string, number> | null }[]) {
+  function merge(add: { id: string; title: string; code: string; qty: number; byWarehouse: Record<string, number> | null; hasSerial?: boolean; serial?: string }[]) {
     setLines((x) => {
       const out = [...x];
       for (const a of add) {
         const i = out.findIndex((l) => l.id === a.id);
-        if (i >= 0) out[i] = { ...out[i], qty: String((Number(out[i].qty) || 0) + a.qty), byWarehouse: out[i].byWarehouse ?? a.byWarehouse };
-        else out.push({ id: a.id, title: a.title, code: a.code, qty: String(a.qty), byWarehouse: a.byWarehouse });
+        if (i >= 0) {
+          const cur = out[i];
+          if (a.serial && cur.serials.includes(a.serial)) continue;
+          const fills = a.serial && cur.serials.length < (Number(cur.qty) || 0);
+          out[i] = { ...cur, qty: fills ? cur.qty : String((Number(cur.qty) || 0) + a.qty), byWarehouse: cur.byWarehouse ?? a.byWarehouse, hasSerial: cur.hasSerial ?? a.hasSerial, serials: a.serial ? [...cur.serials, a.serial] : cur.serials };
+        } else out.push({ id: a.id, title: a.title, code: a.code, qty: String(a.qty), byWarehouse: a.byWarehouse, hasSerial: a.hasSerial, serials: a.serial ? [a.serial] : [] });
       }
       return out;
     });
   }
-  const pick = (p: ProductOption) => merge([{ id: p.id, title: p.title, code: p.sku ?? "", qty: 1, byWarehouse: p.byWarehouse }]);
+  const pick = (p: ProductOption) => merge([{ id: p.id, title: p.title, code: p.sku ?? "", qty: 1, byWarehouse: p.byWarehouse, hasSerial: p.hasSerial, serial: p.serial }]);
 
   async function resolvePaste() {
     if (!paste?.trim()) return;
@@ -244,7 +252,7 @@ function AdjustForm({
     try {
       const r = await api<{ id: string }>("/api/admin/accounting/inventory/adjustments", {
         method: "POST",
-        json: { date, direction, reasonId, warehouseId: wh, partyId: party?.id ?? null, note, lines: lines.map((l) => ({ productId: l.id, qty: Number(l.qty) })) },
+        json: { date, direction, reasonId, warehouseId: wh, partyId: party?.id ?? null, note, lines: lines.map((l) => ({ productId: l.id, qty: Number(l.qty), serials: l.hasSerial ? l.serials : [] })) },
       });
       onSaved(r.id);
     } catch (e) {
@@ -337,6 +345,16 @@ function AdjustForm({
                     {l.code}
                     {avail !== null && ` · موجودی انبار ${faNum(avail)}`}
                   </span>
+                  {l.hasSerial && (
+                    <SerialField
+                      value={l.serials}
+                      onChange={(serials) => setLines((x) => x.map((y) => (y.id === l.id ? { ...y, serials } : y)))}
+                      qty={Number(l.qty) || 0}
+                      itemId={l.id}
+                      warehouseId={wh}
+                      pick={direction === "OUT" ? "stock" : undefined}
+                    />
+                  )}
                 </span>
                 <input
                   value={l.qty}

@@ -1379,12 +1379,15 @@ model Guaranty {
   startDate    DateTime @default(now())
   endDate      DateTime
   notes        String?
+  /// ساخته‌شده از فروش سریال‌دار حسابداری: `AccSerialMove.id` همان فروش — خالی = دستی
+  sourceKey    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   user     User              @relation(fields: [userId], references: [id])
   requests GuarantyRequest[]
 
+  @@index([sourceKey])
   @@index([userId])
   @@index([endDate])
 }
@@ -3987,6 +3990,8 @@ model AccSettings {
   onlineRoundTo         Int       @default(0)
   /// down | nearest | up
   onlineRoundMode       String    @default("nearest")
+  /// فروش دستی و صندوق کالای سریال‌دار بی سریال صادر نمی‌شود (webhesab-parity.md بخش ۱۴)
+  serialRequired        Boolean   @default(true)
   updatedAt             DateTime  @updatedAt
 }
 
@@ -4306,9 +4311,14 @@ model AccItem {
   attrKey      String?
   /// عرضه‌کننده‌ی کالا؛ خالی = طرف آخرین فاکتور خرید (webhesab-parity.md بخش ۵)
   supplierId   String?
+  /// کالای سریال‌دار — هر واحد شماره سریال خودش را دارد (webhesab-parity.md بخش ۱۴)
+  hasSerial    Boolean          @default(false)
+  /// مدت گارانتی (روز) — فروش سریال‌دار گارانتی سایت می‌سازد؛ خالی = بی‌گارانتی
+  warrantyDays Int?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   barcodes     AccItemBarcode[]
+  serials      AccSerial[]
   aliases      AccItemAlias[]
   attrs        AccItemAttr[]
   group        AccItemGroup?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -4323,6 +4333,52 @@ model AccItem {
   @@index([groupId])
   @@index([modelId])
   @@index([supplierId])
+}
+
+/// یک واحد کالای سریال‌دار — webhesab-parity.md بخش ۱۴.
+/// وضعیت از آخرین `AccSerialMove` حساب و اینجا نگه داشته می‌شود (`lib/accounting/inventory/serials.ts`).
+model AccSerial {
+  id            String          @id @default(cuid())
+  itemId        String
+  /// فقط از `normalizeSerial`
+  serial        String
+  /// NEW (ثبت‌شده، بی‌گردش) | IN_STOCK | TRANSIT | OUT
+  status        String          @default("NEW")
+  /// انبار فعلی؛ در راه = انبار مقصد
+  warehouseId   String?
+  lastType      String?
+  lastDate      DateTime?       @db.Date
+  /// طرف آخرین گردش (خریدار یا عرضه‌کننده)
+  partyId       String?
+  createdByName String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  item          AccItem         @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  moves         AccSerialMove[]
+
+  @@unique([itemId, serial])
+  @@index([serial])
+  @@index([itemId, status, warehouseId])
+}
+
+/// هر گردش یک سریال — ورود/خروج فاکتور، صندوق، حواله، ورود و خروج دستی، ثبت برای موجودی
+model AccSerialMove {
+  id            String    @id @default(cuid())
+  serialId      String
+  date          DateTime  @db.Date
+  /// REGISTER | PURCHASE | SALE | SALE_RETURN | PURCHASE_RETURN | ADJUST_IN | ADJUST_OUT | TRANSFER_OUT | TRANSFER_IN
+  type          String
+  warehouseId   String
+  partyId       String?
+  sourceType    String
+  sourceId      String
+  sourceLineId  String?
+  createdByName String
+  createdAt     DateTime  @default(now())
+  serial        AccSerial @relation(fields: [serialId], references: [id], onDelete: Cascade)
+
+  @@index([serialId, date, createdAt])
+  @@index([sourceType, sourceId])
 }
 
 /// یک بار تغییر گروهی قیمت فروشگاه (درصد، مبلغ، قیمت ثابت، اکسل یا برگرداندن) — webhesab-parity.md بخش ۱۰
@@ -4691,11 +4747,12 @@ model AccStockAdjust {
 }
 
 model AccStockAdjustLine {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   adjustId  String
   productId String
   qty       Int
   note      String?
+  serials   String[] @default([])
 
   adjust AccStockAdjust @relation(fields: [adjustId], references: [id], onDelete: Cascade)
 
@@ -4704,12 +4761,13 @@ model AccStockAdjustLine {
 }
 
 model AccTransferLine {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   transferId  String
   productId   String
   qty         Int
   /// تعداد رسیده (حواله‌ی دو مرحله‌ای، بعد از تأیید)
   receivedQty Int?
+  serials     String[] @default([])
 
   transfer AccTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
 
@@ -4908,7 +4966,7 @@ model AccInvoice {
 }
 
 model AccInvoiceLine {
-  id                   String  @id @default(cuid())
+  id                   String   @id @default(cuid())
   invoiceId            String
   seq                  Int
   /// خالی = خدمت (بدون کاردکس) — حسابش در `accountId`
@@ -4918,11 +4976,11 @@ model AccInvoiceLine {
   qty                  Int
   unitPrice            BigInt
   /// تخفیف همین ردیف (کل ردیف)
-  discount             BigInt  @default(0)
+  discount             BigInt   @default(0)
   /// سهم این ردیف از تخفیف فاکتور — `calc.ts` پخش می‌کند، باقی گرد به ردیف آخر
-  invoiceDiscountShare BigInt  @default(0)
-  vatRateBp            Int     @default(0)
-  vatAmount            BigInt  @default(0)
+  invoiceDiscountShare BigInt   @default(0)
+  vatRateBp            Int      @default(0)
+  vatAmount            BigInt   @default(0)
   /// ردیف پس از تخفیف‌ها + مالیات (در حالت قیمت با مالیات: همان مبلغ پس از تخفیف)
   lineTotal            BigInt
   /// ردیف خدمت: حساب درآمد (فروش) یا هزینه (خرید)
@@ -4933,6 +4991,8 @@ model AccInvoiceLine {
   poLineId             String?
   orderItemId          String?
   taxCode              String?
+  /// شماره سریال‌های همین ردیف (کالای سریال‌دار) — با صدور به `AccSerialMove` می‌رود
+  serials              String[] @default([])
 
   invoice AccInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 

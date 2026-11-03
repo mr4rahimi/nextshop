@@ -46,7 +46,7 @@ interface Body {
   invoiceDiscount?: unknown;
   note?: string | null;
   overrideCredit?: boolean;
-  lines?: { productId?: string | null; title?: string; qty?: unknown; unitPrice?: unknown; discount?: unknown; vatRateBp?: unknown }[];
+  lines?: { productId?: string | null; title?: string; qty?: unknown; unitPrice?: unknown; discount?: unknown; vatRateBp?: unknown; serials?: unknown }[];
   payments?: { method?: string; treasuryId?: string | null; amount?: unknown }[];
 }
 
@@ -72,6 +72,7 @@ export async function POST(req: Request) {
         unitPrice: toAmount(l.unitPrice, `فی ردیف ${faNum(i + 1)}`),
         discount: toAmount(l.discount, "تخفیف"),
         vatRateBp: Number(l.vatRateBp) || 0,
+        serials: Array.isArray(l.serials) ? l.serials.map(String) : [],
       };
     });
     if (!lines.length) throw new AccError("سبد خالی است");

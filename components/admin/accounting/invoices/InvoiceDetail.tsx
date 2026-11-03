@@ -32,6 +32,8 @@ interface Line {
   image: string | null;
   account: { id: string; code: string; name: string } | null;
   returnedQty: number;
+  /** شماره سریال‌ها (webhesab-parity.md بخش ۱۴) */
+  serials: string[];
   cost?: string;
 }
 
@@ -326,6 +328,17 @@ export default function InvoiceDetail({ id }: { id: string }) {
                 </p>
                 {l.account && <p className="text-[10px] text-blue-600">{l.account.name}</p>}
                 {l.returnedQty > 0 && <p className="text-[10px] text-amber-600 font-bold">{faNum(l.returnedQty)} عدد برگشت خورده</p>}
+                {l.serials?.length > 0 && (
+                  <span className="block text-[10px] text-gray-500">
+                    سریال:{" "}
+                    {l.serials.map((s, k) => (
+                      <Link key={s} href={`/admin/accounting/inventory/serials?q=${encodeURIComponent(s)}`} className="font-mono text-indigo-600 hover:underline" dir="ltr">
+                        {k ? "، " : ""}
+                        {s}
+                      </Link>
+                    ))}
+                  </span>
+                )}
               </div>
               <Money value={l.lineTotal} className="text-sm shrink-0" />
             </div>
@@ -354,6 +367,17 @@ export default function InvoiceDetail({ id }: { id: string }) {
                   {l.sku && <span className="text-[10px] text-gray-400 mr-2">کد {faNum(l.sku)}</span>}
                   {l.account && <span className="block text-[10px] text-blue-600">{l.account.name}</span>}
                   {l.returnedQty > 0 && <span className="block text-[10px] text-amber-600 font-bold">{faNum(l.returnedQty)} عدد برگشت خورده</span>}
+                  {l.serials?.length > 0 && (
+                  <span className="block text-[10px] text-gray-500">
+                    سریال:{" "}
+                    {l.serials.map((s, k) => (
+                      <Link key={s} href={`/admin/accounting/inventory/serials?q=${encodeURIComponent(s)}`} className="font-mono text-indigo-600 hover:underline" dir="ltr">
+                        {k ? "، " : ""}
+                        {s}
+                      </Link>
+                    ))}
+                  </span>
+                )}
                 </td>
                 <td className="px-3 py-2 text-center tabular-nums">{faNum(l.qty)}</td>
                 <td className="px-3 py-2 text-left tabular-nums">{formatAmount(l.unitPrice)}</td>

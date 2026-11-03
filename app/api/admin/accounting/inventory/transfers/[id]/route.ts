@@ -17,13 +17,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   try {
     const { id } = await params;
-    const b = await readJson<{ action?: string; reason?: string; date?: string; lines?: { lineId: string; qty: unknown }[]; shortage?: string; reasonId?: string; note?: string }>(req);
+    const b = await readJson<{ action?: string; reason?: string; date?: string; lines?: { lineId: string; qty: unknown; missing?: unknown }[]; shortage?: string; reasonId?: string; note?: string }>(req);
     const actor = actorOf(guard.access);
     if (b.action === "void") {
       if (!can(guard.access, "ACC_INVENTORY")) throw new AccError("ابطال حواله مجوز «انبار» می‌خواهد", 403);
       await prisma.$transaction((tx) => voidTransfer(tx, id, String(b.reason ?? ""), actor), { timeout: 120_000 });
     } else if (b.action === "receive") {
-      const lines = (b.lines ?? []).map((l) => ({ lineId: String(l.lineId), qty: Number(l.qty) }));
+      const lines = (b.lines ?? []).map((l) => ({ lineId: String(l.lineId), qty: Number(l.qty), missing: Array.isArray(l.missing) ? l.missing.map(String) : [] }));
       await prisma.$transaction(
         (tx) =>
           receiveTransfer(

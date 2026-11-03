@@ -40,10 +40,10 @@ export interface TicketInput {
   terminalId: string;
   sellerId?: string | null;
   partyId?: string | null;
-  sale: { productId: string; qty: number; unitPrice: bigint; discount: bigint }[];
+  sale: { productId: string; qty: number; unitPrice: bigint; discount: bigint; serials?: string[] }[];
   invoiceDiscount: bigint;
   /** مرجوعی — با رسید: `invoiceId` + `refLineId`ها؛ بی‌رسید (مدیر): `productId`ها */
-  ret: { invoiceId: string | null; lines: { refLineId?: string | null; productId?: string | null; qty: number }[] } | null;
+  ret: { invoiceId: string | null; lines: { refLineId?: string | null; productId?: string | null; qty: number; serials?: string[] }[] } | null;
   /**
    * مبلغ‌های مثبت در جهت مابه‌التفاوت: مشتری می‌دهد، یا (مرجوعی بیشتر) پس می‌گیرد.
    * `cash: "rest"` = باقیِ بعد از کارت — صندوق مبلغ دقیق مرجوعی را پیش از ثبت نمی‌داند
@@ -57,6 +57,8 @@ export interface TicketInput {
 export interface TicketPerms {
   /** تغییر قیمت، مرجوعی بی‌رسید */
   manage: boolean;
+  /** فقط برآورد (`quoteTicket`) — سریال‌ها هنوز انتخاب نشده‌اند */
+  quote?: boolean;
 }
 
 export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerms, actor: Actor) {
@@ -95,7 +97,7 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
     if (l.unitPrice <= 0n) throw new AccError(`${at}: «${it.title}» قیمت ندارد؛ قیمت را بنویسید`);
     if (!perms.manage && it.price > 0n && l.unitPrice !== it.price) throw new AccError(`${at}: تغییر قیمت «${it.title}» مجوز مدیر صندوق می‌خواهد؛ به‌جایش تخفیف بدهید`);
     if (l.discount < 0n) throw new AccError(`${at}: تخفیف منفی نمی‌شود`);
-    return { productId: l.productId, qty: l.qty, unitPrice: l.unitPrice, discount: l.discount, vatRateBp: vat(l.productId) };
+    return { productId: l.productId, qty: l.qty, unitPrice: l.unitPrice, discount: l.discount, vatRateBp: vat(l.productId), serials: l.serials ?? [] };
   });
 
   // ── مرجوعی ──
@@ -107,7 +109,7 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
       if (!ref || ref.type !== "SALES" || ref.status !== "ISSUED") throw new AccError("رسید یا فاکتور فروش مرجوعی پیدا نشد");
       retLines = input.ret.lines.map((l, i) => {
         if (!l.refLineId) throw new AccError(`مرجوعی ردیف ${faNum(i + 1)}: ردیف رسید را انتخاب کنید`);
-        return { refLineId: l.refLineId, qty: l.qty, unitPrice: 0n }; // مبلغ از ردیف مرجع می‌آید
+        return { refLineId: l.refLineId, qty: l.qty, unitPrice: 0n, serials: l.serials ?? [] }; // مبلغ از ردیف مرجع می‌آید
       });
     } else {
       if (!perms.manage) throw new AccError("مرجوعی بی‌رسید مجوز مدیر صندوق می‌خواهد");
@@ -115,7 +117,7 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
         const it = l.productId ? items.get(l.productId) : null;
         if (!it) throw new AccError(`مرجوعی ردیف ${faNum(i + 1)}: کالا پیدا نشد`);
         if (it.price <= 0n) throw new AccError(`مرجوعی «${it.title}»: کالا قیمت ندارد`);
-        return { productId: it.id, qty: l.qty, unitPrice: it.price, vatRateBp: vat(it.id) };
+        return { productId: it.id, qty: l.qty, unitPrice: it.price, vatRateBp: vat(it.id), serials: l.serials ?? [] };
       });
     }
   }
@@ -150,7 +152,7 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
         tx,
         null,
         { type: "SALES_RETURN", date, partyId: party.id, warehouseId: terminal.warehouseId, refInvoiceId: ref?.id ?? null, pricesIncludeVat: true, note, lines: retLines },
-        { issue: true },
+        { issue: true, skipSerials: perms.quote },
         actor,
       )
     : null;
@@ -159,7 +161,7 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
         tx,
         null,
         { type: "SALES", date, partyId: party.id, warehouseId: terminal.warehouseId, invoiceDiscount, pricesIncludeVat: true, note, lines: saleLines },
-        { issue: true, allowOverCredit: !!input.overrideCredit },
+        { issue: true, allowOverCredit: !!input.overrideCredit, skipSerials: perms.quote },
         actor,
       )
     : null;
@@ -284,6 +286,10 @@ export async function findReturnable(raw: string, db: Db = prisma) {
   if (!inv) throw new AccError(isTicket ? `رسید ${faNum(n)} پیدا نشد` : `رسید یا فاکتور فروش ${faNum(n)} پیدا نشد`, 404);
   if (inv.status !== "ISSUED") throw new AccError("این فاکتور باطل شده است", 409);
   const back = await returnedQty(db as Tx, inv.lines.map((l) => l.id));
+  // سریال‌هایی که هنوز برنگشته‌اند — صندوق از همین‌ها انتخاب می‌کند
+  const backSerials = new Set(
+    (await db.accInvoiceLine.findMany({ where: { refLineId: { in: inv.lines.map((l) => l.id) }, invoice: { status: { not: "VOID" } } }, select: { serials: true } })).flatMap((l) => l.serials),
+  );
   return {
     invoiceId: inv.id,
     invoiceNumber: inv.number,
@@ -300,6 +306,7 @@ export async function findReturnable(raw: string, db: Db = prisma) {
         title: l.title,
         qty: l.qty,
         left: l.qty - (back.get(l.id) ?? 0),
+        serials: l.serials.filter((s) => !backSerials.has(s)),
         /** مبلغ برگشت هر عدد — همان سهم فروش (تخفیف ردیف و فاکتور کم شده) */
         each: divRound(l.lineTotal, BigInt(l.qty)),
       })),
@@ -326,6 +333,7 @@ export async function ticketView(id: string, db: Db = prisma) {
     unitPrice: l.unitPrice,
     discount: l.discount,
     lineTotal: l.lineTotal,
+    serials: l.serials,
   });
   return {
     ticket: t,
@@ -356,7 +364,7 @@ export async function quoteTicket(input: TicketInput, perms: TicketPerms, actor:
   try {
     await prisma.$transaction(
       async (tx) => {
-        const t = await createTicket(tx, { ...input, pay: { cash: "rest", card: 0n }, partyId: input.partyId, overrideCredit: true }, perms, actor);
+        const t = await createTicket(tx, { ...input, pay: { cash: "rest", card: 0n }, partyId: input.partyId, overrideCredit: true }, { ...perms, quote: true }, actor);
         throw new QuoteDone({ saleTotal: t.saleTotal, returnTotal: t.returnTotal, net: t.saleTotal - t.returnTotal, discount: t.discount });
       },
       { timeout: 30_000 },

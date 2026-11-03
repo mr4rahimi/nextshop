@@ -45,6 +45,7 @@ interface Boot {
   cashBook: string;
   lastKeptFloat: string | null;
   cashier: string;
+  serialRequired: boolean;
   can: { manage: boolean };
 }
 
@@ -59,6 +60,9 @@ interface Line {
   basePrice: string;
   discount: string;
   stock: number;
+  hasSerial: boolean;
+  /** شماره سریال هر عدد (کالای سریال‌دار) */
+  serials: string[];
 }
 interface RetLine {
   key: string;
@@ -68,6 +72,9 @@ interface RetLine {
   qty: number;
   max: number;
   each: string;
+  /** سریال‌های قابل برگشت ردیف رسید؛ خالی = بی‌سریال */
+  serialChoices: string[];
+  serials: string[];
 }
 interface RetState {
   /** null = بی‌رسید (مدیر) */
@@ -81,7 +88,7 @@ interface Held {
   party: PartyOption | null;
   discount: string;
 }
-type Modal = null | "seller" | "party" | "pay" | "return" | "model" | "list" | "discount" | "held" | "close" | "tickets";
+type Modal = null | "seller" | "party" | "pay" | "return" | "model" | "list" | "discount" | "held" | "close" | "tickets" | "serial";
 
 let keySeq = 0;
 const newKey = () => `k${++keySeq}`;
@@ -113,6 +120,8 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   const [held, setHeld] = useState<Held[]>([]);
   const [openBusy, setOpenBusy] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
+  /** ردیف سبد که پنجره‌ی سریالش باز است */
+  const [serialKey, setSerialKey] = useState<string | null>(null);
   const scanRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -183,8 +192,8 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
       sellerId,
       partyId: ret?.src ? (ret.src.walkIn ? null : ret.src.partyId) : party?.id ?? null,
       invoiceDiscount: discount || "0",
-      sale: lines.map((l) => ({ productId: l.productId, qty: l.qty, unitPrice: l.unitPrice || "0", discount: l.discount || "0" })),
-      ret: ret?.lines.length ? { invoiceId: ret.src?.invoiceId ?? null, lines: ret.lines.map((l) => ({ refLineId: l.refLineId, productId: l.productId, qty: l.qty })) } : null,
+      sale: lines.map((l) => ({ productId: l.productId, qty: l.qty, unitPrice: l.unitPrice || "0", discount: l.discount || "0", serials: l.serials })),
+      ret: ret?.lines.length ? { invoiceId: ret.src?.invoiceId ?? null, lines: ret.lines.map((l) => ({ refLineId: l.refLineId, productId: l.productId, qty: l.qty, serials: l.serials })) } : null,
     }),
     [terminalId, sellerId, party, discount, lines, ret],
   );
@@ -207,8 +216,9 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   }, [hasRet, ticketBody, boot?.shift, flash]);
 
   // ── سبد ──
-  function addItem(it: PosItem) {
+  function addItem(it: PosItem, serial?: string) {
     setLast(null);
+    if (serial && lines.some((l) => l.serials.includes(serial))) return flash(`سریال ${serial} در سبد هست`, "err");
     if (blind) {
       if (B(it.price) <= 0n) return flash(`«${it.title}» قیمت ندارد`, "err");
       setRet((r) => {
@@ -218,7 +228,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           src: null,
           lines: hit
             ? base.lines.map((l) => (l === hit ? { ...l, qty: l.qty + 1 } : l))
-            : [...base.lines, { key: newKey(), refLineId: null, productId: it.id, title: it.title, qty: 1, max: 9999, each: it.price }],
+            : [...base.lines, { key: newKey(), refLineId: null, productId: it.id, title: it.title, qty: 1, max: 9999, each: it.price, serialChoices: [], serials: [] }],
         };
       });
       beep();
@@ -228,20 +238,37 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
       const i = x.findIndex((l) => l.productId === it.id && l.unitPrice === (B(it.price) > 0n ? it.price : l.unitPrice));
       if (i >= 0) {
         setSel(i);
-        return x.map((l, k) => (k === i ? { ...l, qty: l.qty + 1 } : l));
+        // ردیف سریال‌دار: هر اسکن سریال یک عدد؛ اگر عددی بی‌سریال مانده، سریال به همان می‌نشیند
+        return x.map((l, k) =>
+          k === i ? (serial ? { ...l, qty: l.serials.length < l.qty ? l.qty : l.qty + 1, serials: [...l.serials, serial] } : { ...l, qty: l.qty + 1 }) : l,
+        );
       }
       setSel(x.length);
       return [
         ...x,
-        { key: newKey(), productId: it.id, code: it.code, title: it.title, image: it.image, qty: 1, unitPrice: B(it.price) > 0n ? it.price : "", basePrice: it.price, discount: "", stock: it.stock },
+        {
+          key: newKey(),
+          productId: it.id,
+          code: it.code,
+          title: it.title,
+          image: it.image,
+          qty: 1,
+          unitPrice: B(it.price) > 0n ? it.price : "",
+          basePrice: it.price,
+          discount: "",
+          stock: it.stock,
+          hasSerial: it.hasSerial,
+          serials: serial ? [serial] : [],
+        },
       ];
     });
     beep();
     if (B(it.price) <= 0n) flash(`«${it.title}» قیمت ندارد — قیمت را بنویسید`, "err");
+    else if (it.hasSerial && !serial) flash(`«${it.title}» سریال‌دار است — سریالش را اسکن کنید`);
   }
 
   function setQty(i: number, n: number) {
-    setLines((x) => (n <= 0 ? x.filter((_, k) => k !== i) : x.map((l, k) => (k === i ? { ...l, qty: n } : l))));
+    setLines((x) => (n <= 0 ? x.filter((_, k) => k !== i) : x.map((l, k) => (k === i ? { ...l, qty: n, serials: l.serials.slice(0, n) } : l))));
     if (n <= 0) setSel((s) => Math.max(0, Math.min(s, lines.length - 2)));
   }
 
@@ -262,7 +289,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     try {
       const r = await api<ScanResult>(`/api/admin/accounting/pos/scan?terminalId=${terminalId}&q=${encodeURIComponent(code)}`);
       setQ("");
-      if (r.kind === "item") addItem(r.item);
+      if (r.kind === "item") addItem(r.item, r.serial);
       else if (r.kind === "model") {
         if (r.pick.items.length === 1 && !boot?.can.manage) addItem(r.pick.items[0]);
         else {
@@ -300,8 +327,9 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     const next = held.filter((_, k) => k !== i);
     setHeld(next);
     local.set(`pos:held:${terminalId}`, next);
-    setLines(h.lines);
-    setRet(h.ret);
+    // سبدهای کنارگذاشته‌ی پیش از سریال این فیلدها را ندارند
+    setLines(h.lines.map((l) => ({ ...l, hasSerial: !!l.hasSerial, serials: l.serials ?? [] })));
+    setRet(h.ret ? { ...h.ret, lines: h.ret.lines.map((l) => ({ ...l, serialChoices: l.serialChoices ?? [], serials: l.serials ?? [] })) } : null);
     setParty(h.party);
     setDiscount(h.discount);
     setModal(null);
@@ -342,6 +370,14 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     if (!lines.length && !ret?.lines.length) return flash("سبد خالی است", "err");
     if (!sale.valid) return flash("تخفیف یا قیمت یک ردیف درست نیست", "err");
     if (lines.some((l) => B(l.unitPrice) <= 0n)) return flash("یک کالا قیمت ندارد", "err");
+    const noSerial = boot?.serialRequired ? lines.find((l) => l.hasSerial && l.serials.length < l.qty) : null;
+    if (noSerial) {
+      flash(`سریال «${noSerial.title}» را وارد کنید`, "err");
+      setSerialKey(noSerial.key);
+      return setModal("serial");
+    }
+    const retNoSerial = ret?.lines.find((l) => l.serialChoices.length && l.serials.length !== Math.min(l.qty, l.serialChoices.length));
+    if (retNoSerial) return flash(`سریال‌های برگشتی «${retNoSerial.title}» را انتخاب کنید`, "err");
     if (boot?.sellers.length && !sellerId) return setModal("seller");
     setPayStart(start);
     setPayError(null);
@@ -547,6 +583,18 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
                           )}
                           {B(l.discount) > 0n && <span className="rounded-md bg-rose-500/10 px-1.5 text-rose-600">تخفیف {formatAmount(l.discount)}</span>}
                           {short && <span className="rounded-md bg-amber-500/10 px-1.5 text-amber-600">موجودی {faNum(l.stock)}</span>}
+                          {l.hasSerial && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSerialKey(l.key);
+                                setModal("serial");
+                              }}
+                              className={`rounded-md px-1.5 ${l.serials.length < l.qty ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"}`}
+                            >
+                              🔢 {l.serials.length ? <span dir="ltr">{l.serials.join("، ")}</span> : "سریال"} ({faNum(l.serials.length)}/{faNum(l.qty)})
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
@@ -573,10 +621,34 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
                       <p className="text-[11px] font-bold text-rose-500/80">
                         {ret.src ? `رسید ${faNum(ret.src.ticketNumber ?? ret.src.invoiceNumber ?? 0)}` : "بی‌رسید — قیمت امروز"} · هر عدد {formatAmount(l.each)}
                       </p>
+                      {l.serialChoices.length > 0 && (
+                        <div className="mt-1 flex flex-wrap items-center gap-1 text-[11px] font-bold">
+                          <span className="text-rose-500/80">سریال برگشتی:</span>
+                          {l.serialChoices.map((s) => {
+                            const on = l.serials.includes(s);
+                            return (
+                              <button
+                                key={s}
+                                dir="ltr"
+                                onClick={() =>
+                                  setRet((r) =>
+                                    r
+                                      ? { ...r, lines: r.lines.map((x) => (x.key !== l.key ? x : { ...x, serials: on ? x.serials.filter((y) => y !== s) : x.serials.length < x.qty ? [...x.serials, s] : x.serials })) }
+                                      : r,
+                                  )
+                                }
+                                className={`rounded-md px-1.5 py-0.5 ${on ? "bg-rose-600 text-white" : "bg-rose-500/10 text-rose-600"}`}
+                              >
+                                {s}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
                       <button
-                        onClick={() => setRet((r) => (r ? { ...r, lines: r.lines.flatMap((x) => (x.key === l.key ? (x.qty > 1 ? [{ ...x, qty: x.qty - 1 }] : []) : [x])) } : r))}
+                        onClick={() => setRet((r) => (r ? { ...r, lines: r.lines.flatMap((x) => (x.key === l.key ? (x.qty > 1 ? [{ ...x, qty: x.qty - 1, serials: x.serials.slice(0, x.qty - 1) }] : []) : [x])) } : r))}
                         className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600"
                         aria-label="کم"
                       >
@@ -731,6 +803,22 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           onClose={() => setModal(null)}
         />
       )}
+      {modal === "serial" && serialKey && (() => {
+        const line = lines.find((l) => l.key === serialKey);
+        if (!line) return null;
+        return (
+          <SerialSheet
+            terminalId={terminalId}
+            line={line}
+            taken={lines.filter((l) => l.key !== line.key).flatMap((l) => l.serials)}
+            onSave={(serials) => {
+              setLines((x) => x.map((l) => (l.key === line.key ? { ...l, serials, qty: Math.max(l.qty, serials.length) } : l)));
+              setModal(null);
+            }}
+            onClose={() => setModal(null)}
+          />
+        );
+      })()}
       {modal === "list" && <ListPicker items={list} onPick={(it) => { addItem(it); setModal(null); }} onClose={() => setModal(null)} />}
       {modal === "return" && (
         <ReturnSheet
@@ -749,7 +837,9 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
               src,
               lines: picks.map((p) => {
                 const l = src.lines.find((x) => x.refLineId === p.refLineId)!;
-                return { key: newKey(), refLineId: l.refLineId, productId: l.productId, title: l.title, qty: p.qty, max: l.left, each: l.each };
+                // همه‌ی سریال‌های مانده برمی‌گردند ← خودکار؛ وگرنه صندوقدار انتخاب می‌کند
+                const serials = l.serials.length && l.serials.length <= p.qty ? l.serials : [];
+                return { key: newKey(), refLineId: l.refLineId, productId: l.productId, title: l.title, qty: p.qty, max: l.left, each: l.each, serialChoices: l.serials, serials };
               }),
             });
             if (!src.walkIn) setParty({ id: src.partyId, code: 0, name: src.partyName, mobile: null });
@@ -1048,6 +1138,96 @@ function TicketsSheet({ shiftId, onClose }: { shiftId: string; onClose: () => vo
           })}
         </div>
       )}
+    </Overlay>
+  );
+}
+
+/** سریال‌های یک ردیف: انتخاب از سریال‌های در انبار همین صندوق یا اسکن/تایپ سریال تازه */
+function SerialSheet({ terminalId, line, taken, onSave, onClose }: { terminalId: string; line: Line; taken: string[]; onSave: (s: string[]) => void; onClose: () => void }) {
+  const [list, setList] = useState<string[] | null>(null);
+  const [picked, setPicked] = useState<string[]>(line.serials);
+  const [q, setQ] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    api<{ serials: string[] }>(`/api/admin/accounting/pos/serials?terminalId=${terminalId}&itemId=${line.productId}`)
+      .then((d) => setList(d.serials))
+      .catch((e) => setError(e.message));
+    window.setTimeout(() => ref.current?.focus(), 50);
+  }, [terminalId, line.productId]);
+  const norm = (s: string) => s.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).trim().toUpperCase();
+  function add(raw: string) {
+    const s = norm(raw);
+    if (!s) return;
+    setQ("");
+    if (taken.includes(s)) return setError(`سریال ${s} در ردیف دیگری از سبد است`);
+    if (picked.includes(s)) return setError(`سریال ${s} انتخاب شده`);
+    setError(null);
+    setPicked((p) => [...p, s]);
+  }
+  const free = (list ?? []).filter((s) => !taken.includes(s));
+  return (
+    <Overlay title={`سریال — ${line.title}`} onClose={onClose}>
+      <div className="space-y-3">
+        <p className="text-xs font-bold text-gray-500">
+          {faNum(picked.length)} از {faNum(line.qty)} عدد · سریال را اسکن کنید یا از فهرست انتخاب کنید (سریال تازه از موجودی بی‌سریال کم می‌شود).
+        </p>
+        <div className="flex gap-2">
+          <input
+            ref={ref}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                add(q);
+              }
+            }}
+            placeholder="اسکن سریال"
+            dir="ltr"
+            className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-mono text-base outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-white/5"
+          />
+          <button onClick={() => add(q)} className="rounded-xl bg-emerald-600 px-4 text-sm font-black text-white">
+            افزودن
+          </button>
+        </div>
+        {picked.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {picked.map((s) => (
+              <button key={s} onClick={() => setPicked((p) => p.filter((x) => x !== s))} className="rounded-lg bg-emerald-600 px-2 py-1 font-mono text-xs font-bold text-white" dir="ltr">
+                {s} ×
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="max-h-56 overflow-y-auto rounded-xl border border-[var(--adm-border)] p-2">
+          {list === null ? (
+            <p className="p-2 text-xs text-gray-400">…</p>
+          ) : !free.length ? (
+            <p className="p-2 text-xs text-gray-400">سریال ثبت‌شده‌ای از این کالا در انبار این صندوق نیست.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {free.map((s) => {
+                const on = picked.includes(s);
+                return (
+                  <button
+                    key={s}
+                    dir="ltr"
+                    onClick={() => (on ? setPicked((p) => p.filter((x) => x !== s)) : add(s))}
+                    className={`rounded-lg px-2 py-1 font-mono text-xs font-bold ${on ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-gray-200"}`}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {error && <p className="text-xs font-bold text-red-600">{error}</p>}
+        <button onClick={() => onSave(picked)} className="w-full rounded-xl bg-emerald-600 py-3 text-base font-black text-white">
+          تأیید ({faNum(picked.length)})
+        </button>
+      </div>
     </Overlay>
   );
 }

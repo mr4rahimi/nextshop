@@ -4,6 +4,7 @@ import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
 import { stockRows } from "@/lib/accounting/inventory/query";
 import { exactItem, itemCards, itemSearchWhere } from "@/lib/accounting/inventory/items";
+import { findBySerial } from "@/lib/accounting/inventory/serials";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,8 @@ export const dynamic = "force-dynamic";
  *
  * `for=sales|purchase&partyId` — قیمت پیش‌فرض فرم فاکتور (بخش ۱۰): فروش از
  * قیمت سایت، خرید از آخرین خرید از همین تأمین‌کننده (وگرنه آخرین بهای ورود).
+ *
+ * `warehouseId` — شماره سریالِ در همین انبار هم «دقیق» است و با `serial` برمی‌گردد (webhesab-parity.md بخش ۱۴).
  */
 export async function GET(req: Request) {
   const guard = await requirePermission(["ACC_VIEW", "ACC_INVENTORY", "ACC_VOUCHER", "ACC_SALES", "ACC_PURCHASE"]);
@@ -22,7 +25,10 @@ export async function GET(req: Request) {
   const q = url.searchParams.get("q")?.trim() ?? "";
   const forType = url.searchParams.get("for");
   const partyId = url.searchParams.get("partyId");
-  const exact = q ? await exactItem(q) : null;
+  const wid = url.searchParams.get("warehouseId");
+  const bySerial = q ? (await findBySerial(prisma, q, wid)).find((s) => s.status === "IN_STOCK" && (!wid || s.warehouseId === wid)) : undefined;
+  const exact = q ? ((await exactItem(q)) ?? bySerial?.itemId ?? null) : null;
+  const serialOf = bySerial && bySerial.itemId === exact ? bySerial.serial : null;
   const found = await prisma.accItem.findMany({
     where: { ...(await itemSearchWhere(q)), isActive: true },
     orderBy: { title: "asc" },
@@ -45,6 +51,8 @@ export async function GET(req: Request) {
         image: c.image,
         siteStock: c.siteStock ?? 0,
         hasProduct: c.hasProduct,
+        hasSerial: c.hasSerial,
+        ...(serialOf && id === exact ? { serial: serialOf } : {}),
         ...rows.get(id)!,
         ...(prices ? { price: prices.get(id)?.price ?? c.price ?? 0n, vatRateBp: prices.get(id)?.vatRateBp ?? null, taxCode: prices.get(id)?.taxCode ?? null } : {}),
       };

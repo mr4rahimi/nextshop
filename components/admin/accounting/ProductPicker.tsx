@@ -25,6 +25,9 @@ export interface ProductOption {
   price?: string;
   vatRateBp?: number | null;
   taxCode?: string | null;
+  hasSerial?: boolean;
+  /** جستجو شماره سریالِ همین کالا بود */
+  serial?: string;
 }
 
 export default function ProductPicker({
@@ -62,6 +65,7 @@ export default function ProductPicker({
       const p = new URLSearchParams({ q: term });
       if (priceFor) p.set("for", priceFor);
       if (partyId) p.set("partyId", partyId);
+      if (warehouseId) p.set("warehouseId", warehouseId);
       const d = await api<{ items: ProductOption[]; exactId: string | null }>(`/api/admin/accounting/inventory/products?${p}`);
       setItems(d.items);
       setExactId(d.exactId);

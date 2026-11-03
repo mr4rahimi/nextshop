@@ -22,7 +22,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const [open, sellers, settings, treasuries, cashBook, lastShift] = await Promise.all([
       prisma.accPosShift.findFirst({ where: { terminalId: id, status: "OPEN" }, select: { id: true } }),
       prisma.accPosSeller.findMany({ where: { isActive: true }, orderBy: { code: "asc" }, select: { id: true, code: true, name: true } }),
-      prisma.accSettings.findUnique({ where: { id: "singleton" }, select: { vatEnabled: true, vatRateBp: true } }),
+      prisma.accSettings.findUnique({ where: { id: "singleton" }, select: { vatEnabled: true, vatRateBp: true, serialRequired: true } }),
       prisma.accTreasury.findMany({ where: { id: { in: [terminal.cashTreasuryId, terminal.cardTreasuryId].filter((x): x is string => !!x) } }, select: { id: true, name: true, kind: true } }),
       treasuryBook(prisma, terminal.cashTreasuryId),
       prisma.accPosShift.findFirst({ where: { terminalId: id, status: "CLOSED" }, orderBy: { number: "desc" }, select: { keptFloat: true } }),
@@ -37,6 +37,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         cashBook,
         lastKeptFloat: lastShift?.keptFloat ?? null,
         cashier: g.access.name,
+        serialRequired: !!settings?.serialRequired,
         can: { manage: g.manage },
       }),
     );

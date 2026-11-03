@@ -23,6 +23,7 @@ interface Settings {
   vatRateBp: number;
   pricesIncludeVat: boolean;
   vatEnabled: boolean;
+  serialRequired: boolean;
   lockDate: string | null;
   currentYearId: string | null;
   sellerName: string | null;
@@ -194,6 +195,21 @@ export default function AccSettingsClient() {
             {!ro && (
               <button onClick={() => save({ lockDate: s.lockDate })} disabled={busy} className={btn.primary}>
                 ذخیره‌ی قفل
+              </button>
+            )}
+          </Card>
+          <Card className="p-4 space-y-4">
+            <SectionTitle title="شماره سریال کالا" help="accountingSerials" />
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" className="mt-1" checked={s.serialRequired} onChange={(e) => set("serialRequired", e.target.checked)} disabled={ro} />
+              <span>
+                فروش کالای سریال‌دار بی سریال صادر نشود
+                <span className="block text-[11px] text-gray-400 leading-5">روشن: فاکتور فروش دستی و رسید صندوق برای هر عدد کالای سریال‌دار یک شماره سریال می‌خواهد. خاموش: سریال اختیاری است. فروش سایت و بازارگاه همیشه بی سریال ثبت می‌شود.</span>
+              </span>
+            </label>
+            {!ro && (
+              <button onClick={() => save({ serialRequired: s.serialRequired })} disabled={busy} className={btn.primary}>
+                ذخیره
               </button>
             )}
           </Card>

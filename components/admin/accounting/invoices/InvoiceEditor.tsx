@@ -22,12 +22,14 @@ import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import AmountInput from "../AmountInput";
 import PartyPicker, { type PartyOption } from "../PartyPicker";
 import ProductPicker, { type ProductOption } from "../ProductPicker";
+import SerialField from "../inventory/SerialField";
 import { api, btn, Card, ErrorText, Field, inputCls, Money, PageHeader, SectionTitle } from "../ui";
 import { Plus } from "lucide-react";
 
 interface FormCfg {
   mode: string;
   vatEnabled: boolean;
+  serialRequired: boolean;
   vatRateBp: number;
   pricesIncludeVat: boolean;
   warehouses: { id: string; name: string; isDefault: boolean; sellable: boolean }[];
@@ -57,6 +59,11 @@ interface Line {
   /** فاکتور خرید از روی سفارش — سقف تعداد این ردیف (webhesab-parity.md بخش ۱۳) */
   poLineId?: string;
   poLeft?: number;
+  /** کالای سریال‌دار (webhesab-parity.md بخش ۱۴) */
+  hasSerial?: boolean;
+  serials: string[];
+  /** برگشتی: سریال‌های ردیف مرجع */
+  serialChoices?: string[];
 }
 
 interface DetailLine {
@@ -75,6 +82,8 @@ interface DetailLine {
   refLineId: string | null;
   poLineId: string | null;
   poLeft: number | null;
+  hasSerial: boolean;
+  serials: string[];
 }
 
 interface Detail {
@@ -174,7 +183,8 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
             const r = await api<Detail>(`/api/admin/accounting/invoices/${inv.refInvoiceId}`);
             setRefInvoice({ id: r.invoice.id, number: r.invoice.number, type: r.invoice.type });
             const mine = new Map(inv.lines.map((l) => [l.refLineId, l.qty]));
-            setLines(r.invoice.lines.map((rl) => refLine(rl, mine.get(rl.id) ?? 0, mine.get(rl.id) ?? 0)));
+            const mineSerials = new Map(inv.lines.map((l) => [l.refLineId, l.serials]));
+            setLines(r.invoice.lines.map((rl) => ({ ...refLine(rl, mine.get(rl.id) ?? 0, mine.get(rl.id) ?? 0), serials: mineSerials.get(rl.id) ?? [] })));
           } else {
             setLines(inv.lines.map(fromDetail));
           }
@@ -209,6 +219,8 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
       image: l.image,
       sku: l.sku,
       ...(l.poLineId ? { poLineId: l.poLineId, poLeft: l.poLeft ?? 0 } : {}),
+      hasSerial: l.hasSerial,
+      serials: l.serials ?? [],
     };
   }
 
@@ -229,6 +241,9 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
       maxQty: rl.qty - rl.returnedQty + own,
       refQty: rl.qty,
       refDisc: BigInt(rl.discount) + BigInt(rl.invoiceDiscountShare),
+      hasSerial: rl.hasSerial,
+      serials: [],
+      serialChoices: rl.serials ?? [],
     };
   }
 
@@ -239,7 +254,12 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
   function addProduct(p: ProductOption) {
     setLines((x) => {
       const hit = x.find((l) => l.productId === p.id);
-      if (hit) return x.map((l) => (l.key === hit.key ? { ...l, qty: String(Number(l.qty || 0) + 1) } : l));
+      // سریال اسکن‌شده: اگر عددی از ردیف بی‌سریال مانده به همان می‌نشیند، وگرنه یک عدد اضافه
+      if (hit) {
+        if (p.serial && hit.serials.includes(p.serial)) return x;
+        const fills = p.serial && hit.serials.length < Number(hit.qty || 0);
+        return x.map((l) => (l.key === hit.key ? { ...l, qty: fills ? l.qty : String(Number(l.qty || 0) + 1), serials: p.serial ? [...l.serials, p.serial] : l.serials } : l));
+      }
       return [
         ...x,
         {
@@ -254,6 +274,8 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
           image: p.image,
           sku: p.sku,
           stock: p.byWarehouse,
+          hasSerial: !!p.hasSerial,
+          serials: p.serial ? [p.serial] : [],
         },
       ];
     });
@@ -262,7 +284,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
   function addService() {
     const accs = salesSide ? cfg?.revenueAccounts : cfg?.expenseAccounts;
     const def = salesSide ? accs?.find((a) => a.systemKey === "SERVICE_REVENUE") : undefined;
-    setLines((x) => [...x, { key: nextKey(), productId: null, title: "", qty: "1", unitPrice: "", discount: "", vatPct: defaultVat(), accountId: def?.id ?? "" }]);
+    setLines((x) => [...x, { key: nextKey(), productId: null, title: "", qty: "1", unitPrice: "", discount: "", vatPct: defaultVat(), accountId: def?.id ?? "", serials: [] }]);
   }
 
   // ── محاسبه ──
@@ -320,6 +342,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
             accountId: l.accountId || null,
             refLineId: l.refLineId ?? null,
             poLineId: l.poLineId ?? null,
+            serials: l.hasSerial ? l.serials : [],
           })),
         };
         if (batch) {
@@ -545,6 +568,18 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
                             ? [l.sku && `کد ${faNum(l.sku)}`, l.poLineId && `مانده‌ی سفارش ${faNum(l.poLeft ?? 0)}${Number(l.qty || 0) > (l.poLeft ?? 0) ? " — بیشتر از سفارش؛ اضافه را ردیف جدا بزنید" : ""}`, avail !== null && `موجودی ${faNum(avail)}${short ? " — کمتر از تعداد؛ ثبت می‌شود ولی موجودی منفی می‌شود" : ""}`].filter(Boolean).join(" · ") || "کالا"
                             : null}
                       </p>
+                      {l.productId && l.hasSerial && type !== "PROFORMA" && (!hasRef || Number(l.qty) > 0) && (
+                        <SerialField
+                          value={l.serials}
+                          onChange={(serials) => patch(l.key, { serials })}
+                          qty={Number(digits(l.qty) || "0")}
+                          itemId={l.productId}
+                          warehouseId={warehouseId || null}
+                          pick={type === "SALES" || type === "PURCHASE_RETURN" ? "stock" : undefined}
+                          choices={hasRef && l.serialChoices?.length ? l.serialChoices : undefined}
+                          required={type === "SALES" && !!cfg?.serialRequired && channel === "MANUAL"}
+                        />
+                      )}
                       {!l.productId && !hasRef && (
                         <select value={l.accountId} onChange={(e) => patch(l.key, { accountId: e.target.value })} className="mt-1 w-full text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 px-2 py-1.5">
                           <option value="">— حساب {salesSide ? "درآمد" : "هزینه"} —</option>

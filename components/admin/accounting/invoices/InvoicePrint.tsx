@@ -258,6 +258,7 @@ function Shop({ d }: { d: PrintData }) {
               <td className="border border-gray-400 px-1.5 py-1">
                 {l.title}
                 {l.sku && <span className="text-[10px] text-gray-500 mr-1">({faNum(l.sku)})</span>}
+                {l.serials?.length > 0 && <span className="block text-[10px] font-mono" dir="ltr">{l.serials.join("، ")}</span>}
               </td>
               <td className="border border-gray-400 px-1.5 py-1 text-center tabular-nums">{faNum(l.qty)}</td>
               <td className="border border-gray-400 px-1.5 py-1 text-left tabular-nums">{formatAmount(l.unitPrice)}</td>
@@ -366,7 +367,10 @@ function Official({ d }: { d: PrintData }) {
               <tr key={l.id}>
                 <td className="border border-black px-1 py-1 text-center">{faNum(l.seq)}</td>
                 <td className="border border-black px-1 py-1 text-center">{l.sku ? faNum(l.sku) : "—"}</td>
-                <td className="border border-black px-1 py-1">{l.title}</td>
+                <td className="border border-black px-1 py-1">
+                  {l.title}
+                  {l.serials?.length > 0 && <span className="block text-[9px] font-mono" dir="ltr">سریال: {l.serials.join("، ")}</span>}
+                </td>
                 <td className="border border-black px-1 py-1 text-center">{faNum(l.qty)}</td>
                 <td className="border border-black px-1 py-1 text-center">عدد</td>
                 <td className="border border-black px-1 py-1 text-left tabular-nums">{r(l.unitPrice)}</td>
@@ -442,6 +446,7 @@ function Receipt({ d }: { d: PrintData }) {
         {inv.lines.map((l) => (
           <div key={l.id}>
             <p className="font-bold leading-4">{l.title}</p>
+            {l.serials?.length > 0 && <p className="font-mono text-[10px]" dir="ltr">{l.serials.join("، ")}</p>}
             <div className="flex justify-between tabular-nums">
               <span>
                 {faNum(l.qty)} × {formatAmount(l.unitPrice)}

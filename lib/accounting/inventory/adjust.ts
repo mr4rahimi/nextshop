@@ -15,6 +15,7 @@ import { postVoucher, rebuildVoucher, voidVoucher, type Actor, type LineInput } 
 import { applyMoves, assertAvailable, registerCostRebuilder, removeMoves } from "./stock";
 import { exactItem, itemTitles, normalizeItemCode } from "./items";
 import { faNum } from "../money";
+import { cleanSerialList, clearSerials, postSerials } from "./serials";
 
 type Tx = Prisma.TransactionClient;
 type Db = Tx | typeof prisma;
@@ -98,7 +99,7 @@ export interface AdjustInput {
   warehouseId: string;
   partyId?: string | null;
   note?: string | null;
-  lines: { productId: string; qty: number; note?: string | null }[];
+  lines: { productId: string; qty: number; note?: string | null; serials?: string[] | null }[];
 }
 
 export async function createAdjust(tx: Tx, input: AdjustInput, actor: Actor) {
@@ -114,11 +115,15 @@ export async function createAdjust(tx: Tx, input: AdjustInput, actor: Actor) {
   if (input.partyId && !(await tx.accParty.findUnique({ where: { id: input.partyId }, select: { id: true } }))) throw new AccError("شخص پیدا نشد");
 
   // یک کالا چند بار ← جمع
-  const sum = new Map<string, { qty: number; note: string | null }>();
+  const sum = new Map<string, { qty: number; note: string | null; serials: string[] }>();
   for (const l of input.lines) {
     if (!Number.isInteger(l.qty) || l.qty <= 0) throw new AccError("تعداد هر ردیف باید عدد صحیح مثبت باشد");
     const cur = sum.get(l.productId);
-    sum.set(l.productId, { qty: (cur?.qty ?? 0) + l.qty, note: cur?.note ?? (l.note?.trim() || null) });
+    sum.set(l.productId, { qty: (cur?.qty ?? 0) + l.qty, note: cur?.note ?? (l.note?.trim() || null), serials: [...(cur?.serials ?? []), ...(l.serials ?? [])] });
+  }
+  for (const [, l] of sum) {
+    l.serials = cleanSerialList(l.serials);
+    if (l.serials.length > l.qty) throw new AccError(`${faNum(l.serials.length)} شماره سریال برای ${faNum(l.qty)} عدد زیاد است`);
   }
   if (!sum.size) throw new AccError("دست‌کم یک کالا با تعداد وارد کنید");
   if (sum.size > 2000) throw new AccError("بیش از ۲۰۰۰ کالا در یک سند نمی‌شود");
@@ -137,7 +142,7 @@ export async function createAdjust(tx: Tx, input: AdjustInput, actor: Actor) {
       partyId: input.partyId || null,
       note: input.note?.trim() || null,
       createdByName: actor.name,
-      lines: { create: [...sum].map(([productId, l]) => ({ productId, qty: l.qty, note: l.note })) },
+      lines: { create: [...sum].map(([productId, l]) => ({ productId, qty: l.qty, note: l.note, serials: l.serials })) },
     },
     include: { lines: true },
   });
@@ -154,6 +159,12 @@ export async function createAdjust(tx: Tx, input: AdjustInput, actor: Actor) {
       sourceLineId: l.id,
       note: reason.name,
     })),
+    actor,
+  );
+  await postSerials(
+    tx,
+    { sourceType: ADJUST_SOURCE, sourceId: doc.id, date: doc.date },
+    doc.lines.map((l) => ({ productId: l.productId, warehouseId: wh.id, type: input.direction === "IN" ? "ADJUST_IN" : "ADJUST_OUT", serials: l.serials, sourceLineId: l.id, partyId: doc.partyId })),
     actor,
   );
   await buildAdjustVoucher(tx, doc.id, actor);
@@ -176,6 +187,7 @@ export async function voidAdjust(tx: Tx, id: string, reason: string, actor: Acto
     await assertAvailable(tx, doc.lines.map((l) => ({ productId: l.productId, qty: l.qty, title: titles.get(l.productId) })), doc.warehouseId, null, { where: "انبار", verb: "برگرداند (بخشی از آن خارج شده)" });
   }
   await removeMoves(tx, ADJUST_SOURCE, doc.id, actor);
+  await clearSerials(tx, ADJUST_SOURCE, doc.id, actor);
   if (doc.voucherId) await voidVoucher(tx, doc.voucherId, `ابطال ${doc.direction === "IN" ? "ورود" : "خروج"} کالا: ${reason.trim()}`, actor, { fromSource: true });
   return tx.accStockAdjust.update({ where: { id }, data: { status: "VOID", voucherId: null, voidReason: `${reason.trim()} — ${actor.name}` } });
 }

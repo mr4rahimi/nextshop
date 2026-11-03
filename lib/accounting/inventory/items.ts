@@ -12,7 +12,7 @@ import { applyOnlinePrices } from "./online-price";
 import { recordPriceChanges, storePrices } from "./price-log";
 import type { Actor } from "../ledger/post";
 import { AccError } from "../errors";
-import { toLatinDigits } from "../money";
+import { faNum, toLatinDigits } from "../money";
 import { allocItemCode } from "./codes";
 
 type Db = Prisma.TransactionClient | typeof prisma;
@@ -84,6 +84,8 @@ export interface ItemCard {
   siteStock: number | null;
   price: bigint | null;
   lowStockThreshold: number;
+  /** سریال‌دار (webhesab-parity.md بخش ۱۴) */
+  hasSerial: boolean;
 }
 
 /** کارت نمایشی چند کالا — عکس و موجودی و قیمت سایت از محصول هم‌شناسه */
@@ -112,6 +114,7 @@ export async function itemCards(ids: string[], db: Db = prisma): Promise<Map<str
       siteStock: p ? p.stock : null,
       price: p ? (p.salePrice && p.salePrice > 0n ? p.salePrice : p.price) : i.salePrice,
       lowStockThreshold: i.reorderPoint ?? p?.lowStockThreshold ?? 3,
+      hasSerial: i.hasSerial,
     });
   }
   return out;
@@ -131,6 +134,15 @@ export interface ItemInput {
   groupId?: string | null;
   /** عرضه‌کننده (شخص) — خالی = طرف آخرین فاکتور خرید */
   supplierId?: string | null;
+  hasSerial?: boolean;
+  /** مدت گارانتی (روز) — فقط کالای سریال‌دار معنا دارد */
+  warrantyDays?: number | null;
+}
+
+function cleanWarranty(v: number | null | undefined): number | null {
+  if (v === null || v === undefined) return null;
+  if (!Number.isInteger(v) || v < 0 || v > 36500) throw new AccError("مدت گارانتی باید روز صحیح باشد");
+  return v || null;
 }
 
 /** فقط ماتریس (`matrix.ts`) — مدل و ترکیب ویژگی کالا */
@@ -186,6 +198,8 @@ export async function createItem(db: Prisma.TransactionClient, input: ItemInput,
       salePrice: input.salePrice ?? null,
       reorderPoint: input.reorderPoint ?? null,
       sellOnline: input.sellOnline ?? true,
+      hasSerial: !!input.hasSerial,
+      warrantyDays: cleanWarranty(input.warrantyDays),
     },
   });
   if (input.barcodes) await setBarcodes(db, item.id, input.barcodes);
@@ -221,6 +235,14 @@ export async function updateItem(db: Prisma.TransactionClient, id: string, input
   if (input.reorderPoint !== undefined) data.reorderPoint = input.reorderPoint;
   if (input.sellOnline !== undefined) data.sellOnline = input.sellOnline;
   if (input.isActive !== undefined) data.isActive = input.isActive;
+  if (input.warrantyDays !== undefined) data.warrantyDays = cleanWarranty(input.warrantyDays);
+  if (input.hasSerial !== undefined && input.hasSerial !== cur.hasSerial) {
+    if (!input.hasSerial) {
+      const live = await db.accSerial.count({ where: { itemId: id, status: { in: ["IN_STOCK", "TRANSIT"] } } });
+      if (live) throw new AccError(`${faNum(live)} سریال از این کالا در انبار است؛ کالای سریال‌دار با سریال در انبار بی‌سریال نمی‌شود`, 409);
+    }
+    data.hasSerial = input.hasSerial;
+  }
   if (input.groupId !== undefined) {
     await assertGroup(db, input.groupId);
     data.group = input.groupId ? { connect: { id: input.groupId } } : { disconnect: true };

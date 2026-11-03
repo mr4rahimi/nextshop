@@ -41,6 +41,7 @@ interface Line {
   unitPrice: string;
   discount: string;
   lineTotal: string;
+  serials?: string[];
 }
 
 function useAutoPrint(ready: boolean) {
@@ -85,6 +86,7 @@ function Lines({ lines, sign = "" }: { lines: Line[]; sign?: string }) {
       {lines.map((l, i) => (
         <div key={i}>
           <p className="font-bold leading-4">{l.title}</p>
+          {!!l.serials?.length && <p className="font-mono text-[10px]" dir="ltr">سریال: {l.serials.join("، ")}</p>}
           <div className="flex justify-between tabular-nums">
             <span>
               {faNum(l.qty)} × {formatAmount(l.unitPrice)}

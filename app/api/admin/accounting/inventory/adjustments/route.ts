@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   const guard = await requirePermission("ACC_INVENTORY");
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   try {
-    const b = await readJson<{ date?: string; direction?: string; reasonId?: string; warehouseId?: string; partyId?: string | null; note?: string; lines?: { productId: string; qty: unknown; note?: string }[] }>(req);
+    const b = await readJson<{ date?: string; direction?: string; reasonId?: string; warehouseId?: string; partyId?: string | null; note?: string; lines?: { productId: string; qty: unknown; note?: string; serials?: unknown }[] }>(req);
     if (b.direction !== "IN" && b.direction !== "OUT") throw new AccError("ورود یا خروج را انتخاب کنید");
     if (!b.warehouseId) throw new AccError("انبار را انتخاب کنید");
     const doc = await prisma.$transaction(
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
             warehouseId: b.warehouseId!,
             partyId: b.partyId || null,
             note: b.note,
-            lines: (b.lines ?? []).map((l) => ({ productId: String(l.productId), qty: Number(l.qty), note: l.note })),
+            lines: (b.lines ?? []).map((l) => ({ productId: String(l.productId), qty: Number(l.qty), note: l.note, serials: Array.isArray(l.serials) ? l.serials.map(String) : [] })),
           },
           actorOf(guard.access),
         ),

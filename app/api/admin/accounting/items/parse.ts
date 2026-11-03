@@ -1,5 +1,6 @@
 import { AccError, toAmount } from "@/lib/accounting/errors";
 import type { ItemInput } from "@/lib/accounting/inventory/items";
+import { toLatinDigits } from "@/lib/accounting/money";
 
 /** بدنه‌ی فرم کالا → ورودی `createItem` / `updateItem`؛ فیلد نیامده دست نمی‌خورد */
 export function parseItemInput(b: Record<string, unknown>): ItemInput {
@@ -21,6 +22,12 @@ export function parseItemInput(b: Record<string, unknown>): ItemInput {
   if (b.isActive !== undefined) out.isActive = !!b.isActive;
   if (b.groupId !== undefined) out.groupId = b.groupId ? String(b.groupId) : null;
   if (b.supplierId !== undefined) out.supplierId = b.supplierId ? String(b.supplierId) : null;
+  if (b.hasSerial !== undefined) out.hasSerial = !!b.hasSerial;
+  if (b.warrantyDays !== undefined) {
+    const n = b.warrantyDays === null || b.warrantyDays === "" ? null : Number(toLatinDigits(String(b.warrantyDays)));
+    if (n !== null && (!Number.isInteger(n) || n < 0)) throw new AccError("مدت گارانتی باید روز صحیح باشد");
+    out.warrantyDays = n;
+  }
   if (b.barcodes !== undefined) {
     if (!Array.isArray(b.barcodes)) throw new AccError("بارکدها نامعتبر است");
     out.barcodes = b.barcodes.map(String);

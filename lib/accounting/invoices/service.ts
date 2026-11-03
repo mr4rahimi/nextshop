@@ -25,6 +25,7 @@ import { faNum, formatAmount } from "../money";
 import { calcInvoice, CalcError, divRound, INVOICE_TYPE_LABELS, allocate } from "./calc";
 import { ensureItems } from "../inventory/items";
 import { poLineProgress } from "../purchases/progress";
+import { cleanSerialList, clearSerials, postSerials, type SerialEntry, type SerialMoveType } from "../inventory/serials";
 
 type Tx = Prisma.TransactionClient;
 
@@ -69,6 +70,8 @@ export interface InvoiceLineInput {
   taxCode?: string | null;
   /** فاکتور خرید ← ردیف سفارش خرید (webhesab-parity.md بخش ۱۳) */
   poLineId?: string | null;
+  /** کالای سریال‌دار — حداکثر به تعداد ردیف (webhesab-parity.md بخش ۱۴) */
+  serials?: string[] | null;
 }
 
 export interface PartySnapshot {
@@ -110,6 +113,8 @@ export interface SaveOpts {
   shopStock?: boolean;
   /** فروش دستی بیش از سقف اعتبار شخص — کاربر هشدار را دیده و تأیید کرده (فاز ۱۰) */
   allowOverCredit?: boolean;
+  /** فقط برآورد جمع صندوق (تراکنش برمی‌گردد) — سریال نه خواسته و نه ثبت می‌شود */
+  skipSerials?: boolean;
 }
 
 /** تعداد برگشت‌شده‌ی هر ردیف مرجع در برگشتی‌های معتبر */
@@ -189,7 +194,7 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
   const year = issue ? await assertPostable(tx, input.date) : await yearForDate(tx, input.date);
   if (!year) throw new AccError("برای این تاریخ سال مالی تعریف نشده است");
 
-  const settings = await tx.accSettings.findUnique({ where: { id: "singleton" }, select: { vatEnabled: true } });
+  const settings = await tx.accSettings.findUnique({ where: { id: "singleton" }, select: { vatEnabled: true, serialRequired: true } });
   const manual = (input.channel ?? current?.channel ?? "MANUAL") === "MANUAL";
 
   // ── ردیف‌ها ──
@@ -199,7 +204,7 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
   const productIds = [...new Set(input.lines.map((l) => (l.refLineId ? refLines.get(l.refLineId)?.productId : l.productId)).filter((x): x is string => !!x))];
   await ensureItems(tx, productIds);
   const products = new Map(
-    (await tx.accItem.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true } })).map((p) => [p.id, p]),
+    (await tx.accItem.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true, hasSerial: true } })).map((p) => [p.id, p]),
   );
 
   // ── سفارش خرید ── هر ردیف حداکثر تا مانده‌ی ردیف سفارش (منهای فاکتورهای دیگر، پیش‌نویس هم)
@@ -213,7 +218,22 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
   if (poOrderIds.size > 1) throw new AccError("ردیف‌های یک فاکتور فقط از یک سفارش خرید می‌آیند");
   const prevPo = current ? new Set((await tx.accInvoiceLine.findMany({ where: { invoiceId: current.id, poLineId: { not: null } }, select: { poLineId: true } })).map((l) => l.poLineId)) : new Set();
 
-  const lines: (Required<Omit<InvoiceLineInput, "discount" | "vatRateBp" | "title">> & { title: string; discount: bigint; vatRateBp: number })[] = [];
+  const lines: (Required<Omit<InvoiceLineInput, "discount" | "vatRateBp" | "title" | "serials">> & { title: string; discount: bigint; vatRateBp: number; serials: string[] })[] = [];
+  // ── شماره سریال ── فقط کالای سریال‌دار؛ فروش دستی و صندوق با `serialRequired` به تعداد ردیف
+  const serialsOf = (l: InvoiceLineInput, productId: string | null, at: string, qty: number) => {
+    const list = cleanSerialList(l.serials, `${at}: `);
+    if (!productId) {
+      if (list.length) throw new AccError(`${at}: ردیف خدمت شماره سریال ندارد`);
+      return list;
+    }
+    const p = products.get(productId);
+    if (list.length && !p?.hasSerial) throw new AccError(`${at}: «${p?.title ?? ""}» سریال‌دار نیست؛ در کارت کالا «سریال‌دار» را روشن کنید`);
+    if (list.length > qty) throw new AccError(`${at}: ${faNum(list.length)} شماره سریال برای ${faNum(qty)} عدد زیاد است`);
+    if (type === "SALES" && issue && manual && !opts.skipSerials && settings?.serialRequired && p?.hasSerial && list.length !== qty) {
+      throw new AccError(`${at}: «${p.title}» سریال‌دار است؛ ${faNum(qty)} شماره سریال لازم است${list.length ? ` (${faNum(list.length)} وارد شده)` : ""}`);
+    }
+    return list;
+  };
   for (const [i, l] of input.lines.entries()) {
     const at = `ردیف ${faNum(i + 1)}`;
     if (!Number.isInteger(l.qty) || l.qty <= 0) throw new AccError(`${at}: تعداد باید عدد صحیح مثبت باشد`);
@@ -237,6 +257,7 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
         orderItemId: rl.orderItemId,
         taxCode: rl.taxCode,
         poLineId: null,
+        serials: serialsOf(l, rl.productId, at, l.qty),
       });
       continue;
     }
@@ -276,6 +297,7 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
       orderItemId: l.orderItemId ?? null,
       taxCode: l.taxCode ?? null,
       poLineId: l.poLineId ?? null,
+      serials: serialsOf(l, productId, at, l.qty),
     });
   }
 
@@ -397,14 +419,36 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
       orderItemId: l.orderItemId,
       taxCode: l.taxCode,
       poLineId: l.poLineId,
+      serials: l.serials,
     })),
   });
 
   if (issue && MOVE_TYPE[type]) {
     await applyMoves(tx, await invoiceMoves(tx, inv.id), actor, { shopStock: opts.shopStock });
+    if (!opts.skipSerials) await postSerials(tx, { sourceType: INVOICE_SOURCE, sourceId: inv.id, date: inv.date }, await invoiceSerials(tx, inv.id), actor);
     await buildInvoiceVoucher(tx, inv.id, actor);
   }
   return tx.accInvoice.findUniqueOrThrow({ where: { id: inv.id } });
+}
+
+/** گردش سریال‌های یک فاکتور صادرشده — برگشتی فقط سریال‌های ردیف مرجع (اگر داشت) */
+async function invoiceSerials(tx: Tx, invoiceId: string): Promise<SerialEntry[]> {
+  const inv = await tx.accInvoice.findUniqueOrThrow({ where: { id: invoiceId }, include: { lines: { orderBy: { seq: "asc" } } } });
+  const type = MOVE_TYPE[inv.type] as SerialMoveType | null;
+  const rows = inv.lines.filter((l) => l.productId && l.serials.length);
+  if (!type || !rows.length) return [];
+  const refIds = rows.map((l) => l.refLineId).filter((x): x is string => !!x);
+  const refs = new Map(refIds.length ? (await tx.accInvoiceLine.findMany({ where: { id: { in: refIds } }, select: { id: true, serials: true } })).map((r) => [r.id, r.serials]) : []);
+  return rows.map((l) => ({
+    productId: l.productId!,
+    warehouseId: inv.warehouseId!,
+    type,
+    serials: l.serials,
+    sourceLineId: l.id,
+    partyId: inv.partyId,
+    label: `ردیف ${faNum(l.seq)}`,
+    allowed: l.refLineId ? refs.get(l.refLineId) ?? null : null,
+  }));
 }
 
 /** حرکت‌های کاردکس یک فاکتور صادرشده از روی ردیف‌های ذخیره‌شده */
@@ -566,6 +610,7 @@ export async function voidInvoice(tx: Tx, id: string, reason: string, actor: Act
   if (MOVE_TYPE[inv.type]) {
     await assertPostable(tx, inv.date);
     await removeMoves(tx, INVOICE_SOURCE, inv.id, actor, { shopStock: opts.shopStock });
+    await clearSerials(tx, INVOICE_SOURCE, inv.id, actor);
     if (inv.voucherId) await voidVoucher(tx, inv.voucherId, `ابطال ${INVOICE_TYPE_LABELS[inv.type]}: ${reason.trim()}`, actor, { fromSource: true });
   }
   if (inv.convertedFromId) {
@@ -623,6 +668,7 @@ export async function convertProforma(tx: Tx, id: string, date: Date, actor: Act
         vatRateBp: l.vatRateBp,
         accountId: l.accountId,
         taxCode: l.taxCode,
+        serials: l.serials,
       })),
     },
     { issue: true },

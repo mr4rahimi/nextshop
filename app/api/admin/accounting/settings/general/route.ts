@@ -47,6 +47,7 @@ export async function PATCH(req: Request) {
     }
     if ("pricesIncludeVat" in body) data.pricesIncludeVat = !!body.pricesIncludeVat;
     if ("vatEnabled" in body) data.vatEnabled = !!body.vatEnabled;
+    if ("serialRequired" in body) data.serialRequired = !!body.serialRequired;
     if ("currentYearId" in body) {
       const y = await prisma.accFiscalYear.findUnique({ where: { id: String(body.currentYearId) } });
       if (!y) throw new AccError("سال مالی پیدا نشد");

@@ -15,6 +15,7 @@ import { exactItem, itemSearchWhere, normalizeItemCode } from "../inventory/item
 import { ALWAYS_ASK_AXES, baseTitleOf } from "../inventory/relabel";
 import { posItems, type PosItem } from "./setup";
 import { TICKET_BARCODE_PREFIX } from "./tickets";
+import { findBySerial } from "../inventory/serials";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -30,7 +31,8 @@ export interface ModelPick {
 }
 
 export type ScanResult =
-  | { kind: "item"; item: PosItem }
+  /** `serial`: کد اسکن‌شده شماره سریالِ یک واحد در همین انبار بود */
+  | { kind: "item"; item: PosItem; serial?: string }
   | { kind: "model"; pick: ModelPick }
   | { kind: "ticket"; code: string }
   | { kind: "list"; items: PosItem[] };
@@ -86,6 +88,13 @@ export async function scanCode(raw: string, warehouseId: string, db: Db = prisma
     if (it) return { kind: "item", item: it };
   }
   if (legacy) return { kind: "model", pick: await modelPick(db, legacy.modelId, legacy.code, warehouseId) };
+
+  // شماره سریال در همین انبار — پیش از بارکد، چون سریال یک واحد معین است
+  const bySerial = (await findBySerial(db, term, warehouseId)).find((s) => s.status === "IN_STOCK" && s.warehouseId === warehouseId);
+  if (bySerial) {
+    const it = (await posItems([bySerial.itemId], warehouseId, db)).get(bySerial.itemId);
+    if (it) return { kind: "item", item: it, serial: bySerial.serial };
+  }
 
   const exact = await exactItem(code, db);
   if (exact) {

@@ -23,7 +23,7 @@ interface Data {
     createdAt: string;
     reason: { name: string };
   };
-  lines: { id: string; productId: string; qty: number; note: string | null; item: { title: string; code: string; unit: string } | null; cost: string | null }[];
+  lines: { id: string; productId: string; qty: number; note: string | null; serials: string[]; item: { title: string; code: string; unit: string } | null; cost: string | null }[];
   warehouse: { id: string; name: string } | null;
   party: { id: string; name: string } | null;
   account: { code: string; name: string } | null;
@@ -109,6 +109,17 @@ export default function AdjustmentDetail({ id }: { id: string }) {
                 {l.item?.code}
                 {l.note ? ` · ${l.note}` : ""}
               </span>
+              {l.serials.length > 0 && (
+                <span className="block text-[11px] text-gray-500">
+                  سریال:{" "}
+                  {l.serials.map((s, k) => (
+                    <Link key={s} href={`/admin/accounting/inventory/serials?q=${encodeURIComponent(s)}`} className="font-mono text-indigo-600 hover:underline" dir="ltr">
+                      {k ? "، " : ""}
+                      {s}
+                    </Link>
+                  ))}
+                </span>
+              )}
             </span>
             <span className="text-base font-black tabular-nums">
               {faNum(l.qty)} <span className="text-[11px] font-normal text-gray-400">{l.item?.unit}</span>
