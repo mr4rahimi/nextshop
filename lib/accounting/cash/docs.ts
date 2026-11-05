@@ -95,6 +95,8 @@ export interface MoneyDocInput {
   allocations?: { invoiceId: string; amount: bigint }[] | "auto";
   paymentId?: string | null;
   sourceKey?: string | null;
+  /** دریافت/پرداخت گروهی — همه‌ی سندهای یک ثبت (webhesab-parity.md بخش ۱۸) */
+  batchId?: string | null;
   /** هزینه/درآمد: بابت چه — هر ردیف یک حساب هزینه یا درآمد */
   lines?: { accountId: string; amount: bigint; description?: string | null }[];
   /** هزینه: مالیات بر ارزش افزوده‌ی قابل کسر؛ درآمد: مالیات فروش */
@@ -217,6 +219,7 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
       description: input.description?.trim() || null,
       paymentId: input.paymentId ?? null,
       sourceKey: input.sourceKey ?? null,
+      batchId: input.batchId ?? null,
       payable,
       vatAmount: vat,
       createdById: actor.id ?? null,

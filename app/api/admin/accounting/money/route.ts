@@ -30,6 +30,13 @@ export async function GET(req: Request) {
   const partyId = url.searchParams.get("partyId");
   if (partyId) where.partyId = partyId;
   if (from || to) where.date = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
+  // یک ثبت گروهی: همه‌ی سندهایش، بی‌توجه به بازه و نوع فرستاده‌شده
+  const batchId = url.searchParams.get("batchId");
+  if (batchId) {
+    where.batchId = batchId;
+    delete where.date;
+    delete where.kind;
+  }
   const q = url.searchParams.get("q")?.trim();
   if (q) {
     const lat = toLatinDigits(q);
@@ -43,7 +50,7 @@ export async function GET(req: Request) {
     prisma.accMoneyDoc.findMany({
       where,
       orderBy: [{ date: "desc" }, { number: "desc" }],
-      take: 150,
+      take: batchId ? 500 : 150,
       include: { party: { select: { id: true, name: true } }, items: { select: { method: true, treasuryId: true, toTreasuryId: true } }, _count: { select: { allocations: true } } },
     }),
     prisma.accMoneyDoc.aggregate({ where: { ...where, status: "POSTED" }, _sum: { total: true }, _count: true }),

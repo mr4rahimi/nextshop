@@ -5271,6 +5271,8 @@ model AccMoneyDoc {
   payable       BigInt       @default(0)
   /// هزینه: مالیات بر ارزش افزوده‌ی قابل کسر
   vatAmount     BigInt       @default(0)
+  /// دریافت/پرداخت گروهی — webhesab-parity.md بخش ۱۸. همه‌ی سندهای یک ثبت گروهی یک شناسه
+  batchId       String?
   createdById   String?
   createdByName String
   createdAt     DateTime     @default(now())
@@ -5284,6 +5286,7 @@ model AccMoneyDoc {
   @@unique([yearId, kind, number])
   @@index([partyId, date])
   @@index([kind, date])
+  @@index([batchId])
 }
 
 /// یک روش در یک دریافت/پرداخت — «بخشی نقد، بخشی چک»

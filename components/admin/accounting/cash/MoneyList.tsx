@@ -48,13 +48,16 @@ export default function MoneyList() {
   const [range, setRange] = useState<Range>(() => rangeFor("month"));
   const [data, setData] = useState<{ items: Row[]; treasuries: Record<string, string>; summary: { count: number; total: string }; can: { write: boolean } } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // `?batchId=` — همه‌ی سندهای یک دریافت/پرداخت گروهی (webhesab-parity.md بخش ۱۸)
+  const batchId = sp.get("batchId");
 
   const load = useCallback(() => {
     const p = new URLSearchParams(rangeQuery(range));
     p.set("kind", kind);
+    if (batchId) p.set("batchId", batchId);
     if (q.trim()) p.set("q", q.trim());
     api<NonNullable<typeof data>>(`/api/admin/accounting/money?${p}`).then(setData).catch((e) => setError(e.message));
-  }, [kind, q, range]);
+  }, [kind, q, range, batchId]);
   useEffect(() => {
     const h = setTimeout(load, q ? 250 : 0);
     return () => clearTimeout(h);
@@ -73,13 +76,28 @@ export default function MoneyList() {
         desc="پولی که گرفتید یا دادید، و جابه‌جایی بین صندوق و بانک. پرداخت آنلاین سایت خودکار اینجا می‌آید."
         actions={
           data?.can.write && (
-            <Link href={`/admin/accounting/money/new?kind=${kind}`} className={btn.primary}>
-              <Plus className="h-4 w-4" aria-hidden />
-              {KIND_LABELS[kind]} تازه
-            </Link>
+            <>
+              {kind !== "TRANSFER" && (
+                <Link href={`/admin/accounting/money/batch?kind=${kind}`} className={btn.soft}>
+                  🧾 {KIND_LABELS[kind]} گروهی
+                </Link>
+              )}
+              <Link href={`/admin/accounting/money/new?kind=${kind}`} className={btn.primary}>
+                <Plus className="h-4 w-4" aria-hidden />
+                {KIND_LABELS[kind]} تازه
+              </Link>
+            </>
           )
         }
       />
+      {batchId && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 px-3 py-2 text-xs text-blue-900 dark:text-blue-200">
+          <span className="font-bold">سندهای یک ثبت گروهی</span>
+          <button onClick={() => router.replace(`?kind=${kind}`, { scroll: false })} className={`${btn.small} mr-auto`}>
+            × همه‌ی سندها
+          </button>
+        </div>
+      )}
       <Chips
         value={kind}
         onChange={(k) => {

@@ -106,6 +106,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/purchases", label: "خرید", icon: fx("Shopping cart"), keywords: "فاکتور خرید" },
       { href: "/admin/accounting/purchases/orders", label: "سفارش خرید", icon: fx("Clipboard"), keywords: "سفارش خرید پیشنهاد خرید دریافت کالا" },
       { href: "/admin/accounting/money", label: "دریافت و پرداخت", icon: fx("Currency exchange") },
+      { href: "/admin/accounting/money/batch", label: "دریافت گروهی", icon: fx("Ledger"), keywords: "دریافت پرداخت گروهی دسته ای وصول چند مشتری اکسل" },
       { href: "/admin/accounting/cheques", label: "چک‌ها", icon: fx("Fountain pen") },
       { href: "/admin/accounting/expenses", label: "هزینه‌ها", icon: fx("Money with wings") },
       { href: "/admin/accounting/expenses?kind=INCOME", label: "درآمدها", icon: fx("Money bag") },
