@@ -60,10 +60,15 @@ export default function PartiesClient() {
         desc="مشتری‌ها، تأمین‌کننده‌ها، کارمندان و هر کسی که با او حساب دارید."
         actions={
           data?.can.manage && (
-            <button onClick={() => setFormOpen(true)} className={btn.primary}>
-              <Plus className="h-4 w-4" aria-hidden />
-              شخص تازه
-            </button>
+            <>
+              <Link href="/admin/accounting/parties/duplicates" className={btn.soft}>
+                🔀 اشخاص تکراری
+              </Link>
+              <button onClick={() => setFormOpen(true)} className={btn.primary}>
+                <Plus className="h-4 w-4" aria-hidden />
+                شخص تازه
+              </button>
+            </>
           )
         }
       />

@@ -4136,6 +4136,9 @@ model AccParty {
   externalCode  String?
   note          String?
   isActive      Boolean       @default(true)
+  /// ادغام‌شده در این شخص — webhesab-parity.md بخش ۱۷. همه‌ی گردش منتقل شده و این ردیف فقط نشانی است
+  mergedIntoId  String?
+  mergedAt      DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -4150,6 +4153,7 @@ model AccParty {
   @@index([mobile])
   @@index([name])
   @@index([externalCode])
+  @@index([mergedIntoId])
 }
 
 enum AccTreasuryKind {
@@ -4299,7 +4303,7 @@ model AccAttachment {
 /// یک ردیف (پیش‌نویس نه). فقط `lib/accounting/doc-log.ts` می‌نویسد؛ از داخل همان تابع ابطال/ویرایش.
 model AccDocLog {
   id          String   @id @default(cuid())
-  /// AccInvoice | AccMoneyDoc | AccVoucher | AccStockAdjust | AccTransfer | AccStockCount | AccInstallmentPlan
+  /// AccInvoice | AccMoneyDoc | AccVoucher | AccStockAdjust | AccTransfer | AccStockCount | AccInstallmentPlan | AccParty (ادغام)
   docType     String
   /// برنامه‌ی اقساط = شناسه‌ی فاکتورش (برنامه با ابطال حذف می‌شود)
   docId       String

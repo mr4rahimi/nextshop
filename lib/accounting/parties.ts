@@ -114,6 +114,7 @@ export async function createParty(tx: Tx, input: PartyInput & { userId?: string;
 export async function updateParty(tx: Tx, id: string, input: PartyInput): Promise<AccParty> {
   const current = await tx.accParty.findUnique({ where: { id } });
   if (!current) throw new AccError("شخص پیدا نشد", 404);
+  if (current.mergedIntoId) throw new AccError("این شخص در شخص دیگری ادغام شده؛ همان را ویرایش کنید", 409);
   const data = normalize(input, current);
   if (data.mobile && data.mobile !== current.mobile) {
     const dup = await tx.accParty.findFirst({ where: { mobile: data.mobile as string, id: { not: id } }, select: { name: true } });

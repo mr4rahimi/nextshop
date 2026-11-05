@@ -112,6 +112,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/installments", label: "اقساط", icon: fx("Spiral calendar") },
       { href: "/admin/accounting/calendar", label: "تقویم سررسید", icon: fx("Tear-off calendar") },
       { href: "/admin/accounting/parties", label: "اشخاص", icon: fx("Busts in silhouette") },
+      { href: "/admin/accounting/parties/duplicates", label: "اشخاص تکراری", icon: fx("People hugging"), keywords: "ادغام شخص تکراری مشتری تکراری انتقال تراکنش تفصیل" },
       { href: "/admin/accounting/treasury", label: "صندوق و بانک", icon: fx("Bank") },
       { href: "/admin/accounting/vouchers", label: "اسناد", icon: fx("Notebook") },
       { href: "/admin/accounting/attachments", label: "پیوست مدارک", icon: fx("Linked paperclips"), keywords: "پیوست فایل عکس رسید اسکن مدرک ضمیمه" },

@@ -33,9 +33,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     supplier: party.supplierId
       ? await prisma.staffSupplier.findUnique({ where: { id: party.supplierId }, select: { id: true, name: true } })
       : null,
+    mergedInto: party.mergedIntoId
+      ? await prisma.accParty.findUnique({ where: { id: party.mergedIntoId }, select: { id: true, code: true, name: true } })
+      : null,
   };
   return NextResponse.json(
-    serialize({ party, balance: total.balance, statement: st, summary, links, can: { manage: can(guard.access, "ACC_PARTY_MANAGE") } }),
+    serialize({ party, balance: total.balance, statement: st, summary, links, can: { manage: can(guard.access, "ACC_PARTY_MANAGE"), merge: can(guard.access, "ACC_PARTY_MANAGE") && can(guard.access, "ACC_VOUCHER") } }),
   );
 }
 

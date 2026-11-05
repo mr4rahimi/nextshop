@@ -410,11 +410,11 @@ export async function ledgerHealth(db: Db, opts: HealthOpts): Promise<{ checks: 
     },
   );
   push(
-    { key: "dupParties", group: "other", title: "اشخاص با موبایل یا کد ملی تکراری", severity: "info", hint: "احتمالاً یک نفر دو بار تعریف شده و حسابش دو تکه است." },
+    { key: "dupParties", group: "other", title: "اشخاص با موبایل یا کد ملی تکراری", severity: "info", hint: "احتمالاً یک نفر دو بار تعریف شده و حسابش دو تکه است. هر ردیف پنجره‌ی ادغام را باز می‌کند؛ همه‌ی نامزدها (با نام یکسان هم) در «اشخاص تکراری».", more: `${A}/parties/duplicates` },
     map(dupParties, (r) => ({
       label: r.names.join(" / "),
       detail: `${r.kind === "mobile" ? "موبایل" : "کد ملی"} ${r.key}`,
-      href: `${A}/parties/${r.ids[0]}`,
+      href: `${A}/parties/${r.ids[0]}?merge=${r.ids[1]}`,
     })),
   );
 

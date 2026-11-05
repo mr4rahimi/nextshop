@@ -15,6 +15,8 @@ import Link from "next/link";
 import { formatJalali } from "@/lib/club/jalali";
 import { invoiceTitle, StatusBadge, type InvoiceRow } from "./invoices/InvoicesList";
 import Attachments from "./Attachments";
+import PartyMerge from "./PartyMerge";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export interface PartySummary {
   opening: string;
@@ -29,8 +31,12 @@ interface Data {
   balance: string;
   statement: StatementData;
   summary: PartySummary;
-  links: { user: { id: string; phone: string } | null; supplier: { id: string; name: string } | null };
-  can: { manage: boolean };
+  links: {
+    user: { id: string; phone: string } | null;
+    supplier: { id: string; name: string } | null;
+    mergedInto: { id: string; code: number; name: string } | null;
+  };
+  can: { manage: boolean; merge: boolean };
 }
 
 export default function PartyDetailClient({ id }: { id: string }) {
@@ -40,6 +46,10 @@ export default function PartyDetailClient({ id }: { id: string }) {
   const [edit, setEdit] = useState(false);
   const [invoices, setInvoices] = useState<InvoiceRow[] | null>(null);
   const [mode, setMode] = useState<"detail" | "summary">("detail");
+  const sp = useSearchParams();
+  const router = useRouter();
+  // `?merge=<id>` از سلامت دفتر / اشخاص تکراری — پنجره‌ی ادغام با همان جفت
+  const [merge, setMerge] = useState<string | null | false>(() => sp.get("merge") || false);
 
   // فاکتورهای این شخص — هر سمتی که کاربر اجازه‌ی دیدنش را دارد
   useEffect(() => {
@@ -77,14 +87,29 @@ export default function PartyDetailClient({ id }: { id: string }) {
             <Link href={`/admin/accounting/money/new?kind=PAYMENT&partyId=${id}`} className={btn.soft}>
               📤 پرداخت
             </Link>
-            {data.can.manage && (
+            {data.can.manage && !data.links.mergedInto && (
               <button onClick={() => setEdit(true)} className={btn.soft}>
                 ✏️ ویرایش
+              </button>
+            )}
+            {data.can.manage && !data.links.mergedInto && (
+              <button onClick={() => setMerge(null)} className={btn.soft}>
+                🔀 ادغام تکراری
               </button>
             )}
           </>
         }
       />
+
+      {data.links.mergedInto && (
+        <div className="rounded-2xl bg-amber-50 dark:bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-200">
+          این شخص در{" "}
+          <Link href={`/admin/accounting/parties/${data.links.mergedInto.id}`} className="font-black underline">
+            «{data.links.mergedInto.name}» (کد {faNum(data.links.mergedInto.code)})
+          </Link>{" "}
+          ادغام شده و همه‌ی گردشش آنجاست.
+        </div>
+      )}
 
       <Card className="p-4 grid gap-4 sm:grid-cols-[1fr_auto] items-center">
         <div className="space-y-2">
@@ -170,6 +195,23 @@ export default function PartyDetailClient({ id }: { id: string }) {
           onSaved={() => {
             setEdit(false);
             load();
+          }}
+        />
+      )}
+      {merge !== false && !data.links.mergedInto && (
+        <PartyMerge
+          baseId={id}
+          otherId={merge}
+          onClose={() => {
+            setMerge(false);
+            if (sp.get("merge")) router.replace(`/admin/accounting/parties/${id}`);
+          }}
+          onDone={(keepId) => {
+            setMerge(false);
+            if (keepId === id) {
+              router.replace(`/admin/accounting/parties/${id}`);
+              load();
+            } else router.push(`/admin/accounting/parties/${keepId}`);
           }}
         />
       )}

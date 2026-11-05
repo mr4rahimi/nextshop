@@ -54,6 +54,7 @@ const TYPES: { value: string; label: string }[] = [
   { value: "AccTransfer", label: "حواله" },
   { value: "AccStockCount", label: "انبارگردانی" },
   { value: "AccInstallmentPlan", label: "اقساط" },
+  { value: "AccParty", label: "ادغام اشخاص" },
 ];
 
 const when = (iso: string) => {

@@ -51,6 +51,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { href: "/admin/accounting/reports/health", icon: "🩺", title: "سلامت دفتر", desc: "سند تراز نشده، فاکتور بی سند، موجودی منفی، بهای صفر و رویداد مسدود — با لینک به هر مورد", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/reports/doc-log", icon: "🗑", title: "اسناد باطل‌شده", desc: "چه کسی، کی و چرا سندی را باطل کرد", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/reports/doc-log?action=EDIT", icon: "✏️", title: "اسناد ویرایش‌شده", desc: "فاکتورهای صادرشده‌ای که بعداً عوض شدند، با ریز قبل و بعد", perm: ["ACC_REPORTS"] },
+      { href: "/admin/accounting/parties/duplicates", icon: "🔀", title: "اشخاص تکراری", desc: "هم‌موبایل، هم‌کد ملی یا هم‌نام — با ادغام در یک شخص", perm: ["ACC_PARTY_MANAGE"] },
     ],
   },
   {

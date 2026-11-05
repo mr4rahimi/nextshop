@@ -14,7 +14,7 @@ import type { Db } from "./reports/common";
 
 type Tx = Prisma.TransactionClient;
 
-export type DocType = "AccInvoice" | "AccMoneyDoc" | "AccVoucher" | "AccStockAdjust" | "AccTransfer" | "AccStockCount" | "AccInstallmentPlan";
+export type DocType = "AccInvoice" | "AccMoneyDoc" | "AccVoucher" | "AccStockAdjust" | "AccTransfer" | "AccStockCount" | "AccInstallmentPlan" | "AccParty";
 
 export interface DocChange {
   label: string;
@@ -74,6 +74,7 @@ export const DOC_TYPE_LABELS: Record<DocType, string> = {
   AccTransfer: "حواله",
   AccStockCount: "انبارگردانی",
   AccInstallmentPlan: "برنامه‌ی اقساط",
+  AccParty: "ادغام اشخاص",
 };
 
 export function docLabel(r: { docType: string; kind: string | null; number: number | null }): string {
@@ -93,6 +94,8 @@ export function docLabel(r: { docType: string; kind: string | null; number: numb
       return `انبارگردانی${n}`;
     case "AccInstallmentPlan":
       return `اقساط فاکتور${n}`;
+    case "AccParty":
+      return `ادغام در شخص${n}`;
   }
   return r.docType;
 }
@@ -114,6 +117,8 @@ export function docHref(r: { docType: string; docId: string }): string {
       return `${base}/inventory/counts/${r.docId}`;
     case "AccInstallmentPlan":
       return `${base}/invoices/${r.docId}`;
+    case "AccParty":
+      return `${base}/parties/${r.docId}`;
   }
   return base;
 }
