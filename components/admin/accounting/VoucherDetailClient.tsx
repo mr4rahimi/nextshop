@@ -122,6 +122,11 @@ export default function VoucherDetailClient({ id }: { id: string }) {
               {v.sourceId.startsWith("adjust:") ? "دیدن سند ورود/خروج کالا ←" : "دیدن انبارگردانی ←"}
             </Link>
           )}
+          {manual && v.sourceId?.startsWith("template:") && (
+            <Link href={`/admin/accounting/vouchers/templates/${v.sourceId.slice(9)}`} className="text-[10px] font-bold text-blue-600">
+              ثبت‌شده با ورودی سریع ←
+            </Link>
+          )}
           <Badge>سال مالی {faNum(v.year.title)}</Badge>
           {v.status === "VOID" && <Badge tone="red">باطل شده</Badge>}
         </div>

@@ -116,6 +116,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/parties/duplicates", label: "اشخاص تکراری", icon: fx("People hugging"), keywords: "ادغام شخص تکراری مشتری تکراری انتقال تراکنش تفصیل" },
       { href: "/admin/accounting/treasury", label: "صندوق و بانک", icon: fx("Bank") },
       { href: "/admin/accounting/vouchers", label: "اسناد", icon: fx("Notebook") },
+      { href: "/admin/accounting/vouchers/templates", label: "ورودی سریع", icon: fx("Ledger"), keywords: "سند الگو ثبت تکراری اجاره قالب سند ورودی سریع" },
       { href: "/admin/accounting/attachments", label: "پیوست مدارک", icon: fx("Linked paperclips"), keywords: "پیوست فایل عکس رسید اسکن مدرک ضمیمه" },
       { href: "/admin/accounting/accounts", label: "سرفصل حساب‌ها", icon: fx("Books") },
       { href: "/admin/accounting/events", label: "رویدادهای مالی", icon: fx("Satellite antenna") },

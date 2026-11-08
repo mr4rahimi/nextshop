@@ -5,6 +5,7 @@ import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { postVoucher } from "@/lib/accounting/ledger/post";
+import { templateSourceId } from "@/lib/accounting/ledger/templates";
 import { AccError, accErrorResponse, toAmount } from "@/lib/accounting/errors";
 import { actorOf, rangeFrom, readJson, requireDay } from "@/lib/accounting/api";
 import { faNum, toLatinDigits } from "@/lib/accounting/money";
@@ -22,11 +23,16 @@ export async function GET(req: Request) {
   const status = url.searchParams.get("status");
   const { from, to } = rangeFrom(url);
   const take = Math.min(Number(url.searchParams.get("take")) || 100, 300);
+  // سندهای یک ورودی سریع — بازه نادیده گرفته می‌شود تا شمارش فهرست با کارت الگو یکی باشد
+  const template = url.searchParams.get("template");
 
   const where: Prisma.AccVoucherWhereInput = {};
   if (source) where.source = source;
   if (status === "POSTED" || status === "VOID") where.status = status;
-  if (from || to) where.date = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
+  if (template) {
+    where.source = "MANUAL";
+    where.sourceId = templateSourceId(template);
+  } else if (from || to) where.date = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
   if (q) {
     const n = toLatinDigits(q);
     where.OR = [{ description: { contains: q, mode: "insensitive" } }, ...(/^\d+$/.test(n) ? [{ number: Number(n) }] : [])];

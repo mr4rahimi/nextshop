@@ -4093,10 +4093,11 @@ model AccAccount {
   hesabanId  Int?
   createdAt  DateTime      @default(now())
 
-  parent     AccAccount?      @relation("AccTree", fields: [parentId], references: [id])
-  children   AccAccount[]     @relation("AccTree")
-  lines      AccVoucherLine[]
-  moneyLines AccMoneyLine[]
+  parent        AccAccount?              @relation("AccTree", fields: [parentId], references: [id])
+  children      AccAccount[]             @relation("AccTree")
+  lines         AccVoucherLine[]
+  templateLines AccVoucherTemplateLine[]
+  moneyLines    AccMoneyLine[]
 
   @@index([parentId])
 }
@@ -4143,6 +4144,7 @@ model AccParty {
   updatedAt     DateTime      @updatedAt
 
   lines            AccVoucherLine[]
+  templateLines    AccVoucherTemplateLine[]
   invoices         AccInvoice[]
   purchaseOrders   AccPurchaseOrder[]
   moneyDocs        AccMoneyDoc[]
@@ -4181,7 +4183,8 @@ model AccTreasury {
   hesabanId  Int?
   createdAt  DateTime        @default(now())
 
-  lines AccVoucherLine[]
+  lines         AccVoucherLine[]
+  templateLines AccVoucherTemplateLine[]
 }
 
 enum AccVoucherStatus {
@@ -4264,6 +4267,63 @@ model AccVoucherLine {
   @@index([partyId, date])
   @@index([treasuryId, date])
   @@index([yearId, isVoid])
+}
+
+/// طرف ردیف الگوی سند
+enum AccTemplateSide {
+  DEBIT
+  CREDIT
+}
+
+/// مبلغ ردیف الگو از کجا می‌آید — docs/plans/webhesab-parity.md بخش ۱۹
+enum AccTemplateAmount {
+  BASE // خود مبلغ پایه
+  PERCENT // درصدی از مبلغ پایه
+  FIXED // مبلغ ثابت
+  ASK // هنگام ثبت پرسیده می‌شود
+  REMAINDER // هرچه سند را تراز کند
+}
+
+/// ورودی سریع (سند الگو): با یک مبلغ پایه سند کامل ساخته می‌شود
+model AccVoucherTemplate {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  /// شرح پیش‌فرض سند
+  description   String
+  /// عنوان فیلد مبلغ پایه در فرم ثبت (مثلاً «مبلغ اجاره»)
+  baseLabel     String   @default("مبلغ")
+  baseAmount    BigInt   @default(0)
+  createdById   String?
+  createdByName String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  lines AccVoucherTemplateLine[]
+}
+
+model AccVoucherTemplateLine {
+  id          String            @id @default(cuid())
+  templateId  String
+  seq         Int
+  accountId   String
+  side        AccTemplateSide
+  kind        AccTemplateAmount
+  /// درصد × ۱۰۰ (۹٪ = ۹۰۰)؛ فقط برای PERCENT
+  percentBps  Int?
+  /// فقط برای FIXED
+  fixedAmount BigInt?
+  /// تفصیلی پیش‌فرض؛ خالی = هنگام ثبت انتخاب می‌شود
+  partyId     String?
+  treasuryId  String?
+  description String?
+
+  template AccVoucherTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  account  AccAccount         @relation(fields: [accountId], references: [id])
+  party    AccParty?          @relation(fields: [partyId], references: [id], onDelete: SetNull)
+  treasury AccTreasury?       @relation(fields: [treasuryId], references: [id], onDelete: SetNull)
+
+  @@index([templateId])
+  @@index([partyId])
 }
 
 enum AccEventStatus {

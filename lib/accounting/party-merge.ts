@@ -34,6 +34,7 @@ const REFS = [
   { key: "serials", label: "شماره سریال", count: (db: Db, id: string) => db.accSerial.count({ where: { partyId: id } }), move: (tx: Tx, a: string, b: string) => tx.accSerial.updateMany({ where: { partyId: a }, data: { partyId: b } }) },
   { key: "serialMoves", label: "گردش سریال", count: (db: Db, id: string) => db.accSerialMove.count({ where: { partyId: id } }), move: (tx: Tx, a: string, b: string) => tx.accSerialMove.updateMany({ where: { partyId: a }, data: { partyId: b } }) },
   { key: "items", label: "کالا با این عرضه‌کننده", count: (db: Db, id: string) => db.accItem.count({ where: { supplierId: id } }), move: (tx: Tx, a: string, b: string) => tx.accItem.updateMany({ where: { supplierId: a }, data: { supplierId: b } }) },
+  { key: "templateLines", label: "ردیف ورودی سریع", count: (db: Db, id: string) => db.accVoucherTemplateLine.count({ where: { partyId: id } }), move: (tx: Tx, a: string, b: string) => tx.accVoucherTemplateLine.updateMany({ where: { partyId: a }, data: { partyId: b } }) },
   {
     key: "attachments",
     label: "پیوست",

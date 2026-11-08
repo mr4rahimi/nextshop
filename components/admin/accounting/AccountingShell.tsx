@@ -19,7 +19,7 @@ import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import {
   ArrowDownToLine, ArrowUpFromLine, Banknote, Calculator, ClipboardCheck, FilePen, FileText,
-  Coins, House, Landmark, LayoutGrid, Plus, Receipt, Repeat, ScanBarcode, ShoppingBag, Store, Truck, UserPlus, Users, Wallet,
+  Coins, House, Landmark, LayoutGrid, Plus, Receipt, Repeat, ScanBarcode, ShoppingBag, Store, Truck, UserPlus, Users, Zap, Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { useAccess } from "./access";
@@ -46,6 +46,7 @@ const QUICK: AppItem[] = [
   { href: "/admin/accounting/inventory/adjustments", label: "ورود و خروج کالا", icon: ArrowUpFromLine, tone: "orange", perm: ["ACC_INVENTORY"], img: "quick-stock-adjust" },
   { href: "/admin/accounting/inventory/transfers", label: "حواله‌ی انتقال", icon: Truck, tone: "slate", perm: ["ACC_INVENTORY", "ACC_STOCK_RECEIVE"], img: "quick-stock-transfer" },
   { href: "/admin/accounting/vouchers/new", label: "سند دستی", icon: FilePen, tone: "fuchsia", perm: ["ACC_VOUCHER"], img: "quick-voucher" },
+  { href: "/admin/accounting/vouchers/templates", label: "ورودی سریع", icon: Zap, tone: "fuchsia", perm: ["ACC_VOUCHER"], img: "quick-voucher" },
 ];
 
 const MODULE = { href: "/admin/accounting", label: "حسابداری", icon: Calculator, tone: "blue" as const };

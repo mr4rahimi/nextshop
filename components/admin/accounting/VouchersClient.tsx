@@ -23,7 +23,7 @@ interface V {
 
 type SrcF = "" | "MANUAL" | "OPENING";
 
-export default function VouchersClient() {
+export default function VouchersClient({ templateId }: { templateId?: string }) {
   const [q, setQ] = useState("");
   const [src, setSrc] = useState<SrcF>("");
   const [range, setRange] = useState<Range>(() => rangeFor("year"));
@@ -34,13 +34,14 @@ export default function VouchersClient() {
     const p = new URLSearchParams(rangeQuery(range));
     if (q.trim()) p.set("q", q.trim());
     if (src) p.set("source", src);
+    if (templateId) p.set("template", templateId);
     api<{ vouchers: V[]; can: { manage: boolean } }>(`/api/admin/accounting/vouchers?${p}`)
       .then((d) => {
         setData(d);
         setError(null);
       })
       .catch((e) => setError(e.message));
-  }, [q, src, range]);
+  }, [q, src, range, templateId]);
   useEffect(() => {
     const h = setTimeout(load, q ? 250 : 0);
     return () => clearTimeout(h);
@@ -54,9 +55,14 @@ export default function VouchersClient() {
         desc="همه‌ی ثبت‌های مالی با شماره‌ی پیوسته. بیشترشان خودکار ساخته می‌شوند."
         actions={
           data?.can.manage && (
-            <Link href="/admin/accounting/vouchers/new" className={btn.primary}>
-              📝 سند دستی
-            </Link>
+            <>
+              <Link href="/admin/accounting/vouchers/templates" className={btn.soft}>
+                ⚡ ورودی سریع
+              </Link>
+              <Link href="/admin/accounting/vouchers/new" className={btn.primary}>
+                📝 سند دستی
+              </Link>
+            </>
           )
         }
       />
@@ -72,7 +78,16 @@ export default function VouchersClient() {
           ]}
         />
       </div>
-      <RangeBar value={range} onChange={setRange} />
+      {templateId ? (
+        <p className="text-xs text-gray-500">
+          فقط سندهای یک ورودی سریع، در همه‌ی تاریخ‌ها.{" "}
+          <Link href="/admin/accounting/vouchers" className="text-blue-600 hover:underline">
+            همه‌ی اسناد
+          </Link>
+        </p>
+      ) : (
+        <RangeBar value={range} onChange={setRange} />
+      )}
       <ErrorText>{error}</ErrorText>
 
       <Card className="divide-y divide-gray-100 dark:divide-white/5 overflow-hidden">
