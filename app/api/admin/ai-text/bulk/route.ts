@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getCategorySubtreeIds } from "@/lib/category-data";
 import { getAuthUser } from "@/lib/auth";
 import { getAiSettings } from "@/lib/ai/settings";
 import { startBulkTextJob, runningTextJobs } from "@/lib/ai/text-jobs";
@@ -39,7 +40,7 @@ export async function GET(req: Request) {
 
   const where: Prisma.ProductWhereInput = {
     ...(or && { OR: or }),
-    ...(categoryId && { categoryId }),
+    ...(categoryId && { categoryId: { in: await getCategorySubtreeIds(categoryId) } }),
     ...(q && { title: { contains: q, mode: "insensitive" } }),
   };
   const [products, total] = await Promise.all([

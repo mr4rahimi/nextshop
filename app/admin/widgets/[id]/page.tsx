@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { categoryOptions } from "@/lib/category-tree";
 import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import { isoToTehranLocal, tehranLocalToIso } from "@/lib/club/jalali";
 import {
@@ -109,7 +110,8 @@ function CategoryEditor({
     const a = [...selectedIds]; [a[i], a[i + 1]] = [a[i + 1], a[i]]; setSelectedIds(a);
   }
 
-  const filtered = categories.filter(c => c.title.toLowerCase().includes(search.toLowerCase()));
+  const options = categoryOptions(categories);
+  const filtered = options.filter(c => c.label.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-6">
@@ -128,7 +130,7 @@ function CategoryEditor({
                   <label className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${sel ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                     {cat.imageUrl ? <img src={cat.imageUrl} alt={cat.title} className="w-9 h-9 rounded-xl object-cover flex-shrink-0" /> : <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 flex-shrink-0" />}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{cat.title}</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{cat.label}</p>
                       <p className="text-[10px] text-gray-400">{cat.slug}</p>
                     </div>
                     <div className="relative flex-shrink-0">
@@ -159,13 +161,13 @@ function CategoryEditor({
           ) : (
             <ul className="divide-y divide-gray-100 dark:divide-gray-800 max-h-96 overflow-y-auto">
               {selectedIds.map((catId, i) => {
-                const cat = categories.find(c => c.id === catId);
+                const cat = options.find(c => c.id === catId);
                 if (!cat) return null;
                 return (
                   <li key={catId} className="flex items-center gap-3 px-4 py-3">
                     <span className="w-6 h-6 rounded-lg bg-blue-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">{i + 1}</span>
                     {cat.imageUrl ? <img src={cat.imageUrl} alt={cat.title} className="w-9 h-9 rounded-xl object-cover flex-shrink-0" /> : <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 flex-shrink-0" />}
-                    <p className="flex-1 text-sm font-bold text-gray-900 dark:text-white truncate">{cat.title}</p>
+                    <p className="flex-1 text-sm font-bold text-gray-900 dark:text-white truncate">{cat.label}</p>
                     <div className="flex gap-1 flex-shrink-0">
                       <button onClick={() => moveUp(i)} disabled={i === 0} className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 disabled:opacity-30 flex items-center justify-center text-gray-500 transition-all text-xs">↑</button>
                       <button onClick={() => moveDown(i)} disabled={i === selectedIds.length - 1} className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 disabled:opacity-30 flex items-center justify-center text-gray-500 transition-all text-xs">↓</button>
@@ -455,8 +457,9 @@ function ProductsByCategoryEditor({
   setProductIds: (ids: string[]) => void;
 }) {
   const [search, setSearch] = useState("");
-  const filtered = categories.filter(c => c.title.toLowerCase().includes(search.toLowerCase()));
-  const selectedCat = categories.find(c => c.id === categoryId);
+  const options = categoryOptions(categories);
+  const filtered = options.filter(c => c.label.toLowerCase().includes(search.toLowerCase()));
+  const selectedCat = options.find(c => c.id === categoryId);
 
   return (
     <div className="space-y-6">
@@ -477,7 +480,7 @@ function ProductsByCategoryEditor({
                   <label className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${sel ? "bg-teal-50 dark:bg-teal-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
                     {cat.imageUrl ? <img src={cat.imageUrl} alt={cat.title} className="w-9 h-9 rounded-xl object-cover flex-shrink-0" /> : <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 flex-shrink-0" />}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{cat.title}</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{cat.label}</p>
                       <p className="text-[10px] text-gray-400">{cat.slug}</p>
                     </div>
                     <input type="radio" name="pbcCat" className="w-4 h-4 accent-teal-600"
@@ -504,7 +507,7 @@ function ProductsByCategoryEditor({
                 </div>
               )}
               <div>
-                <p className="font-black text-sm text-gray-900 dark:text-white">{selectedCat.title}</p>
+                <p className="font-black text-sm text-gray-900 dark:text-white">{selectedCat.label}</p>
                 <p className="text-[10px] text-gray-400 mt-0.5">{selectedCat.slug}</p>
                 <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold text-teal-600 bg-teal-500/10 px-2 py-0.5 rounded-full">
                   ✓ انتخاب شده

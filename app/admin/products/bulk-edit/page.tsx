@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { categoryOptions, categorySubtreeIds } from "@/lib/category-tree";
 
 interface Product {
   id: string;
@@ -13,6 +14,7 @@ interface Product {
   isActive: boolean;
   stock?: number;
   trackStock?: boolean;
+  categoryId?: string;
   category?: { title: string };
   brand?: { title: string };
 }
@@ -57,7 +59,7 @@ export default function BulkEditPage() {
         fetch("/api/admin/brands"),
       ]);
       const data = await prodRes.json();
-      setProducts(Array.isArray(data) ? data : []);
+      setProducts(Array.isArray(data) ? data : (data.items ?? []));
       setCategories(await catRes.json());
       setBrands(await brandRes.json());
     } finally {
@@ -75,17 +77,18 @@ export default function BulkEditPage() {
       return;
     }
 
-    const selectedCat = categories.find(c => c.title === filterCategory);
-    if (selectedCat) {
-      fetch(`/api/admin/categories/${selectedCat.id}/attribute-groups`)
-        .then(r => r.json())
-        .then(setAttributeGroups)
-        .catch(() => setAttributeGroups([]));
-    }
-  }, [filterCategory, categories]);
+    fetch(`/api/admin/categories/${filterCategory}/attribute-groups`)
+      .then(r => r.json())
+      .then(setAttributeGroups)
+      .catch(() => setAttributeGroups([]));
+  }, [filterCategory]);
+
+  const catOptions = categoryOptions(categories);
+  const catLabels = new Map(catOptions.map(c => [c.id, c.label]));
+  const catScope = filterCategory ? new Set(categorySubtreeIds(categories, filterCategory)) : null;
 
   const filtered = products.filter(p => {
-    const matchCat = !filterCategory || p.category?.title === filterCategory;
+    const matchCat = !catScope || (!!p.categoryId && catScope.has(p.categoryId));
     const matchBrand = !filterBrand || p.brand?.title === filterBrand;
     const matchAttributes = selectedAttributeValues.length === 0 || 
       (p as any).attributes?.some((attr: any) => 
@@ -187,7 +190,7 @@ export default function BulkEditPage() {
             className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
           >
             <option value="">همه دسته‌بندی‌ها</option>
-            {categories.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}
+            {catOptions.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
 
           <select
@@ -413,7 +416,7 @@ export default function BulkEditPage() {
                   <div className="flex items-center gap-2 mt-1">
                     {p.category && (
                       <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                        {p.category.title}
+                        {(p.categoryId && catLabels.get(p.categoryId)) || p.category.title}
                       </span>
                     )}
                     {p.brand && (

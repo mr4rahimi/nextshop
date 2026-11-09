@@ -5,6 +5,7 @@
  * کلید GapGPT هر سایت، مدل و کیفیت پیش‌فرض تصویر، و حالت‌های آماده‌ی استودیو تصویر.
  */
 import { useEffect, useState } from "react";
+import { categoryOptions } from "@/lib/category-tree";
 import HelpButton from "@/components/admin/worklist/HelpButton";
 import AssistantSettingsCard from "@/components/admin/assistant/AssistantSettingsCard";
 import {
@@ -59,7 +60,7 @@ export default function AiSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [testing, setTesting] = useState(false);
-  const [cats, setCats] = useState<{ id: string; title: string }[]>([]);
+  const [cats, setCats] = useState<{ id: string; title: string; parentId?: string | null }[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/ai-settings").then(r => r.json()).then(setS)
@@ -250,7 +251,7 @@ export default function AiSettingsPage() {
               <div className="flex gap-2">
                 <select value={t.categoryId} onChange={e => updateTpl(i, { categoryId: e.target.value })} className={inputClass + " flex-1"}>
                   <option value="">انتخاب دسته…</option>
-                  {cats.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                  {categoryOptions(cats).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                   {t.categoryId && !cats.some(c => c.id === t.categoryId) && <option value={t.categoryId}>(دسته‌ی ذخیره‌شده)</option>}
                 </select>
                 <button type="button" onClick={() => setS({ ...s, titleTemplates: s.titleTemplates.filter((_, j) => j !== i) })}

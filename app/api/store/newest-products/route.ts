@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
+import { categorySubtreeIds } from "@/lib/category-tree";
 
 export const runtime = "nodejs";
 
@@ -14,10 +15,15 @@ export async function GET(req: Request) {
     return NextResponse.json([]);
   }
 
+  const tree = await prisma.category.findMany({
+    where: { isActive: true },
+    select: { id: true, parentId: true },
+  });
+
   const results = await Promise.all(
     ids.map(async (categoryId) => {
       const products = await prisma.product.findMany({
-        where: { isActive: true, categoryId },
+        where: { isActive: true, categoryId: { in: categorySubtreeIds(tree, categoryId) } },
         orderBy: { createdAt: "desc" },
         take: perCategory,
         include: {
@@ -31,7 +37,9 @@ export async function GET(req: Request) {
   );
 
   // flat + serialize
-  const flat = results.flat().map(p => ({
+  // مادر و فرزند اگر هر دو انتخاب شده باشند، یک محصول دو بار می‌آید
+  const unique = [...new Map(results.flat().map(p => [p.id, p])).values()];
+  const flat = unique.map(p => ({
     id: p.id,
     title: p.title,
     slug: p.slug,

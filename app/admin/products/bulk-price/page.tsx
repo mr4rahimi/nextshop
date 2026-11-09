@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { categoryOptions } from "@/lib/category-tree";
 
 interface Product {
   id: string;
@@ -9,6 +10,7 @@ interface Product {
   price: string;
   salePrice: string | null;
   mainImage: string | null;
+  categoryId?: string;
   category?: { title: string };
   brand?: { title: string };
 }
@@ -55,7 +57,7 @@ export default function BulkPricePage() {
   const fetchProducts = useCallback(async () => {
     const params = new URLSearchParams({ pageSize: "5000" });
     if (search) params.set("search", search);
-    if (filterCat) params.set("category", filterCat);
+    if (filterCat) params.set("categoryId", filterCat);
     if (filterBrand) params.set("brand", filterBrand);
     selectedAttributeValues.forEach(v => params.append("attr", v));
   
@@ -69,13 +71,14 @@ export default function BulkPricePage() {
 
   useEffect(() => {
     if (!filterCat) { setAttributeGroups([]); setSelectedAttributeValues([]); return; }
-    const cat = categories.find(c => c.title === filterCat);
-    if (!cat) return;
-    fetch(`/api/admin/categories/${cat.id}/attribute-groups`)
+    fetch(`/api/admin/categories/${filterCat}/attribute-groups`)
       .then(r => r.json())
       .then(setAttributeGroups)
       .catch(() => setAttributeGroups([]));
-  }, [filterCat, categories]);
+  }, [filterCat]);
+
+  const catOptions = categoryOptions(categories);
+  const catLabels = new Map(catOptions.map(c => [c.id, c.label]));
 
   const filtered = products.filter(p => {
     const q = search.toLowerCase();
@@ -302,7 +305,7 @@ export default function BulkPricePage() {
           <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
             className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all">
             <option value="">همه دسته‌بندی‌ها</option>
-            {categories.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}
+            {catOptions.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
           <select value={filterBrand} onChange={e => setFilterBrand(e.target.value)}
             className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all">
@@ -424,7 +427,7 @@ export default function BulkPricePage() {
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   {p.category && (
                     <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded">
-                      {p.category.title}
+                      {(p.categoryId && catLabels.get(p.categoryId)) || p.category.title}
                     </span>
                   )}
                   {p.brand && (

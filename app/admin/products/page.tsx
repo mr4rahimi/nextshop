@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { categoryOptions } from "@/lib/category-tree";
 
 interface Product {
   id: string;
@@ -14,6 +15,7 @@ interface Product {
   stock?: number;
   trackStock?: boolean;
   lowStockThreshold?: number;
+  categoryId?: string;
   category?: { title: string };
   brand?: { title: string };
   attributes?: { attributeValueId: string }[];
@@ -79,13 +81,11 @@ export default function ProductsListPage() {
       setSelectedAttributeValues([]);
       return;
     }
-    const selectedCat = categories.find(c => c.title === filterCategory);
-    if (!selectedCat) return;
-    fetch(`/api/admin/categories/${selectedCat.id}/attribute-groups`)
+    fetch(`/api/admin/categories/${filterCategory}/attribute-groups`)
       .then(r => r.json())
       .then(setAttributeGroups)
       .catch(() => setAttributeGroups([]));
-  }, [filterCategory, categories]);
+  }, [filterCategory]);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -95,7 +95,7 @@ export default function ProductsListPage() {
         pageSize: String(PAGE_SIZE),
       });
       if (debouncedSearch) params.set("search", debouncedSearch);
-      if (filterCategory) params.set("category", filterCategory);
+      if (filterCategory) params.set("categoryId", filterCategory);
       if (filterBrand) params.set("brand", filterBrand);
       if (filterStatus) params.set("status", filterStatus);
       selectedAttributeValues.forEach(v => params.append("attr", v));
@@ -152,6 +152,8 @@ export default function ProductsListPage() {
 
   const hasFilters = !!(search || filterCategory || filterBrand || filterStatus || selectedAttributeValues.length > 0);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const catOptions = categoryOptions(categories);
+  const catLabels = new Map(catOptions.map(c => [c.id, c.label]));
 
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
@@ -245,7 +247,7 @@ export default function ProductsListPage() {
             className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all"
           >
             <option value="">همه دسته‌بندی‌ها</option>
-            {categories.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}
+            {catOptions.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
 
           {}
@@ -394,7 +396,7 @@ export default function ProductsListPage() {
             <div className="hidden lg:block">
               {p.category && (
                 <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 block w-fit mb-1">
-                  {p.category.title}
+                  {(p.categoryId && catLabels.get(p.categoryId)) || p.category.title}
                 </span>
               )}
               {p.brand && <p className="text-[11px] text-gray-400">{p.brand.title}</p>}

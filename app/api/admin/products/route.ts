@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { submitToIndexNow, productUrl } from "@/lib/indexnow";
 import { logActivityAsync } from "@/lib/activity";
 import { slugify } from "@/lib/slug";
+import { getCategorySubtreeIds } from "@/lib/category-data";
  
 // ─── GET /api/admin/products ──────────────────────────────────────────────────
 export const runtime = "nodejs";
@@ -20,7 +21,7 @@ export async function GET(req: Request) {
   const pageParam     = url.searchParams.get("page");
   const pageSizeParam = url.searchParams.get("pageSize");
   const search   = url.searchParams.get("search")?.trim() || url.searchParams.get("q")?.trim();
-  const category = url.searchParams.get("category")?.trim();
+  const categoryId = url.searchParams.get("categoryId")?.trim();
   const brand     = url.searchParams.get("brand")?.trim();
   const status    = url.searchParams.get("status")?.trim();
   const attrValues = url.searchParams.getAll("attr").filter(Boolean);
@@ -39,7 +40,8 @@ export async function GET(req: Request) {
     ];
   }
 
-  if (category) where.category = { title: category };
+  // محصول فقط به زیردسته وصل است؛ دسته‌ی مادر با نوادگانش جستجو می‌شود
+  if (categoryId) where.categoryId = { in: await getCategorySubtreeIds(categoryId) };
   if (brand)     where.brand    = { title: brand };
 
   if (status === "active")   where.isActive = true;
@@ -77,6 +79,7 @@ export async function GET(req: Request) {
         trackStock: true,
         lowStockThreshold: true,
         createdAt: true,
+        categoryId: true,
         category: { select: { title: true } },
         brand: { select: { title: true } },
         attributes: { select: { attributeValueId: true } },

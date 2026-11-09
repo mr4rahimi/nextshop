@@ -10,8 +10,8 @@ export async function GET(req: Request) {
   if (!categoryId) {
     const categories = await prisma.category.findMany({
       where: { isActive: true },
-      select: { id: true, title: true, slug: true },
-      orderBy: { title: "asc" },
+      select: { id: true, title: true, slug: true, parentId: true },
+      orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
     });
     return NextResponse.json({ categories });
   }

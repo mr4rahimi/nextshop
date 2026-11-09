@@ -1,5 +1,21 @@
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
+import { categorySubtreeIds } from "@/lib/category-tree";
+
+/**
+ * شناسه‌ی دسته و همه‌ی نوادگانش، برای فیلتر محصول با `categoryId: { in }`.
+ * `activeOnly` برای ویترین است: زیردسته‌ی غیرفعال و زیرشاخه‌اش کنار می‌روند.
+ */
+export async function getCategorySubtreeIds(
+  categoryId: string,
+  opts: { activeOnly?: boolean } = {},
+): Promise<string[]> {
+  const rows = await prisma.category.findMany({
+    where: opts.activeOnly ? { isActive: true } : undefined,
+    select: { id: true, parentId: true },
+  });
+  return categorySubtreeIds(rows, categoryId);
+}
 
 // ── داده دسته‌بندی (مستقیم از Prisma، بدون HTTP به خود) ──
 export async function getCategoryData(slug: string) {

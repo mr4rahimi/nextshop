@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
+import { getCategorySubtreeIds } from "@/lib/category-data";
 
 export const runtime = "nodejs";
 
@@ -58,7 +59,7 @@ export async function GET(req: Request) {
   if (!categoryId) return NextResponse.json([]);
 
   const products = await prisma.product.findMany({
-    where: { isActive: true, categoryId },
+    where: { isActive: true, categoryId: { in: await getCategorySubtreeIds(categoryId, { activeOnly: true }) } },
     orderBy: sort === "best_sellers"
       ? [{ orderItems: { _count: "desc" } }, { createdAt: "desc" }]
       : { createdAt: "desc" },

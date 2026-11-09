@@ -10,9 +10,10 @@ import LinkTextarea from "@/components/admin/LinkTextarea";
 import VariantsSection from "./VariantsSection";
 import SizeChartSection from "./SizeChartSection";
 import { isExternalDownload, sanitizeDownloadUrl } from "@/lib/download-link";
+import { categoryOptions } from "@/lib/category-tree";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface Category { id: string; title: string }
+interface Category { id: string; title: string; parentId?: string | null }
 interface Brand    { id: string; title: string }
 interface SpecGroup { id: string; title: string; items: { id: string; title: string }[] }
 interface FaqItem  { q: string; a: string }
@@ -640,7 +641,7 @@ export default function ProductForm({ mode, productId, initialForm }: Props) {
               <select required value={form.categoryId} className={inp}
                 onChange={e => set("categoryId", e.target.value)}>
                 <option value="">انتخاب دسته‌بندی...</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                {categoryOptions(categories).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             </Field>
             <Field label="برند">

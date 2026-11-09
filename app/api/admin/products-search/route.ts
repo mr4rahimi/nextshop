@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCategorySubtreeIds } from "@/lib/category-data";
 import { serialize } from "@/lib/serialize";
 
 export const runtime = "nodejs";
@@ -48,7 +49,7 @@ export async function GET(req: Request) {
                   })),
                 }
               : {}),
-            ...(categoryId ? { categoryId } : {}),
+            ...(categoryId ? { categoryId: { in: await getCategorySubtreeIds(categoryId) } } : {}),
             ...(brandId ? { brandId } : {}),
           }),
     },

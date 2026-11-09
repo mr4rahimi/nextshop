@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { categoryOptions } from "@/lib/category-tree";
 import LinkTextarea from "@/components/admin/LinkTextarea";
 
-type Cat = { id: string; title: string; slug: string };
+type Cat = { id: string; title: string; slug: string; parentId?: string | null };
 type AttrOpt = { title: string; slug: string; values: { value: string; slug: string }[] };
 type Row = {
   id: string; slug: string; categoryId: string; filters: Record<string, string>;
@@ -119,7 +120,7 @@ export default function LandingPagesAdmin() {
             <select className={inputCls} value={form.categoryId}
               onChange={e => setForm(f => ({ ...f, categoryId: e.target.value, filters: {} }))}>
               <option value="">انتخاب کنید</option>
-              {cats.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+              {categoryOptions(cats).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
           </div>
           <div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { categoryOptions, categorySubtreeIds } from "@/lib/category-tree";
 
 interface Product {
   id: string;
@@ -10,6 +11,7 @@ interface Product {
   stock: number;
   trackStock: boolean;
   lowStockThreshold: number;
+  categoryId?: string;
   category?: { title: string };
   brand?: { title: string };
 }
@@ -52,10 +54,14 @@ export default function BulkStockPage() {
 
   useEffect(() => { fetchData(); }, []);
 
+  const catOptions = categoryOptions(categories);
+  const catLabels = new Map(catOptions.map(c => [c.id, c.label]));
+  const catScope = filterCat ? new Set(categorySubtreeIds(categories, filterCat)) : null;
+
   const filtered = products.filter(p => {
     const q = search.toLowerCase();
     const matchS = !q || p.title.toLowerCase().includes(q);
-    const matchC = !filterCat || p.category?.title === filterCat;
+    const matchC = !catScope || (!!p.categoryId && catScope.has(p.categoryId));
     const matchB = !filterBrand || p.brand?.title === filterBrand;
     const matchStock =
       filterStock === "" ? true :
@@ -263,7 +269,7 @@ export default function BulkStockPage() {
           <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
             className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all">
             <option value="">همه دسته‌بندی‌ها</option>
-            {categories.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}
+            {catOptions.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
           <select value={filterBrand} onChange={e => setFilterBrand(e.target.value)}
             className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all">
@@ -349,7 +355,7 @@ export default function BulkStockPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-black text-gray-900 dark:text-white truncate">{p.title}</p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  {p.category && <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded">{p.category.title}</span>}
+                  {p.category && <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded">{(p.categoryId && catLabels.get(p.categoryId)) || p.category.title}</span>}
                   {p.brand && <span className="text-[10px] text-gray-400">{p.brand.title}</span>}
                 </div>
               </div>

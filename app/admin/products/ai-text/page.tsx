@@ -6,6 +6,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { categoryOptions } from "@/lib/category-tree";
 import HelpButton from "@/components/admin/worklist/HelpButton";
 import { AI_TEXT_SECTIONS, type AiTextSection } from "@/lib/ai/text-presets";
 
@@ -45,7 +46,7 @@ export default function AiTextBulkPage() {
   const [missing, setMissing] = useState("any");
   const [cat, setCat] = useState("");
   const [q, setQ] = useState("");
-  const [cats, setCats] = useState<{ id: string; title: string }[]>([]);
+  const [cats, setCats] = useState<{ id: string; title: string; parentId?: string | null }[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sections, setSections] = useState<AiTextSection[]>(["short", "expert", "features", "faq", "seo", "specs"]);
   const [retitle, setRetitle] = useState(false);
@@ -195,7 +196,7 @@ export default function AiTextBulkPage() {
           </select>
           <select value={cat} onChange={e => setCat(e.target.value)} className={inp}>
             <option value="">همه‌ی دسته‌ها</option>
-            {cats.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+            {categoryOptions(cats).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="جست‌وجوی عنوان…" className={inp + " flex-1 min-w-[10rem]"} />
         </div>
