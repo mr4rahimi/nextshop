@@ -51,10 +51,13 @@ export default function ProductsListPage() {
 
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, outofstock: 0 });
 
-  useEffect(() => {
-    fetch("/api/admin/categories").then(r => r.json()).then(setCategories).catch(() => {});
-    fetch("/api/admin/brands").then(r => r.json()).then(setBrands).catch(() => {});
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectingAll, setSelectingAll] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
 
+  const fetchStats = useCallback(() => {
     Promise.all([
       fetch("/api/admin/products?pageSize=1").then(r => r.json()),
       fetch("/api/admin/products?pageSize=1&status=active").then(r => r.json()),
@@ -69,6 +72,12 @@ export default function ProductsListPage() {
       });
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/categories").then(r => r.json()).then(setCategories).catch(() => {});
+    fetch("/api/admin/brands").then(r => r.json()).then(setBrands).catch(() => {});
+    fetchStats();
+  }, [fetchStats]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 400);
@@ -87,39 +96,111 @@ export default function ProductsListPage() {
       .catch(() => setAttributeGroups([]));
   }, [filterCategory]);
 
+  const filterParams = useCallback(() => {
+    const params = new URLSearchParams();
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    if (filterCategory) params.set("categoryId", filterCategory);
+    if (filterBrand) params.set("brand", filterBrand);
+    if (filterStatus) params.set("status", filterStatus);
+    selectedAttributeValues.forEach(v => params.append("attr", v));
+    return params;
+  }, [debouncedSearch, filterCategory, filterBrand, filterStatus, selectedAttributeValues]);
+
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: String(PAGE_SIZE),
-      });
-      if (debouncedSearch) params.set("search", debouncedSearch);
-      if (filterCategory) params.set("categoryId", filterCategory);
-      if (filterBrand) params.set("brand", filterBrand);
-      if (filterStatus) params.set("status", filterStatus);
-      selectedAttributeValues.forEach(v => params.append("attr", v));
+      const params = filterParams();
+      params.set("page", String(page));
+      params.set("pageSize", String(PAGE_SIZE));
 
       const res = await fetch(`/api/admin/products?${params}`);
       const data = await res.json();
+      const count: number = data.total ?? 0;
       setProducts(data.items ?? []);
-      setTotal(data.total ?? 0);
+      setTotal(count);
+      // بعد از غیرفعال‌سازی گروهی ممکن است صفحه‌ی فعلی دیگر وجود نداشته باشد
+      const lastPage = Math.max(1, Math.ceil(count / PAGE_SIZE));
+      if (page > lastPage) setPage(lastPage);
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, filterCategory, filterBrand, filterStatus, selectedAttributeValues]);
+  }, [page, filterParams]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   useEffect(() => {
     setPage(1);
+    // انتخاب با فیلتر قبلی نباید روی محصولاتی که دیگر دیده نمی‌شوند اعمال شود
+    setSelected(new Set());
   }, [debouncedSearch, filterCategory, filterBrand, filterStatus, selectedAttributeValues]);
+
+  function toggleSelected(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function togglePage() {
+    setSelected(prev => {
+      const next = new Set(prev);
+      const allOn = products.length > 0 && products.every(p => next.has(p.id));
+      products.forEach(p => { if (allOn) next.delete(p.id); else next.add(p.id); });
+      return next;
+    });
+  }
+
+  async function selectAllResults() {
+    setSelectingAll(true);
+    try {
+      const params = filterParams();
+      params.set("idsOnly", "1");
+      const res = await fetch(`/api/admin/products?${params}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setSelected(new Set<string>(data.ids ?? []));
+    } catch {
+      setNotice({ ok: false, text: "انتخاب همه‌ی نتیجه‌ها انجام نشد. دوباره تلاش کنید." });
+    } finally {
+      setSelectingAll(false);
+    }
+  }
+
+  async function applyBulkStatus(isActive: boolean) {
+    setBulkBusy(true);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/admin/products/bulk-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [...selected], isActive }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setSelected(new Set());
+      setNotice({ ok: true, text: `${toFa(data.count ?? 0)} محصول ${isActive ? "فعال" : "غیرفعال"} شد.` });
+      fetchProducts();
+      fetchStats();
+    } catch {
+      setNotice({ ok: false, text: "تغییر وضعیت انجام نشد. انتخاب‌ها حفظ شد؛ دوباره تلاش کنید." });
+    } finally {
+      setBulkBusy(false);
+      setConfirmDeactivate(false);
+    }
+  }
 
   async function handleDelete(id: string) {
     setDeletingId(id);
     try {
       await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
       setProducts(prev => prev.filter(p => p.id !== id));
+      setSelected(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       setTotal(t => Math.max(0, t - 1));
     } finally {
       setDeletingId(null);
@@ -154,6 +235,7 @@ export default function ProductsListPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const catOptions = categoryOptions(categories);
   const catLabels = new Map(catOptions.map(c => [c.id, c.label]));
+  const allOnPage = products.length > 0 && products.every(p => selected.has(p.id));
 
   return (
     <div className="p-4 lg:p-6 space-y-5" dir="rtl">
@@ -177,6 +259,25 @@ export default function ProductsListPage() {
               <button onClick={() => handleDelete(confirmId)} disabled={!!deletingId}
                 className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl text-sm font-black transition-all">
                 {deletingId ? "در حال حذف..." : "حذف کن"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDeactivate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
+            <h3 className="text-base font-black text-gray-900 dark:text-white mb-2">غیرفعال کردن {toFa(selected.size)} محصول</h3>
+            <p className="text-sm text-gray-500 mb-6">این محصولات از فروشگاه پنهان می‌شوند. هر زمان بخواهید می‌توانید دوباره فعالشان کنید.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDeactivate(false)} disabled={bulkBusy}
+                className="flex-1 py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-black transition-all">
+                انصراف
+              </button>
+              <button onClick={() => applyBulkStatus(false)} disabled={bulkBusy}
+                className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl text-sm font-black transition-all">
+                {bulkBusy ? "در حال انجام..." : "غیرفعال شود"}
               </button>
             </div>
           </div>
@@ -269,6 +370,7 @@ export default function ProductsListPage() {
             { value: "inactive", label: "غیرفعال" },
             { value: "outofstock", label: "ناموجود" },
             { value: "noprice", label: "بدون قیمت" },
+            { value: "noimage", label: "بدون عکس اصلی" },
             { value: "noseotitle", label: "بدون عنوان سئو" },
             { value: "nometa", label: "بدون توضیحات متا" },
           ].map(f => (
@@ -331,10 +433,29 @@ export default function ProductsListPage() {
         )}
       </div>
 
+      {notice && (
+        <div role="status" className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-xs font-black ${
+          notice.ok
+            ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+            : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
+        }`}>
+          <span>{notice.text}</span>
+          <button onClick={() => setNotice(null)} aria-label="بستن پیام" className="text-base leading-none opacity-60 hover:opacity-100">×</button>
+        </div>
+      )}
+
       {}
       <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
+        {products.length > 0 && !loading && (
+          <label className="lg:hidden flex items-center gap-2 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06] text-xs font-black text-gray-500 cursor-pointer">
+            <input type="checkbox" checked={allOnPage} onChange={togglePage} className="w-4 h-4 rounded accent-blue-600 cursor-pointer flex-shrink-0" />
+            انتخاب همه‌ی این صفحه
+          </label>
+        )}
+
         {}
-        <div className="hidden lg:grid grid-cols-[56px_1fr_140px_120px_90px_160px] gap-3 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
+        <div className="hidden lg:grid grid-cols-[20px_56px_1fr_140px_120px_90px_160px] gap-3 px-5 py-3 items-center bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
+          <input type="checkbox" checked={allOnPage} onChange={togglePage} aria-label="انتخاب همه‌ی این صفحه" className="w-4 h-4 rounded accent-blue-600 cursor-pointer flex-shrink-0" />
           {["", "محصول", "دسته / برند", "قیمت", "وضعیت", "عملیات"].map(h => (
             <div key={h} className="text-[11px] font-black text-gray-400">{h}</div>
           ))}
@@ -368,9 +489,14 @@ export default function ProductsListPage() {
         {}
         {!loading && products.map((p, idx) => (
           <div key={p.id}
-            className={`group flex lg:grid lg:grid-cols-[56px_1fr_140px_120px_90px_160px] gap-3 px-5 py-3.5 items-center transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02] ${
+            className={`group flex lg:grid lg:grid-cols-[20px_56px_1fr_140px_120px_90px_160px] gap-3 px-5 py-3.5 items-center transition-colors ${
+              selected.has(p.id) ? "bg-blue-50/70 dark:bg-blue-500/[0.07]" : "hover:bg-gray-50 dark:hover:bg-white/[0.02]"
+            } ${
               idx < products.length - 1 ? "border-b border-gray-50 dark:border-white/[0.04]" : ""
             }`}>
+
+            <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelected(p.id)}
+              aria-label={`انتخاب ${p.title}`} className="w-4 h-4 rounded accent-blue-600 cursor-pointer flex-shrink-0" />
 
             {}
             <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 border border-gray-100 dark:border-white/[0.06] flex-shrink-0 flex items-center justify-center">
@@ -459,6 +585,34 @@ export default function ProductsListPage() {
           </div>
         ))}
       </div>
+
+      {selected.size > 0 && (
+        <div className="sticky bottom-4 z-40 flex items-center flex-wrap gap-2 px-4 py-3 rounded-2xl bg-gray-900 dark:bg-[#1a1d27] border border-white/10 shadow-2xl">
+          <span className="text-xs font-black text-white">{toFa(selected.size)} محصول انتخاب شد</span>
+
+          {selected.size < total && (
+            <button onClick={selectAllResults} disabled={selectingAll}
+              className="text-xs font-black text-blue-300 hover:text-blue-200 disabled:opacity-50 transition-colors">
+              {selectingAll ? "در حال انتخاب..." : `انتخاب همه‌ی ${toFa(total)} نتیجه`}
+            </button>
+          )}
+
+          <div className="flex items-center gap-2 mr-auto">
+            <button onClick={() => applyBulkStatus(true)} disabled={bulkBusy}
+              className="px-3.5 py-2 rounded-xl text-xs font-black bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white transition-all">
+              فعال کردن
+            </button>
+            <button onClick={() => setConfirmDeactivate(true)} disabled={bulkBusy}
+              className="px-3.5 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white transition-all">
+              غیرفعال کردن
+            </button>
+            <button onClick={() => setSelected(new Set())} disabled={bulkBusy}
+              className="px-3 py-2 rounded-xl text-xs font-black text-gray-300 hover:text-white transition-colors">
+              لغو انتخاب
+            </button>
+          </div>
+        </div>
+      )}
 
       {}
       {!loading && total > 0 && (

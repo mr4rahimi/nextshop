@@ -10,6 +10,8 @@ import { getCategorySubtreeIds } from "@/lib/category-data";
 // ─── GET /api/admin/products ──────────────────────────────────────────────────
 export const runtime = "nodejs";
 
+const MAX_PAGE_SIZE = 5000;
+
 function toInt(v: string | null, fallback: number) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -27,7 +29,7 @@ export async function GET(req: Request) {
   const attrValues = url.searchParams.getAll("attr").filter(Boolean);
 
   const page     = Math.max(1, toInt(pageParam, 1));
-  const pageSize = Math.min(5000, Math.max(1, toInt(pageSizeParam, 50)));
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, toInt(pageSizeParam, 50)));
 
   const where: any = {};
 
@@ -52,13 +54,26 @@ export async function GET(req: Request) {
   }
 
   // فیلترهای سئو — فقط محصولات فعال، چون غیرفعال‌ها در گوگل نیستند
-  const blank = (f: "seoTitle" | "seoDescription") => ({ OR: [{ [f]: null }, { [f]: "" }] });
+  const blank = (f: "seoTitle" | "seoDescription" | "mainImage") => ({ OR: [{ [f]: null }, { [f]: "" }] });
   if (status === "noseotitle") { where.isActive = true; where.AND = [blank("seoTitle")]; }
   if (status === "nometa")     { where.isActive = true; where.AND = [blank("seoDescription")]; }
   if (status === "noprice")    { where.isActive = true; where.price = 0; }
+  // برخلاف فیلترهای سئو، غیرفعال‌ها هم می‌آیند: محصولی که برای نبود عکس خاموش مانده باید پیدا شود
+  if (status === "noimage")    { where.AND = [blank("mainImage")]; }
 
   if (attrValues.length > 0) {
     where.attributes = { some: { attributeValueId: { in: attrValues } } };
+  }
+
+  // «انتخاب همه‌ی نتیجه‌ها» در فهرست محصولات
+  if (url.searchParams.get("idsOnly") === "1") {
+    const rows = await prisma.product.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: MAX_PAGE_SIZE,
+      select: { id: true },
+    });
+    return NextResponse.json({ ids: rows.map((r) => r.id) });
   }
 
   const [items, total] = await Promise.all([
