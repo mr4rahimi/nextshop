@@ -53,6 +53,8 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["33", "پیش‌دریافت‌ها", L, "LIABILITY", "CREDIT", "NONE", null],
   ["3301", "کیف پول مشتریان", S, "LIABILITY", "CREDIT", "PARTY", "WALLET_LIABILITY"],
   ["3302", "پیش‌دریافت فروش", S, "LIABILITY", "CREDIT", "PARTY", "CUSTOMER_ADVANCE"],
+  ["34", "تسهیلات مالی", L, "LIABILITY", "CREDIT", "NONE", null],
+  ["3401", "تسهیلات دریافتی", S, "LIABILITY", "CREDIT", "NONE", "LOAN_PAYABLE"],
 
   ["5", "حقوق صاحبان سرمایه", G, "EQUITY", "CREDIT", "NONE", null],
   ["51", "سرمایه", L, "EQUITY", "CREDIT", "NONE", null],
@@ -99,6 +101,7 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["83", "هزینه‌های مالی", L, "EXPENSE", "DEBIT", "NONE", null],
   ["8301", "کارمزد بانکی", S, "EXPENSE", "DEBIT", "NONE", "BANK_FEE"],
   ["8302", "کارمزد خرید اقساطی", S, "EXPENSE", "DEBIT", "NONE", "INSTALLMENT_EXPENSE"],
+  ["8303", "سود و جریمه‌ی تسهیلات", S, "EXPENSE", "DEBIT", "NONE", "LOAN_INTEREST"],
 ];
 
 /** کلیدهای سیستمی که کد به آن‌ها تکیه دارد — نبودشان یعنی سرفصل ناقص است */

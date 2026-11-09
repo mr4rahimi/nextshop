@@ -102,7 +102,7 @@ const normName = (s: string) =>
     .replace(/ك/g, "ک")
     .replace(/[\s‌‍]+/g, "");
 
-function dayOf(raw: string | null | undefined): Date | null | "bad" {
+export function dayOf(raw: string | null | undefined): Date | null | "bad" {
   const s = toLatinDigits(raw ?? "").trim();
   if (!s) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(`${s}T00:00:00.000Z`);

@@ -4183,8 +4183,11 @@ model AccTreasury {
   hesabanId  Int?
   createdAt  DateTime        @default(now())
 
-  lines         AccVoucherLine[]
-  templateLines AccVoucherTemplateLine[]
+  lines            AccVoucherLine[]
+  templateLines    AccVoucherTemplateLine[]
+  bankRecons       AccBankRecon[]
+  loans            AccLoan[]
+  loanInstallments AccLoanInstallment[]
 }
 
 enum AccVoucherStatus {
@@ -4212,6 +4215,7 @@ enum AccSource {
   INCOME // درآمد متفرقه (فاز ۱۰)
   INSTALLMENT // کارمزد فروش/خرید اقساطی (فاز ۱۰)
   POS // صندوق فروشگاهی: پس دادن پول مرجوعی و مغایرت بستن صندوق (۲.۹۵.۰)
+  LOAN // وام و تسهیلات: دریافت وام و پرداخت قسط (۲.۱۳۰.۰)
 }
 
 /// سند حسابداری. ⚠️ فقط از `lib/accounting/ledger/post.ts` نوشته می‌شود —
@@ -4257,10 +4261,11 @@ model AccVoucherLine {
   yearId      String
   isVoid      Boolean  @default(false)
 
-  voucher  AccVoucher   @relation(fields: [voucherId], references: [id], onDelete: Cascade)
-  account  AccAccount   @relation(fields: [accountId], references: [id])
-  party    AccParty?    @relation(fields: [partyId], references: [id])
-  treasury AccTreasury? @relation(fields: [treasuryId], references: [id])
+  voucher   AccVoucher        @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  account   AccAccount        @relation(fields: [accountId], references: [id])
+  party     AccParty?         @relation(fields: [partyId], references: [id])
+  treasury  AccTreasury?      @relation(fields: [treasuryId], references: [id])
+  reconItem AccBankReconItem?
 
   @@index([voucherId])
   @@index([accountId, date])
@@ -4324,6 +4329,133 @@ model AccVoucherTemplateLine {
 
   @@index([templateId])
   @@index([partyId])
+}
+
+enum AccBankReconStatus {
+  OPEN
+  CLOSED
+}
+
+/// تطبیق حساب بانک با صورت‌حساب — docs/plans/webhesab-parity.md بخش ۲۰
+model AccBankRecon {
+  id             String             @id @default(cuid())
+  treasuryId     String
+  /// گردش پیش از این تاریخ وارد تطبیق نمی‌شود؛ مانده‌ی آغاز همین‌جا را می‌گوید
+  fromDate       DateTime           @db.Date
+  statementDate  DateTime           @db.Date
+  openingBalance BigInt
+  closingBalance BigInt
+  status         AccBankReconStatus @default(OPEN)
+  note           String?
+  closedAt       DateTime?
+  closedByName   String?
+  createdById    String?
+  createdByName  String
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  treasury AccTreasury           @relation(fields: [treasuryId], references: [id])
+  items    AccBankReconItem[]
+  rows     AccBankStatementRow[]
+
+  @@index([treasuryId, status])
+  @@index([treasuryId, statementDate])
+}
+
+/// یک ردیف دفتر که با بانک تطبیق شد. عدد و شرح کپی‌اند تا تطبیق بسته با ویرایش سند عوض نشود
+model AccBankReconItem {
+  id             String   @id @default(cuid())
+  reconId        String
+  /// تهی یعنی سند بعد از تطبیق بازسازی شد
+  voucherLineId  String?  @unique
+  statementRowId String?
+  /// بدهکار − بستانکار؛ مثبت = واریز
+  amount         BigInt
+  date           DateTime @db.Date
+  description    String
+  voucherId      String
+  voucherNumber  Int
+
+  recon AccBankRecon         @relation(fields: [reconId], references: [id], onDelete: Cascade)
+  line  AccVoucherLine?      @relation(fields: [voucherLineId], references: [id], onDelete: SetNull)
+  row   AccBankStatementRow? @relation(fields: [statementRowId], references: [id], onDelete: SetNull)
+
+  @@index([reconId])
+  @@index([statementRowId])
+}
+
+/// ردیف صورت‌حساب واردشده از اکسل؛ مبلغ به تومان، مثبت = واریز
+model AccBankStatementRow {
+  id          String   @id @default(cuid())
+  reconId     String
+  seq         Int
+  date        DateTime @db.Date
+  description String?
+  refNo       String?
+  amount      BigInt
+  balance     BigInt?
+
+  recon AccBankRecon       @relation(fields: [reconId], references: [id], onDelete: Cascade)
+  items AccBankReconItem[]
+
+  @@index([reconId, seq])
+}
+
+enum AccLoanStatus {
+  ACTIVE
+  SETTLED
+  VOID
+}
+
+/// وام و تسهیلات دریافتی — docs/plans/webhesab-parity.md بخش ۲۱
+model AccLoan {
+  id             String        @id @default(cuid())
+  number         Int           @unique @default(autoincrement())
+  title          String
+  lender         String
+  /// حسابی که وام به آن واریز شد؛ در وام قدیمی بی‌سند تهی
+  treasuryId     String?
+  date           DateTime      @db.Date
+  /// اصل وام؛ در وام قدیمی همان اصلِ باقی‌مانده
+  principal      BigInt
+  upfrontFee     BigInt        @default(0)
+  /// نرخ سالانه × ۱۰۰؛ فقط برای نمایش و ساخت جدول
+  rateBp         Int           @default(0)
+  intervalMonths Int           @default(1)
+  status         AccLoanStatus @default(ACTIVE)
+  /// تهی یعنی دریافت وام سند ندارد (وام قدیمی با مانده‌ی اول دوره)
+  voucherId      String?       @unique
+  voidReason     String?
+  note           String?
+  createdById    String?
+  createdByName  String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  treasury AccTreasury?         @relation(fields: [treasuryId], references: [id])
+  items    AccLoanInstallment[]
+
+  @@index([status])
+}
+
+model AccLoanInstallment {
+  id         String    @id @default(cuid())
+  loanId     String
+  seq        Int
+  dueDate    DateTime  @db.Date
+  principal  BigInt
+  interest   BigInt    @default(0)
+  paidAt     DateTime? @db.Date
+  penalty    BigInt    @default(0)
+  treasuryId String?
+  voucherId  String?   @unique
+  paidByName String?
+
+  loan     AccLoan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  treasury AccTreasury? @relation(fields: [treasuryId], references: [id])
+
+  @@unique([loanId, seq])
+  @@index([dueDate])
 }
 
 enum AccEventStatus {

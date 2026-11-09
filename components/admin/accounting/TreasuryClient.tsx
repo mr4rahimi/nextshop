@@ -3,6 +3,7 @@
 /** صندوق‌ها و حساب‌های بانکی با موجودی — docs/plans/accounting.md بخش ۹ */
 
 import Link from "next/link";
+import { useAccess } from "./access";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { faNum } from "@/lib/accounting/money";
@@ -18,6 +19,7 @@ interface Data {
 }
 
 export default function TreasuryClient() {
+  const { can } = useAccess();
   const sp = useSearchParams();
   const router = useRouter();
   const [data, setData] = useState<Data | null>(null);
@@ -46,12 +48,19 @@ export default function TreasuryClient() {
         help="accountingTreasury"
         desc="هر جایی که پول نگه می‌دارید یا پول به آن می‌رسد، با موجودی لحظه‌ای."
         actions={
-          data?.can.manage && (
+          <>
+            {can("ACC_TREASURY") && (
+              <Link href="/admin/accounting/treasury/reconcile" className={btn.soft}>
+                🏦 تطبیق بانک
+              </Link>
+            )}
+            {data?.can.manage && (
             <button onClick={() => setForm({ item: null })} className={btn.primary}>
               <Plus className="h-4 w-4" aria-hidden />
               صندوق یا بانک تازه
             </button>
-          )
+            )}
+          </>
         }
       />
       {data && <Stat label="جمع پول نقد و بانک" value={<Money value={data.total} />} />}

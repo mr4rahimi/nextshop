@@ -15,7 +15,7 @@ import { faShort } from "@/components/admin/reports/charts";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, Money, PageHeader, Stat } from "./ui";
 
 interface Item {
-  kind: "cheque" | "installment" | "invoice";
+  kind: "cheque" | "installment" | "invoice" | "loan";
   dir: "in" | "out";
   id: string;
   date: string;
@@ -35,7 +35,7 @@ interface Data {
 
 const MONTHS = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
 const WEEK = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
-const KIND: Record<Item["kind"], string> = { cheque: "چک", installment: "قسط", invoice: "فاکتور" };
+const KIND: Record<Item["kind"], string> = { cheque: "چک", installment: "قسط", invoice: "فاکتور", loan: "وام" };
 const DAY = 86_400_000;
 
 export default function CalendarClient() {

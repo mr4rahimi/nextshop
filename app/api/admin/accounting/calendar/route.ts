@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Item = {
-  kind: "cheque" | "installment" | "invoice";
+  kind: "cheque" | "installment" | "invoice" | "loan";
   dir: "in" | "out";
   id: string;
   date: Date;
@@ -101,6 +101,23 @@ export async function GET(req: Request) {
           sub: `سررسید فاکتور ${i.type === "SALES" ? "فروش" : "خرید"} ${i.number ?? ""}`,
           href: `/admin/accounting/invoices/${i.id}`,
           done: !o || o.open === 0n,
+        });
+      }
+    }
+
+    if (can(guard.access, "ACC_VIEW")) {
+      const loans = await prisma.accLoanInstallment.findMany({ where: { dueDate: inMonth, loan: { status: { not: "VOID" } } }, include: { loan: { select: { id: true, title: true, lender: true } } } });
+      for (const i of loans) {
+        items.push({
+          kind: "loan",
+          dir: "out",
+          id: i.id,
+          date: i.dueDate,
+          amount: i.principal + i.interest + i.penalty,
+          title: `قسط ${i.seq} وام ${i.loan.title}`,
+          sub: i.loan.lender,
+          href: `/admin/accounting/loans/${i.loan.id}#i${i.seq}`,
+          done: !!i.paidAt,
         });
       }
     }

@@ -9,7 +9,7 @@
  */
 
 import {
-  Activity, ArrowLeftRight, Banknote, CalendarClock, ChartColumn, ChartPie, ClipboardList,
+  Activity, ArrowLeftRight, Banknote, HandCoins, CalendarClock, ChartColumn, ChartPie, ClipboardList,
   ClockCheck, Coins, FileSpreadsheet, FolderTree, House, Landmark, Link2, ListTodo, NotebookPen,
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
@@ -118,6 +118,7 @@ export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting/reports", label: "گزارش‌ها", icon: ChartPie, tone: "violet", perm: ["ACC_REPORTS"], img: "acc-reports" },
   { href: "/admin/accounting/parties", label: "اشخاص", icon: Users, tone: "indigo", perm: ["ACC_VIEW", "ACC_PARTY_MANAGE"], img: "acc-parties" },
   { href: "/admin/accounting/treasury", label: "صندوق و بانک", icon: Landmark, tone: "cyan", perm: ["ACC_VIEW", "ACC_SETTINGS"], img: "acc-treasury" },
+  { href: "/admin/accounting/loans", label: "وام و تسهیلات", icon: HandCoins, tone: "orange", perm: ["ACC_VIEW", "ACC_TREASURY"] },
   { href: "/admin/accounting/inventory", label: "کالا و انبار", icon: Warehouse, tone: "amber", perm: ["ACC_VIEW", "ACC_INVENTORY"], img: "acc-inventory" },
   { href: "/admin/accounting/vouchers", label: "اسناد", icon: NotebookPen, tone: "fuchsia", perm: ["ACC_VOUCHER", "ACC_VIEW"], tag: "حسابدار", img: "acc-vouchers" },
   { href: "/admin/accounting/accounts", label: "سرفصل حساب‌ها", icon: FolderTree, tone: "lime", perm: ["ACC_VOUCHER", "ACC_SETTINGS"], tag: "حسابدار", img: "acc-accounts" },
