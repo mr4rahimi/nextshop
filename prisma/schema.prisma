@@ -4036,6 +4036,7 @@ model AccFiscalYear {
   createdAt    DateTime      @default(now())
 
   vouchers AccVoucher[]
+  budgets  AccBudget[]
 }
 
 /// شماره‌گذاری پیوسته. ⚠️ فقط از `nextNumber` — یک UPSERT اتمیک، نه max+1 (تله‌ی ۵)
@@ -4098,6 +4099,7 @@ model AccAccount {
   lines         AccVoucherLine[]
   templateLines AccVoucherTemplateLine[]
   moneyLines    AccMoneyLine[]
+  budgets       AccBudget[]
 
   @@index([parentId])
 }
@@ -4399,6 +4401,24 @@ model AccBankStatementRow {
   items AccBankReconItem[]
 
   @@index([reconId, seq])
+}
+
+/// بودجه‌ی یک حساب سود و زیانی در یک ماه سال مالی — docs/plans/webhesab-parity.md بخش ۲۲.
+/// فقط برنامه است و سند نمی‌سازد؛ `seq` شماره‌ی ماه از اول سال مالی (۱ به بعد). ردیف صفر ذخیره نمی‌شود.
+/// حساب‌های کاهنده (برگشت از فروش و تخفیف) هم مثبت ذخیره می‌شوند.
+model AccBudget {
+  yearId        String
+  accountId     String
+  seq           Int
+  amount        BigInt
+  updatedAt     DateTime @updatedAt
+  updatedByName String
+
+  year    AccFiscalYear @relation(fields: [yearId], references: [id], onDelete: Cascade)
+  account AccAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([yearId, accountId, seq])
+  @@index([accountId])
 }
 
 enum AccLoanStatus {

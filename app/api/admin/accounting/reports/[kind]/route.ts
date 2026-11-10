@@ -13,13 +13,14 @@ import { expenseReport, inventoryValue, treasuryFlow, vatReport } from "@/lib/ac
 import { monthlyTrend } from "@/lib/accounting/reports/trend";
 import { partyBalances, type PartyRole } from "@/lib/accounting/reports/parties";
 import { movers } from "@/lib/accounting/reports/movers";
+import { budgetReport } from "@/lib/accounting/budget";
 import { COL_DIMS, parseDim, salesAnalysis, salesDims, type ColDim } from "@/lib/accounting/reports/sales";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** گزارش‌هایی که بها یا سود نشان می‌دهند — `ACC_COST_VIEW` هم لازم است */
-const COST_REPORTS = ["pl", "balance", "trial", "profit", "inventory", "trend"];
+const COST_REPORTS = ["pl", "balance", "trial", "profit", "inventory", "trend", "budget"];
 const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties", "sales", "movers"];
 
 /**
@@ -36,6 +37,7 @@ const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties
  *   trend     ?months=12                 روند ماهانه‌ی فروش، سود، هزینه و نقد (فاز ۱۰)
  *   parties   ?role&show=all|debtor|creditor|active&q   کل حساب اشخاص (فاز ۱۰)
  *   movers    ?mode=slow|fast&groupBy=item|model&maxSold&maxRate&minSold&top&groupId&warehouseId&supplierId   راکد و پرفروش (بخش ۶)
+ *   budget    ?yearId&fromSeq&toSeq      بودجه در برابر عملکرد (webhesab-parity.md بخش ۲۲)
  *   sales     ?by&col&groupId&warehouseId&supplierId[&row&cell]   تحلیل فروش کالا (row ← جزئیات سطر) — بها و سود فقط با ACC_COST_VIEW (webhesab-parity.md بخش ۵)
  */
 export async function GET(req: Request, { params }: { params: Promise<{ kind: string }> }) {
@@ -124,6 +126,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
           prisma.accWarehouse.findMany({ where: { isActive: true }, orderBy: { code: "asc" }, select: { id: true, name: true } }),
         ]);
         data = { ...report, dims, suppliers, groups, warehouses };
+        break;
+      }
+      case "budget": {
+        const seq = (k: string) => (Number.isInteger(Number(q(k))) && Number(q(k)) > 0 ? Number(q(k)) : null);
+        const report = await budgetReport(prisma, { yearId: q("yearId"), fromSeq: seq("fromSeq"), toSeq: seq("toSeq") });
+        data = { ...report, canManage: can(guard.access, "ACC_SETTINGS") };
         break;
       }
       case "expenses":

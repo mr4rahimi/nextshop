@@ -117,6 +117,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/treasury", label: "صندوق و بانک", icon: fx("Bank") },
       { href: "/admin/accounting/treasury/reconcile", label: "تطبیق بانک", icon: fx("Bank"), keywords: "تطبیق حساب بانک مغایرت صورت حساب مغایرت گیری" },
       { href: "/admin/accounting/loans", label: "وام و تسهیلات", icon: fx("Money bag"), keywords: "وام تسهیلات قسط بانک بدهی بانکی" },
+      { href: "/admin/accounting/reports/budget", label: "بودجه", icon: fx("Ledger"), keywords: "بودجه برنامه مالی عملکرد مقایسه بودجه هزینه سالانه" },
       { href: "/admin/accounting/vouchers", label: "اسناد", icon: fx("Notebook") },
       { href: "/admin/accounting/vouchers/templates", label: "ورودی سریع", icon: fx("Ledger"), keywords: "سند الگو ثبت تکراری اجاره قالب سند ورودی سریع" },
       { href: "/admin/accounting/attachments", label: "پیوست مدارک", icon: fx("Linked paperclips"), keywords: "پیوست فایل عکس رسید اسکن مدرک ضمیمه" },

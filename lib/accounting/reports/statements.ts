@@ -56,6 +56,29 @@ function group(key: string, title: string, ls: StatementLine[], hasPrev: boolean
 const leavesUnder = (idx: AccountIndex, root: AccAccount | undefined) =>
   root ? [...idx.byId.values()].filter((a) => a.level === "SUBLEDGER" && idx.chain(a.id).some((p) => p.id === root.id)) : [];
 
+/** حساب‌های معین سود و زیان به همان بخش‌بندی صورت سود و زیان؛ بودجه هم از همین می‌خواند */
+export function plSections(idx: AccountIndex) {
+  const salesLedger = idx.chain(idx.byKey.get("SALES")?.id ?? "").find((a) => a.level === "LEDGER");
+  const cogsGroup = idx.chain(idx.byKey.get("COGS")?.id ?? "").find((a) => a.level === "GROUP");
+  const sales = leavesUnder(idx, salesLedger);
+  const cogs = leavesUnder(idx, cogsGroup);
+  const used = new Set([...sales, ...cogs].map((a) => a.id));
+  const leaves = [...idx.byId.values()].filter((a) => a.level === "SUBLEDGER" && !used.has(a.id));
+
+  // هزینه‌ها به تفکیک حساب کل (هزینه‌های فروش، اداری، مالی، …)
+  const byLedger = new Map<string, AccAccount[]>();
+  for (const a of leaves.filter((x) => x.class === "EXPENSE")) {
+    const l = idx.chain(a.id).find((x) => x.level === "LEDGER");
+    const k = l?.id ?? "_";
+    byLedger.set(k, [...(byLedger.get(k) ?? []), a]);
+  }
+  const expenses = [...byLedger.entries()]
+    .sort(([a], [b]) => (idx.byId.get(a)?.code ?? "").localeCompare(idx.byId.get(b)?.code ?? ""))
+    .map(([k, accounts]) => ({ key: `exp:${k}`, title: idx.byId.get(k)?.name ?? "سایر هزینه‌ها", accounts }));
+
+  return { sales, cogs, otherIncome: leaves.filter((a) => a.class === "REVENUE"), expenses };
+}
+
 export async function profitLoss(db: Db, range: DateRange, compare: DateRange | null) {
   const idx = await accountIndex(db);
   const notClosing = { voucher: { source: { not: "CLOSING" as const } } };
@@ -65,29 +88,13 @@ export async function profitLoss(db: Db, range: DateRange, compare: DateRange | 
   ]);
   const hasPrev = !!prev;
 
-  const salesLedger = idx.chain(idx.byKey.get("SALES")?.id ?? "").find((a) => a.level === "LEDGER");
-  const cogsGroup = idx.chain(idx.byKey.get("COGS")?.id ?? "").find((a) => a.level === "GROUP");
-  const sales = leavesUnder(idx, salesLedger);
-  const cogs = leavesUnder(idx, cogsGroup);
-  const used = new Set([...sales, ...cogs].map((a) => a.id));
-  const leaves = [...idx.byId.values()].filter((a) => a.level === "SUBLEDGER" && !used.has(a.id));
-
-  const salesG = group("sales", "فروش خالص", lines(sales, cur, prev), hasPrev);
-  const cogsG = group("cogs", "بهای تمام‌شده‌ی کالای فروش‌رفته", lines(cogs, cur, prev), hasPrev);
-  const otherIncomeG = group("otherIncome", "سایر درآمدها", lines(leaves.filter((a) => a.class === "REVENUE"), cur, prev), hasPrev);
-
-  // هزینه‌ها به تفکیک حساب کل (هزینه‌های فروش، اداری، مالی، …)
-  const expenseLeaves = leaves.filter((a) => a.class === "EXPENSE");
-  const byLedger = new Map<string, AccAccount[]>();
-  for (const a of expenseLeaves) {
-    const l = idx.chain(a.id).find((x) => x.level === "LEDGER");
-    const k = l?.id ?? "_";
-    byLedger.set(k, [...(byLedger.get(k) ?? []), a]);
-  }
-  const expenseGroups = [...byLedger.entries()]
-    .map(([k, accs]) => group(`exp:${k}`, idx.byId.get(k)?.name ?? "سایر هزینه‌ها", lines(accs, cur, prev), hasPrev))
-    .filter((g) => g.lines.length)
-    .sort((a, b) => (idx.byId.get(a.key.slice(4))?.code ?? "").localeCompare(idx.byId.get(b.key.slice(4))?.code ?? ""));
+  const sec = plSections(idx);
+  const salesG = group("sales", "فروش خالص", lines(sec.sales, cur, prev), hasPrev);
+  const cogsG = group("cogs", "بهای تمام‌شده‌ی کالای فروش‌رفته", lines(sec.cogs, cur, prev), hasPrev);
+  const otherIncomeG = group("otherIncome", "سایر درآمدها", lines(sec.otherIncome, cur, prev), hasPrev);
+  const expenseGroups = sec.expenses
+    .map((e) => group(e.key, e.title, lines(e.accounts, cur, prev), hasPrev))
+    .filter((g) => g.lines.length);
 
   const figure = (f: (g: StatementGroup) => bigint | null) => {
     const expenses = expenseGroups.reduce((s, g) => s + (f(g) ?? 0n), 0n);

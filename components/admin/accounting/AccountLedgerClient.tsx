@@ -7,8 +7,8 @@ import { faNum } from "@/lib/accounting/money";
 import StatementView, { RangeBar, rangeFor, rangeQuery, type Range, type StatementData } from "./Statement";
 import { api, ErrorText, PageHeader } from "./ui";
 
-export default function AccountLedgerClient({ id }: { id: string }) {
-  const [range, setRange] = useState<Range>(() => rangeFor("year"));
+export default function AccountLedgerClient({ id, from = "", to = "" }: { id: string; from?: string; to?: string }) {
+  const [range, setRange] = useState<Range>(() => (from || to ? { preset: "custom", from, to } : rangeFor("year")));
   const [data, setData] = useState<(StatementData & { account: { code: string; name: string; level: string } }) | null>(null);
   const [error, setError] = useState<string | null>(null);
 
