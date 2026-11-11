@@ -241,6 +241,7 @@ export const MENU_GROUPS: NavGroup[] = [
           { href: "/admin/club/members",     label: "اعضا" },
           { href: "/admin/club/tiers",       label: "سطوح عضویت" },
           { href: "/admin/club/cards",       label: "کارت اشتراک" },
+          { href: "/admin/club/legacy",      label: "انتقال مشتریان" },
           { href: "/admin/club/coupons",     label: "کدهای تخفیف" },
           { href: "/admin/club/qr",          label: "QR عضویت" },
           { href: "/admin/club/bale",        label: "ربات بله" },

@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { faNum } from "@/lib/accounting/money";
+import { faNum, formatAmount } from "@/lib/accounting/money";
 import PartyForm, { type PartyRecord } from "./PartyForm";
 import StatementView, { RangeBar, rangeFor, rangeQuery, SOURCE_LABELS, type Range, type StatementData } from "./Statement";
 import { api, Badge, BalanceLabel, btn, Card, ErrorText, Money, PageHeader, Segmented, SectionTitle } from "./ui";
@@ -35,6 +35,8 @@ interface Data {
     user: { id: string; phone: string } | null;
     supplier: { id: string; name: string } | null;
     mergedInto: { id: string; code: number; name: string } | null;
+    /** پرونده‌ی نرم‌افزار قبلی — webhesab-parity.md بخش ۲۴ */
+    legacy?: { code: string; source: string; store: string | null; groupName: string | null; registeredAt: string | null; invoiceCount: number; spent: string; lastPurchaseAt: string | null }[];
   };
   can: { manage: boolean; merge: boolean };
 }
@@ -134,6 +136,21 @@ export default function PartyDetailClient({ id }: { id: string }) {
           </dl>
           {p.address && <p className="text-xs text-gray-500">{p.address}</p>}
           {p.note && <p className="text-xs text-gray-500 bg-gray-50 dark:bg-white/5 rounded-lg px-2 py-1.5">{p.note}</p>}
+          {!!data.links.legacy?.length && (
+            <div className="text-xs bg-amber-50 dark:bg-amber-500/10 rounded-lg px-2 py-1.5 space-y-0.5">
+              {data.links.legacy.map((l) => (
+                <p key={l.code} className="text-gray-700 dark:text-gray-200">
+                  <Link href={`/admin/club/legacy`} className="font-bold text-amber-700 dark:text-amber-300 hover:underline">
+                    {l.source} — کد {faNum(l.code)}
+                  </Link>
+                  {l.groupName ? ` · گروه ${l.groupName}` : ""}
+                  {l.store ? ` · ${l.store}` : ""}
+                  {` · ${faNum(l.invoiceCount)} فاکتور، ${formatAmount(BigInt(l.spent))} تومان`}
+                  {l.lastPurchaseAt ? ` · آخرین خرید ${new Date(l.lastPurchaseAt).toLocaleDateString("fa-IR")}` : ""}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
         <div className="sm:text-left border-t sm:border-t-0 sm:border-r border-gray-100 dark:border-white/5 pt-3 sm:pt-0 sm:pr-5">
           <p className="text-[11px] text-gray-500 mb-1">مانده‌ی امروز</p>

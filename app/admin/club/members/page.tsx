@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { JALALI_MONTH_OPTIONS, formatJalaliShort, toJalali } from "@/lib/club/jalali";
 import SendMessagePanel from "@/components/admin/club/SendMessagePanel";
@@ -801,10 +802,16 @@ function EditModal({
     { id: string; fromName: string | null; toName: string | null; byName: string; via: string; reason: string | null; createdAt: string }[]
   >([]);
 
+  const [legacy, setLegacy] = useState<LegacyInfo[]>([]);
+
   useEffect(() => {
     fetch(`/api/admin/club/members/${member.id}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setHistory(d.ownerTransfers ?? []))
+      .then((d) => {
+        if (!d) return;
+        setHistory(d.ownerTransfers ?? []);
+        setLegacy(d.legacy ?? []);
+      })
       .catch(() => {});
   }, [member.id]);
   const [saving, setSaving] = useState(false);
@@ -962,6 +969,7 @@ function EditModal({
         {can.assign && ownerId !== (member.ownerId ?? "") && (
           <Input label="دلیل جابه‌جایی (اختیاری)" value={ownerReason} onChange={setOwnerReason} />
         )}
+        {legacy.length > 0 && <LegacyBox rows={legacy} />}
         {history.length > 0 && (
           <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 space-y-1">
             <p className="text-[10px] font-black text-gray-500">تاریخچه‌ی صاحب</p>
@@ -1202,5 +1210,33 @@ function PageBtn({
         />
       </svg>
     </button>
+  );
+}
+interface LegacyInfo {
+  code: string; source: string; name: string; store: string | null; groupName: string | null; registeredAt: string | null;
+  invoiceCount: number; spent: string; lastPurchaseAt: string | null; isActive: boolean; cardNumber: string | null;
+}
+
+/** سابقه‌ی نرم‌افزار قبلی — webhesab-parity.md بخش ۲۴ */
+function LegacyBox({ rows }: { rows: LegacyInfo[] }) {
+  return (
+    <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 p-3 space-y-1">
+      <p className="text-[10px] font-black text-amber-700 dark:text-amber-300">
+        سابقه در {rows[0].source}{" "}
+        <Link href="/admin/club/legacy" className="underline">(همه)</Link>
+      </p>
+      {rows.map((r) => (
+        <p key={r.code} className="text-[11px] text-gray-700 dark:text-gray-200">
+          کد {r.code}
+          {r.registeredAt ? ` · عضو از ${formatJalaliShort(new Date(r.registeredAt))}` : ""}
+          {r.groupName ? ` · گروه ${r.groupName}` : ""}
+          {r.store ? ` · ${r.store}` : ""}
+          <span className="block text-gray-500">
+            {toFa(r.invoiceCount)} فاکتور · {toFa(r.spent)} تومان
+            {r.lastPurchaseAt ? ` · آخرین خرید ${formatJalaliShort(new Date(r.lastPurchaseAt))}` : ""}
+          </span>
+        </p>
+      ))}
+    </div>
   );
 }

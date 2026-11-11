@@ -6227,3 +6227,44 @@ model AccPurchaseOrderLine {
   @@index([orderId])
   @@index([productId])
 }
+
+/// پرونده‌ی مشتری در نرم‌افزار قبلی (وب حساب) — docs/plans/webhesab-parity.md بخش ۲۴.
+/// ورود تکرارپذیر: کلید = کد تفصیل همان نرم‌افزار. آمار خریدش در `ClubProfile.totalSpent`
+/// جمع می‌شود (`recomputePurchaseStatsMany`). شناسه‌ی شخص/کاربر بی FK (مثل `AccLegacyItem`)؛
+/// ادغام اشخاص در `party-merge.ts` جابه‌جایش می‌کند.
+model LegacyCustomer {
+  /// کد تفصیل مشتری در نرم‌افزار قبلی
+  code           String    @id
+  source         String    @default("وب حساب")
+  /// شناسه‌ی داخلی همان نرم‌افزار (debtor_no)
+  sourceId       String?
+  name           String
+  /// موبایل یکدست‌شده؛ null = نامعتبر یا خالی
+  mobile         String?
+  rawMobile      String?
+  phone          String?
+  address        String?
+  region         String?
+  store          String?
+  /// گروه امتیازدهی (vip، A …) — برچسب عضو باشگاه می‌شود، نه سطح
+  groupName      String?
+  cardNumber     String?
+  gender         String?
+  /// شمسی، همان‌طور که در نرم‌افزار قبلی بود
+  birthDate      String?
+  marriageDate   String?
+  registeredAt   DateTime?
+  isActive       Boolean   @default(true)
+  invoiceCount   Int       @default(0)
+  /// جمع خرید (تومان)
+  spent          BigInt    @default(0)
+  lastPurchaseAt DateTime?
+  partyId        String?
+  userId         String?
+  importedAt     DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([mobile])
+  @@index([partyId])
+  @@index([userId])
+}

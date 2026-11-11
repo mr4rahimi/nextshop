@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { legacyOf } from "@/lib/club/legacy-customers";
 import { prisma } from "@/lib/prisma";
 import { requirePermission, can } from "@/lib/permissions";
 import { assignOwner, canSeeProfile, setCategory } from "@/lib/club/ownership";
@@ -67,7 +68,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     return NextResponse.json({ error: "عضو یافت نشد" }, { status: 404 });
   }
 
-  const [balance, registeredBy] = await Promise.all([
+  const [balance, registeredBy, legacy] = await Promise.all([
     getPointsBalance(profile.id),
     profile.registeredById
       ? prisma.user.findUnique({
@@ -75,9 +76,10 @@ export async function GET(_req: Request, { params }: Ctx) {
           select: { firstName: true, lastName: true, phone: true },
         })
       : null,
+    legacyOf({ userId: profile.userId }),
   ]);
 
-  return NextResponse.json(serialize({ ...profile, balance, registeredBy }));
+  return NextResponse.json(serialize({ ...profile, balance, registeredBy, legacy }));
 }
 
 /**

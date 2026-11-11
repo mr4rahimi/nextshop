@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { legacyOf } from "@/lib/club/legacy-customers";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
@@ -36,6 +37,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     mergedInto: party.mergedIntoId
       ? await prisma.accParty.findUnique({ where: { id: party.mergedIntoId }, select: { id: true, code: true, name: true } })
       : null,
+    legacy: await legacyOf({ partyId: id }),
   };
   return NextResponse.json(
     serialize({ party, balance: total.balance, statement: st, summary, links, can: { manage: can(guard.access, "ACC_PARTY_MANAGE"), merge: can(guard.access, "ACC_PARTY_MANAGE") && can(guard.access, "ACC_VOUCHER") } }),

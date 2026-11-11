@@ -7,6 +7,7 @@ import { actorOf, readJson } from "@/lib/accounting/api";
 import { faNum, formatAmount } from "@/lib/accounting/money";
 import { posGuard } from "@/lib/accounting/pos/api";
 import { createTicket, quoteTicket, type TicketInput } from "@/lib/accounting/pos/tickets";
+import { recomputePurchaseStatsMany } from "@/lib/club/profile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,6 +83,9 @@ export async function POST(req: Request) {
       entityTitle: `رسید صندوق ${t.number}`,
       summary: `${KIND_LABEL[t.kind]} صندوق — رسید ${faNum(t.number)} — ${t.partyName} — ${formatAmount(net < 0n ? -net : net)} تومان${net < 0n ? " پس داده شد" : ""}`,
     });
+    // آمار خرید عضو باشگاه (جمع خرید، آخرین خرید) — بیرون از تراکنش، خطایش رسید را نمی‌خواباند
+    const owner = await prisma.accParty.findUnique({ where: { id: t.partyId }, select: { userId: true } });
+    if (owner?.userId) await recomputePurchaseStatsMany([owner.userId]).catch((e) => console.error("[acc-pos-ticket] آمار باشگاه", e));
     return NextResponse.json(serialize({ ok: true, ticket: t }));
   } catch (e) {
     return accErrorResponse(e, "[acc-pos-ticket]");

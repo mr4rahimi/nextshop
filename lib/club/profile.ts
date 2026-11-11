@@ -24,6 +24,8 @@ export interface EnsureProfileOptions {
   consentIp?: string | null;
   birthDate?: Date | null;
   gender?: string | null;
+  /** false = بی امتیاز عضویت (ورود انبوه از نرم‌افزار قبلی؛ امتیاز اینجا اعتبار پولی است) */
+  welcome?: boolean;
 }
 
 /**
@@ -74,12 +76,14 @@ export async function ensureClubProfile(
   }
 
   // امتیاز خوش‌آمد — مقدارش از تنظیمات می‌آید؛ ۰ یعنی این قابلیت خاموش است
-  await grantPoints({
-    profileId: profile.id,
-    reason: "SIGNUP",
-    refType: "profile",
-    refId: profile.id,
-  });
+  if (opts.welcome !== false) {
+    await grantPoints({
+      profileId: profile.id,
+      reason: "SIGNUP",
+      refType: "profile",
+      refId: profile.id,
+    });
+  }
 
   return profile;
 }
@@ -95,6 +99,8 @@ export interface UpsertCustomerInput {
   gender?: string | null;
   smsConsent?: boolean;
   consentIp?: string | null;
+  /** false = بی امتیاز عضویت (ورود از نرم‌افزار قبلی) */
+  welcome?: boolean;
 }
 
 export interface UpsertCustomerResult {
@@ -145,6 +151,7 @@ export async function upsertClubCustomer(
       gender: input.gender,
       smsConsent: input.smsConsent,
       consentIp: input.consentIp,
+      welcome: input.welcome,
     });
 
     // اگر پروفایل از قبل بود ولی رضایت پیامک تازه داده شده، ثبتش کن
@@ -220,12 +227,14 @@ export async function upsertClubCustomer(
   //    ساخته می‌شود، پس `ensureClubProfile()` — که تنها جای دیگر این امتیاز
   //    است — اصلاً صدا زده نمی‌شود. بدون این، هر عضوی که از ثبت فروشنده،
   //    ورود فایل، مارکت‌پلیس یا صفحه‌ی QR بیاید امتیاز عضویتش را نمی‌گیرد.
-  await grantPoints({
-    profileId: user.clubProfile!.id,
-    reason: "SIGNUP",
-    refType: "profile",
-    refId: user.clubProfile!.id,
-  });
+  if (input.welcome !== false) {
+    await grantPoints({
+      profileId: user.clubProfile!.id,
+      reason: "SIGNUP",
+      refType: "profile",
+      refId: user.clubProfile!.id,
+    });
+  }
 
   if (input.smsConsent) {
     await setClubConsent({
@@ -273,28 +282,47 @@ export async function setSmsConsent(
 }
 
 /**
- * بازمحاسبه آمار خرید از روی سفارش‌های واقعی.
- * فعلاً فقط سفارش‌های سایت؛ خرید حضوری در فاز ۴ اضافه می‌شود.
+ * بازمحاسبه آمار خرید: سفارش‌های سایت + رسیدهای صندوق (شخص وصل به همین کاربر) + سابقه‌ی
+ * نرم‌افزار قبلی (`LegacyCustomer`). فرمول یک‌جا در `recomputePurchaseStatsMany` است.
  */
 export async function recomputePurchaseStats(userId: string) {
-  const agg = await prisma.order.aggregate({
-    where: {
-      userId,
-      status: { in: ["PAID", "CONFIRMED", "PROCESSING", "PACKAGING", "SHIPPED", "DELIVERED", "COMPLETED"] },
-    },
-    _sum: { grandTotal: true },
-    _count: { _all: true },
-    _max: { createdAt: true },
-  });
+  await recomputePurchaseStatsMany([userId]);
+  return prisma.clubProfile.findUnique({ where: { userId } });
+}
 
-  return prisma.clubProfile.update({
-    where: { userId },
-    data: {
-      totalSpent: agg._sum.grandTotal ?? 0n,
-      orderCount: agg._count._all,
-      lastPurchaseAt: agg._max.createdAt ?? null,
-    },
-  });
+/** همان بازمحاسبه برای چند کاربر با یک کوئری (ورود انبوه، صندوق) */
+export async function recomputePurchaseStatsMany(userIds: string[], db: Prisma.TransactionClient | typeof prisma = prisma) {
+  if (!userIds.length) return 0;
+  return db.$executeRaw`
+    WITH u AS (SELECT unnest(${userIds}::text[]) AS "userId"),
+    o AS (
+      SELECT o."userId", SUM(o."grandTotal") AS s, COUNT(*)::int AS n, MAX(o."createdAt") AS last
+      FROM "Order" o JOIN u ON u."userId" = o."userId"
+      WHERE o.status::text IN ('PAID','CONFIRMED','PROCESSING','PACKAGING','SHIPPED','DELIVERED','COMPLETED')
+      GROUP BY o."userId"
+    ),
+    t AS (
+      SELECT pa."userId", SUM(t."saleTotal" - t."returnTotal") AS s,
+             COUNT(*) FILTER (WHERE t."saleTotal" > 0)::int AS n,
+             MAX(t."createdAt") FILTER (WHERE t."saleTotal" > 0) AS last
+      FROM "AccPosTicket" t JOIN "AccParty" pa ON pa.id = t."partyId" JOIN u ON u."userId" = pa."userId"
+      GROUP BY pa."userId"
+    ),
+    l AS (
+      SELECT l."userId", SUM(l.spent) AS s, SUM(l."invoiceCount")::int AS n, MAX(l."lastPurchaseAt") AS last
+      FROM "LegacyCustomer" l JOIN u ON u."userId" = l."userId"
+      GROUP BY l."userId"
+    )
+    UPDATE "ClubProfile" p SET
+      "totalSpent" = GREATEST(0, COALESCE(o.s, 0) + COALESCE(t.s, 0) + COALESCE(l.s, 0)),
+      "orderCount" = COALESCE(o.n, 0) + COALESCE(t.n, 0) + COALESCE(l.n, 0),
+      "lastPurchaseAt" = GREATEST(o.last, t.last, l.last)
+    FROM u
+    LEFT JOIN o ON o."userId" = u."userId"
+    LEFT JOIN t ON t."userId" = u."userId"
+    LEFT JOIN l ON l."userId" = u."userId"
+    WHERE p."userId" = u."userId"
+  `;
 }
 
 /** موجودی امتیاز از روی دفتر کل — هرگز از فیلد کش‌شده استفاده نکنید */

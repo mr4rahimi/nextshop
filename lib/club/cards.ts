@@ -370,7 +370,7 @@ export async function commitImport(rows: ImportRow[], s?: CreditSettings) {
   let newUsers = 0;
   for (const [mobile, list] of by) {
     const first = list[0];
-    const { profileId, isNewUser } = await upsertClubCustomer({ phone: mobile, lastName: list.find((r) => r.name)?.name || null, source: "IMPORT" });
+    const { profileId, isNewUser } = await upsertClubCustomer({ phone: mobile, lastName: list.find((r) => r.name)?.name || null, source: "IMPORT", welcome: false });
     if (isNewUser) newUsers++;
     await prisma.$transaction(async (tx) => {
       await lockProfile(tx, profileId);
