@@ -25,8 +25,8 @@ export async function GET(req: Request) {
       }),
       prisma.clubTier.findMany({ orderBy: { sortOrder: "asc" }, select: { id: true, title: true, cardChargeBp: true, posDiscountBp: true, manualOnly: true } }),
     ]);
-    const s = await prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { pointRedeemEnabled: true, pointExpiryDays: true, pointRedeemRate: true } });
-    return NextResponse.json(serialize({ ...data, tiers, redeemOnline: !!s?.pointRedeemEnabled, expiryDays: s?.pointExpiryDays ?? 0, rate: s?.pointRedeemRate ?? 1 }));
+    const s = await prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { pointRedeemEnabled: true, pointExpiryDays: true, pointRedeemRate: true, clubCardDefaultTierId: true } });
+    return NextResponse.json(serialize({ ...data, tiers, redeemOnline: !!s?.pointRedeemEnabled, expiryDays: s?.pointExpiryDays ?? 0, rate: s?.pointRedeemRate ?? 1, defaultTierId: s?.clubCardDefaultTierId ?? null }));
   } catch (e) {
     return cardsError(e, "[club-cards]");
   }
@@ -46,13 +46,18 @@ export async function POST(req: Request) {
   }
 }
 
-/** PATCH — کلیدهای کارت در صندوق و اعمال انقضا: { clubCardPosEnabled?, pointExpiryEnforced?, pointExpiryDays? } */
+/** PATCH — کلیدهای کارت در صندوق و اعمال انقضا: { clubCardPosEnabled?, pointExpiryEnforced?, pointExpiryDays?, clubCardDefaultTierId? } */
 export async function PATCH(req: Request) {
   const g = await cardsGuard();
   if (!g.ok) return g.res;
   try {
     const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-    const data: { clubCardPosEnabled?: boolean; pointExpiryEnforced?: boolean; pointExpiryDays?: number } = {};
+    const data: { clubCardPosEnabled?: boolean; pointExpiryEnforced?: boolean; pointExpiryDays?: number; clubCardDefaultTierId?: string | null } = {};
+    if (b.clubCardDefaultTierId !== undefined) {
+      const id = typeof b.clubCardDefaultTierId === "string" && b.clubCardDefaultTierId ? b.clubCardDefaultTierId : null;
+      if (id && !(await prisma.clubTier.findUnique({ where: { id }, select: { id: true } }))) return NextResponse.json({ error: "سطح پیدا نشد" }, { status: 400 });
+      data.clubCardDefaultTierId = id;
+    }
     if (typeof b.clubCardPosEnabled === "boolean") data.clubCardPosEnabled = b.clubCardPosEnabled;
     if (typeof b.pointExpiryEnforced === "boolean") data.pointExpiryEnforced = b.pointExpiryEnforced;
     if (b.pointExpiryDays !== undefined) {

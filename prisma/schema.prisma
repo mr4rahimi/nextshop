@@ -951,6 +951,8 @@ model StoreSettings {
   clubCardPosEnabled   Boolean @default(false)
   /// شارژ/امتیاز تاریخ‌گذشته واقعاً بسوزد (پیش‌فرض خاموش: سایت‌های قدیمی امتیازشان دست نخورد)
   pointExpiryEnforced  Boolean @default(false)
+  /// سطح کارت تازه‌ای که صندوقدار صادر می‌کند (مدیر صندوق می‌تواند عوض کند)؛ null = بی سطح
+  clubCardDefaultTierId String?
   /// ترتیب اولویت کانال‌ها هنگام ارسال — آرایه‌ای از ClubChannel
   /// مثلاً ["TELEGRAM","BALE","SMS"] یعنی اول رایگان‌ها، بعد پیامک
   channelPriority      Json    @default("[\"SMS\"]")
@@ -2259,6 +2261,8 @@ model ClubCard {
   isActive  Boolean  @default(true)
   issuedAt  DateTime @default(now())
   note      String?
+  /// صادرکننده (نام کاربر پنل) و صندوق، اگر از صندوق صادر شده
+  issuedBy  String?
   createdAt DateTime @default(now())
 
   profile ClubProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)

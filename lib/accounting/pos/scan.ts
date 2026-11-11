@@ -17,7 +17,8 @@ import { posItems, type PosItem } from "./setup";
 import { TICKET_BARCODE_PREFIX } from "./tickets";
 import { findBySerial } from "../inventory/serials";
 import { posMemberByCard, type PosMember } from "./club";
-import { looksLikeCard } from "@/lib/club/credit-calc";
+import { looksLikeCard, normalizeCardNumber } from "@/lib/club/credit-calc";
+import { creditSettings } from "@/lib/club/credit";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -39,7 +40,8 @@ export type ScanResult =
   | { kind: "ticket"; code: string }
   | { kind: "list"; items: PosItem[] }
   /** کارت اشتراک — مشتری رسید می‌شود (بخش ۲۳ هم‌ترازی) */
-  | { kind: "member"; member: PosMember };
+  | { kind: "member"; member: PosMember }
+  | { kind: "newCard"; number: string };
 
 const pairs = (raw: unknown): { axisId: string; valueId: string }[] =>
   Array.isArray(raw) ? raw.filter((a): a is { axisId: string; valueId: string } => !!a && typeof a.axisId === "string" && typeof a.valueId === "string") : [];
@@ -87,6 +89,8 @@ export async function scanCode(raw: string, warehouseId: string, db: Db = prisma
   if (looksLikeCard(term)) {
     const member = await posMemberByCard(term);
     if (member) return { kind: "member", member };
+    // کارت خام: صندوقدار همان‌جا صادرش می‌کند
+    if ((await creditSettings()).posEnabled) return { kind: "newCard", number: normalizeCardNumber(term) };
     throw new AccError("این کارت اشتراک ثبت نشده است");
   }
   const code = normalizeItemCode(term) ?? "";

@@ -17,7 +17,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, Banknote, ClipboardList, CreditCard, Lock, Minus, PauseCircle, Percent, Plus, Printer, RotateCcw, ScanLine, ShoppingBag, Trash2, User, UserRound, X,
+  ArrowRight, Banknote, ClipboardList, CreditCard, IdCard, Lock, Minus, PauseCircle, Percent, Plus, Printer, RotateCcw, ScanLine, ShoppingBag, Trash2, User, UserRound, X,
 } from "lucide-react";
 import { calcInvoice } from "@/lib/accounting/invoices/calc";
 import { parseAmountInput } from "@/lib/accounting/money";
@@ -48,7 +48,17 @@ interface Boot {
   serialRequired: boolean;
   /** کارت اشتراک در صندوق روشن است */
   clubCards: boolean;
+  /** صدور کارت در صندوق: سطح پیش‌فرض و (فقط مدیر صندوق) همه‌ی سطح‌ها */
+  clubIssue: { defaultTier: IssueTier | null; tiers: IssueTier[] } | null;
   can: { manage: boolean };
+}
+
+interface IssueTier {
+  id: string;
+  title: string;
+  color: string | null;
+  cardChargeBp: number | null;
+  posDiscountBp: number;
 }
 
 interface Line {
@@ -90,7 +100,7 @@ interface Held {
   party: PartyOption | null;
   discount: string;
 }
-type Modal = null | "seller" | "party" | "pay" | "return" | "model" | "list" | "discount" | "held" | "close" | "tickets" | "serial";
+type Modal = null | "seller" | "party" | "card" | "pay" | "return" | "model" | "list" | "discount" | "held" | "close" | "tickets" | "serial";
 
 let keySeq = 0;
 const newKey = () => `k${++keySeq}`;
@@ -102,6 +112,8 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   const [party, setParty] = useState<PartyOption | null>(null);
   /** کارت اشتراک مشتری رسید (بخش ۲۳ هم‌ترازی) */
   const [member, setMember] = useState<PosMember | null>(null);
+  /** شماره‌ی کارت خامِ کشیده‌شده برای پنجره‌ی صدور */
+  const [cardDraft, setCardDraft] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [ret, setRet] = useState<RetState | null>(null);
   const [blind, setBlind] = useState(false);
@@ -322,6 +334,12 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           beep();
           flash(`کارت ${r.member.name} — اعتبار ${formatAmount(B(r.member.credit))} تومان`);
         }
+      } else if (r.kind === "newCard") {
+        if (ret?.src) flash("مرجوعی رسیددار به نام خریدار همان رسید است", "err");
+        else {
+          setCardDraft(r.number);
+          setModal("card");
+        }
       } else if (r.kind === "item") addItem(r.item, r.serial);
       else if (r.kind === "model") {
         if (r.pick.items.length === 1 && !boot?.can.manage) addItem(r.pick.items[0]);
@@ -525,6 +543,18 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
               {member.tier?.title ?? "کارت اشتراک"}
               <span className="tabular-nums">اعتبار {formatAmount(B(member.credit))}</span>
             </span>
+          )}
+          {boot.clubCards && !ret?.src && !(member && member.partyId === ticketPartyId && member.card) && (
+            <button
+              onClick={() => {
+                setCardDraft("");
+                setModal("card");
+              }}
+              className="flex h-10 items-center gap-1.5 rounded-xl border border-dashed border-amber-500/50 px-3 text-xs font-black text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
+            >
+              <IdCard className="h-4 w-4" aria-hidden />
+              صدور کارت
+            </button>
           )}
           <div className="mr-auto flex items-center gap-1">
             <HeadBtn icon={RotateCcw} label="مرجوعی" k="F8" onClick={() => { setReturnCode(undefined); setModal("return"); }} tone="rose" />
@@ -839,6 +869,24 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
             </button>
           )}
         </Overlay>
+      )}
+      {modal === "card" && boot.clubIssue && (
+        <IssueCardSheet
+          terminalId={terminalId}
+          number={cardDraft}
+          party={party}
+          member={member && member.partyId === ticketPartyId ? member : null}
+          opts={boot.clubIssue}
+          manage={boot.can.manage}
+          onClose={() => setModal(null)}
+          onDone={(m) => {
+            setParty({ id: m.partyId, code: 0, name: m.partyName, mobile: m.mobile });
+            setMember(m);
+            setModal(null);
+            beep();
+            flash(`${m.replaced ? "کارت تازه جایگزین شد" : "کارت صادر شد"} — ${m.name}${m.tier ? ` · ${m.tier.title}` : ""}`);
+          }}
+        />
       )}
       {modal === "model" && pick && (
         <ModelPicker
@@ -1276,6 +1324,144 @@ function SerialSheet({ terminalId, line, taken, onSave, onClose }: { terminalId:
         {error && <p className="text-xs font-bold text-red-600">{error}</p>}
         <button onClick={() => onSave(picked)} className="w-full rounded-xl bg-emerald-600 py-3 text-base font-black text-white">
           تأیید ({faNum(picked.length)})
+        </button>
+      </div>
+    </Overlay>
+  );
+}
+
+/**
+ * صدور کارت اشتراک در صندوق — webhesab-parity.md بخش ۲۳.
+ * کارت خامِ کشیده‌شده یا دکمه‌ی «صدور کارت». مشتریِ انتخاب‌شده پیش‌فرض است؛ صندوقدار با سطح
+ * پیش‌فرض صادر می‌کند و فقط مدیر صندوق سطح را انتخاب می‌کند. کارت قبلی عضو جایگزین می‌شود.
+ */
+function IssueCardSheet({
+  terminalId,
+  number,
+  party,
+  member,
+  opts,
+  manage,
+  onClose,
+  onDone,
+}: {
+  terminalId: string;
+  number: string;
+  party: PartyOption | null;
+  member: PosMember | null;
+  opts: NonNullable<Boot["clubIssue"]>;
+  manage: boolean;
+  onClose: () => void;
+  onDone: (m: PosMember & { replaced: boolean; isNewUser: boolean }) => void;
+}) {
+  const [f, setF] = useState({
+    number,
+    mobile: member?.mobile ?? party?.mobile ?? "",
+    name: party ? party.name : "",
+    tierId: (member?.card ? member.tier?.id : opts.defaultTier?.id) ?? member?.tier?.id ?? "",
+  });
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const numRef = useRef<HTMLInputElement>(null);
+  const mobRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    (number ? mobRef : numRef).current?.focus();
+  }, [number]);
+  const fromParty = !!party;
+  const tier = opts.defaultTier;
+
+  async function save() {
+    if (busy) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await api<{ member: PosMember & { replaced: boolean; isNewUser: boolean } }>("/api/admin/accounting/pos/member", {
+        method: "POST",
+        json: { terminalId, number: f.number, mobile: f.mobile, name: f.name, partyId: party?.id ?? null, tierId: manage ? f.tierId : null },
+      });
+      onDone(r.member);
+    } catch (e) {
+      setErr((e as Error).message);
+      setBusy(false);
+    }
+  }
+  const input = "h-12 w-full rounded-2xl border border-gray-200 bg-white px-4 text-base font-bold outline-none focus:border-amber-500 dark:border-white/10 dark:bg-white/5";
+  return (
+    <Overlay title={member?.card ? "تعویض کارت اشتراک" : "صدور کارت اشتراک"} onClose={onClose}>
+      <div className="space-y-3">
+        {err && <p className="rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700 dark:bg-red-500/10 dark:text-red-300">{err}</p>}
+        <label className="block space-y-1">
+          <span className="text-xs font-black text-gray-500">شماره‌ی کارت</span>
+          <input
+            ref={numRef}
+            dir="ltr"
+            value={f.number}
+            onChange={(e) => setF({ ...f, number: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                mobRef.current?.focus();
+              }
+            }}
+            placeholder="کارت را روی کارت‌خوان بکشید"
+            className={`${input} tabular-nums`}
+          />
+        </label>
+        <label className="block space-y-1">
+          <span className="text-xs font-black text-gray-500">موبایل مشتری</span>
+          <input
+            ref={mobRef}
+            dir="ltr"
+            inputMode="tel"
+            value={f.mobile}
+            onChange={(e) => setF({ ...f, mobile: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void save();
+              }
+            }}
+            placeholder="09…"
+            className={`${input} tabular-nums`}
+          />
+          <span className="block text-[11px] font-bold leading-5 text-gray-400">اعتبار کارت با همین شماره در کیف پول حساب کاربری مشتری دیده می‌شود.</span>
+        </label>
+        {!fromParty && (
+          <label className="block space-y-1">
+            <span className="text-xs font-black text-gray-500">نام مشتری</span>
+            <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="اگر مشتری از قبل هست نامش عوض نمی‌شود" className={input} />
+          </label>
+        )}
+        {manage && opts.tiers.length > 0 ? (
+          <label className="block space-y-1">
+            <span className="text-xs font-black text-gray-500">سطح</span>
+            <select value={f.tierId} onChange={(e) => setF({ ...f, tierId: e.target.value })} className={input}>
+              <option value="">{member?.tier ? `بدون تغییر (${member.tier.title})` : "بی سطح"}</option>
+              {opts.tiers.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                  {t.cardChargeBp != null ? ` — شارژ ${faNum(t.cardChargeBp / 100)}٪` : ""}
+                  {t.posDiscountBp ? ` — تخفیف ${faNum(t.posDiscountBp / 100)}٪` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <p className="rounded-2xl bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+            {member?.card
+              ? `سطح مشتری${member.tier ? ` (${member.tier.title})` : ""} عوض نمی‌شود.`
+              : tier
+                ? `سطح کارت: ${tier.title}${tier.cardChargeBp != null ? ` — از هر خرید ${faNum(tier.cardChargeBp / 100)}٪ شارژ` : ""}${tier.posDiscountBp ? ` — ${faNum(tier.posDiscountBp / 100)}٪ تخفیف` : ""}`
+                : "سطح پیش‌فرض کارت تعیین نشده؛ شارژ با قاعده‌ی عمومی امتیاز باشگاه است."}
+          </p>
+        )}
+        {member?.card && <p className="text-[11px] font-bold leading-6 text-gray-500">کارت فعلی ({member.card.number.slice(-4)}…) غیرفعال و این کارت جایگزینش می‌شود؛ اعتبار عوض نمی‌شود.</p>}
+        <button
+          onClick={() => void save()}
+          disabled={busy || !f.mobile.trim()}
+          className="h-12 w-full rounded-2xl bg-amber-500 text-base font-black text-white transition hover:bg-amber-600 disabled:opacity-50"
+        >
+          {busy ? "در حال ثبت…" : member?.card ? "تعویض کارت" : "صدور کارت"}
         </button>
       </div>
     </Overlay>

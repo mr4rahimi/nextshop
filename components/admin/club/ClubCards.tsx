@@ -23,7 +23,7 @@ interface Row {
 interface ListData {
   settings: { posEnabled: boolean; enforceExpiry: boolean; rate: number; expiryDays: number };
   totals: { cards: number; credit: string; expiringSoon: string; negative: number };
-  rows: Row[]; truncated: boolean; tiers: TierLite[]; redeemOnline: boolean; expiryDays: number;
+  rows: Row[]; truncated: boolean; tiers: TierLite[]; redeemOnline: boolean; expiryDays: number; defaultTierId: string | null;
 }
 
 const toman = (v: string | number) => `${fa(v)} تومان`;
@@ -81,6 +81,13 @@ export default function ClubCards() {
               onChange={(v) => setting({ pointExpiryEnforced: v })}
               label="سوخت شارژ تاریخ‌گذشته"
               hint={`هر شارژ ${d.expiryDays ? `${fa(d.expiryDays)} روز` : "بی‌انقضا"} اعتبار دارد؛ خاموش = هیچ اعتباری نمی‌سوزد.`}
+            />
+            <Select
+              label="سطح کارت تازه در صندوق"
+              hint="صندوقدار کارت را با همین سطح صادر می‌کند (تعویض کارت گم‌شده سطح را عوض نمی‌کند). فقط مدیر صندوق می‌تواند سطح دیگری انتخاب کند."
+              value={d.defaultTierId ?? ""}
+              onChange={(v) => setting({ clubCardDefaultTierId: v || null })}
+              options={[{ value: "", label: "بی سطح (قاعده‌ی عمومی امتیاز)" }, ...d.tiers.map((t) => ({ value: t.id, label: `${t.title}${t.cardChargeBp != null ? ` — شارژ ${fa(t.cardChargeBp / 100)}٪` : ""}` }))]}
             />
           </div>
           <p className="text-[11px] font-bold leading-6 text-gray-500">
@@ -419,7 +426,7 @@ function IssueSheet({ tiers, onClose, onDone }: { tiers: TierLite[]; onClose: ()
 interface Member {
   profileId: string; name: string; mobile: string; partyId: string | null; userId: string;
   tier: { title: string; color: string | null; cardChargeBp: number | null; posDiscountBp: number } | null;
-  cards: { id: string; number: string; isActive: boolean; issuedAt: string; note: string | null }[];
+  cards: { id: string; number: string; isActive: boolean; issuedAt: string; note: string | null; issuedBy: string | null }[];
   credit: string; enforceExpiry: boolean; expiredUnposted: string;
   lots: { id: string; credit: string; of: string; expiresAt: string | null; createdAt: string }[];
   ledger: { id: string; label: string; note: string | null; amount: string; balance: string; createdAt: string; expiresAt: string | null; ticket: { id: string; number: number; invoiceId: string | null } | null; orderId: string | null }[];
@@ -473,7 +480,7 @@ function MemberSheet({ profileId, onClose, onChanged }: { profileId: string; onC
             {d.cards.map((c) => (
               <div key={c.id} className="flex items-center justify-between rounded-xl border border-gray-200 px-3 py-2 text-[11px] font-bold dark:border-white/10">
                 <span dir="ltr" className="tabular-nums">{c.number}</span>
-                <span className="text-gray-500">{faDate(c.issuedAt)}{c.note ? ` · ${c.note}` : ""}</span>
+                <span className="text-gray-500">{faDate(c.issuedAt)}{c.issuedBy ? ` · صدور: ${c.issuedBy}` : ""}{c.note ? ` · ${c.note}` : ""}</span>
                 <button onClick={() => toggle(c.id, !c.isActive)} className={c.isActive ? "text-red-600" : "text-emerald-600"}>{c.isActive ? "غیرفعال کردن" : "فعال کردن"}</button>
               </div>
             ))}

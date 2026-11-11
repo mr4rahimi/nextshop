@@ -33,7 +33,8 @@ export type ScanResult =
   | { kind: "model"; pick: ModelPick }
   | { kind: "ticket"; code: string }
   | { kind: "list"; items: PosItem[] }
-  | { kind: "member"; member: PosMember };
+  | { kind: "member"; member: PosMember }
+  | { kind: "newCard"; number: string };
 
 /** دارنده‌ی کارت اشتراک در صندوق — `lib/accounting/pos/club.ts` */
 export interface PosMember {

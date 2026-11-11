@@ -7,6 +7,7 @@ import { readJson } from "@/lib/accounting/api";
 import { posGuard } from "@/lib/accounting/pos/api";
 import { saveTerminal, treasuryBook, type TerminalInput } from "@/lib/accounting/pos/setup";
 import { shiftSummary } from "@/lib/accounting/pos/shifts";
+import { posIssueOptions } from "@/lib/accounting/pos/club";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,7 +39,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         lastKeptFloat: lastShift?.keptFloat ?? null,
         cashier: g.access.name,
         serialRequired: !!settings?.serialRequired,
-        clubCards: (await prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { clubCardPosEnabled: true } }))?.clubCardPosEnabled ?? false,
+        ...(await (async () => {
+          const on = (await prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { clubCardPosEnabled: true } }))?.clubCardPosEnabled ?? false;
+          return { clubCards: on, clubIssue: on ? await posIssueOptions(g.manage) : null };
+        })()),
         can: { manage: g.manage },
       }),
     );

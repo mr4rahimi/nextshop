@@ -154,16 +154,30 @@ export async function memberDetail(profileId: string) {
 
 // ── صدور و تغییر کارت ──────────────────────────────────────────────
 
-export async function issueCard(input: { mobile: string; name?: string | null; number: string; tierId?: string | null; note?: string | null }) {
+/**
+ * صدور یا تعویض کارت. `tierId` همیشه اعمال می‌شود؛ `firstCardTierId` فقط اگر عضو تا حالا هیچ
+ * کارتی نداشته (صدور صندوقدار: تعویض کارت گم‌شده سطح عضو را عوض نمی‌کند).
+ */
+export async function issueCard(input: {
+  mobile: string;
+  name?: string | null;
+  number: string;
+  tierId?: string | null;
+  firstCardTierId?: string | null;
+  note?: string | null;
+  issuedBy?: string | null;
+}) {
   const phone = normalizePhone(input.mobile);
   if (!phone) throw new CardError("شماره موبایل درست نیست");
   const number = normalizeCardNumber(input.number || phone);
   if (number.length < 4) throw new CardError("شماره‌ی کارت را بکشید یا بنویسید");
   const clash = await prisma.clubCard.findUnique({ where: { number }, include: { profile: { select: { user: { select: { phone: true } } } } } });
-  if (clash && clash.profile.user.phone !== phone) throw new CardError(`این کارت به نام ${clash.profile.user.phone} ثبت شده است`);
+  if (clash && clash.profile.user.phone !== phone) throw new CardError(`این کارت به نام مشتری دیگری (${clash.profile.user.phone.slice(0, 4)}…${clash.profile.user.phone.slice(-3)}) ثبت شده است`);
   const { profileId, isNewUser } = await upsertClubCustomer({ phone, lastName: input.name?.trim() || null, source: "IN_STORE" });
-  if (input.tierId) {
-    const tier = await prisma.clubTier.findUnique({ where: { id: input.tierId }, select: { id: true } });
+  const hadCard = (await prisma.clubCard.count({ where: { profileId } })) > 0;
+  const tierId = input.tierId || (!hadCard ? input.firstCardTierId : null);
+  if (tierId) {
+    const tier = await prisma.clubTier.findUnique({ where: { id: tierId }, select: { id: true } });
     if (!tier) throw new CardError("سطح پیدا نشد");
     await prisma.clubProfile.update({ where: { id: profileId }, data: { tierId: tier.id } });
   }
@@ -172,9 +186,9 @@ export async function issueCard(input: { mobile: string; name?: string | null; n
     await tx.clubCard.updateMany({ where: { profileId, isActive: true, NOT: { number } }, data: { isActive: false } });
     return clash
       ? tx.clubCard.update({ where: { id: clash.id }, data: { isActive: true, note: input.note ?? clash.note } })
-      : tx.clubCard.create({ data: { number, profileId, note: input.note ?? null } });
+      : tx.clubCard.create({ data: { number, profileId, note: input.note ?? null, issuedBy: input.issuedBy ?? null } });
   });
-  return { card, profileId, isNewUser };
+  return { card, profileId, isNewUser, replaced: hadCard };
 }
 
 export async function setCardActive(cardId: string, isActive: boolean) {
