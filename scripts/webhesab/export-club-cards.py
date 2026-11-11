@@ -104,11 +104,11 @@ def main():
     if "loginform" in home:
         sys.exit("ورود ناموفق — ACC_USER/ACC_PASS/ACC_COMPANY را ببینید")
     # امروزِ خود وب حساب (پاصفحه: «1405/08/19 14:36») — شارژ تاریخ‌گذشته در مانده‌اش نیست
-    today = (re.search(r"(1[34]\d\d/\d\d/\d\d) \d\d:\d\d", home) or [None, ""])[1]
-    print(f"امروز وب حساب: {today or 'نامعلوم'}", file=sys.stderr)
 
     # فهرست مشتریان دارای کارت — جستجوی فقط نمایشی، بی فیلتر تاریخ
     page = c.get("crm/inquiry/customers_cards.php")
+    today = (re.search(r"(1[34]\d\d/\d\d/\d\d)(?:&nbsp;|\s)\d\d:\d\d", page) or [None, ""])[1]
+    print(f"امروز وب حساب: {today or 'نامعلوم'}", file=sys.stderr)
     data = form_fields(page)
     data.update({"no_date_filter": "1", "show": "جستجو"})
     page = c.post("crm/inquiry/customers_cards.php", data)
@@ -152,6 +152,9 @@ def main():
                     burned = num(v("امتیاز سوخته")) * 10
                     left = amount - num(v("تخصیص")) - burned
                     exp = v("تاریخ اعتبار")
+                    # «وضعیت اعتبار» هر شارژ: خرید پرداخت‌نشده یا گروه بی‌امتیاز «نامعتبر» است و در مانده نیست
+                    if "وضعیت اعتبار" in h and v("وضعیت اعتبار") and v("وضعیت اعتبار") != "معتبر":
+                        continue
                     if today and exp and exp < today:
                         continue  # منقضی: وب حساب هم حسابش نمی‌کند
                     if left > 0:
