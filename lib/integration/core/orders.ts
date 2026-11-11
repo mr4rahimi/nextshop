@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { BaseAdapter } from "@/lib/integration/adapters/base.adapter";
-import { decrementMappingStockForOrder, restoreMappingStockForCancel } from "./inventory";
+import { decrementMappingStockForOrder, restoreMappingStockForCancel, adjustVariantStockForOrder } from "./inventory";
+import { shopVariantFor } from "./variant-links";
 import { writeLog } from "./log";
 import { enrollMarketplaceCustomer } from "@/lib/club/marketplace";
 import { emitAccEventSafe } from "@/lib/accounting/events";
@@ -113,8 +114,17 @@ export async function fetchAndProcessOrders(
       // احتمالاً ارسال شده و موجودی‌اش از حسابداری به‌روز شده است
       const late = !!item.orderedAt && Date.now() - item.orderedAt.getTime() > LATE_ORDER_MS;
 
+      // تنوع سایتِ این قلم (محصولات تنوع‌دارِ ساخته‌شده از پنل) — docs/integrations/create-products.md
+      const shopVariantId = link && item.platformVariantId
+        ? await shopVariantFor(platformCode, item.platformProductId, item.platformVariantId).catch(() => null)
+        : null;
+
       if (hasProductId && !late) {
-        await decrementMappingStockForOrder(platformCode, item.platformProductId, item.qty).catch(() => {});
+        if (shopVariantId) {
+          await adjustVariantStockForOrder(platformCode, item.platformProductId, shopVariantId, item.qty, "decrement").catch(() => {});
+        } else {
+          await decrementMappingStockForOrder(platformCode, item.platformProductId, item.qty).catch(() => {});
+        }
       }
 
       // بدون نگاشت، فاکتور ساخته نمی‌شود. به‌جای اینکه ردیف تا ابد PENDING بماند و
@@ -128,6 +138,8 @@ export async function fetchAndProcessOrders(
           platformOrderId:     item.platformOrderId,
           platformOrderNo:     item.platformOrderNo ?? null,
           platformOrderItemId: item.platformOrderItemId ?? null,
+          platformVariantId:   item.platformVariantId ?? null,
+          shopVariantId,
           productTitle:        item.title ?? "(بدون عنوان)",
           qty:                 item.qty,
           unitPrice:           item.unitPrice ?? null,
@@ -198,7 +210,9 @@ export async function fetchAndProcessOrders(
         const link = await prisma.integMappingLink.findUnique({
           where: { mappingId_platformCode: { mappingId: row.mappingId, platformCode } },
         });
-        if (link) {
+        if (link && row.shopVariantId) {
+          await adjustVariantStockForOrder(platformCode, link.externalId, row.shopVariantId, row.qty, "restore").catch(() => {});
+        } else if (link) {
           await restoreMappingStockForCancel(platformCode, link.externalId, row.qty).catch(() => {});
         }
       }

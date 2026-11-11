@@ -1670,6 +1670,10 @@ model IntegOrder {
   platformOrderId     String
   platformOrderNo     String? // شماره سفارش قابل نمایش برای کاربر (نه شناسه داخلی)
   platformOrderItemId String?
+  /// تنوع خریده‌شده روی بازارگاه (variation.id باسلام) — docs/integrations/create-products.md
+  platformVariantId   String?
+  /// تنوع سایتِ همان قلم، از روی نقشه‌ی تنوع‌های لینک نگاشت — فاکتور روی کالای همین تنوع می‌خورد
+  shopVariantId       String?
   productTitle        String
   qty                 Int
   unitPrice           Float?

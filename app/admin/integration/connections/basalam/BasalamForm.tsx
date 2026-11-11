@@ -365,7 +365,9 @@ export default function BasalamForm({ existingConnection }: Props) {
 
                <div className="pt-2 border-t border-gray-100 dark:border-white/[0.04]">
                  <p className="text-xs text-gray-400">
-                   برای بروزرسانی موجودی و قیمت، به صفحه‌های{" "}
+                   برای ساختن محصولات سایت در باسلام (با تنوع‌ها) به{" "}
+                   <a href="/admin/integration/create-products?platform=basalam" className="text-blue-600 dark:text-blue-400 underline">ساخت محصول در بازارگاه</a>
+                   {" "}بروید. برای بروزرسانی موجودی و قیمت، به صفحه‌های{" "}
                    <a href="/admin/integration/inventory" className="text-blue-600 dark:text-blue-400 underline">مدیریت موجودی</a>
                    {" "}و{" "}
                    <a href="/admin/integration/pricing" className="text-blue-600 dark:text-blue-400 underline">مدیریت قیمت</a>

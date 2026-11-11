@@ -4,6 +4,51 @@ import { decryptCredentials } from "./crypto";
 import { writeLog } from "./log";
 import { recordPushedStock } from "./snapshot";
 import { isHesabanInvoicingAllowed } from "@/lib/accounting/settings";
+import { productHasVariants } from "./variant-links";
+import { deductVariantStock, recomputeProductStock } from "@/lib/variants";
+
+/**
+ * قلم سفارش بازارگاه روی یک تنوع مشخص — موجودی همان تنوع در سایت کم یا زیاد
+ * می‌شود. خود بازارگاه موجودی‌اش را کم کرده؛ بازارگاه‌های دیگر تنوع نمی‌شناسند،
+ * پس ارسالی به آن‌ها نیست. docs/integrations/create-products.md
+ */
+export async function adjustVariantStockForOrder(
+  sourcePlatformCode: string,
+  externalId: string,
+  shopVariantId: string,
+  qty: number,
+  direction: "decrement" | "restore",
+): Promise<void> {
+  const link = await prisma.integMappingLink.findUnique({
+    where: { platformCode_externalId: { platformCode: sourcePlatformCode, externalId } },
+    include: { mapping: { include: { links: { where: { platformCode: "shop", isActive: true } } } } },
+  });
+  const productId = link?.mapping.links[0]?.externalId;
+  if (!link?.isActive || !link.mapping.isActive || !link.mapping.syncStockEnabled || !productId) return;
+
+  const variant = await prisma.productVariant.findUnique({ where: { id: shopVariantId }, select: { productId: true, stock: true, title: true } });
+  if (!variant || variant.productId !== productId) return;
+
+  if (direction === "decrement") {
+    await deductVariantStock(prisma, [{ productId, variantId: shopVariantId, qty }]);
+  } else {
+    await prisma.productVariant.update({ where: { id: shopVariantId }, data: { stock: variant.stock + qty } });
+    await recomputeProductStock(prisma, [productId]);
+  }
+
+  await writeLog({
+    platformCode:  sourcePlatformCode,
+    operationType: "FETCH_ORDERS",
+    direction:     "INBOUND",
+    entityType:    "STOCK",
+    entityId:      externalId,
+    status:        "SUCCESS",
+    responseData:  {
+      action: direction === "decrement" ? "کسر موجودی تنوع (سفارش)" : "برگشت موجودی تنوع (لغو سفارش)",
+      variant: variant.title, qty, from: variant.stock,
+    },
+  }).catch(() => {});
+}
 
 async function getPlatformType(platformCode: string): Promise<"ACCOUNTING" | "MARKETPLACE" | null> {
   const p = await prisma.integPlatform.findUnique({ where: { code: platformCode }, select: { type: true } });
@@ -24,6 +69,9 @@ async function pushMappingStock(
     if (link.platformCode === excludePlatformCode) continue;
 
     if (link.platformCode === "shop") {
+      // محصول تنوع‌دار: Product.stock جمع تنوع‌هاست و فقط lib/variants می‌نویسد؛
+      // عدد کلی نگاشت روی آن نوشته نمی‌شود (کسر تنوع جدا انجام می‌شود)
+      if (await productHasVariants(link.externalId)) continue;
       await prisma.product.update({
         where: { id: link.externalId },
         data:  { stock: Math.max(0, Math.floor(stock)) },

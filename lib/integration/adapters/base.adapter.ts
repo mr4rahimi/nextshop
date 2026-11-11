@@ -9,6 +9,9 @@ import type {
   FetchChatsResult,
   FetchMessagesResult,
   SendMessageResult,
+  ProductDraft,
+  CreatedProduct,
+  PlatformCategory,
 } from "@/lib/integration/types";
 
 export abstract class BaseAdapter {
@@ -39,11 +42,20 @@ export abstract class BaseAdapter {
     updates: PriceUpdate[]
   ): Promise<BatchResult>;
 
-  // ساخت محصول جدید — اختیاری
+  // ساخت محصول جدید (با تنوع‌ها) — اختیاری؛ docs/integrations/create-products.md
   createProduct?(
     credentials: Record<string, string>,
-    product: IntegProductInfo
-  ): Promise<string>;
+    draft: ProductDraft
+  ): Promise<CreatedProduct>;
+
+  /** درخت دسته‌های بازارگاه (فقط برگ‌ها) — برای نگاشت دسته‌های سایت */
+  fetchCategories?(credentials: Record<string, string>): Promise<PlatformCategory[]>;
+
+  /** ویژگی‌های اجباری یک دسته که بدون آن‌ها ساخت محصول رد می‌شود */
+  requiredCategoryAttributes?(
+    credentials: Record<string, string>,
+    categoryId: number
+  ): Promise<string[]>;
 
   fetchOrders?(
     credentials: Record<string, string>,

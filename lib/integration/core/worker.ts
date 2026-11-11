@@ -15,6 +15,18 @@ import { enqueue } from "./queue";
 import { processPendingInvoices } from "./invoicing";
 import { dispatchAccEvents } from "@/lib/accounting/dispatcher";
 import { recordPushedPrice, recordPushedStock } from "./snapshot";
+import { runCreateProduct } from "./create-product";
+import { normalizeCreateSettings } from "./variant-links";
+import type { BasalamAdapter } from "@/lib/integration/adapters/marketplace/basalam.adapter";
+
+/** آیا این پلتفرم محصول تنوع‌دار نگاشت‌شده دارد؟ (meta.variants روی لینک) */
+async function hasVariantLinks(platformCode: string): Promise<boolean> {
+  const rows = await prisma.$queryRaw<{ n: bigint }[]>`
+    SELECT COUNT(*)::bigint AS n FROM "IntegMappingLink"
+    WHERE "platformCode" = ${platformCode} AND "isActive" = true AND meta -> 'variants' IS NOT NULL
+  `;
+  return Number(rows[0]?.n ?? 0) > 0;
+}
 
 // ── jobهای زمان‌بندی‌شده خودکار (خودترمیم) ─────────────────────────
 // - هر مارکت‌پلیس متصل که fetchOrders دارد: حلقه FETCH_ORDERS همیشه زنده می‌ماند
@@ -70,6 +82,26 @@ async function ensureScheduledJobs(): Promise<void> {
         });
         if (!pendingChat) {
           await enqueue({ type: "FETCH_CHATS", platformCode: conn.platformCode, payload: {}, priority: 3 });
+        }
+      }
+
+      // تنوع‌های محصولاتی که از پنل ساخته شده‌اند — هر «بازه خودکار» اتصال
+      if (adapter && "syncVariantProducts" in adapter && (conn.syncStockEnabled || conn.syncPriceEnabled)) {
+        const settings = normalizeCreateSettings((conn.config as Record<string, unknown> | null)?.create);
+        if (settings.autoSyncVariants) {
+          const busy = await prisma.integJob.findFirst({
+            where:  { platformCode: conn.platformCode, type: "SYNC_ALL_STOCK", status: { in: ["PENDING", "PROCESSING"] } },
+            select: { id: true },
+          });
+          const last = busy ? null : await prisma.integJob.findFirst({
+            where:   { platformCode: conn.platformCode, type: "SYNC_ALL_STOCK", status: "DONE", payload: { path: ["variantsOnly"], equals: true } },
+            orderBy: { completedAt: "desc" },
+            select:  { completedAt: true },
+          });
+          const due = !busy && Date.now() - (last?.completedAt?.getTime() ?? 0) >= conn.syncIntervalMin * 60_000;
+          if (due && (await hasVariantLinks(conn.platformCode))) {
+            await enqueue({ type: "SYNC_ALL_STOCK", platformCode: conn.platformCode, payload: { variantsOnly: true }, priority: 5 });
+          }
         }
       }
 
@@ -238,6 +270,8 @@ async function executeJob(job: IntegJob): Promise<void> {
       });
     }
 
+    // خطایی که خود job با جزئیات (مثلاً شناسه‌ی محصول) ثبت کرده، دوباره لاگ نمی‌شود
+    if ((err as { logged?: boolean } | null)?.logged) return;
     await writeLog({
       jobId:        job.id,
       platformCode: job.platformCode,
@@ -249,6 +283,33 @@ async function executeJob(job: IntegJob): Promise<void> {
       durationMs:   Date.now() - start,
     }).catch(() => {});
   }
+}
+
+/**
+ * دور خودکار تنوع‌ها: موجودی (و اگر همگام‌سازی قیمت روشن است، قیمت) هر تنوعِ
+ * محصولات ساخته‌شده از پنل — فقط مقدارهای تغییرکرده. docs/integrations/create-products.md
+ */
+async function syncVariantsJob(
+  jobId: string,
+  platformCode: string,
+  adapter: BaseAdapter,
+  credentials: Record<string, string>,
+  connection: { syncStockEnabled: boolean; syncPriceEnabled: boolean },
+): Promise<void> {
+  const sync = (adapter as BaseAdapter & { syncVariantProducts?: BasalamAdapter["syncVariantProducts"] }).syncVariantProducts;
+  if (!sync) return;
+  const r = await sync.call(adapter, credentials, { stock: connection.syncStockEnabled, price: connection.syncPriceEnabled });
+  if (!r.products) return;
+  await writeLog({
+    jobId,
+    platformCode,
+    operationType: "SYNC_ALL_STOCK",
+    direction:     "OUTBOUND",
+    entityType:    "STOCK",
+    status:        r.failed.length === 0 ? "SUCCESS" : r.pushed > 0 ? "PARTIAL" : "ERROR",
+    responseData:  { variantProducts: r.products, pushedVariations: r.pushed, failed: r.failed.length },
+    errorMessage:  r.failed.length ? r.failed.slice(0, 3).map((f) => `${f.id}: ${f.error}`).join(" — ").slice(0, 900) : undefined,
+  }).catch(() => {});
 }
 
 async function dispatchJob(job: IntegJob): Promise<void> {
@@ -302,6 +363,10 @@ async function dispatchJob(job: IntegJob): Promise<void> {
     }
 
     case "SYNC_ALL_STOCK": {
+      if (payload.variantsOnly) {
+        await syncVariantsJob(job.id, job.platformCode, adapter, credentials, connection);
+        break;
+      }
       await syncAllStock(job.id, job.platformCode, adapter, credentials);
       break;
     }
@@ -349,8 +414,10 @@ async function dispatchJob(job: IntegJob): Promise<void> {
       break;
     }
 
-    case "CREATE_PRODUCT":
-      throw new Error(`Job type ${job.type} not yet implemented`);
+    case "CREATE_PRODUCT": {
+      await runCreateProduct(job.id, job.platformCode, adapter, credentials, payload);
+      break;
+    }
 
     default:
       throw new Error(`Unknown job type: ${job.type}`);

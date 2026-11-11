@@ -114,6 +114,58 @@ export interface CreateProductPayload {
   shopProductId: string;
 }
 
+// ── ساخت محصول روی بازارگاه — docs/integrations/create-products.md ─────
+
+/** یک عکس آماده‌ی آپلود */
+export interface DraftImage {
+  name:   string;
+  type:   string;
+  buffer: Buffer;
+}
+
+export interface DraftVariant {
+  shopVariantId: string;
+  sku?:          string;
+  price:         number;   // تومان، بعد از تنظیم قیمت بازارگاه
+  stock:         number;
+  /** [{ property: "رنگ", value: "مشکی" }, …] به ترتیب محورها */
+  properties:    { property: string; value: string }[];
+}
+
+export interface ProductDraft {
+  shopProductId:   string;
+  title:           string;
+  description:     string;
+  images:          DraftImage[];
+  price:           number;   // تومان
+  stock:           number;
+  sku?:            string;
+  variants:        DraftVariant[];
+  /** شناسه‌ی دسته در خود بازارگاه */
+  categoryId:      number;
+  preparationDays: number;
+  weight:          number;   // گرم
+  packageWeight:   number;   // گرم
+  publish:         boolean;
+}
+
+export interface CreatedProduct {
+  platformProductId: string;
+  title:             string;
+  /** shopVariantId → شناسه‌ی تنوع روی بازارگاه */
+  variants:          Record<string, string>;
+  /** وضعیت بازبینی بازارگاه، برای نمایش */
+  statusTitle?:      string;
+}
+
+export interface PlatformCategory {
+  id:     number;
+  title:  string;
+  /** مسیر کامل: «مد و پوشاک › زنانه › مانتو و تونیک» */
+  path:   string;
+  maxPreparationDays?: number | null;
+}
+
 export interface TestConnectionPayload {
   connectionId: string;
 }
@@ -134,7 +186,9 @@ export interface OrderItemInfo {
   /** شماره سفارش قابل نمایش (آنچه مشتری و پنل فروشنده می‌بینند) — نه شناسه داخلی */
   platformOrderNo?: string;
   platformOrderItemId?: string;
-  platformProductId: string;    
+  platformProductId: string;
+  /** تنوع خریده‌شده روی بازارگاه — فقط محصولات تنوع‌دار */
+  platformVariantId?: string;
   qty: number;
   title?: string;
   unitPrice?: number;      // تومان

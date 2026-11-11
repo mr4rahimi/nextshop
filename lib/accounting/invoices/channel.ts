@@ -173,7 +173,9 @@ export async function saleFromIntegOrder(tx: Tx, rowId: string): Promise<AccInvo
 
   const platform = await tx.integPlatform.findUnique({ where: { code: row.platformCode }, select: { name: true } });
   const party = await partyForPlatform(tx, row.platformCode, platform?.name ?? row.platformCode);
-  const vat = await vatDefaults(tx, [link.externalId]);
+  // قلم تنوع‌دار (docs/integrations/create-products.md) ← کالای حسابداری همان تنوع
+  const itemId = (await variantItems(tx, [{ productId: link.externalId, variantId: row.shopVariantId }]))({ productId: link.externalId, variantId: row.shopVariantId });
+  const vat = await vatDefaults(tx, [itemId]);
   const price = row.unitPrice && row.unitPrice > 0 ? BigInt(Math.round(row.unitPrice)) : 0n;
   const buyer = [row.customerName, row.customerPhone].filter(Boolean).join(" — ");
 
@@ -195,7 +197,7 @@ export async function saleFromIntegOrder(tx: Tx, rowId: string): Promise<AccInvo
       channel: "MARKETPLACE",
       platformCode: row.platformCode,
       sourceKey: integSaleKey(row.id),
-      lines: [{ productId: link.externalId, title: row.productTitle, qty: row.qty, unitPrice: price, ...vat(link.externalId) }],
+      lines: [{ productId: itemId, title: row.productTitle, qty: row.qty, unitPrice: price, ...vat(itemId) }],
     },
     { issue: true, shopStock: false },
     AUTO_ACTOR,

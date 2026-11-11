@@ -61,6 +61,7 @@ const TOPIC_PAGES: Record<string, string> = {
   integrationHesaban: "/admin/integration/connections/hesaban",
   integrationMapping: "/admin/integration/mapping",
   integrationMappingSuggestions: "/admin/integration/mapping/suggestions",
+  integrationCreateProducts: "/admin/integration/create-products",
   integrationProductSuggestions: "/admin/integration/product-suggestions",
   integrationOrders: "/admin/integration/orders",
   integrationMessages: "/admin/integration/messages",

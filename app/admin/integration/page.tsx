@@ -144,7 +144,7 @@ export default async function IntegrationDashboardPage() {
       )}
 
       {/* آمار کلی */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <Link href="/admin/integration/mapping"
           className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-blue-300 dark:hover:border-blue-500/30 transition-colors">
           <p className="text-xs text-gray-500 font-bold">نگاشت فعال</p>
@@ -157,6 +157,13 @@ export default async function IntegrationDashboardPage() {
           <p className="text-xs text-gray-500 font-bold">پیشنهاد در انتظار</p>
           <p className="text-3xl font-black mt-1 text-amber-500">{suggestionCount}</p>
           <p className="text-[10px] text-gray-400 mt-0.5">نیاز به تأیید</p>
+        </Link>
+
+        <Link href="/admin/integration/create-products"
+          className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-orange-300 dark:hover:border-orange-500/30 transition-colors">
+          <p className="text-xs text-gray-500 font-bold">ساخت محصول</p>
+          <p className="text-3xl font-black mt-1 text-orange-500">+</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">سایت → بازارگاه</p>
         </Link>
 
         <Link href="/admin/integration/price-rules"
