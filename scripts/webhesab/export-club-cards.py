@@ -103,6 +103,9 @@ def main():
     })
     if "loginform" in home:
         sys.exit("ورود ناموفق — ACC_USER/ACC_PASS/ACC_COMPANY را ببینید")
+    # امروزِ خود وب حساب (پاصفحه: «1405/08/19 14:36») — شارژ تاریخ‌گذشته در مانده‌اش نیست
+    today = (re.search(r"(1[34]\d\d/\d\d/\d\d) \d\d:\d\d", home) or [None, ""])[1]
+    print(f"امروز وب حساب: {today or 'نامعلوم'}", file=sys.stderr)
 
     # فهرست مشتریان دارای کارت — جستجوی فقط نمایشی، بی فیلتر تاریخ
     page = c.get("crm/inquiry/customers_cards.php")
@@ -148,8 +151,11 @@ def main():
                     # مانده‌ی هر شارژ = مبلغ − تخصیص‌خورده − سوخته (امتیاز سوخته به ریالِ همان نسبت)
                     burned = num(v("امتیاز سوخته")) * 10
                     left = amount - num(v("تخصیص")) - burned
+                    exp = v("تاریخ اعتبار")
+                    if today and exp and exp < today:
+                        continue  # منقضی: وب حساب هم حسابش نمی‌کند
                     if left > 0:
-                        lots.append((left, v("تاریخ اعتبار")))
+                        lots.append((left, exp))
         if sum(x for x, _ in lots) != m["amount"]:
             mismatch += 1
             print(f"  ⚠ {m['card'][-4:]}: جمع شارژها {sum(x for x, _ in lots):,} ≠ مانده {m['amount']:,} — یک سطر با کل مانده", file=sys.stderr)
