@@ -2,7 +2,7 @@
 
 /**
  * انتقال مشتریان از نرم‌افزار قبلی — docs/plans/webhesab-parity.md بخش ۲۴.
- * فایل CSV خروجی `scripts/webhesab/export-customers.py` در مرورگر خوانده و دسته‌دسته
+ * فایل CSV (نمونه‌اش در همین صفحه دانلود می‌شود؛ برای وب حساب `scripts/webhesab/export-customers.py`) در مرورگر خوانده و دسته‌دسته
  * فرستاده می‌شود (سقف درخواست nginx). اجرای دوباره فقط تازه‌ها را می‌افزاید و تغییرها را به‌روز می‌کند.
  */
 
@@ -75,6 +75,24 @@ const mobileKey = (v: string) => {
   const d = digits(v).replace(/^0098|^98|^0/, "");
   return /^9\d{9}$/.test(d) ? d : null;
 };
+
+const SAMPLE = [
+  ["کد", "نام", "موبایل", "تلفن", "آدرس", "منطقه", "انبار", "گروه", "شماره کارت", "تاریخ ثبت", "وضعیت", "جنسیت", "تاریخ تولد", "تاریخ ازدواج", "تعداد فاکتور", "مبلغ خرید (ریال)", "آخرین خرید"],
+  ["1001", "رضایی مریم", "09120000001", "02100000000", "تهران، خیابان نمونه، پلاک ۱", "تهران", "فروشگاه مرکزی", "vip", "2111000000000001", "1398/07/28", "فعال", "خانم", "1370/05/12", "", "12", "185000000", "1405/06/30"],
+  ["1002", "احمدی علی", "09120000002", "", "", "تهران", "فروشگاه مرکزی", "", "", "1401/02/15", "فعال", "آقا", "", "", "3", "24500000", "1404/11/02"],
+  ["1003", "شرکت نمونه", "", "02100000001", "", "کرج", "", "", "", "1400/10/01", "فعال", "شرکت", "", "", "1", "50000000", "1400/10/01"],
+  ["1004", "کریمی سارا", "09120000004", "", "", "", "", "", "", "1399/01/20", "غیر فعال", "", "", "", "0", "0", ""],
+];
+
+function downloadSample() {
+  const csv = SAMPLE.map((r) => r.map((c) => (/[",\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c)).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "نمونه-مشتریان.csv";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 function mergeSummary(a: Summary, b: Summary): Summary {
   const out = { ...a } as Summary;
@@ -253,7 +271,7 @@ function ImportCard({ onDone }: { onDone: () => void }) {
     setFileName(f.name);
     if (!/\.(csv|tsv|txt)$/i.test(f.name)) {
       setTable(null);
-      return setErr({ error: "فایل CSV خروجی ابزار انتقال را انتخاب کنید (اکسل را با «ذخیره به‌صورت CSV UTF-8» بسازید)" });
+      return setErr({ error: "فایل CSV انتخاب کنید (در اکسل: ذخیره به‌صورت «CSV UTF-8»). فایل نمونه را از همین کادر دانلود کنید." });
     }
     const rows = parseTable(await f.text());
     if (rows.length < 2) return setErr({ error: "فایل سطری ندارد" });
@@ -332,8 +350,25 @@ function ImportCard({ onDone }: { onDone: () => void }) {
 
   const s = summary;
   return (
-    <Card title="ورود فایل" hint="خروجی ابزار scripts/webhesab/export-customers.py (CSV). اول «بررسی»، بعد «ثبت». مبلغ خرید در فایل ابزار به ریال است.">
+    <Card
+      title="ورود فایل"
+      hint="فایل CSV مشتریان نرم‌افزار قبلی با سرستون‌های فایل نمونه. اول «بررسی»، بعد «ثبت»."
+      action={
+        <button onClick={downloadSample} className="rounded-xl bg-gray-100 px-3 py-2 text-xs font-black text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-200">
+          دانلود فایل نمونه
+        </button>
+      }
+    >
       <ErrorBox err={err} />
+      <details className="rounded-xl bg-gray-50 p-3 text-[11px] font-bold leading-6 text-gray-600 dark:bg-white/5 dark:text-gray-300">
+        <summary className="cursor-pointer font-black">ستون‌های فایل</summary>
+        <p>لازم: <b>کد</b> (کد مشتری در نرم‌افزار قبلی؛ یکتا) و <b>نام</b>. بقیه اختیاری‌اند و ستون خالی یا نبودنش اشکالی ندارد.</p>
+        <p>
+          موبایل (بی موبایل = فقط شخص حسابداری)، تلفن، آدرس، منطقه (شهر)، انبار (فروشگاه)، گروه (برچسب عضو مثل vip)، شماره کارت، تاریخ ثبت (شمسی ۱۴۰۲/۰۵/۱۰)،
+          وضعیت (فعال / غیر فعال)، جنسیت (آقا / خانم / شرکت)، تاریخ تولد و ازدواج (شمسی)، تعداد فاکتور، مبلغ خرید (ریال یا تومان — از فهرست کنار «بررسی»)، آخرین خرید (شمسی).
+        </p>
+        <p>در اکسل: «Save As ← CSV UTF-8». ترتیب ستون‌ها مهم نیست؛ نام سرستون مهم است.</p>
+      </details>
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-xs font-black text-gray-600 hover:border-primary-400 dark:border-gray-600 dark:text-gray-300">
           {fileName || "انتخاب فایل CSV"}

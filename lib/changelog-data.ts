@@ -19,6 +19,15 @@ export interface ReleaseNote {
 
 export const VERSIONS: ReleaseNote[] = [
   {
+    version: "2.136.1",
+    date: "1405/08/20",
+    tag: "patch",
+    title: "فایل نمونه‌ی انتقال مشتریان",
+    changes: [
+      { type: "improvement", text: "«باشگاه ← انتقال مشتریان ← دانلود فایل نمونه»: فایل CSV با سرستون‌ها و چند سطر نمونه؛ زیر «ستون‌های فایل» توضیح هر ستون و اینکه فقط «کد» و «نام» لازم است." },
+    ],
+  },
+  {
     version: "2.136.0",
     date: "1405/08/20",
     tag: "minor",
