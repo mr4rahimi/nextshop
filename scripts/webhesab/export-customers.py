@@ -18,6 +18,7 @@
 import argparse
 import csv
 import html
+import http.client
 import http.cookiejar
 import re
 import sys
@@ -48,10 +49,19 @@ class Client:
             b = r.read()
             return b if raw else b.decode("utf-8", "replace")
 
-    def post(self, path, data):
+    def post(self, path, data, tries=4):
+        """قطع ارتباط سرور وب حساب (Connection reset) گاهی پیش می‌آید — چند بار با مکث دوباره"""
         body = urllib.parse.urlencode(data).encode("utf-8")
-        with self.op.open(f"{self.base}/{path.lstrip('/')}", body, timeout=900) as r:
-            return r.read().decode("utf-8", "replace")
+        for k in range(tries):
+            try:
+                with self.op.open(f"{self.base}/{path.lstrip('/')}", body, timeout=900) as r:
+                    return r.read().decode("utf-8", "replace")
+            except (OSError, http.client.HTTPException) as e:
+                if k == tries - 1:
+                    raise
+                wait = 10 * (k + 1)
+                print(f"  ⚠ {type(e).__name__} — {wait} ثانیه بعد دوباره", file=sys.stderr)
+                time.sleep(wait)
 
 
 def form_fields(page):
@@ -105,7 +115,7 @@ def login(c, env):
         sys.exit("ورود ناموفق — ACC_USER/ACC_PASS/ACC_COMPANY را ببینید")
 
 
-def list_customers(c, since, max_pages, pause):
+def list_customers(c, since, max_pages, pause, relogin=None):
     """«لیست مشتریان فروشگاه» با غیرفعال‌ها، همه‌ی انبارها؛ صفحه‌به‌صفحه (۵۰تایی)"""
     path = "sales/inquiry/customers_list.php"
     page = c.get(path)
@@ -145,7 +155,20 @@ def list_customers(c, since, max_pages, pause):
         d2 = form_fields(page)
         d2.pop("search", None)
         d2["trans_tbl_page_next"] = "1"
-        page = c.post(path, d2)
+        try:
+            page = c.post(path, d2)
+        except (OSError, http.client.HTTPException):
+            if not relogin:
+                raise
+            # ورود و جستجوی دوباره، بعد جلو رفتن تا همان صفحه (سطرهای خوانده‌شده دوباره نمی‌آیند)
+            print(f"  ⚠ ورود دوباره و ادامه از صفحه‌ی {n + 1}", file=sys.stderr)
+            relogin()
+            page = c.post(path, d)
+            for _ in range(n):
+                d3 = form_fields(page)
+                d3.pop("search", None)
+                d3["trans_tbl_page_next"] = "1"
+                page = c.post(path, d3)
     return out, today
 
 
@@ -194,7 +217,9 @@ def main():
     c = Client(env["ACC_URL"])
     login(c, env)
 
-    custs, today = list_customers(c, a.since.translate(FA), a.pages, a.pause)
+    custs, today = list_customers(c, a.since.translate(FA), a.pages, a.pause, relogin=lambda: login(c, env))
+    seen = set()
+    custs = [x for x in custs if not (x["code"] in seen or seen.add(x["code"]))]  # جلو رفتن پس از قطع، تکرار نسازد
     print(f"{len(custs)} مشتری در فهرست (امروز وب حساب: {today or 'نامعلوم'})", file=sys.stderr)
 
     # جنسیت و تاریخ‌ها از «لیست مشتریان» (فقط فعال‌ها)
