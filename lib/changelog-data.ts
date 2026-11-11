@@ -19,6 +19,15 @@ export interface ReleaseNote {
 
 export const VERSIONS: ReleaseNote[] = [
   {
+    version: "2.134.1",
+    date: "1405/08/20",
+    tag: "patch",
+    title: "قیمت تخفیف‌دار باسلام هم‌راستا با اسنپ‌شاپ",
+    changes: [
+      { type: "improvement", text: "با تغییر قیمت پایه، تخفیف باسلام با همان درصد روی قیمت تازه می‌نشیند؛ ارسال‌های پشت‌سرهم و تخفیف‌هایی که مستقیم در پنل باسلام گذاشته شده‌اند هم خودکار درست اعمال می‌شوند." },
+    ],
+  },
+  {
     version: "2.134.0",
     date: "1405/08/20",
     tag: "minor",

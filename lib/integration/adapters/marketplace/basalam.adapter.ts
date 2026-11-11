@@ -644,16 +644,7 @@ export class BasalamAdapter extends BaseAdapter {
     const hasCampaign = new Set(cached.map((c) => c.platformProductId));
 
     const clearFailed = new Map<string, string>();
-    for (const u of updates) {
-      if (!hasCampaign.has(u.platformProductId)) continue;
-      try {
-        await this.removeDiscountCampaign(credentials, u.platformProductId);
-      } catch (err) {
-        // ادامه می‌دهیم: اگر کمپین واقعاً مانده باشد، خود باسلام ارسال قیمت را
-        // رد می‌کند و پیامش در نتیجه دیده می‌شود.
-        clearFailed.set(u.platformProductId, err instanceof Error ? err.message : String(err));
-      }
-    }
+    await this.removeCampaigns(credentials, updates.map((u) => u.platformProductId).filter((id) => hasCampaign.has(id)), clearFailed);
 
     // محصول تنوع‌دار: قیمت هر تنوع از قیمت همان تنوع در سایت (با تنظیم قیمت
     // بازارگاه) می‌آید، نه قیمت واحدِ قانون قیمت — docs/integrations/create-products.md
@@ -674,21 +665,59 @@ export class BasalamAdapter extends BaseAdapter {
         )
       : { success: [] as string[], failed: [] as { id: string; error: string }[] };
 
+    // کش از کمپین خبر نداشت (مثلاً تخفیف را کسی در پنل باسلام گذاشته) و باسلام
+    // ارسال قیمت را با «تخفیف زمانمند» رد کرد: کمپین را برمی‌داریم و دوباره می‌فرستیم.
+    // پیش از این، محصول با قیمت قدیمی می‌ماند و تخفیف تازه هم هرگز ساخته نمی‌شد.
+    const timed = result.failed.filter((f) => BasalamAdapter.isTimedDiscountError(f.error)).map((f) => f.id);
+    if (timed.length) {
+      const removeErr = new Map<string, string>();
+      await this.removeCampaigns(credentials, timed, removeErr);
+      const retryIds = timed.filter((id) => !removeErr.has(id));
+      if (retryIds.length) {
+        await this.rateLimit(BasalamAdapter.CAMPAIGN_SETTLE_MS);   // حذف کمپین ۲۰۲ است و چند ثانیه بعد می‌نشیند
+        const byId = new Map(plain.map((u) => [u.platformProductId, u]));
+        const retry = await this.bulkUpdate(
+          credentials,
+          retryIds.map((id) => ({ id: parseInt(id, 10), price: applyDiscount(byId.get(id)!.price, byId.get(id)!.discount).original * 10 })),
+          retryIds,
+        );
+        result.failed = result.failed.filter((f) => !retry.success.includes(f.id) && !retry.failed.some((r) => r.id === f.id));
+        result.success.push(...retry.success);
+        result.failed.push(...retry.failed);
+      }
+    }
+
     for (const [productId, target] of targets) {
       const r = await this.pushVariantTarget(credentials, productId, target, { stock: false, price: true, force: true });
       if (r.errors.length) result.failed.push({ id: productId, error: r.errors.join(" | ") });
       else result.success.push(productId);
     }
 
+    // ساخت دوباره‌ی کمپین با همان درصد — باسلام همان درصد را روی قیمت تازه حساب
+    // می‌کند (رفتار اسنپ‌شاپ). باسلام بین دو درخواست تخفیف یک محصول دست‌کم ۳۰ ثانیه
+    // فاصله می‌خواهد («فاصله بین هر دو درخواست، میبایست حداقل 30 ثانیه باشد» — لاگ
+    // پروداکشن ۱۴۰۵/۰۸/۱۹). بدون تلاش دوباره، محصول بی‌تخفیف و با قیمت کامل می‌ماند.
     const successSet = new Set(result.success);
-    for (const u of updates) {
-      if (!successSet.has(u.platformProductId)) continue;
-      if (!u.discount || !(u.discount.percent > 0)) continue;
+    const withDiscount = updates.filter((u) => successSet.has(u.platformProductId) && u.discount && u.discount.percent > 0);
+    const later: PriceUpdate[] = [];
+    for (const u of withDiscount) {
       try {
-        await this.applyDiscountCampaign(credentials, u.platformProductId, u.discount);
+        await this.applyDiscountCampaign(credentials, u.platformProductId, u.discount!);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        failMove(result, u.platformProductId, `قیمت ارسال شد ولی ساخت کمپین تخفیف ناموفق بود: ${msg}`);
+        if (BasalamAdapter.isIntervalError(msg)) later.push(u);
+        else failMove(result, u.platformProductId, `قیمت ارسال شد ولی ساخت کمپین تخفیف ناموفق بود: ${msg}`);
+      }
+    }
+    if (later.length) {
+      await this.rateLimit(BasalamAdapter.DISCOUNT_GAP_MS);
+      for (const u of later) {
+        try {
+          await this.applyDiscountCampaign(credentials, u.platformProductId, u.discount!);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          failMove(result, u.platformProductId, `قیمت ارسال شد ولی ساخت کمپین تخفیف ناموفق بود: ${msg}`);
+        }
       }
     }
 
@@ -698,6 +727,41 @@ export class BasalamAdapter extends BaseAdapter {
     }
 
     return result;
+  }
+
+  /** فاصله‌ی لازم باسلام بین دو درخواست تخفیف یک محصول (۳۰ ثانیه + حاشیه) */
+  private static readonly DISCOUNT_GAP_MS = 31_000;
+  /** زمان نشستن حذف کمپین (پاسخ ۲۰۲) پیش از ارسال دوباره‌ی قیمت */
+  private static readonly CAMPAIGN_SETTLE_MS = 5_000;
+
+  private static isIntervalError(msg: string): boolean {
+    return /فاصله بین هر دو درخواست|حداقل\s*30\s*ثانیه/.test(msg);
+  }
+
+  private static isTimedDiscountError(msg: string): boolean {
+    return /تخفیف زمانمند/.test(msg);
+  }
+
+  /** حذف کمپین چند محصول؛ اگر باسلام «۳۰ ثانیه» گفت، یک بار صبر و دوباره. خطاها در `failed`. */
+  private async removeCampaigns(credentials: Record<string, string>, ids: string[], failed: Map<string, string>): Promise<void> {
+    const later: string[] = [];
+    for (const id of ids) {
+      try {
+        await this.removeDiscountCampaign(credentials, id);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // ادامه می‌دهیم: اگر کمپین واقعاً مانده باشد، خود باسلام ارسال قیمت را
+        // رد می‌کند و پیامش در نتیجه دیده می‌شود.
+        if (BasalamAdapter.isIntervalError(msg)) later.push(id);
+        else failed.set(id, msg);
+      }
+    }
+    if (!later.length) return;
+    await this.rateLimit(BasalamAdapter.DISCOUNT_GAP_MS);
+    for (const id of later) {
+      try { await this.removeDiscountCampaign(credentials, id); }
+      catch (err) { failed.set(id, err instanceof Error ? err.message : String(err)); }
+    }
   }
 
   /** بدنه‌ی مشترک فراخوانی‌های کمپین تخفیف. پاسخ ۲۰۲ است و اثرش چند ثانیه بعد می‌نشیند. */
