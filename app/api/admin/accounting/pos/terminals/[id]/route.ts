@@ -38,6 +38,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         lastKeptFloat: lastShift?.keptFloat ?? null,
         cashier: g.access.name,
         serialRequired: !!settings?.serialRequired,
+        clubCards: (await prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { clubCardPosEnabled: true } }))?.clubCardPosEnabled ?? false,
         can: { manage: g.manage },
       }),
     );

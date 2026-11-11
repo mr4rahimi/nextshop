@@ -32,7 +32,22 @@ export type ScanResult =
   | { kind: "item"; item: PosItem; serial?: string }
   | { kind: "model"; pick: ModelPick }
   | { kind: "ticket"; code: string }
-  | { kind: "list"; items: PosItem[] };
+  | { kind: "list"; items: PosItem[] }
+  | { kind: "member"; member: PosMember };
+
+/** دارنده‌ی کارت اشتراک در صندوق — `lib/accounting/pos/club.ts` */
+export interface PosMember {
+  profileId: string;
+  partyId: string;
+  partyName: string;
+  name: string;
+  mobile: string;
+  card: { id: string; number: string } | null;
+  tier: { id: string; title: string; color: string | null; chargeBp: number | null; discountBp: number } | null;
+  points: number;
+  credit: string;
+  nextExpiry: { at: string; credit: string } | null;
+}
 
 export interface ShiftSummary {
   shift: {

@@ -28,7 +28,7 @@ import ModelPicker from "./ModelPicker";
 import PaySheet, { type PayResult } from "./PaySheet";
 import ReturnSheet, { type Returnable } from "./ReturnSheet";
 import { CloseShift, OpenShift } from "./ShiftPanels";
-import { B, Kbd, TICKET_KIND, abs, beep, faNum, formatAmount, local, timeFa, type ModelPick, type PosItem, type ScanResult, type ShiftSummary } from "./shared";
+import { B, Kbd, TICKET_KIND, abs, beep, faNum, formatAmount, local, timeFa, type ModelPick, type PosItem, type PosMember, type ScanResult, type ShiftSummary } from "./shared";
 
 interface Boot {
   terminal: {
@@ -46,6 +46,8 @@ interface Boot {
   lastKeptFloat: string | null;
   cashier: string;
   serialRequired: boolean;
+  /** کارت اشتراک در صندوق روشن است */
+  clubCards: boolean;
   can: { manage: boolean };
 }
 
@@ -98,6 +100,8 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   const [bootError, setBootError] = useState<string | null>(null);
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [party, setParty] = useState<PartyOption | null>(null);
+  /** کارت اشتراک مشتری رسید (بخش ۲۳ هم‌ترازی) */
+  const [member, setMember] = useState<PosMember | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [ret, setRet] = useState<RetState | null>(null);
   const [blind, setBlind] = useState(false);
@@ -111,7 +115,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   const [q, setQ] = useState("");
   const [scanning, setScanning] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: "ok" | "err" } | null>(null);
-  const [quote, setQuote] = useState<{ saleTotal: string; returnTotal: string; net: string } | null>(null);
+  const [quote, setQuote] = useState<{ saleTotal: string; returnTotal: string; net: string; clubRestored?: string } | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
@@ -162,9 +166,26 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   const seller = boot?.sellers.find((s) => s.id === sellerId) ?? null;
   const roundTo = BigInt(boot?.terminal.roundTo ?? 0);
 
+  // مشتری رسید: با مرجوعی رسیددار همان خریدار رسید است
+  const ticketPartyId = ret?.src ? (ret.src.walkIn ? null : ret.src.partyId) : party?.id ?? null;
+  useEffect(() => {
+    if (!boot?.clubCards || !ticketPartyId) {
+      setMember(null);
+      return;
+    }
+    let live = true;
+    api<{ member: PosMember | null }>(`/api/admin/accounting/pos/member?partyId=${ticketPartyId}`)
+      .then((r) => live && setMember(r.member))
+      .catch(() => live && setMember(null));
+    return () => {
+      live = false;
+    };
+  }, [boot?.clubCards, ticketPartyId]);
+  const memberBp = member && member.partyId === ticketPartyId ? BigInt(member.tier?.discountBp ?? 0) : 0n;
+
   // ── جمع‌ها ──
   const sale = useMemo(() => {
-    if (!lines.length) return { subtotal: 0n, discount: 0n, total: 0n, rounding: 0n, valid: true };
+    if (!lines.length) return { subtotal: 0n, discount: 0n, total: 0n, rounding: 0n, member: 0n, valid: true };
     try {
       const c = calcInvoice({
         lines: lines.map((l) => ({ qty: l.qty, unitPrice: B(l.unitPrice), discount: B(l.discount), vatRateBp: 0 })),
@@ -172,17 +193,20 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
         additions: 0n,
         pricesIncludeVat: true,
       });
-      const rounding = roundTo > 0n ? c.total % roundTo : 0n;
-      return { subtotal: c.subtotal, discount: c.lineDiscount + c.invoiceDiscount + rounding, total: c.total - rounding, rounding, valid: true };
+      // تخفیف مستقیم سطح کارت — همان ترتیب سرور: بعد از تخفیف‌ها، پیش از گرد کردن
+      const md = (c.total * memberBp) / 10_000n;
+      const rounding = roundTo > 0n ? (c.total - md) % roundTo : 0n;
+      return { subtotal: c.subtotal, discount: c.lineDiscount + c.invoiceDiscount + md + rounding, total: c.total - md - rounding, rounding, member: md, valid: true };
     } catch {
-      return { subtotal: 0n, discount: 0n, total: 0n, rounding: 0n, valid: false };
+      return { subtotal: 0n, discount: 0n, total: 0n, rounding: 0n, member: 0n, valid: false };
     }
-  }, [lines, discount, roundTo]);
+  }, [lines, discount, roundTo, memberBp]);
   const retApprox = useMemo(() => (ret?.lines ?? []).reduce((s, l) => s + B(l.each) * BigInt(l.qty), 0n), [ret]);
   const hasRet = !!ret?.lines.length;
   const saleTotal = hasRet && quote ? B(quote.saleTotal) : sale.total;
   const retTotal = hasRet && quote ? B(quote.returnTotal) : retApprox;
-  const net = saleTotal - retTotal;
+  const clubRestored = hasRet && quote?.clubRestored ? B(quote.clubRestored) : 0n;
+  const net = hasRet && quote ? B(quote.net) : saleTotal - retTotal;
   const exact = !hasRet || !!quote;
   const itemCount = lines.reduce((s, l) => s + l.qty, 0);
 
@@ -207,7 +231,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     setQuote(null);
     setQuoting(true);
     const h = window.setTimeout(() => {
-      api<{ quote: { saleTotal: string; returnTotal: string; net: string } }>(`/api/admin/accounting/pos/tickets?quote=1`, { method: "POST", json: { ...ticketBody(), pay: { cash: "rest", card: "0" } } })
+      api<{ quote: { saleTotal: string; returnTotal: string; net: string; clubRestored: string } }>(`/api/admin/accounting/pos/tickets?quote=1`, { method: "POST", json: { ...ticketBody(), pay: { cash: "rest", card: "0" } } })
         .then((r) => setQuote(r.quote))
         .catch((e) => flash(e.message, "err"))
         .finally(() => setQuoting(false));
@@ -278,6 +302,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     setBlind(false);
     setDiscount("");
     setParty(null);
+    setMember(null);
     setSel(0);
     setQuote(null);
   }
@@ -289,7 +314,15 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     try {
       const r = await api<ScanResult>(`/api/admin/accounting/pos/scan?terminalId=${terminalId}&q=${encodeURIComponent(code)}`);
       setQ("");
-      if (r.kind === "item") addItem(r.item, r.serial);
+      if (r.kind === "member") {
+        if (ret?.src) flash("مرجوعی رسیددار به نام خریدار همان رسید است", "err");
+        else {
+          setParty({ id: r.member.partyId, code: 0, name: r.member.partyName, mobile: r.member.mobile });
+          setMember(r.member);
+          beep();
+          flash(`کارت ${r.member.name} — اعتبار ${formatAmount(B(r.member.credit))} تومان`);
+        }
+      } else if (r.kind === "item") addItem(r.item, r.serial);
       else if (r.kind === "model") {
         if (r.pick.items.length === 1 && !boot?.can.manage) addItem(r.pick.items[0]);
         else {
@@ -344,7 +377,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     try {
       const r = await api<{ ticket: { id: string; number: number; saleTotal: string; returnTotal: string; change: string; kind: string } }>("/api/admin/accounting/pos/tickets", {
         method: "POST",
-        json: { ...ticketBody(), pay: { cash: p.cash === null ? "rest" : p.cash.toString(), card: p.card.toString() }, tendered: p.tendered?.toString() ?? null, overrideCredit: override },
+        json: { ...ticketBody(), pay: { cash: p.cash === null ? "rest" : p.cash.toString(), card: p.card.toString() }, clubSpend: p.club.toString(), tendered: p.tendered?.toString() ?? null, overrideCredit: override },
       });
       const t = r.ticket;
       if (win) win.location.href = `/admin/accounting/pos/tickets/${t.id}/print?auto=1`;
@@ -483,6 +516,16 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
             <span className="max-w-[9rem] truncate">{ret?.src ? ret.src.partyName : party?.name ?? "مشتری حضوری"}</span>
             <Kbd>F6</Kbd>
           </button>
+          {member && member.partyId === ticketPartyId && (
+            <span
+              title={member.nextExpiry ? `انقضای نزدیک: ${formatAmount(B(member.nextExpiry.credit))} تومان تا ${new Date(member.nextExpiry.at).toLocaleDateString("fa-IR")}` : undefined}
+              className="flex h-10 items-center gap-2 rounded-xl bg-amber-500/10 px-3 text-xs font-black text-amber-700 dark:text-amber-300"
+            >
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: member.tier?.color ?? "#d4af37" }} />
+              {member.tier?.title ?? "کارت اشتراک"}
+              <span className="tabular-nums">اعتبار {formatAmount(B(member.credit))}</span>
+            </span>
+          )}
           <div className="mr-auto flex items-center gap-1">
             <HeadBtn icon={RotateCcw} label="مرجوعی" k="F8" onClick={() => { setReturnCode(undefined); setModal("return"); }} tone="rose" />
             <HeadBtn icon={PauseCircle} label={held.length ? `معلق (${faNum(held.length)})` : "معلق"} k="F7" onClick={hold} />
@@ -688,7 +731,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
             </div>
             {sale.discount > 0n && (
               <div className="mt-1 flex justify-between text-sm font-bold text-rose-600">
-                <span>تخفیف{sale.rounding > 0n ? " و گرد کردن" : ""}</span>
+                <span>تخفیف{sale.member > 0n ? " (با کارت)" : ""}{sale.rounding > 0n ? " و گرد کردن" : ""}</span>
                 <span className="tabular-nums">−{formatAmount(sale.discount)}</span>
               </div>
             )}
@@ -699,6 +742,12 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
                   −{!exact && "≈"}
                   {formatAmount(retTotal)}
                 </span>
+              </div>
+            )}
+            {clubRestored > 0n && (
+              <div className="mt-1 flex justify-between text-xs font-bold text-amber-700 dark:text-amber-300">
+                <span>از مرجوعی، برگشت به کارت اشتراک</span>
+                <span className="tabular-nums">{formatAmount(clubRestored)}</span>
               </div>
             )}
             <button onClick={() => setModal("discount")} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-blue-600">
@@ -853,6 +902,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           exact={exact}
           hasCard={!!boot.terminal.card}
           canCredit={ret?.src ? !ret.src.walkIn : !!party}
+          clubCredit={member && member.partyId === ticketPartyId && B(member.credit) > 0n ? B(member.credit) : null}
           start={payStart}
           busy={busy || (hasRet && !quote)}
           error={payError}

@@ -166,11 +166,8 @@ export async function quoteRedeem(
     return { allowed: false, maxPoints: 0, maxDiscount: 0, reason: "ارزش امتیاز تنظیم نشده" };
   }
 
-  const agg = await prisma.pointTransaction.aggregate({
-    where: { profileId },
-    _sum: { amount: true },
-  });
-  const balance = agg._sum.amount ?? 0;
+  const { ledgerState } = await import("./credit");
+  const balance = (await ledgerState(prisma, profileId)).balance;
 
   if (balance < rules.redeemMin) {
     return {

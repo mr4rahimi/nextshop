@@ -28,6 +28,9 @@ interface Tier {
   benefits: string[];
   sortOrder: number;
   isActive: boolean;
+  cardChargeBp: number | null;
+  posDiscountBp: number;
+  manualOnly: boolean;
   _count: { profiles: number };
 }
 
@@ -40,7 +43,12 @@ const BLANK = {
   pointRate: "1",
   benefits: "",
   isActive: true,
+  cardChargePct: "",
+  posDiscountPct: "",
+  manualOnly: false,
 };
+
+const bpToPct = (bp: number | null) => (bp == null ? "" : String(bp / 100));
 
 export default function TiersPage() {
   const list = useApi<{ tiers: Tier[] }>("/api/admin/club/tiers");
@@ -66,6 +74,9 @@ export default function TiersPage() {
       pointRate: Number(form.pointRate) || 1,
       benefits: form.benefits.split("\n").map((s) => s.trim()).filter(Boolean),
       isActive: form.isActive,
+      cardChargePct: form.cardChargePct.trim(),
+      posDiscountPct: form.posDiscountPct.trim() || "0",
+      manualOnly: form.manualOnly,
     };
 
     const res = await apiSend("/api/admin/club/tiers", form.id ? "PUT" : "POST", payload);
@@ -136,6 +147,29 @@ export default function TiersPage() {
             value={form.color}
             onChange={(v) => setForm((f) => ({ ...f, color: v }))}
           />
+          <Field
+            label="درصد شارژ کارت از هر خرید"
+            dir="ltr"
+            value={form.cardChargePct}
+            onChange={(v) => setForm((f) => ({ ...f, cardChargePct: v }))}
+            hint="مثلاً ۱۰ یعنی ۱۰٪ مبلغ هر خرید (فروشگاه و سایت) به اعتبار عضو اضافه می‌شود. خالی = فرمول امتیاز تنظیمات"
+          />
+          <Field
+            label="درصد تخفیف مستقیم در صندوق"
+            dir="ltr"
+            value={form.posDiscountPct}
+            onChange={(v) => setForm((f) => ({ ...f, posDiscountPct: v }))}
+            hint="با انتخاب دارنده‌ی کارت این سطح در صندوق، همین درصد از جمع فاکتور کم می‌شود. ۰ = ندارد"
+          />
+          <Select
+            label="نحوه‌ی عضویت در سطح"
+            value={form.manualOnly ? "1" : "0"}
+            onChange={(v) => setForm((f) => ({ ...f, manualOnly: v === "1" }))}
+            options={[
+              { value: "0", label: "خودکار با مجموع خرید" },
+              { value: "1", label: "دستی (مثل VIP کارت‌دار) — خرید سطح را عوض نمی‌کند" },
+            ]}
+          />
           <Select
             label="وضعیت"
             value={form.isActive ? "1" : "0"}
@@ -178,7 +212,7 @@ export default function TiersPage() {
         ) : !tiers?.length ? (
           <Empty text="هنوز سطحی تعریف نشده — تا زمانی که سطح نسازید، هیچ عضوی سطح نمی‌گیرد" />
         ) : (
-          <Table head={["سطح", "حداقل خرید", "ضریب", "اعضا", "وضعیت", ""]}>
+          <Table head={["سطح", "حداقل خرید", "ضریب", "شارژ / تخفیف صندوق", "اعضا", "وضعیت", ""]}>
             {tiers.map((t) => (
               <tr key={t.id}>
                 <td className="py-2.5">
@@ -197,6 +231,11 @@ export default function TiersPage() {
                 </td>
                 <td className="py-2.5 text-[11px] font-bold text-gray-500 tabular-nums">
                   ×{fa(t.pointRate)}
+                </td>
+                <td className="py-2.5 text-[11px] font-bold text-gray-500 tabular-nums">
+                  {t.cardChargeBp != null ? `${fa(t.cardChargeBp / 100)}٪ شارژ` : "—"}
+                  {t.posDiscountBp > 0 ? ` · ${fa(t.posDiscountBp / 100)}٪ تخفیف` : ""}
+                  {t.manualOnly ? " · دستی" : ""}
                 </td>
                 <td className="py-2.5 text-[11px] font-bold text-gray-500 tabular-nums">
                   {fa(t._count.profiles)}
@@ -220,6 +259,9 @@ export default function TiersPage() {
                         pointRate: String(t.pointRate),
                         benefits: (t.benefits ?? []).join("\n"),
                         isActive: t.isActive,
+                        cardChargePct: bpToPct(t.cardChargeBp),
+                        posDiscountPct: t.posDiscountBp ? bpToPct(t.posDiscountBp) : "",
+                        manualOnly: t.manualOnly,
                       })
                     }
                     className="text-[10px] font-black text-primary-600 hover:underline"

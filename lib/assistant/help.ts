@@ -94,6 +94,7 @@ const TOPIC_PAGES: Record<string, string> = {
   accountingMovers: "/admin/accounting/reports/movers",
   accountingAdjustments: "/admin/accounting/inventory/adjustments",
   accountingPosRegister: "/admin/accounting/pos",
+  clubCards: "/admin/club/cards",
   accountingPriceCheck: "/admin/accounting/price-check",
   accountingPosClose: "/admin/accounting/pos?tab=shifts",
   tools: "/admin/tools",

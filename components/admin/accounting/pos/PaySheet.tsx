@@ -15,6 +15,8 @@ export interface PayResult {
   card: bigint;
   /** null = باقی نقد (`"rest"`) */
   cash: bigint | null;
+  /** از اعتبار کارت اشتراک */
+  club: bigint;
   tendered: bigint | null;
 }
 
@@ -25,6 +27,7 @@ export default function PaySheet({
   exact,
   hasCard,
   canCredit,
+  clubCredit = null,
   start,
   busy,
   error,
@@ -38,6 +41,8 @@ export default function PaySheet({
   hasCard: boolean;
   /** مشتری انتخاب شده — بخشی نسیه ممکن است */
   canCredit: boolean;
+  /** اعتبار قابل خرج کارت اشتراک مشتری؛ null = ندارد */
+  clubCredit?: bigint | null;
   start: "cash" | "card";
   busy: boolean;
   error: string | null;
@@ -50,13 +55,16 @@ export default function PaySheet({
   const [tendered, setTendered] = useState("");
   const [credit, setCredit] = useState(false);
   const [cashManual, setCashManual] = useState("");
+  const [club, setClub] = useState("");
   const cardB = B(card);
-  const cash = credit ? B(cashManual) : due > cardB ? due - cardB : 0n;
+  const clubB = refund ? 0n : B(club);
+  const clubMax = clubCredit && !refund ? (clubCredit < due ? clubCredit : due) : 0n;
+  const cash = credit ? B(cashManual) : due > cardB + clubB ? due - cardB - clubB : 0n;
   const tenderedB = B(tendered);
   const change = !refund && tenderedB > cash ? tenderedB - cash : 0n;
   const short = !refund && tenderedB > 0n && tenderedB < cash;
-  const over = cardB > due;
-  const left = credit ? due - cardB - cash : 0n;
+  const over = cardB + clubB > due || clubB > clubMax;
+  const left = credit ? due - cardB - clubB - cash : 0n;
 
   const quick = useMemo(() => {
     if (refund || cash <= 0n) return [];
@@ -66,7 +74,7 @@ export default function PaySheet({
 
   function submit() {
     if (busy || over || short || (credit && left < 0n)) return;
-    onSubmit({ card: cardB, cash: credit ? cash : null, tendered: tenderedB > 0n ? tenderedB : null });
+    onSubmit({ card: cardB, cash: credit ? cash : null, club: clubB, tendered: tenderedB > 0n ? tenderedB : null });
   }
 
   useEffect(() => {
@@ -124,6 +132,19 @@ export default function PaySheet({
                   <CreditCard className="h-5 w-5" aria-hidden /> {refund ? "برگشت به کارت" : "همه کارت"} <Kbd>F10</Kbd>
                 </button>
               </div>
+
+              {clubMax > 0n && (
+                <div className="rounded-2xl bg-amber-50 p-3 dark:bg-amber-500/10">
+                  <div className="mb-1.5 flex items-center justify-between text-xs font-bold text-amber-800 dark:text-amber-200">
+                    <span>کارت اشتراک — اعتبار {formatAmount(clubCredit ?? 0n)} تومان</span>
+                    <button onClick={() => setClub(clubB === clubMax ? "" : clubMax.toString())} className="rounded-lg bg-amber-500/20 px-2 py-1 font-black">
+                      {clubB === clubMax ? "برداشتن" : "پرداخت از کارت"}
+                    </button>
+                  </div>
+                  <BigAmount value={club} onChange={setClub} onEnter={submit} />
+                  {clubB > clubMax && <p className="mt-1 text-xs font-bold text-red-600">بیشتر از اعتبار یا مبلغ قابل پرداخت است</p>}
+                </div>
+              )}
 
               {hasCard && (
                 <div>

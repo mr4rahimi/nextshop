@@ -138,6 +138,7 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
     balance: number;
     enabled: boolean;
     rate: number;
+    hasCard?: boolean;
     quote: { allowed: boolean; maxPoints: number; maxDiscount: number; reason?: string } | null;
     consent?: { given: boolean; points: number };
   } | null>(null);
@@ -640,11 +641,11 @@ export default function CheckoutClient({ initialAddresses, storeSettings, wallet
                             <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${usePoints ? "-translate-x-4" : "translate-x-0.5"}`} />
                           </button>
                           <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                            استفاده از امتیاز باشگاه
+                            {club.hasCard ? "استفاده از اعتبار کارت باشگاه" : "استفاده از امتیاز باشگاه"}
                           </span>
                         </div>
                         <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-lg shrink-0">
-                          {toFa(club.balance)} امتیاز
+                          {club.hasCard ? `${toFa(Math.floor(club.balance * club.rate))} تومان` : `${toFa(club.balance)} امتیاز`}
                         </span>
                       </div>
 

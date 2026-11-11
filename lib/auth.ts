@@ -114,3 +114,37 @@ export async function verifyPassword(
 
   return bcrypt.compare(password, hash);
 }
+
+// ── گواهی تأیید پیامکی برای ثبت‌نام ─────────────────────────────────
+// `verify-otp` برای شماره‌ی تازه این کوکی را می‌گذارد و `register` بی آن کاربر
+// نمی‌سازد. کلید جداست (`:otp-register`) تا هرگز به‌جای توکن ورود پذیرفته نشود.
+const OTP_PROOF_COOKIE = "otp_reg";
+const OTP_PROOF_TTL = 15 * 60;
+
+export async function setOtpProofCookie(phone: string) {
+  const body = base64UrlEncode(new TextEncoder().encode(JSON.stringify({ p: phone, purpose: "register", exp: Math.floor(Date.now() / 1000) + OTP_PROOF_TTL })));
+  const sig = await createHmac(body, `${SECRET}:otp-register`);
+  const cookieStore = await cookies();
+  cookieStore.set(OTP_PROOF_COOKIE, `${body}.${sig}`, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: OTP_PROOF_TTL, path: "/" });
+}
+
+/** شماره‌ای که همین الان با کد پیامکی تأیید شده، یا null */
+export async function readOtpProof(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+    const raw = cookieStore.get(OTP_PROOF_COOKIE)?.value;
+    if (!raw) return null;
+    const [body, sig] = raw.split(".");
+    if (!body || !sig || (await createHmac(body, `${SECRET}:otp-register`)) !== sig) return null;
+    const payload = JSON.parse(base64UrlDecode(body).toString("utf-8"));
+    if (payload.purpose !== "register" || payload.exp < Math.floor(Date.now() / 1000)) return null;
+    return typeof payload.p === "string" ? payload.p : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearOtpProof() {
+  const cookieStore = await cookies();
+  cookieStore.delete(OTP_PROOF_COOKIE);
+}

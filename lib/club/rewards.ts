@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { recomputePurchaseStats, getPointsBalance } from "./profile";
 import { loadPointRules, expiryDate } from "./points";
 import { rewardReferralOnFirstPurchase } from "./referral";
+import { earnPoints } from "./credit-calc";
 
 /**
  * موتور پاداش باشگاه — امتیاز و سطح
@@ -98,16 +99,14 @@ export async function awardPurchasePoints(
   if (already) return 0;
 
   const rules = await loadPointRules();
-  if (rules.perToman <= 0) return 0;
 
-  // ضریب سطح — مثلاً سطح طلایی ۱.۵ برابر امتیاز می‌گیرد
+  // ضریب سطح — مثلاً سطح طلایی ۱.۵ برابر امتیاز می‌گیرد؛ سطح با «درصد شارژ کارت»
+  // (مثلاً ۱۰٪) همان درصد را در خرید اینترنتی هم می‌گیرد — اعتبار سایت و فروشگاه یکی است
   const profile = await prisma.clubProfile.findUnique({
     where: { id: profileId },
-    select: { tier: { select: { pointRate: true } } },
+    select: { tier: { select: { pointRate: true, cardChargeBp: true } } },
   });
-  const multiplier = profile?.tier?.pointRate ?? 1;
-
-  const amount = Math.floor(Number(grandTotal) * rules.perToman * multiplier);
+  const amount = earnPoints(grandTotal, { perToman: rules.perToman, redeemRate: rules.redeemRate }, profile?.tier ?? null);
   if (amount <= 0) return 0;
 
   await prisma.pointTransaction.create({
@@ -136,12 +135,14 @@ export async function assignTier(
 ): Promise<{ changed: boolean; title: string | null }> {
   const profile = await prisma.clubProfile.findUnique({
     where: { id: profileId },
-    select: { totalSpent: true, tierId: true },
+    select: { totalSpent: true, tierId: true, tier: { select: { manualOnly: true, title: true } } },
   });
   if (!profile) return { changed: false, title: null };
+  // سطح دستی (VIP کارت‌دار) با مبلغ خرید سایت عوض نمی‌شود
+  if (profile.tier?.manualOnly) return { changed: false, title: profile.tier.title };
 
   const tier = await prisma.clubTier.findFirst({
-    where: { isActive: true, minSpent: { lte: profile.totalSpent } },
+    where: { isActive: true, manualOnly: false, minSpent: { lte: profile.totalSpent } },
     orderBy: { minSpent: "desc" },
     select: { id: true, title: true },
   });

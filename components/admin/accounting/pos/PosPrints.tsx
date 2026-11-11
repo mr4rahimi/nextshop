@@ -34,6 +34,8 @@ interface TicketData {
   sale: { number: number | null; subtotal: string; discount: string; vat: string; total: string; lines: Line[] } | null;
   ret: { number: number | null; total: string; lines: Line[] } | null;
   barcode: string;
+  /** کارت اشتراک (بخش ۲۳ هم‌ترازی) */
+  club: { card: string | null; spent: string; earned: string; restored: string; reversed: string; balance: string } | null;
 }
 interface Line {
   title: string;
@@ -121,7 +123,8 @@ export function TicketPrint({ id }: { id: string }) {
   if (!d) return <p className="p-6 text-sm text-gray-500">…</p>;
   const t = d.ticket;
   const mm = d.terminal.paperMm === 58 ? 58 : 80;
-  const net = (d.sale ? B(d.sale.total) : 0n) - (d.ret ? B(d.ret.total) : 0n);
+  // سهم مرجوعی که به کارت اشتراک برگشت، نقد پس داده نمی‌شود
+  const net = (d.sale ? B(d.sale.total) : 0n) - (d.ret ? B(d.ret.total) : 0n) + (d.club ? B(d.club.restored) : 0n);
   const cash = B(t.cash);
   const card = B(t.card);
   return (
@@ -170,8 +173,19 @@ export function TicketPrint({ id }: { id: string }) {
         {cash !== 0n && <Kv k={cash < 0n ? "نقد پس داده شد" : "نقد"} v={formatAmount(abs(cash))} />}
         {card !== 0n && <Kv k={card < 0n ? "برگشت به کارت" : "کارت"} v={formatAmount(abs(card))} />}
         {B(t.credit) !== 0n && <Kv k={B(t.credit) > 0n ? "نسیه" : "روی حساب مشتری"} v={formatAmount(abs(B(t.credit)))} />}
+        {d.club && B(d.club.spent) > 0n && <Kv k="کارت اشتراک" v={formatAmount(d.club.spent)} />}
+        {d.club && B(d.club.restored) > 0n && <Kv k="برگشت به کارت اشتراک" v={formatAmount(d.club.restored)} />}
         {t.tendered && <Kv k="دریافتی" v={formatAmount(t.tendered)} />}
         {B(t.change) > 0n && <Kv k="باقی پول" v={formatAmount(t.change)} bold />}
+        {d.club && (
+          <>
+            <Dash />
+            <p className="text-center text-[10px] font-black">کارت اشتراک {d.club.card ?? ""}</p>
+            {B(d.club.earned) > 0n && <Kv k="شارژ این خرید" v={`+${formatAmount(d.club.earned)}`} />}
+            {B(d.club.reversed) > 0n && <Kv k="کسر شارژ مرجوعی" v={`−${formatAmount(d.club.reversed)}`} />}
+            <Kv k="مانده‌ی اعتبار" v={`${formatAmount(d.club.balance)} تومان`} bold />
+          </>
+        )}
         <Dash />
         <Bar value={d.barcode} />
         <p className="text-center text-[9px] tracking-widest">{d.barcode}</p>

@@ -92,6 +92,9 @@ type ParsedTier = {
   benefits: string[];
   sortOrder: number;
   isActive: boolean;
+  cardChargeBp: number | null;
+  posDiscountBp: number;
+  manualOnly: boolean;
 };
 
 function parseTier(body: unknown): ParsedTier | { error: string } {
@@ -122,9 +125,26 @@ function parseTier(body: unknown): ParsedTier | { error: string } {
     ? b.benefits.map((x) => String(x).trim()).filter(Boolean)
     : [];
 
+  // درصدها از فرم به صدم درصد — «۱۰» یعنی ۱۰٪ = ۱۰۰۰
+  const pct = (v: unknown) => {
+    const t = String(v ?? "").replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/[٫,]/g, ".").trim();
+    return t === "" ? null : Math.round(Number(t) * 100);
+  };
+  const cardChargeBp = pct(b.cardChargePct);
+  const posDiscountBp = pct(b.posDiscountPct) ?? 0;
+  if (cardChargeBp != null && (!Number.isFinite(cardChargeBp) || cardChargeBp < 0 || cardChargeBp > 10_000)) {
+    return { error: "درصد شارژ کارت باید بین ۰ تا ۱۰۰ باشد" };
+  }
+  if (!Number.isFinite(posDiscountBp) || posDiscountBp < 0 || posDiscountBp > 10_000) {
+    return { error: "درصد تخفیف صندوق باید بین ۰ تا ۱۰۰ باشد" };
+  }
+
   return {
     title,
     slug,
+    cardChargeBp,
+    posDiscountBp,
+    manualOnly: b.manualOnly === true,
     minSpent: BigInt(Math.floor(minSpentNum)),
     color: typeof b.color === "string" && b.color.trim() ? b.color.trim() : null,
     pointRate,

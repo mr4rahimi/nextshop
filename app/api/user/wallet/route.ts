@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { getAuthUser } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { userClubCredit } from "@/lib/club/credit";
 
 export const runtime = "nodejs";
 
@@ -9,7 +10,7 @@ export async function GET() {
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const [userData, transactions] = await Promise.all([
+  const [userData, transactions, club] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
       select: { walletBalance: true },
@@ -19,10 +20,13 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       take: 50,
     }),
+    // اعتبار کارت اشتراک / باشگاه — همان شماره موبایل (webhesab-parity.md بخش ۲۳)
+    userClubCredit(user.id, true).catch(() => null),
   ]);
 
   return NextResponse.json(serialize({
     balance: userData?.walletBalance ?? 0,
     transactions,
+    club,
   }));
 }

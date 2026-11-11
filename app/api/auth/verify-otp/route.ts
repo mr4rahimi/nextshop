@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyOtp } from "@/lib/otp";
-import { signToken, setAuthCookie } from "@/lib/auth";
+import { signToken, setAuthCookie, setOtpProofCookie } from "@/lib/auth";
 import { isDemo } from "@/lib/demo";
 import { demoSignIn } from "@/lib/demo/login";
 
@@ -25,6 +25,8 @@ export async function POST(req: Request) {
   const user = await prisma.user.findUnique({ where: { phone } });
 
   if (!user) {
+    // ثبت‌نام فقط با همین گواهی (۱۵ دقیقه) — register بی آن کاربر نمی‌سازد
+    await setOtpProofCookie(phone);
     return NextResponse.json({ success: true, isNewUser: true });
   }
 

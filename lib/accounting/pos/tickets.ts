@@ -30,6 +30,9 @@ import { TREASURY_ACCOUNT_KEY } from "../treasury";
 import { todayKey } from "../dates";
 import { faNum, formatAmount } from "../money";
 import { posItems } from "./setup";
+import { posClubOf } from "./club";
+import { addPoints, creditSettings, expiryFrom, ledgerState, lockProfile } from "@/lib/club/credit";
+import { earnPoints, pointsToToman, proportional, tomanToPoints } from "@/lib/club/credit-calc";
 
 type Tx = Prisma.TransactionClient;
 type Db = Tx | typeof prisma;
@@ -52,6 +55,8 @@ export interface TicketInput {
   pay: { cash: bigint | "rest"; card: bigint };
   tendered?: bigint | null;
   overrideCredit?: boolean;
+  /** تومانی که از اعتبار کارت اشتراک خرج می‌شود (فقط وقتی مشتری چیزی می‌دهد) */
+  clubSpend?: bigint;
 }
 
 export interface TicketPerms {
@@ -131,9 +136,29 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   if (!party) throw new AccError("مشتری پیدا نشد");
   const walkIn = party.platformCode === "walk-in";
 
+  // ── کارت اشتراک (بخش ۲۳ هم‌ترازی) ──
+  const cs = await creditSettings(tx);
+  const club = cs.posEnabled && !walkIn ? await posClubOf(tx, party) : null;
+  if (club) await lockProfile(tx, club.profileId);
+  const clubSpend = input.clubSpend ?? 0n;
+  if (clubSpend < 0n) throw new AccError("مبلغ کارت اشتراک منفی نمی‌شود");
+  if (clubSpend > 0n && !club) throw new AccError("این مشتری کارت اشتراک فعال ندارد");
+
   // ── گرد کردن جمع فروش به پایین — اختلاف تخفیف فاکتور می‌شود ──
   let invoiceDiscount = input.invoiceDiscount;
   if (invoiceDiscount < 0n) throw new AccError("تخفیف منفی نمی‌شود");
+  // تخفیف مستقیم سطح کارت — روی جمع بعد از تخفیف‌های صندوقدار، پیش از گرد کردن
+  let memberDiscount = 0n;
+  if (saleLines.length && club?.tier?.posDiscountBp) {
+    try {
+      const pre = calcInvoice({ lines: saleLines.map((l) => ({ qty: l.qty, unitPrice: l.unitPrice, discount: l.discount, vatRateBp: l.vatRateBp })), invoiceDiscount, additions: 0n, pricesIncludeVat: true });
+      memberDiscount = (pre.total * BigInt(club.tier.posDiscountBp)) / 10_000n;
+      invoiceDiscount += memberDiscount;
+    } catch (e) {
+      if (e instanceof CalcError) throw new AccError(e.message);
+      throw e;
+    }
+  }
   if (saleLines.length && terminal.roundTo > 0) {
     try {
       const pre = calcInvoice({ lines: saleLines.map((l) => ({ qty: l.qty, unitPrice: l.unitPrice, discount: l.discount, vatRateBp: l.vatRateBp })), invoiceDiscount, additions: 0n, pricesIncludeVat: true });
@@ -168,13 +193,41 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
 
   const S = saleInv?.total ?? 0n;
   const R = retInv?.total ?? 0n;
-  const net = S - R;
+
+  // ── مرجوعی رسیدی که با کارت پرداخت/شارژ شده بود: سهم کارت به کارت برمی‌گردد (نه نقد)
+  //    و شارژ همان سهم پس گرفته می‌شود. تجمعی، تا برگشت کامل دقیقاً همه را برگرداند.
+  const orig = ref ? await tx.accPosTicket.findFirst({ where: { saleInvoiceId: ref.id } }) : null;
+  let restore = 0n;
+  let reversePts = 0;
+  if (orig?.clubProfileId && R > 0n && (orig.clubSpent > 0n || orig.clubEarned > 0)) {
+    const prior = await tx.accPosTicket.aggregate({ where: { refTicketId: orig.id }, _sum: { returnTotal: true, clubRestored: true, clubReversed: true } });
+    const cum = (prior._sum.returnTotal ?? 0n) + R;
+    const r = proportional(orig.clubSpent, cum, orig.saleTotal) - (prior._sum.clubRestored ?? 0n);
+    restore = r > R ? R : r > 0n ? r : 0n;
+    const v = Number(proportional(BigInt(orig.clubEarned), cum, orig.saleTotal)) - (prior._sum.clubReversed ?? 0);
+    reversePts = v > 0 ? v : 0;
+    if (orig.clubProfileId !== club?.profileId) await lockProfile(tx, orig.clubProfileId);
+  }
+  const restorePts = tomanToPoints(restore, cs.rate);
+
+  const net = S - (R - restore);
   const due = net >= 0n ? net : -net;
   const k = input.pay.card;
-  const c = input.pay.cash === "rest" ? (due > k ? due - k : 0n) : input.pay.cash;
+  const u = net > 0n ? clubSpend : 0n;
+  if (clubSpend > 0n && net <= 0n) throw new AccError("با کارت اشتراک فقط مبلغ قابل پرداخت را می‌شود داد");
+  let spendPts = 0;
+  if (u > 0n && club) {
+    const st = await ledgerState(tx, club.profileId, cs);
+    const bal = st.balance + (orig?.clubProfileId === club.profileId ? restorePts - reversePts : 0);
+    const avail = pointsToToman(bal, cs.rate);
+    if (u > avail) throw new AccError(`اعتبار کارت اشتراک ${formatAmount(avail)} تومان است`);
+    if (u > due) throw new AccError(`مبلغ کارت اشتراک از مبلغ قابل پرداخت (${formatAmount(due)}) بیشتر است`);
+    spendPts = Math.min(tomanToPoints(u, cs.rate), bal);
+  }
+  const c = input.pay.cash === "rest" ? (due > k + u ? due - k - u : 0n) : input.pay.cash;
   if (c < 0n || k < 0n) throw new AccError("مبلغ منفی نمی‌شود");
   if (k > 0n && !terminal.cardTreasuryId) throw new AccError("این صندوق کارتخوان ندارد");
-  const moved = c + k;
+  const moved = c + k + u;
   if (moved > due) {
     throw new AccError(
       net >= 0n
@@ -213,19 +266,46 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
       credit: net >= 0n ? unsettled : -unsettled,
       tendered: net > 0n && c > 0n && input.tendered && input.tendered > c ? input.tendered : null,
       change: net > 0n && c > 0n && input.tendered && input.tendered > c ? input.tendered - c : 0n,
+      clubProfileId: club?.profileId ?? orig?.clubProfileId ?? null,
+      clubSpent: u,
+      clubEarned: club && S > 0n ? earnPoints(S, { perToman: cs.perToman, redeemRate: cs.rate }, club.tier) : 0,
+      clubRestored: restore,
+      clubReversed: reversePts,
+      refTicketId: orig?.id ?? null,
     },
   });
 
+  // ── دفتر اعتبار: برگشت سهم کارت ← کسر شارژ مرجوعی ← خرج ← شارژ این خرید ──
+  const now = new Date();
+  const expiresAt = expiryFrom(cs, now);
+  const tag = `${terminal.name} — رسید ${faNum(number)}`;
+  if (orig?.clubProfileId && restorePts) {
+    await addPoints(tx, { profileId: orig.clubProfileId, amount: restorePts, reason: "ADJUST", refType: "pos_return_credit", refId: ticket.id, note: tag, expiresAt, createdAt: now });
+  }
+  if (orig?.clubProfileId && reversePts) {
+    await addPoints(tx, { profileId: orig.clubProfileId, amount: -reversePts, reason: "ADJUST", refType: "pos_return_earn", refId: ticket.id, note: tag, createdAt: new Date(now.getTime() + 1) });
+  }
+  if (club && spendPts) {
+    await addPoints(tx, { profileId: club.profileId, amount: -spendPts, reason: "REDEEM", refType: "pos", refId: ticket.id, note: tag, createdAt: new Date(now.getTime() + 2) });
+  }
+  if (club && ticket.clubEarned) {
+    // بعد از خرج — شارژ همین خرید فقط از خرید بعدی خرج می‌شود
+    await addPoints(tx, { profileId: club.profileId, amount: ticket.clubEarned, reason: "PURCHASE", refType: "pos", refId: ticket.id, note: tag, expiresAt, createdAt: new Date(now.getTime() + 3) });
+  }
+
   // ── پول ──
-  const internal = S < R ? S : R;
+  const Rcash = R - restore;
+  const internal = S < Rcash ? S : Rcash;
   let receiptDocId: string | null = null;
   let refundVoucherId: string | null = null;
   const cashIn = saleInv ? internal + (net >= 0n ? c : 0n) : 0n;
   const cardIn = saleInv && net >= 0n ? k : 0n;
-  if (saleInv && cashIn + cardIn > 0n) {
+  const clubIn = saleInv ? u : 0n;
+  if (saleInv && cashIn + cardIn + clubIn > 0n) {
     const items: MoneyItemInput[] = [];
     if (cashIn > 0n) items.push({ method: "CASH", treasuryId: terminal.cashTreasuryId, amount: cashIn });
     if (cardIn > 0n) items.push({ method: "POS", treasuryId: terminal.cardTreasuryId, amount: cardIn });
+    if (clubIn > 0n) items.push({ method: "CLUB_CREDIT", amount: clubIn });
     const doc = await createMoneyDoc(
       tx,
       {
@@ -234,7 +314,7 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
         partyId: party.id,
         description: `${note} — فاکتور فروش ${faNum(saleInv.number ?? 0)}`,
         items,
-        allocations: [{ invoiceId: saleInv.id, amount: cashIn + cardIn }],
+        allocations: [{ invoiceId: saleInv.id, amount: cashIn + cardIn + clubIn }],
       },
       actor,
     );
@@ -242,10 +322,11 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   }
   const cashOut = retInv ? internal + (net < 0n ? c : 0n) : 0n;
   const cardOut = retInv && net < 0n ? k : 0n;
-  if (retInv && cashOut + cardOut > 0n) {
+  if (retInv && cashOut + cardOut + restore > 0n) {
     const trs = await tx.accTreasury.findMany({ where: { id: { in: [terminal.cashTreasuryId, terminal.cardTreasuryId].filter((x): x is string => !!x) } } });
     const keyOf = (id: string) => TREASURY_ACCOUNT_KEY[trs.find((t) => t.id === id)!.kind];
-    const lines: LineInput[] = [{ accountKey: "AR", partyId: party.id, debit: cashOut + cardOut, description: "پس دادن مرجوعی" }];
+    const lines: LineInput[] = [{ accountKey: "AR", partyId: party.id, debit: cashOut + cardOut + restore, description: "پس دادن مرجوعی" }];
+    if (restore > 0n) lines.push({ accountKey: "SALES_DISCOUNT", credit: restore, description: "برگشت به کارت اشتراک" });
     if (cashOut > 0n) lines.push({ accountKey: keyOf(terminal.cashTreasuryId), treasuryId: terminal.cashTreasuryId, credit: cashOut, description: internal > 0n && saleInv ? "تعویض و پس دادن نقد" : "پس دادن نقد" });
     if (cardOut > 0n) lines.push({ accountKey: keyOf(terminal.cardTreasuryId!), treasuryId: terminal.cardTreasuryId, credit: cardOut, description: "برگشت به کارت" });
     const v = await postVoucher(tx, {
@@ -347,11 +428,27 @@ export async function ticketView(id: string, db: Db = prisma) {
     sale: sale ? { number: sale.number, subtotal: sale.subtotal, discount: sale.lineDiscount + sale.invoiceDiscount, vat: sale.vatTotal, total: sale.total, lines: sale.lines.map(line) } : null,
     ret: ret ? { number: ret.number, total: ret.total, lines: ret.lines.map(line) } : null,
     barcode: `${TICKET_BARCODE_PREFIX}${t.number}`,
+    club: t.clubProfileId ? await ticketClub(db, t) : null,
+  };
+}
+
+/** خط کارت اشتراک رسید: خرج، شارژ، برگشت و مانده‌ی فعلی */
+async function ticketClub(db: Db, t: { clubProfileId: string | null; clubSpent: bigint; clubEarned: number; clubRestored: bigint; clubReversed: number }) {
+  const cs = await creditSettings(db);
+  const st = await ledgerState(db, t.clubProfileId!, cs);
+  const card = await db.clubCard.findFirst({ where: { profileId: t.clubProfileId!, isActive: true }, orderBy: { issuedAt: "desc" }, select: { number: true } });
+  return {
+    card: card ? `…${card.number.slice(-4)}` : null,
+    spent: t.clubSpent,
+    earned: pointsToToman(t.clubEarned, cs.rate),
+    restored: t.clubRestored,
+    reversed: pointsToToman(t.clubReversed, cs.rate),
+    balance: pointsToToman(st.balance, cs.rate),
   };
 }
 
 class QuoteDone extends Error {
-  constructor(public readonly totals: { saleTotal: bigint; returnTotal: bigint; net: bigint; discount: bigint }) {
+  constructor(public readonly totals: { saleTotal: bigint; returnTotal: bigint; net: bigint; discount: bigint; clubRestored: bigint; clubEarned: number }) {
     super("quote");
   }
 }
@@ -364,8 +461,8 @@ export async function quoteTicket(input: TicketInput, perms: TicketPerms, actor:
   try {
     await prisma.$transaction(
       async (tx) => {
-        const t = await createTicket(tx, { ...input, pay: { cash: "rest", card: 0n }, partyId: input.partyId, overrideCredit: true }, { ...perms, quote: true }, actor);
-        throw new QuoteDone({ saleTotal: t.saleTotal, returnTotal: t.returnTotal, net: t.saleTotal - t.returnTotal, discount: t.discount });
+        const t = await createTicket(tx, { ...input, pay: { cash: "rest", card: 0n }, clubSpend: 0n, partyId: input.partyId, overrideCredit: true }, { ...perms, quote: true }, actor);
+        throw new QuoteDone({ saleTotal: t.saleTotal, returnTotal: t.returnTotal, net: t.saleTotal - t.returnTotal + t.clubRestored, discount: t.discount, clubRestored: t.clubRestored, clubEarned: t.clubEarned });
       },
       { timeout: 30_000 },
     );

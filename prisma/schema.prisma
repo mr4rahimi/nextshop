@@ -947,6 +947,10 @@ model StoreSettings {
   pointRedeemMin       Int     @default(0)
   /// سقف درصدی از مبلغ سفارش که با امتیاز قابل پرداخت است (۰ تا ۱۰۰)
   pointRedeemMaxPct    Int     @default(100)
+  /// کارت اشتراک و اعتبار باشگاه در صندوق فروشگاهی — webhesab-parity.md بخش ۲۳
+  clubCardPosEnabled   Boolean @default(false)
+  /// شارژ/امتیاز تاریخ‌گذشته واقعاً بسوزد (پیش‌فرض خاموش: سایت‌های قدیمی امتیازشان دست نخورد)
+  pointExpiryEnforced  Boolean @default(false)
   /// ترتیب اولویت کانال‌ها هنگام ارسال — آرایه‌ای از ClubChannel
   /// مثلاً ["TELEGRAM","BALE","SMS"] یعنی اول رایگان‌ها، بعد پیامک
   channelPriority      Json    @default("[\"SMS\"]")
@@ -2016,6 +2020,7 @@ model ClubProfile {
   category       ClubCustomerCategory? @relation(fields: [categoryId], references: [id])
   ownerTransfers ClubOwnerTransfer[]
   points         PointTransaction[]
+  cards          ClubCard[]
   touchpoints    ClubTouchpoint[]
   identities     ClubChannelIdentity[]
   consentEvents  ClubConsentEvent[]
@@ -2040,6 +2045,12 @@ model ClubTier {
   minSpent  BigInt        @default(0)
   color     String?
   pointRate Float         @default(1)
+  /// درصد شارژ کارت از هر خرید (صدم درصد، ۱۰۰۰ = ۱۰٪) — پر باشد، جای فرمول امتیاز را می‌گیرد (سایت و صندوق)
+  cardChargeBp  Int?
+  /// تخفیف مستقیم صندوق برای دارنده‌ی کارت این سطح (صدم درصد)
+  posDiscountBp Int     @default(0)
+  /// سطح دستی (مثل VIP کارت‌دار): ارتقای خودکار عضو را به آن نمی‌برد و از آن بیرون نمی‌آورد
+  manualOnly    Boolean @default(false)
   benefits  Json          @default("[]")
   sortOrder Int           @default(0)
   isActive  Boolean       @default(true)
@@ -2232,6 +2243,23 @@ model CouponRedemption {
   @@unique([couponId, orderId])
   @@index([userId])
   @@index([orderId])
+}
+
+/// کارت اشتراک (کارت مغناطیسی/بارکد) — webhesab-parity.md بخش ۲۳.
+/// اعتبارش همان امتیاز باشگاه است (`PointTransaction`)؛ کارت فقط شناسه است.
+model ClubCard {
+  id        String   @id @default(cuid())
+  /// شماره‌ی یکدست‌شده (بی `%` و `?`، رقم لاتین)
+  number    String   @unique
+  profileId String
+  isActive  Boolean  @default(true)
+  issuedAt  DateTime @default(now())
+  note      String?
+  createdAt DateTime @default(now())
+
+  profile ClubProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
 }
 
 model PointTransaction {
@@ -5424,6 +5452,18 @@ model AccPosTicket {
   /// پولی که مشتری داد و باقی‌اش (فقط برای چاپ رسید)
   tendered        BigInt?
   change          BigInt           @default(0)
+  /// ── کارت اشتراک (بخش ۲۳ هم‌ترازی) ──
+  clubProfileId   String?
+  /// تومانی که با اعتبار کارت پرداخت شد
+  clubSpent       BigInt           @default(0)
+  /// امتیاز شارژشده از این رسید
+  clubEarned      Int              @default(0)
+  /// مرجوعی: تومانِ برگشته به کارت (سهم پرداخت با کارت)
+  clubRestored    BigInt           @default(0)
+  /// مرجوعی: امتیازِ شارژ که پس گرفته شد
+  clubReversed    Int              @default(0)
+  /// مرجوعی: رسید فروش اصلی
+  refTicketId     String?
   createdAt       DateTime         @default(now())
 
   terminal AccPosTerminal @relation(fields: [terminalId], references: [id])
@@ -5435,6 +5475,8 @@ model AccPosTicket {
   @@index([terminalId, createdAt])
   @@index([sellerId, createdAt])
   @@index([createdAt])
+  @@index([refTicketId])
+  @@index([clubProfileId])
 }
 
 // ── حسابداری — دریافت، پرداخت، انتقال و چک (فاز ۵، docs/plans/accounting.md بخش ۶.۷، ۶.۸ و ۹) ──
@@ -5457,6 +5499,7 @@ enum AccMoneyMethod {
   WALLET // کیف پول مشتری — فقط دریافت خودکار سفارش سایت (فاز ۶)
   GIFT_CARD // بن و کارت هدیه — روی صندوق یا بانک (فاز ۱۰)
   OFFSET // تهاتر — طلب و بدهی همان شخص هم را صاف می‌کنند، بی‌خزانه (فاز ۱۰)
+  CLUB_CREDIT // اعتبار کارت اشتراک — بی‌خزانه، بدهکار «تخفیفات فروش» (webhesab-parity.md بخش ۲۳)
 }
 
 /// دریافت از شخص، پرداخت به شخص، یا انتقال بین صندوق و بانک.

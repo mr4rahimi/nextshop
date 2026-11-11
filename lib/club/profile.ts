@@ -299,11 +299,9 @@ export async function recomputePurchaseStats(userId: string) {
 
 /** موجودی امتیاز از روی دفتر کل — هرگز از فیلد کش‌شده استفاده نکنید */
 export async function getPointsBalance(profileId: string): Promise<number> {
-  const agg = await prisma.pointTransaction.aggregate({
-    where: { profileId },
-    _sum: { amount: true },
-  });
-  return agg._sum.amount ?? 0;
+  // بازپخش دفتر — با «انقضا روشن» شارژ تاریخ‌گذشته حساب نمی‌شود (webhesab-parity.md بخش ۲۳)
+  const { ledgerState } = await import("./credit");
+  return (await ledgerState(prisma, profileId)).balance;
 }
 
 // ─── کمکی‌ها ────────────────────────────────────────────────────

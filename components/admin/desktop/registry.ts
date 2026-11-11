@@ -158,6 +158,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/users", label: "کاربران", icon: fx("Bust in silhouette") },
       { href: "/admin/club/members", label: "اعضای باشگاه", icon: fx("Crown") },
       { href: "/admin/club/tiers", label: "سطوح عضویت", icon: fx("1st place medal") },
+      { href: "/admin/club/cards", label: "کارت اشتراک", icon: fx("Identification card") },
       { href: "/admin/club/coupons", label: "کدهای تخفیف", icon: fx("Ticket") },
       { href: "/admin/club/campaigns", label: "کمپین‌ها", icon: fx("Megaphone") },
       { href: "/admin/club/templates", label: "قالب پیامک", icon: fx("Memo") },

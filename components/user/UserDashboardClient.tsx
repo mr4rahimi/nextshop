@@ -17,6 +17,8 @@ interface Stats {
   canceledOrders: number;
   cartItems: number;
   walletBalance: string;
+  /** اعتبار کارت اشتراک / باشگاه (تومان) — null = ندارد */
+  clubCredit: string | null;
 }
 
 interface Props {
@@ -73,6 +75,11 @@ export default function UserDashboardClient({ user, stats, recentOrders }: Props
               </span>
               <span className="text-[11px] font-black text-gray-400">تومان</span>
             </div>
+            {stats.clubCredit != null && (
+              <p className="mt-2 text-[11px] font-black text-amber-600 dark:text-amber-400">
+                + اعتبار کارت باشگاه: {toFa(stats.clubCredit)} تومان
+              </p>
+            )}
             <div className="mt-6 w-full h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
               <div className="w-2/3 h-full bg-gradient-to-l from-secondary-500 to-secondary-300 rounded-full group-hover:w-full transition-all duration-1000" />
             </div>

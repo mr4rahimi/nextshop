@@ -2,6 +2,7 @@ import { getAuthUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import UserDashboardClient from "@/components/user/UserDashboardClient";
+import { userClubCredit } from "@/lib/club/credit";
 
 export const metadata = { title: "پیشخوان | حساب کاربری" };
 
@@ -39,6 +40,7 @@ export default async function UserDashboardPage() {
     canceledOrders,
     cartItems,
     walletBalance: walletBalance._sum.amount ?? BigInt(0),
+    clubCredit: (await userClubCredit(user.id).catch(() => null))?.credit ?? null,
   };
 
   return (

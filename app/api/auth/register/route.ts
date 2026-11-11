@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, signToken, setAuthCookie } from "@/lib/auth";
+import { hashPassword, signToken, setAuthCookie, readOtpProof, clearOtpProof } from "@/lib/auth";
 import { ensureClubProfile } from "@/lib/club/profile";
 
 export const runtime = "nodejs";
@@ -15,10 +15,7 @@ export async function POST(req: Request) {
 
   const { phone, password } = body;
 
-  console.log("[Register] phone:", phone, "| password length:", password?.length);
-
   if (!phone || !password) {
-    console.log("[Register] Missing fields - phone:", !!phone, "password:", !!password);
     return NextResponse.json({ error: "اطلاعات ناقص است" }, { status: 400 });
   }
 
@@ -26,11 +23,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "رمز عبور باید حداقل ۶ کاراکتر باشد" }, { status: 400 });
   }
 
+  // ⚠️ فقط شماره‌ای که همین الان با کد پیامکی تأیید شده (کوکی `verify-otp`)
+  if ((await readOtpProof()) !== phone) {
+    return NextResponse.json({ error: "اول شماره موبایل را با کد پیامکی تأیید کنید" }, { status: 403 });
+  }
+
+  // ⚠️ حساب موجود هرگز از این مسیر وارد نمی‌شود (ورود با کد پیامکی یا رمز است)
   const existing = await prisma.user.findUnique({ where: { phone } });
   if (existing) {
-    const token = await signToken({ userId: existing.id, phone: existing.phone, role: existing.role });
-    await setAuthCookie(token);
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ error: "این شماره قبلاً ثبت شده است؛ با کد پیامکی وارد شوید" }, { status: 409 });
   }
 
   const passwordHash = await hashPassword(password);
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
     console.error("[club] ساخت پروفایل باشگاه ناموفق:", e)
   );
 
+  await clearOtpProof();
   const token = await signToken({ userId: user.id, phone: user.phone, role: user.role });
   await setAuthCookie(token);
 

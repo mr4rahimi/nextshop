@@ -16,6 +16,8 @@ import { ALWAYS_ASK_AXES, baseTitleOf } from "../inventory/relabel";
 import { posItems, type PosItem } from "./setup";
 import { TICKET_BARCODE_PREFIX } from "./tickets";
 import { findBySerial } from "../inventory/serials";
+import { posMemberByCard, type PosMember } from "./club";
+import { looksLikeCard } from "@/lib/club/credit-calc";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -35,7 +37,9 @@ export type ScanResult =
   | { kind: "item"; item: PosItem; serial?: string }
   | { kind: "model"; pick: ModelPick }
   | { kind: "ticket"; code: string }
-  | { kind: "list"; items: PosItem[] };
+  | { kind: "list"; items: PosItem[] }
+  /** کارت اشتراک — مشتری رسید می‌شود (بخش ۲۳ هم‌ترازی) */
+  | { kind: "member"; member: PosMember };
 
 const pairs = (raw: unknown): { axisId: string; valueId: string }[] =>
   Array.isArray(raw) ? raw.filter((a): a is { axisId: string; valueId: string } => !!a && typeof a.axisId === "string" && typeof a.valueId === "string") : [];
@@ -79,6 +83,12 @@ export async function modelPick(db: Db, modelId: string, legacyCode: string | nu
 export async function scanCode(raw: string, warehouseId: string, db: Db = prisma): Promise<ScanResult> {
   const term = raw.trim();
   if (!term) throw new AccError("کد را اسکن کنید یا بنویسید");
+  // کارت اشتراک: کارت‌خوان مغناطیسی `%…?` می‌فرستد؛ شماره‌ی خالی هم اگر کالا نبود (پایین‌تر)
+  if (looksLikeCard(term)) {
+    const member = await posMemberByCard(term);
+    if (member) return { kind: "member", member };
+    throw new AccError("این کارت اشتراک ثبت نشده است");
+  }
   const code = normalizeItemCode(term) ?? "";
   if (code.startsWith(TICKET_BARCODE_PREFIX) && /^\d+$/.test(code.slice(TICKET_BARCODE_PREFIX.length))) return { kind: "ticket", code };
 
@@ -100,6 +110,11 @@ export async function scanCode(raw: string, warehouseId: string, db: Db = prisma
   if (exact) {
     const it = (await posItems([exact], warehouseId, db)).get(exact);
     if (it) return { kind: "item", item: it };
+  }
+  // شماره‌ی کارت که دستی نوشته شده (بی `%`)
+  if (/^\d{8,}$/.test(code)) {
+    const member = await posMemberByCard(code);
+    if (member) return { kind: "member", member };
   }
   const found = await db.accItem.findMany({ where: { ...(await itemSearchWhere(term, db)), isActive: true }, orderBy: { title: "asc" }, take: 12, select: { id: true } });
   const map = await posItems(found.map((f) => f.id), warehouseId, db);

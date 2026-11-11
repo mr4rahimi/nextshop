@@ -20,7 +20,7 @@ export async function GET(req: Request) {
 
   const profile = await prisma.clubProfile.findUnique({
     where: { userId: user.id },
-    select: { id: true, smsConsent: true },
+    select: { id: true, smsConsent: true, cards: { where: { isActive: true }, select: { id: true }, take: 1 } },
   });
 
   const rules = await loadPointRules();
@@ -44,6 +44,8 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     balance,
+    /** کارت اشتراک دارد — مبلغ به تومان «اعتبار کارت» نشان داده می‌شود (webhesab-parity.md بخش ۲۳) */
+    hasCard: profile.cards.length > 0,
     enabled: rules.redeemEnabled,
     rate: rules.redeemRate,
     min: rules.redeemMin,
