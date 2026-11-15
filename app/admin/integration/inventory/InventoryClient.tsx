@@ -87,7 +87,7 @@ export default function InventoryClient({ initialItems, initialTotal }: Props) {
         <p className="text-xs text-gray-400 mr-auto">{total} محصول نگاشت‌شده</p>
       </div>
 
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
         {items.length === 0 ? (
           <p className="text-center text-gray-400 text-sm py-12">هنوز محصولی نگاشت نشده</p>
         ) : (

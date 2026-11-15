@@ -125,7 +125,7 @@ export default function HesabanForm({ existingConnection }: Props) {
       )}
 
       {/* فرم اعتبارنامه */}
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
         <h2 className="font-black text-sm text-gray-900 dark:text-white">اعتبارنامه</h2>
 
         <div>
@@ -195,7 +195,7 @@ export default function HesabanForm({ existingConnection }: Props) {
       </div>
 
       {/* تنظیمات sync */}
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
         <h2 className="font-black text-sm text-gray-900 dark:text-white">تنظیمات همگام‌سازی</h2>
 
         <div className="space-y-3">
@@ -242,7 +242,7 @@ export default function HesabanForm({ existingConnection }: Props) {
 
       {/* sync دستی */}
       {existingConnection?.status === "CONNECTED" && (
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
           <h2 className="font-black text-sm text-gray-900 dark:text-white">اجرای دستی</h2>
           <p className="text-xs text-gray-400">برای sync فوری بدون انتظار برای زمان‌بندی خودکار</p>
 

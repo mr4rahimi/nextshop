@@ -189,7 +189,7 @@ export default function MessagesClient({ platforms }: { platforms: { code: strin
               onClick={() => setType(t.key)}
               className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
                 type === t.key
-                  ? "bg-white dark:bg-[#0f1117] text-gray-900 dark:text-white shadow-sm"
+                  ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
                   : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
             >
@@ -224,7 +224,7 @@ export default function MessagesClient({ platforms }: { platforms: { code: strin
 
       <div className="grid md:grid-cols-[20rem_1fr] gap-4 items-start">
         {/* فهرست گفت‌وگوها */}
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
           {loadingChats ? (
             <p className="text-center text-gray-400 text-sm py-10">در حال بارگذاری…</p>
           ) : chats.length === 0 ? (
@@ -268,7 +268,7 @@ export default function MessagesClient({ platforms }: { platforms: { code: strin
         </div>
 
         {/* رشته پیام‌ها */}
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden flex flex-col min-h-[24rem]">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden flex flex-col min-h-[24rem]">
           {!selected ? (
             <p className="text-center text-gray-400 text-sm py-20">یک گفت‌وگو را انتخاب کنید</p>
           ) : loadingThread ? (

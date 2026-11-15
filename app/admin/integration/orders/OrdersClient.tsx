@@ -152,7 +152,7 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
             className={`p-4 rounded-2xl border text-right transition-colors ${
               status === s
                 ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/10"
-                : "border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0f1117] hover:border-gray-300"
+                : "border-gray-200 dark:border-white/[0.06] bg-white dark:bg-gray-900 hover:border-gray-300"
             }`}
           >
             <div className="text-2xl font-black text-gray-900 dark:text-white">
@@ -168,7 +168,7 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
         <select
           value={platform}
           onChange={e => setPlatform(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#0f1117] text-sm text-gray-900 dark:text-white"
+          className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white"
         >
           <option value="">همه پلتفرم‌ها</option>
           <option value="shop">سایت</option>
@@ -179,7 +179,7 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
           value={q}
           onChange={e => setQ(e.target.value)}
           placeholder="جستجو: نام محصول، مشتری، شماره سفارش…"
-          className="flex-1 min-w-[200px] px-4 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#0f1117] text-sm text-gray-900 dark:text-white placeholder-gray-400"
+          className="flex-1 min-w-[200px] px-4 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white placeholder-gray-400"
         />
 
         {selected.size > 0 && (
@@ -232,7 +232,7 @@ export default function OrdersClient({ platforms }: { platforms: { code: string;
       )}
 
       {/* جدول */}
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
         {loading ? (
           <div className="p-10 text-center text-sm text-gray-400">در حال بارگذاری…</div>
         ) : rows.length === 0 ? (

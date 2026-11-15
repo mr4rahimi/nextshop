@@ -226,7 +226,7 @@ export default function GuarantyListPage() {
       </div>
 
       {}
-      <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
         <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">ثبت گارانتی جدید</h2>
 
         {formError && (
@@ -322,7 +322,7 @@ export default function GuarantyListPage() {
       </div>
 
       {}
-      <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4 flex flex-wrap gap-3 items-center">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-xl p-4 flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px]">
           <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -351,7 +351,7 @@ export default function GuarantyListPage() {
       </div>
 
       {}
-      <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="hidden lg:grid grid-cols-[1fr_140px_140px_120px_120px_140px_140px] gap-3 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
           {["خریدار", "محصول", "ستومان", "تاریخ ثبت", "تاریخ پایان", "وضعیت", "عملیات"].map(h => (
             <div key={h} className="text-[11px] font-black text-gray-400">{h}</div>
@@ -440,7 +440,7 @@ export default function GuarantyListPage() {
       {}
       {editItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setEditItem(null)}>
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
             onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
               <h3 className="text-sm font-black text-gray-900 dark:text-white">
@@ -499,7 +499,7 @@ export default function GuarantyListPage() {
       {}
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
             <h3 className="text-base font-black text-gray-900 dark:text-white mb-2">حذف گارانتی</h3>
             <p className="text-sm text-gray-500 mb-6">این عملیات برگشت‌پذیر نیست. مطمئنید؟</p>
             <div className="flex gap-3">

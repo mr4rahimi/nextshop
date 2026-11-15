@@ -337,7 +337,7 @@ function MappingWizard({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="bg-white dark:bg-[#0f1117] rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden"
+        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden"
         dir="rtl"
         onClick={(e) => e.stopPropagation()}
         style={{ maxHeight: "90vh" }}
@@ -673,14 +673,14 @@ function PlatformTab({ platform, allPlatforms }: { platform: Platform; allPlatfo
       )}
 
       {loading ? (
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-10 text-center text-sm text-gray-400">در حال بارگذاری...</div>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-10 text-center text-sm text-gray-400">در حال بارگذاری...</div>
       ) : total === 0 ? (
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-12 text-center">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-12 text-center">
           <p className="text-gray-400 text-sm">هنوز محصولی دریافت نشده</p>
           <p className="text-gray-400 text-xs mt-2">دکمه «دریافت محصولات» را بزنید</p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-sm text-gray-400">موردی با این فیلتر یافت نشد</div>
           ) : (
@@ -766,15 +766,15 @@ function MappingsTab({ platforms }: { platforms: Platform[] }) {
     <div className="space-y-4">
       <p className="text-sm text-gray-500">{total} نگاشت تأیید‌شده</p>
       {loading ? (
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-10 text-center text-sm text-gray-400">در حال بارگذاری...</div>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-10 text-center text-sm text-gray-400">در حال بارگذاری...</div>
       ) : mappings.length === 0 ? (
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-10 text-center text-sm text-gray-400">هنوز نگاشتی ایجاد نشده</div>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-10 text-center text-sm text-gray-400">هنوز نگاشتی ایجاد نشده</div>
       ) : (
         <div className="space-y-3">
           {mappings.map((m) => {
             const linkByCode = new Map(m.links.map((l) => [l.platformCode, l]));
             return (
-              <div key={m.id} className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
+              <div key={m.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-2">
                     {allCodes.map((code) => {
@@ -897,7 +897,7 @@ function EditMappingModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/10 w-full max-w-lg max-h-[85vh] overflow-y-auto p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/10 w-full max-w-lg max-h-[85vh] overflow-y-auto p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="font-black text-gray-900 dark:text-white">ویرایش نگاشت</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
@@ -1030,15 +1030,15 @@ export default function MappingPageClient({ platforms, initialMappingCount, init
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
           <p className="text-2xl font-black text-gray-900 dark:text-white">{mappingCount}</p>
           <p className="text-xs text-gray-500 mt-1">نگاشت فعال</p>
         </div>
-        <div className={`bg-white dark:bg-[#0f1117] rounded-2xl border p-4 ${suggestionCount > 0 ? "border-amber-200 dark:border-amber-500/20" : "border-gray-200 dark:border-white/[0.06]"}`}>
+        <div className={`bg-white dark:bg-gray-900 rounded-2xl border p-4 ${suggestionCount > 0 ? "border-amber-200 dark:border-amber-500/20" : "border-gray-200 dark:border-white/[0.06]"}`}>
           <p className={`text-2xl font-black ${suggestionCount > 0 ? "text-amber-500" : "text-gray-900 dark:text-white"}`}>{suggestionCount}</p>
           <p className="text-xs text-gray-500 mt-1">پیشنهاد در انتظار</p>
         </div>
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
           <p className="text-2xl font-black text-gray-900 dark:text-white">{platforms.length}</p>
           <p className="text-xs text-gray-500 mt-1">پلتفرم متصل</p>
         </div>

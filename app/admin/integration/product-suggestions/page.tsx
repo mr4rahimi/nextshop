@@ -65,11 +65,11 @@ export default function ProductSuggestionsPage() {
       </div>
 
       {loading ? (
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-12 text-center text-sm text-gray-400">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-12 text-center text-sm text-gray-400">
           در حال بارگذاری...
         </div>
       ) : suggestions.length === 0 ? (
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-12 text-center">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-12 text-center">
           <p className="text-gray-400 text-sm">همه نگاشت‌ها کامل هستند</p>
           <p className="text-gray-400 text-xs mt-2">
             وقتی نگاشتی بدون یک پلتفرم ایجاد شود، اینجا نمایش داده می‌شود.
@@ -84,7 +84,7 @@ export default function ProductSuggestionsPage() {
               const otherLinks = s.links.filter((l) => l.platformCode !== "shop");
 
               return (
-                <div key={s.mappingId} className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5">
+                <div key={s.mappingId} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5">
                   {/* Product name */}
                   <div className="mb-4">
                     <p className="text-sm font-black text-gray-900 dark:text-white">

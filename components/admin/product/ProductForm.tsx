@@ -71,7 +71,7 @@ function Section({ title, icon, children, defaultOpen = true }: {
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
       <button type="button" onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
         <span className="text-base">{icon}</span>
@@ -317,7 +317,7 @@ function RelatedSearch({ productId, currentProductTitle }: { productId?: string;
             className={inp} />
           {searching && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">جستجو...</span>}
           {results.length > 0 && (
-            <div className="absolute top-full mt-1 right-0 left-0 z-20 bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl shadow-xl overflow-hidden">
+            <div className="absolute top-full mt-1 right-0 left-0 z-20 bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-xl shadow-xl overflow-hidden">
               {results.map(p => (
                 <button key={p.id} type="button" onClick={() => addRelated(p)}
                   className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-right">

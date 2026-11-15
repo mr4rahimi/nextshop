@@ -128,7 +128,7 @@ export default function QueueClient({ initialJobs, initialTotal, initialStats, p
           <button
             key={s.status}
             onClick={() => handleFilterChange(statusFilter === s.status ? "" : s.status, platformFilter)}
-            className={`bg-white dark:bg-[#0f1117] rounded-2xl border p-4 text-center transition-colors ${
+            className={`bg-white dark:bg-gray-900 rounded-2xl border p-4 text-center transition-colors ${
               statusFilter === s.status
                 ? "border-blue-400 dark:border-blue-500/50"
                 : "border-gray-200 dark:border-white/[0.06] hover:border-gray-300 dark:hover:border-white/10"
@@ -145,7 +145,7 @@ export default function QueueClient({ initialJobs, initialTotal, initialStats, p
         <select
           value={platformFilter}
           onChange={e => handleFilterChange(statusFilter, e.target.value)}
-          className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#0f1117] text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
+          className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
         >
           <option value="">همه پلتفرم‌ها</option>
           {platforms.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
@@ -173,7 +173,7 @@ export default function QueueClient({ initialJobs, initialTotal, initialStats, p
       </div>
 
       {/* جدول job‌ها */}
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
         {jobs.length === 0 ? (
           <p className="text-center text-gray-400 text-sm py-12">
             {statusFilter ? `هیچ job ${STATUS_CFG[statusFilter]?.label ?? statusFilter} وجود ندارد` : "هنوز job‌ای وجود ندارد"}

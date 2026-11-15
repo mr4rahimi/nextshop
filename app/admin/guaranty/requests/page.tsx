@@ -113,7 +113,7 @@ export default function GuarantyRequestsPage() {
       </div>
 
       {}
-      <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4 flex flex-wrap gap-3 items-center">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-xl p-4 flex flex-wrap gap-3 items-center">
         <div className="flex gap-2 flex-wrap">
           {STATUS_TABS.map(tab => (
             <button key={tab.value} onClick={() => setActiveStatus(tab.value)}
@@ -138,7 +138,7 @@ export default function GuarantyRequestsPage() {
       </div>
 
       {}
-      <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="hidden lg:grid grid-cols-[1fr_140px_1fr_140px_140px_100px] gap-3 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
           {["خریدار", "ستومان محصول", "توضیحات", "تاریخ ثبت", "وضعیت", ""].map(h => (
             <div key={h} className="text-[11px] font-black text-gray-400">{h}</div>
@@ -219,7 +219,7 @@ export default function GuarantyRequestsPage() {
       {}
       {detailItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setDetailItem(null)}>
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
             onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
               <h3 className="text-sm font-black text-gray-900 dark:text-white">جزئیات درخواست</h3>

@@ -248,7 +248,7 @@ export default function AdminsPage() {
       )}
 
       {}
-      <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-gray-400">در حال بارگذاری...</div>
         ) : admins.length === 0 ? (
@@ -365,7 +365,7 @@ export default function AdminsPage() {
 
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => busy || setConfirmDelete(null)}>
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-black text-gray-900 dark:text-white">حذف {nameOf(confirmDelete)}؟</h2>
             <p className="mt-2 text-sm leading-7 text-gray-500">
               دیگر نمی‌تواند وارد پنل شود. اگر این حساب سابقه داشته باشد (مثل سفارش)، حذف کامل نمی‌شود و فقط از
@@ -389,7 +389,7 @@ export default function AdminsPage() {
       {}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <h2 className="text-lg font-black text-gray-900 dark:text-white mb-5">
               {editingAdmin ? "ویرایش ادمین" : "ادمین جدید"}
             </h2>

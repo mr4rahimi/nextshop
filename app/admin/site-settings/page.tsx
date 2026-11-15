@@ -508,7 +508,7 @@ export default function AdminSiteSettingsPage() {
       {tab === "sms" && (
         <div className="space-y-6">
           {}
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-gray-900 dark:text-white">تنظیمات اتصال ایران پیامک</h3>
               <div className="flex items-center gap-3">
@@ -536,7 +536,7 @@ export default function AdminSiteSettingsPage() {
           </div>
       
           {}
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <h3 className="text-sm font-black text-gray-900 dark:text-white mb-4">کدهای پترن پیامک</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
@@ -565,7 +565,7 @@ export default function AdminSiteSettingsPage() {
       )}
 
       {tab === "wallet" && (
-        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
           <div className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all ${settings.walletEnabled ? "border-blue-400 bg-blue-50 dark:bg-blue-900/10" : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"}`}>
             <div className="flex items-center gap-4">
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${settings.walletEnabled ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600" : "bg-gray-100 dark:bg-gray-800 text-gray-400"}`}>
@@ -592,7 +592,7 @@ export default function AdminSiteSettingsPage() {
 
       {tab === "gateway" && (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 space-y-6">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 space-y-6">
             <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-800">
               <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

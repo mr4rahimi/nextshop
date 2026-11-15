@@ -47,7 +47,7 @@ export default function SuggestionsClient({ initialSuggestions, total }: Props) 
 
   if (remaining === 0) {
     return (
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-12 text-center">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-12 text-center">
         <p className="text-gray-400 text-sm">پیشنهادی در انتظار بررسی وجود ندارد</p>
         <p className="text-gray-400 text-xs mt-2">
           {total > 0 ? `${total} پیشنهاد پردازش شد` : "برای دریافت پیشنهادها ابتدا محصولات را از حسابان دریافت کنید"}
@@ -62,7 +62,7 @@ export default function SuggestionsClient({ initialSuggestions, total }: Props) 
 
       {items.map((s) => (
         <div key={s.id}
-          className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
+          className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
           <div className="flex items-start gap-4">
             {/* محصول فروشگاه */}
             <div className="flex items-center gap-3 flex-1 min-w-0">

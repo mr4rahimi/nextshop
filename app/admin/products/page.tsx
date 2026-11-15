@@ -243,7 +243,7 @@ export default function ProductsListPage() {
       {}
       {confirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
             <div className="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-4">
               <svg className="w-7 h-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -267,7 +267,7 @@ export default function ProductsListPage() {
 
       {confirmDeactivate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
             <h3 className="text-base font-black text-gray-900 dark:text-white mb-2">غیرفعال کردن {toFa(selected.size)} محصول</h3>
             <p className="text-sm text-gray-500 mb-6">این محصولات از فروشگاه پنهان می‌شوند. هر زمان بخواهید می‌توانید دوباره فعالشان کنید.</p>
             <div className="flex gap-3">
@@ -309,7 +309,7 @@ export default function ProductsListPage() {
           { label: "غیرفعال", value: stats.inactive, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10" },
           { label: "ناموجود", value: stats.outofstock, color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-500/10" },
         ].map(stat => (
-          <div key={stat.label} className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4 flex items-center gap-3">
+          <div key={stat.label} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-xl p-4 flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center flex-shrink-0`}>
               <span className={`text-lg font-black ${stat.color}`}>{toFa(stat.value)}</span>
             </div>
@@ -319,7 +319,7 @@ export default function ProductsListPage() {
       </div>
 
       {}
-      <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-xl p-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           {}
           <div className="relative md:col-span-2">
@@ -445,7 +445,7 @@ export default function ProductsListPage() {
       )}
 
       {}
-      <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         {products.length > 0 && !loading && (
           <label className="lg:hidden flex items-center gap-2 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06] text-xs font-black text-gray-500 cursor-pointer">
             <input type="checkbox" checked={allOnPage} onChange={togglePage} className="w-4 h-4 rounded accent-blue-600 cursor-pointer flex-shrink-0" />
@@ -587,7 +587,7 @@ export default function ProductsListPage() {
       </div>
 
       {selected.size > 0 && (
-        <div className="sticky bottom-4 z-40 flex items-center flex-wrap gap-2 px-4 py-3 rounded-2xl bg-gray-900 dark:bg-[#1a1d27] border border-white/10 shadow-2xl">
+        <div className="sticky bottom-4 z-40 flex items-center flex-wrap gap-2 px-4 py-3 rounded-2xl bg-gray-900 dark:bg-gray-900 border border-white/10 shadow-2xl">
           <span className="text-xs font-black text-white">{toFa(selected.size)} محصول انتخاب شد</span>
 
           {selected.size < total && (

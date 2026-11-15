@@ -283,7 +283,7 @@ export default function AppearancePage() {
   if (loading) return (
     <div className="p-6 space-y-4">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="h-24 bg-white dark:bg-[#0f1117] rounded-2xl animate-pulse" />
+        <div key={i} className="h-24 bg-white dark:bg-gray-900 rounded-2xl animate-pulse" />
       ))}
     </div>
   );
@@ -327,7 +327,7 @@ export default function AppearancePage() {
         {}
         <div className="space-y-4">
           {}
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">پالت‌های آماده</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {PRESETS.map(preset => (
@@ -349,7 +349,7 @@ export default function AppearancePage() {
           </div>
 
           {}
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">رنگ اصلی (Primary)</h2>
             <p className="text-xs text-gray-400 mb-4">رنگ دکمه‌ها، لینک‌ها، و عناصر اصلی سایت</p>
 
@@ -394,7 +394,7 @@ export default function AppearancePage() {
           </div>
 
           {}
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">رنگ ثانویه (Secondary)</h2>
             <p className="text-xs text-gray-400 mb-4">رنگ تخفیف‌ها، برچسب‌های ویژه و تأکیدهای ثانویه</p>
 
@@ -431,7 +431,7 @@ export default function AppearancePage() {
           </div>
 
           {}
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">رنگ‌های پس‌زمینه</h2>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -466,7 +466,7 @@ export default function AppearancePage() {
 
         {}
         <div className="space-y-4">
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 sticky top-8">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 sticky top-8">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">پیش‌نمایش زنده</h2>
             <ThemePreview theme={theme} />
 

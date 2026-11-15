@@ -404,7 +404,7 @@ function SettingsSheet({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-sm space-y-4 rounded-3xl bg-white p-5 text-gray-900 shadow-2xl dark:bg-[#111620] dark:text-gray-100">
+      <div className="relative w-full max-w-sm space-y-4 rounded-3xl bg-white p-5 text-gray-900 shadow-2xl dark:bg-gray-900 dark:text-gray-100">
         <div className="flex items-center justify-between">
           <p className="text-base font-black">تنظیمات کیوسک</p>
           <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5" aria-label="بستن">

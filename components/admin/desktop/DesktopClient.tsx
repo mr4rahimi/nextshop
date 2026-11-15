@@ -9,7 +9,7 @@
  * | کارت‌های شاخص | فروش، سفارش، میانگین سبد، کاربر تازه، کارهای مانده |
  * | پنجره‌ی دسته | آیکن هر بخش با نام زیرش؛ جمع‌شدنی؛ راست‌کلیک = منوی اپ |
  * | ویجت | گزارش مرتبط با همان دسته، کنار پنجره‌اش |
- * | داک | اپ‌های سنجاق‌شده، پایین صفحه |
+ * | دسترسی سریع | پرکاربردترین بخش‌های همین مدیر، بالای صفحه — ../quickAccess.ts |
  *
  * فقط اپ‌های مجاز از سرور می‌رسند (app/admin/page.tsx).
  * مستندات: docs/features/admin-desktop.md
@@ -19,8 +19,9 @@ import "@/app/styles/desktop.css";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, ExternalLink, LayoutGrid, Pin, PinOff, Search, SquareArrowOutUpRight, X } from "lucide-react";
-import { DEFAULT_DOCK, type BadgeKey, type DesktopApp, type DesktopCategory } from "./registry";
+import { ChevronDown, EyeOff, ExternalLink, Pin, PinOff, RotateCcw, Search, SquareArrowOutUpRight, X, Zap } from "lucide-react";
+import { type BadgeKey, type DesktopApp, type DesktopCategory } from "./registry";
+import { useQuickAccess } from "../quickAccess";
 import { BarList, DailyBars, Donut, Heatmap, Sparkline, TrendChart, fa, faShort, type DonutSlice } from "./charts";
 import { useAdminMe } from "../useAdminMe";
 import { normalize } from "../AdminSidebar";
@@ -50,7 +51,6 @@ interface Props {
 
 // ── ذخیره‌ی محلی (فقط راحتی هر بیننده؛ نبودنش چیزی را خراب نمی‌کند) ───────
 
-const DOCK_KEY = "admin:dock";
 const COLLAPSED_KEY = "admin:desktop:collapsed";
 
 function readList(key: string): string[] | null {
@@ -105,13 +105,14 @@ function greeting(h: number): string {
 interface MenuState { app: DesktopApp; x: number; y: number }
 
 function AppTile({
-  app, badge, selected, onMenu, index = 0,
+  app, badge, selected, onMenu, index = 0, pinned,
 }: {
   app: DesktopApp;
   badge?: number;
   selected?: boolean;
   onMenu: (m: MenuState) => void;
   index?: number;
+  pinned?: boolean;
 }) {
   return (
     <Link
@@ -129,8 +130,13 @@ function AppTile({
         {/* eslint-disable-next-line @next/next/no-img-element -- آیکن ثابت محلی ۱۲۸ پیکسلی؛ بهینه‌ساز تصویر لازم نیست */}
         <img src={app.icon} alt="" width={52} height={52} className="dk-app-img h-12 w-12 sm:h-[52px] sm:w-[52px]" loading="lazy" draggable={false} />
         {!!badge && (
-          <span className="absolute -left-2 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-black text-white shadow-md ring-2 ring-white dark:ring-[#141a26]">
+          <span className="absolute -left-2 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-pink-600 px-1.5 text-[10px] font-black text-white shadow-md ring-2 ring-[var(--adm-surface)]">
             {badge > 99 ? "۹۹+" : fa(badge)}
+          </span>
+        )}
+        {pinned && (
+          <span className="absolute -right-1.5 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--adm-surface)] text-[var(--adm-accent)] shadow ring-1 ring-[var(--adm-border)]" aria-label="سنجاق‌شده">
+            <Pin className="h-2.5 w-2.5" aria-hidden />
           </span>
         )}
       </span>
@@ -140,11 +146,14 @@ function AppTile({
 }
 
 function AppMenu({
-  menu, pinned, onTogglePin, onClose,
+  menu, pinned, inQuick, onTogglePin, onHide, onClose,
 }: {
   menu: MenuState;
   pinned: boolean;
+  /** در فهرست دسترسی سریع هست — گزینه‌ی «برداشتن» فقط آن‌وقت معنا دارد */
+  inQuick: boolean;
   onTogglePin: () => void;
+  onHide: () => void;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -168,7 +177,7 @@ function AppMenu({
   }, [onClose]);
 
   // در پنجره بماند
-  const W = 216, H = 150;
+  const W = 232, H = 190;
   const left = Math.min(menu.x, window.innerWidth - W - 8);
   const top = Math.min(menu.y, window.innerHeight - H - 8);
   const item = "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-bold text-[var(--dk-ink)] transition-colors hover:bg-[var(--adm-accent)] hover:text-white";
@@ -194,8 +203,13 @@ function AppMenu({
         </button>
         <button role="menuitem" className={item} onClick={() => { onTogglePin(); onClose(); }}>
           {pinned ? <PinOff className="h-4 w-4" aria-hidden /> : <Pin className="h-4 w-4" aria-hidden />}
-          {pinned ? "برداشتن از داک" : "سنجاق به داک"}
+          {pinned ? "برداشتن سنجاق" : "سنجاق در دسترسی سریع"}
         </button>
+        {inQuick && (
+          <button role="menuitem" className={item} onClick={() => { onHide(); onClose(); }}>
+            <EyeOff className="h-4 w-4" aria-hidden /> برداشتن از دسترسی سریع
+          </button>
+        )}
       </div>
     </div>
   );
@@ -317,25 +331,19 @@ export default function DesktopClient(props: Props) {
   const byHref = useMemo(() => new Map(allApps.map((a) => [a.href, a])), [allApps]);
   const cat = (key: string) => categories.find((c) => c.key === key);
 
-  // ── داک و جمع‌بودن پنجره‌ها ──
-  const [dock, setDock] = useState<string[]>(DEFAULT_DOCK);
+  // ── دسترسی سریع و جمع‌بودن پنجره‌ها ──
+  const allowed = useMemo(() => (h: string) => byHref.has(h), [byHref]);
+  const quick = useQuickAccess(me?.userId, allowed, 12);
   const [collapsed, setCollapsed] = useState<string[]>([]);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage فقط بعد از mount
-    setDock(readList(DOCK_KEY) ?? DEFAULT_DOCK);
     setCollapsed(readList(COLLAPSED_KEY) ?? []);
   }, []);
-  const togglePin = (href: string) => {
-    const next = dock.includes(href) ? dock.filter((h) => h !== href) : [...dock, href];
-    setDock(next);
-    writeList(DOCK_KEY, next);
-  };
   const toggleCollapsed = (key: string) => {
     const next = collapsed.includes(key) ? collapsed.filter((k) => k !== key) : [...collapsed, key];
     setCollapsed(next);
     writeList(COLLAPSED_KEY, next);
   };
-  const dockApps = dock.map((h) => byHref.get(h)).filter((a): a is NonNullable<typeof a> => !!a);
 
   const [menu, setMenu] = useState<MenuState | null>(null);
 
@@ -405,7 +413,7 @@ export default function DesktopClient(props: Props) {
     <div className="dk-root" dir="rtl">
       <div className="dk-wallpaper" aria-hidden />
 
-      <div className="mx-auto max-w-[1500px] space-y-4 px-4 pb-32 pt-5 lg:space-y-5 lg:px-6 lg:pt-7">
+      <div className="mx-auto max-w-[1500px] space-y-4 px-4 pb-12 pt-5 lg:space-y-5 lg:px-6 lg:pt-7">
         {/* ── سرصفحه ── */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -463,11 +471,39 @@ export default function DesktopClient(props: Props) {
           </Window>
         ) : (
           <>
+            {/* ── دسترسی سریع ── */}
+            {quick.items.length > 0 && (
+              <section className="dk-window dk-quick relative overflow-hidden rounded-[22px]">
+                <header className="flex items-center gap-3 px-4 pt-3.5">
+                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-[image:var(--adm-grad)] text-white shadow-[var(--adm-glow)]">
+                    <Zap className="h-4 w-4" aria-hidden />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-sm font-black text-[var(--dk-ink)]">دسترسی سریع</h2>
+                    <p className="truncate text-[11px] text-[var(--dk-ink-3)]">به ترتیب استفاده‌ی شما — سنجاق با راست‌کلیک یا لمس طولانی</p>
+                  </div>
+                  <button
+                    onClick={quick.reset}
+                    title="برگشت به ترتیب پیش‌فرض"
+                    className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold text-[var(--dk-ink-3)] transition-colors hover:bg-[var(--adm-hover)] hover:text-[var(--dk-ink)]"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                    <span className="hidden sm:inline">پیش‌فرض</span>
+                  </button>
+                </header>
+                <div className="grid grid-cols-4 gap-1 p-3 sm:grid-cols-6 sm:p-4 lg:grid-cols-[repeat(12,minmax(0,1fr))]">
+                  {quick.items.map((a, i) => (
+                    <AppTile key={a.href} app={a} index={i} pinned={a.pinned} badge={a.badge ? badges[a.badge] : undefined} onMenu={setMenu} />
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* ── کارت‌های شاخص ── */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5 lg:gap-4">
               <Kpi href="/admin/accounting/reports/sales" label="فروش ۳۰ روز" value={toman(sales30)} delta={pctChange(sales30, salesPrev30)} spark={last(dailySales, 30)} color="var(--dk-s1)" />
               <Kpi href="/admin/orders" label="سفارش ۳۰ روز" value={fa(orders30)} delta={pctChange(orders30, ordersPrev30)} spark={last(dailyOrders, 30)} color="var(--dk-s2)" />
-              <Kpi href="/admin/orders" label="میانگین سبد" value={toman(aov)} delta={pctChange(aov, aovPrev)} />
+              <Kpi href="/admin/orders" label="میانگین سبد" value={toman(aov)} delta={pctChange(aov, aovPrev)} color="var(--dk-s4)" />
               <Kpi href="/admin/users" label="کاربر تازه ۳۰ روز" value={fa(users30)} delta={pctChange(users30, usersPrev30)} spark={last(dailyUsers, 30)} color="var(--dk-s3)" sub={`از ${fa(totals.users)} کاربر`} />
               <PendingKpi badges={badges} total={pending} />
             </div>
@@ -486,50 +522,13 @@ export default function DesktopClient(props: Props) {
         )}
       </div>
 
-      {/* ── داک ── */}
-      {dockApps.length > 0 && (
-        <nav aria-label="داک" className="pointer-events-none sticky bottom-3 z-20 flex justify-center px-3 pb-1 sm:bottom-4">
-          <div className="dk-dock pointer-events-auto flex max-w-full items-end gap-1 overflow-x-auto rounded-[22px] px-2.5 py-2 sm:gap-1.5 sm:overflow-visible">
-            {dockApps.map((a) => (
-              <Link
-                key={a.href}
-                href={a.href}
-                aria-label={a.label}
-                onContextMenu={(e) => { e.preventDefault(); setMenu({ app: a, x: e.clientX, y: e.clientY }); }}
-                className="dk-dock-item relative flex-shrink-0 rounded-xl p-1 outline-none"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={a.icon} alt="" className="h-10 w-10 sm:h-11 sm:w-11" draggable={false} />
-                {a.badge && !!badges[a.badge] && (
-                  <span className="absolute left-0 top-0 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-[var(--dk-glass-strong)]" />
-                )}
-                <span className="dk-dock-tip absolute -top-9 right-1/2 hidden whitespace-nowrap rounded-lg bg-gray-900/90 px-2 py-1 text-[11px] font-bold text-white sm:block dark:bg-white/90 dark:text-gray-900">
-                  {a.label}
-                </span>
-              </Link>
-            ))}
-            <span className="mx-1 h-10 w-px flex-shrink-0 self-center bg-[var(--dk-edge)]" aria-hidden />
-            <button
-              onClick={() => { document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" }); searchRef.current?.focus(); }}
-              aria-label="همه‌ی بخش‌ها"
-              className="dk-dock-item relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-[var(--dk-ink-2)] outline-none sm:h-[52px] sm:w-[52px]"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-slate-600 to-slate-800 text-white shadow-md sm:h-11 sm:w-11 dark:from-slate-300 dark:to-slate-500 dark:text-slate-900">
-                <LayoutGrid className="h-5 w-5" aria-hidden />
-              </span>
-              <span className="dk-dock-tip absolute -top-9 right-1/2 hidden whitespace-nowrap rounded-lg bg-gray-900/90 px-2 py-1 text-[11px] font-bold text-white sm:block dark:bg-white/90 dark:text-gray-900">
-                جستجوی بخش‌ها
-              </span>
-            </button>
-          </div>
-        </nav>
-      )}
-
       {menu && (
         <AppMenu
           menu={menu}
-          pinned={dock.includes(menu.app.href)}
-          onTogglePin={() => togglePin(menu.app.href)}
+          pinned={quick.isPinned(menu.app.href)}
+          inQuick={quick.items.some((q) => q.href === menu.app.href)}
+          onTogglePin={() => quick.togglePin(menu.app.href)}
+          onHide={() => quick.hide(menu.app.href)}
           onClose={() => setMenu(null)}
         />
       )}
@@ -549,9 +548,9 @@ function Kpi({ href, label, value, delta, spark, color, sub }: {
   sub?: string;
 }) {
   return (
-    <Link href={href} className="dk-window group flex min-w-0 flex-col rounded-[20px] p-4 transition-transform hover:-translate-y-0.5">
+    <Link href={href} style={{ ["--c" as string]: color }} className="dk-window dk-kpi group flex min-w-0 flex-col rounded-[20px] p-4 transition-transform hover:-translate-y-0.5">
       <span className="text-[11px] font-bold text-[var(--dk-ink-3)]">{label}</span>
-      <span className="mt-1 truncate text-lg font-black tabular-nums text-[var(--dk-ink)] sm:text-xl">{value}</span>
+      <span className="mt-1 truncate text-lg font-black tabular-nums text-[var(--dk-ink)] sm:text-[22px]">{value}</span>
       <span className="mt-0.5 truncate"><Delta value={delta} suffix="از ماه قبل" /></span>
       {sub && <span className="truncate text-[11px] text-[var(--dk-ink-3)]">{sub}</span>}
       <div className="mt-auto pt-2">{spark ? <Sparkline data={spark} color={color} /> : <div className="h-9" />}</div>
@@ -567,7 +566,7 @@ function PendingKpi({ badges, total }: { badges: Record<BadgeKey, number>; total
     { href: "/admin/guaranty/requests", label: "گارانتی باز", v: badges.guaranty },
   ];
   return (
-    <div className="dk-window col-span-2 flex min-w-0 flex-col rounded-[20px] p-4 md:col-span-1">
+    <div style={{ ["--c" as string]: "var(--dk-s2)" }} className="dk-window dk-kpi col-span-2 flex min-w-0 flex-col rounded-[20px] p-4 md:col-span-1">
       <span className="text-[11px] font-bold text-[var(--dk-ink-3)]">کارهای منتظر رسیدگی</span>
       <span className="mt-1 text-xl font-black tabular-nums text-[var(--dk-ink)]">{fa(total)}</span>
       <ul className="mt-2 grid grid-cols-2 gap-1">

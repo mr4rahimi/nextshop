@@ -304,7 +304,7 @@ export default function AttributeGroupsPage() {
       {}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center">
             <div className="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-4">
               <svg
                 className="w-7 h-7 text-red-500"
@@ -364,7 +364,7 @@ export default function AttributeGroupsPage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {}
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-4">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">گروه‌های ویژگی</h2>
 
             <div className="flex gap-2 mb-4">
@@ -457,7 +457,7 @@ export default function AttributeGroupsPage() {
           </div>
 
           {}
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-4">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">ویژگی‌ها</h2>
 
             {currentGroup ? (
@@ -553,7 +553,7 @@ export default function AttributeGroupsPage() {
           </div>
 
           {}
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-4">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">مقادیر</h2>
 
             {currentAttribute ? (

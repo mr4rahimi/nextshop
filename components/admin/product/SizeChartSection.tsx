@@ -246,7 +246,7 @@ export default function SizeChartSection({ productId, onGalleryChange }: { produ
   }
 
   return (
-    <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-5">
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-5">
       <div>
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-black text-gray-900 dark:text-white">📏 راهنمای سایز</p>

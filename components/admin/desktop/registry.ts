@@ -292,14 +292,22 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
   },
 ];
 
-/** داک پیش‌فرض — تا کاربر خودش سنجاق نکرده (کلید localStorage: admin:dock) */
-export const DEFAULT_DOCK = [
+/**
+ * ترتیب پیش‌فرض «دسترسی سریع» — تا مدیر خودش بخش‌ها را باز کند. بعد از آن
+ * ترتیب با امتیاز بازدید (پرکاربرد + تازه) عوض می‌شود و این‌ها فقط جای خالی را
+ * پر می‌کنند. منطق: components/admin/quickAccess.ts
+ */
+export const DEFAULT_QUICK = [
   "/admin/orders",
   "/admin/products",
-  "/admin/accounting/pos",
-  "/admin/worklist/phone-order",
   "/admin/accounting",
-  "/admin/accounting/reports",
+  "/admin/accounting/pos",
+  "/admin/accounting/sales",
+  "/admin/accounting/inventory",
+  "/admin/accounting/money",
+  "/admin/accounting/parties",
   "/admin/worklist",
+  "/admin/accounting/reports",
+  "/admin/users",
   "/admin/site-settings",
 ];

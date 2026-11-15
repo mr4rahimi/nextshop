@@ -58,7 +58,7 @@ function NodeEditor({
   }
 
   return (
-    <div className={`rounded-2xl border-2 ${borderColor} bg-white dark:bg-[#0f1117]`}>
+    <div className={`rounded-2xl border-2 ${borderColor} bg-white dark:bg-gray-900`}>
       {}
       <div className="flex items-center gap-2 p-3">
         <button

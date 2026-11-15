@@ -24,7 +24,7 @@ interface AuthState {
 const API = "/api/integration/connections/digikala";
 const SELLER_PANEL = "https://seller.digikala.com";
 
-const card  = "bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4";
+const card  = "bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4";
 const input = "w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-colors font-mono";
 const btnPrimary = "px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
 const btnOutline = "px-4 py-2 rounded-xl border border-blue-500 text-blue-600 dark:text-blue-400 text-sm font-bold hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed";

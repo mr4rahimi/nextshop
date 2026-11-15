@@ -55,7 +55,7 @@ export default async function ConnectionsPage() {
                 const conn = p.connections[0];
                 return (
                   <Link key={p.code} href={`/admin/integration/connections/${p.code}`}
-                    className="flex items-center gap-4 p-4 bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] hover:border-blue-300 dark:hover:border-blue-500/30 transition-colors">
+                    className="flex items-center gap-4 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] hover:border-blue-300 dark:hover:border-blue-500/30 transition-colors">
                     <div className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center font-black text-gray-500">
                       {p.name[0]}
                     </div>

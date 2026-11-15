@@ -25,6 +25,7 @@ import HeartbeatPing from "@/components/admin/worklist/HeartbeatPing";
 import OnlineOrderSound from "@/components/admin/orders/OnlineOrderSound";
 import AssistantButton from "@/components/admin/assistant/AssistantButton";
 import DemoShell from "@/components/admin/DemoShell";
+import { useRecordVisit } from "@/components/admin/quickAccess";
 
 /**
  * پیام «به این بخش دسترسی ندارید» وقتی proxy صفحه‌ی بسته را به کارتابل برگرداند.
@@ -86,7 +87,7 @@ function PlanBanner({ pathname }: { pathname: string }) {
 }
 
 const ICON_BTN =
-  "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-gray-500 transition-colors hover:bg-[var(--adm-hover)] hover:text-gray-900 dark:text-gray-400 dark:hover:text-white";
+  "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-[var(--adm-muted)] transition-colors hover:bg-[var(--adm-hover)] hover:text-[var(--adm-accent)]";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -116,7 +117,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // کاربر ناشناس با /admin به همین‌جا ریدایرکت می‌شود (proxy.ts) و باید فقط
   // فرم ورود را ببیند، نه اسکلت پنل را در پس‌زمینه.
   if (pathname === "/admin/login") {
-    return <>{children}</>;
+    // فقط پالت پنل (admin.css)، بی‌قاب
+    return <div className="admin-shell min-h-dvh">{children}</div>;
   }
 
   // صفحه‌های چاپ (فاکتور حسابداری) بی‌قاب‌اند — فقط برگه روی کاغذ می‌آید
@@ -155,7 +157,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               {/* جعبه‌ی جستجوی سریع — در موبایل فقط آیکن */}
               <button
                 onClick={() => setPaletteOpen(true)}
-                className="hidden h-9 w-56 items-center gap-2 rounded-xl border border-[var(--adm-border)] bg-[var(--adm-surface)] px-3 text-right text-[13px] font-medium text-gray-400 shadow-[var(--adm-shadow)] transition-colors hover:border-[var(--adm-border-strong)] md:flex xl:w-72"
+                className="hidden h-10 w-56 items-center gap-2 rounded-2xl border border-[var(--adm-border)] bg-[var(--adm-surface)] px-3.5 text-right text-[13px] font-medium text-[var(--adm-muted)] shadow-[var(--adm-shadow)] transition-colors hover:border-[var(--adm-border-strong)] md:flex xl:w-80"
               >
                 <Search className="h-4 w-4 flex-shrink-0" aria-hidden />
                 <span className="flex-1 truncate">جستجوی سریع…</span>
@@ -178,7 +180,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto">
+          <main className="adm-main flex-1 overflow-y-auto">
             {/* دموی عمومی — docs/plans/demo.md؛ بیرون از دمو چیزی رندر نمی‌کند */}
             <DemoShell />
             <PlanBanner pathname={pathname} />
@@ -193,9 +195,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             بدون دسترسی یا بدون داده، هیچ‌چیز رندر نمی‌کند. */}
         <WorklistNotifier />
         <HeartbeatPing />
+        <VisitRecorder />
       </div>
     </ThemeProvider>
   );
+}
+
+/** هر جابه‌جایی به یک بخش = یک بازدید برای «دسترسی سریع» (components/admin/quickAccess.ts) */
+function VisitRecorder() {
+  useRecordVisit(useAdminMe()?.userId);
+  return null;
 }
 
 function ThemeToggle() {
@@ -216,7 +225,7 @@ function HeaderAvatar() {
   const me = useAdminMe();
   return (
     <div
-      className="mr-1 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-[13px] font-black text-white shadow-md shadow-indigo-600/25 ring-2 ring-[var(--adm-surface)]"
+      className="mr-1 flex h-9 w-9 items-center justify-center rounded-full bg-[image:var(--adm-grad)] text-[13px] font-black text-white shadow-[var(--adm-glow)] ring-2 ring-[var(--adm-surface)]"
       title={me?.name ? `${me.name}${me.roleTitle ? ` — ${me.roleTitle}` : ""}` : undefined}
     >
       {initialOf(me?.name)}
@@ -243,7 +252,7 @@ function Breadcrumb() {
             )}
             <span
               aria-current={last ? "page" : undefined}
-              className={`truncate ${last ? "text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500"}`}
+              className={`truncate ${last ? "text-[15px] font-black text-[var(--adm-text)]" : "text-[var(--adm-muted)]"}`}
             >
               {label(i)}
             </span>

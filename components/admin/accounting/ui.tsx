@@ -217,7 +217,7 @@ export function Sheet({
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center" role="dialog" aria-modal="true">
       <div className="adm-fade-in absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={onClose} />
       <div
-        className={`acc-sheet adm-sheet-in relative w-full ${wide ? "md:max-w-3xl" : "md:max-w-lg"} max-h-[92vh] flex flex-col bg-white dark:bg-[#111620] border border-transparent dark:border-white/[0.07] rounded-t-[28px] md:rounded-3xl shadow-2xl`}
+        className={`acc-sheet adm-sheet-in relative w-full ${wide ? "md:max-w-3xl" : "md:max-w-lg"} max-h-[92vh] flex flex-col bg-white dark:bg-gray-900 border border-transparent dark:border-white/[0.07] rounded-t-[28px] md:rounded-3xl shadow-2xl`}
       >
         <div className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-gray-300 md:hidden dark:bg-white/15" aria-hidden />
         <div className="flex items-center justify-between gap-2 px-5 pt-4 pb-3 border-b border-gray-100 dark:border-white/5">

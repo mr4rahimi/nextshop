@@ -9,35 +9,35 @@
  */
 
 .dk-root {
-  --dk-glass: rgb(255 255 255 / 0.72);
-  --dk-glass-strong: rgb(255 255 255 / 0.9);
-  --dk-glass-border: rgb(255 255 255 / 0.7);
-  --dk-edge: rgb(15 23 42 / 0.08);
-  --dk-title: rgb(248 250 252 / 0.75);
-  --dk-ink: #0f172a;
-  --dk-ink-2: #475569;
-  --dk-ink-3: #94a3b8;
-  --dk-grid: rgb(15 23 42 / 0.07);
-  --dk-shadow: 0 1px 1px rgb(15 23 42 / 0.03), 0 10px 30px -12px rgb(30 41 80 / 0.22);
+  --dk-glass: rgb(255 255 255 / 0.8);
+  --dk-glass-strong: rgb(255 255 255 / 0.94);
+  --dk-glass-border: rgb(255 255 255 / 0.85);
+  --dk-edge: rgb(35 39 90 / 0.08);
+  --dk-title: transparent;
+  --dk-ink: #171a3a;
+  --dk-ink-2: #50577a;
+  --dk-ink-3: #8a90b0;
+  --dk-grid: rgb(35 39 90 / 0.07);
+  --dk-shadow: 0 1px 1px rgb(35 39 90 / 0.03), 0 14px 34px -16px rgb(48 40 140 / 0.24);
 
-  /* سری‌ها — پالت دسته‌ای مرجع، ترتیب ثابت */
-  --dk-s1: #2a78d6;
-  --dk-s2: #eb6834;
-  --dk-s3: #1baf7a;
-  --dk-s4: #eda100;
-  --dk-prev: #a3adbd;
-  /* ترتیبی (نقشه‌ی حرارتی) — یک رنگ، روشن به تیره */
-  --dk-seq-0: #eef4fc;
-  --dk-seq-1: #c6dbf5;
-  --dk-seq-2: #8fb8ec;
-  --dk-seq-3: #4f8fe0;
-  --dk-seq-4: #2a6bc4;
-  --dk-seq-5: #1a4a8f;
+  /* سری‌ها — پالت پنل (۲.۱۳۷.۰): بنفش، صورتی، فیروزه‌ای، کهربایی؛ ترتیب ثابت */
+  --dk-s1: #6f60ee;
+  --dk-s2: #e5508a;
+  --dk-s3: #12a5b9;
+  --dk-s4: #e39a1f;
+  --dk-prev: #b3b8d0;
+  /* ترتیبی (نقشه‌ی حرارتی) — یک رنگ بنفش، روشن به تیره */
+  --dk-seq-0: #f1f0fd;
+  --dk-seq-1: #d9d5fc;
+  --dk-seq-2: #b4abf8;
+  --dk-seq-3: #8e80f1;
+  --dk-seq-4: #6a59e0;
+  --dk-seq-5: #4535ad;
 
-  --dk-wall-1: #dfe9fb;
-  --dk-wall-2: #f3e8ff;
-  --dk-wall-3: #d6f5ec;
-  --dk-wall-base: #eef2f9;
+  --dk-wall-1: #e4e0ff;
+  --dk-wall-2: #ffe1ee;
+  --dk-wall-3: #d9f4f8;
+  --dk-wall-base: var(--adm-bg);
 
   position: relative;
   isolation: isolate;
@@ -46,33 +46,33 @@
 }
 
 .dark .dk-root {
-  --dk-glass: rgb(20 26 38 / 0.68);
-  --dk-glass-strong: rgb(22 28 42 / 0.92);
-  --dk-glass-border: rgb(255 255 255 / 0.08);
-  --dk-edge: rgb(255 255 255 / 0.06);
-  --dk-title: rgb(255 255 255 / 0.03);
-  --dk-ink: #eef1f6;
-  --dk-ink-2: #b4bdcc;
-  --dk-ink-3: #7a8598;
-  --dk-grid: rgb(255 255 255 / 0.07);
-  --dk-shadow: 0 1px 1px rgb(0 0 0 / 0.3), 0 18px 40px -16px rgb(0 0 0 / 0.7);
+  --dk-glass: rgb(23 26 58 / 0.78);
+  --dk-glass-strong: rgb(27 30 66 / 0.95);
+  --dk-glass-border: rgb(165 172 255 / 0.09);
+  --dk-edge: rgb(165 172 255 / 0.08);
+  --dk-title: transparent;
+  --dk-ink: #ecedfa;
+  --dk-ink-2: #b7bbdc;
+  --dk-ink-3: #8389b3;
+  --dk-grid: rgb(165 172 255 / 0.08);
+  --dk-shadow: 0 1px 1px rgb(0 0 0 / 0.3), 0 20px 44px -18px rgb(0 0 0 / 0.8);
 
-  --dk-s1: #3987e5;
-  --dk-s2: #d95926;
-  --dk-s3: #199e70;
-  --dk-s4: #c98500;
-  --dk-prev: #5d6778;
-  --dk-seq-0: #1a2232;
-  --dk-seq-1: #1e3556;
-  --dk-seq-2: #22508a;
-  --dk-seq-3: #2f6fc0;
-  --dk-seq-4: #4f93e6;
-  --dk-seq-5: #8cbcf3;
+  --dk-s1: #9186fb;
+  --dk-s2: #f2729f;
+  --dk-s3: #3cc9dc;
+  --dk-s4: #f2b552;
+  --dk-prev: #4f5580;
+  --dk-seq-0: #1c1f45;
+  --dk-seq-1: #2b2a66;
+  --dk-seq-2: #41388f;
+  --dk-seq-3: #5f4fc0;
+  --dk-seq-4: #8677ef;
+  --dk-seq-5: #b9b0ff;
 
-  --dk-wall-1: #10234a;
-  --dk-wall-2: #2a1848;
-  --dk-wall-3: #0b3238;
-  --dk-wall-base: #070a12;
+  --dk-wall-1: #2a2266;
+  --dk-wall-2: #3a1840;
+  --dk-wall-3: #0f2e44;
+  --dk-wall-base: var(--adm-bg);
 }
 
 /* ── والپیپر ───────────────────────────────────────────────────────────── */
@@ -93,7 +93,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.35;
+  opacity: 0.25;
   background-image: radial-gradient(rgb(15 23 42 / 0.05) 1px, transparent 1px);
   background-size: 22px 22px;
 }
@@ -110,6 +110,30 @@
 }
 .dark .dk-window { box-shadow: var(--dk-shadow), inset 0 1px 0 rgb(255 255 255 / 0.05); }
 
+/* کارت شاخص — هاله‌ی رنگ سری خودش در گوشه */
+.dk-kpi { position: relative; overflow: hidden; isolation: isolate; }
+.dk-kpi::before {
+  content: "";
+  position: absolute;
+  inset: -45% auto auto -25%;
+  width: 75%;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--c, var(--adm-accent)) 22%, transparent), transparent 70%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* دسترسی سریع — لبه‌ی شیب برند بالای کارت */
+.dk-quick::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  background: var(--adm-grad);
+}
+
 .dk-titlebar {
   background: var(--dk-title);
   border-bottom: 1px solid var(--dk-edge);
@@ -120,25 +144,25 @@
 .dk-tone::before {
   content: "";
   position: absolute;
-  inset-inline: 18px;
+  inset-inline: 22px;
   top: -1px;
-  height: 2px;
-  border-radius: 0 0 2px 2px;
-  background: var(--tone);
-  opacity: 0.85;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(90deg, transparent, var(--tone) 20%, var(--tone) 80%, transparent);
+  opacity: 0.9;
 }
-.dk-tone-blue { --tone: #2a78d6; }
-.dk-tone-emerald { --tone: #1baf7a; }
-.dk-tone-amber { --tone: #eda100; }
-.dk-tone-violet { --tone: #6250d6; }
-.dk-tone-rose { --tone: #e87ba4; }
-.dk-tone-cyan { --tone: #0ea5c6; }
-.dk-tone-orange { --tone: #eb6834; }
-.dk-tone-slate { --tone: #64748b; }
-.dk-tone-indigo { --tone: #4f46e5; }
-.dk-tone-teal { --tone: #0d9488; }
-.dk-tone-fuchsia { --tone: #c026d3; }
-.dk-tone-lime { --tone: #65a30d; }
+.dk-tone-blue { --tone: #6f60ee; }
+.dk-tone-emerald { --tone: #14a37a; }
+.dk-tone-amber { --tone: #e39a1f; }
+.dk-tone-violet { --tone: #9b5cf0; }
+.dk-tone-rose { --tone: #e5508a; }
+.dk-tone-cyan { --tone: #12a5b9; }
+.dk-tone-orange { --tone: #ee7a3c; }
+.dk-tone-slate { --tone: #7a80a6; }
+.dk-tone-indigo { --tone: #5b4fd6; }
+.dk-tone-teal { --tone: #0f9c95; }
+.dk-tone-fuchsia { --tone: #c84fd8; }
+.dk-tone-lime { --tone: #6aa516; }
 
 /* ── آیکن ──────────────────────────────────────────────────────────────── */
 
@@ -146,8 +170,8 @@
   -webkit-tap-highlight-color: transparent;
   transition: background-color 0.15s ease, transform 0.15s ease;
 }
-.dk-app:hover { background: rgb(255 255 255 / 0.55); }
-.dark .dk-app:hover { background: rgb(255 255 255 / 0.06); }
+.dk-app:hover { background: var(--adm-hover); }
+.dark .dk-app:hover { background: rgb(165 172 255 / 0.07); }
 .dk-app:active { transform: scale(0.96); }
 
 .dk-app-img {

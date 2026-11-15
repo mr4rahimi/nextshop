@@ -187,7 +187,7 @@ export default function AiTextStudio({
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" dir="rtl"
       onClick={e => e.target === e.currentTarget && phase !== "running" && onClose()}>
-      <div className="w-full sm:max-w-3xl max-h-[95dvh] overflow-y-auto bg-white dark:bg-[#0f1117] rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 space-y-5 shadow-2xl">
+      <div className="w-full sm:max-w-3xl max-h-[95dvh] overflow-y-auto bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 space-y-5 shadow-2xl">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-black text-gray-900 dark:text-white">✨ نوشتن متن محصول با هوش مصنوعی</h2>
           <button type="button" onClick={onClose} disabled={phase === "running"}

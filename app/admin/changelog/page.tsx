@@ -48,15 +48,15 @@ export default function ChangelogPage() {
                 <div className={`relative z-10 flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center font-black text-xs shadow-lg ${
                   isLatest
                     ? "bg-blue-600 text-white shadow-blue-500/40"
-                    : "bg-white dark:bg-[#0f1117] border-2 border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400"
+                    : "bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400"
                 }`}>
                   {isLatest ? "🔥" : "●"}
                 </div>
 
                 <div className={`flex-1 rounded-2xl border overflow-hidden ${
                   isLatest
-                    ? "bg-white dark:bg-[#0f1117] border-blue-200 dark:border-blue-500/20 shadow-xl shadow-blue-500/5"
-                    : "bg-white dark:bg-[#0f1117] border-gray-200 dark:border-white/[0.06]"
+                    ? "bg-white dark:bg-gray-900 border-blue-200 dark:border-blue-500/20 shadow-xl shadow-blue-500/5"
+                    : "bg-white dark:bg-gray-900 border-gray-200 dark:border-white/[0.06]"
                 }`}>
                   <div className={`p-5 border-b ${isLatest ? "border-blue-100 dark:border-blue-500/10" : "border-gray-100 dark:border-white/[0.04]"}`}>
                     <div className="flex items-start justify-between gap-3 flex-wrap">

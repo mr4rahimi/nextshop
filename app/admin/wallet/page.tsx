@@ -87,7 +87,7 @@ export default function AdminWalletPage() {
       </div>
 
       {}
-      <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
         <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">جستجوی کاربر</h2>
         <div className="flex gap-3">
           <input dir="ltr" value={phone} onChange={e => setPhone(e.target.value)}
@@ -106,7 +106,7 @@ export default function AdminWalletPage() {
       {user && (
         <>
           {}
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <p className="text-base font-black text-gray-900 dark:text-white">
@@ -125,7 +125,7 @@ export default function AdminWalletPage() {
           </div>
 
           {}
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
             <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">تغییر موجودی</h2>
 
             {saveError && (
@@ -190,7 +190,7 @@ export default function AdminWalletPage() {
 
           {}
           {user.walletTx.length > 0 && (
-            <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
                 <h2 className="text-sm font-black text-gray-900 dark:text-white">آخرین تراکنش‌ها</h2>
               </div>

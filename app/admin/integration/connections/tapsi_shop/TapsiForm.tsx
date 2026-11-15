@@ -111,7 +111,7 @@ export default function TapsiForm({ existingConnection }: Props) {
         </div>
       )}
 
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
         <h2 className="font-black text-sm text-gray-900 dark:text-white">اعتبارنامه</h2>
 
         <div>
@@ -178,7 +178,7 @@ export default function TapsiForm({ existingConnection }: Props) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
         <h2 className="font-black text-sm text-gray-900 dark:text-white">تنظیمات همگام‌سازی</h2>
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300 text-xs">
           <span>فروشگاه → تپسی‌شاپ</span><span className="opacity-50">—</span>
@@ -208,7 +208,7 @@ export default function TapsiForm({ existingConnection }: Props) {
       </div>
 
       {existingConnection?.status === "CONNECTED" && (
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
           <h2 className="font-black text-sm text-gray-900 dark:text-white">اجرای دستی</h2>
           <p className="text-xs text-gray-400">برای دریافت اولیه محصولات تپسی‌شاپ (برای نگاشت)</p>
           {syncMsg && <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">{syncMsg}</p>}

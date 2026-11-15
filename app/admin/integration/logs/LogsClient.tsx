@@ -90,7 +90,7 @@ export default function LogsClient({ initialLogs, initialTotal, platforms }: Pro
         <select
           value={platformFilter}
           onChange={e => handleFilter(e.target.value, statusFilter, typeFilter)}
-          className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#0f1117] text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
+          className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
         >
           <option value="">همه پلتفرم‌ها</option>
           {platforms.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
@@ -99,7 +99,7 @@ export default function LogsClient({ initialLogs, initialTotal, platforms }: Pro
         <select
           value={statusFilter}
           onChange={e => handleFilter(platformFilter, e.target.value, typeFilter)}
-          className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#0f1117] text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
+          className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
         >
           <option value="">همه وضعیت‌ها</option>
           <option value="SUCCESS">موفق</option>
@@ -110,7 +110,7 @@ export default function LogsClient({ initialLogs, initialTotal, platforms }: Pro
         <select
           value={typeFilter}
           onChange={e => handleFilter(platformFilter, statusFilter, e.target.value)}
-          className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-[#0f1117] text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
+          className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
         >
           <option value="">همه انواع</option>
           {OP_TYPES.map(t => <option key={t} value={t}>{OP_LABELS[t]}</option>)}
@@ -129,7 +129,7 @@ export default function LogsClient({ initialLogs, initialTotal, platforms }: Pro
       </div>
 
       {/* جدول */}
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
         {loading ? (
           <p className="text-center text-gray-400 text-sm py-12">در حال بارگذاری...</p>
         ) : logs.length === 0 ? (

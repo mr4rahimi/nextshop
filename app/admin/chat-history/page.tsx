@@ -125,7 +125,7 @@ export default function ChatHistoryPage() {
         <div className="lg:col-span-2 space-y-2">
           {loadingList ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-20 bg-white dark:bg-[#0f1117] rounded-2xl animate-pulse" />
+              <div key={i} className="h-20 bg-white dark:bg-gray-900 rounded-2xl animate-pulse" />
             ))
           ) : list.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-12">مکالمه‌ای ثبت نشده</p>
@@ -137,7 +137,7 @@ export default function ChatHistoryPage() {
                 className={`w-full text-right p-4 rounded-2xl border transition-all ${
                   selectedId === c.id
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10"
-                    : "border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0f1117] hover:border-gray-300 dark:hover:border-white/20"
+                    : "border-gray-200 dark:border-white/[0.06] bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-white/20"
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
@@ -184,7 +184,7 @@ export default function ChatHistoryPage() {
 
         {}
         <div className="lg:col-span-3">
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 sticky top-8 min-h-[400px]">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 sticky top-8 min-h-[400px]">
             {!selectedId ? (
               <div className="flex items-center justify-center h-[360px] text-xs text-gray-400">
                 یک مکالمه را برای مشاهده انتخاب کنید

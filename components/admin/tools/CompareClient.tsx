@@ -19,10 +19,10 @@ type Days = (typeof DAYS)[number];
 
 /** رنگ هر محصول به جایگاهش در انتخاب بسته است، نه رتبه‌اش — پالت اعتبارسنجی‌شده (dataviz، روشن/تاریک) */
 const SERIES = [
-  { stroke: "stroke-[#2a78d6] dark:stroke-[#3987e5]", fill: "bg-[#2a78d6] dark:bg-[#3987e5]" },
-  { stroke: "stroke-[#eb6834] dark:stroke-[#d95926]", fill: "bg-[#eb6834] dark:bg-[#d95926]" },
-  { stroke: "stroke-[#1baf7a] dark:stroke-[#199e70]", fill: "bg-[#1baf7a] dark:bg-[#199e70]" },
-  { stroke: "stroke-[#eda100] dark:stroke-[#c98500]", fill: "bg-[#eda100] dark:bg-[#c98500]" },
+  { stroke: "stroke-[#6f60ee] dark:stroke-[#9186fb]", fill: "bg-[#6f60ee] dark:bg-[#9186fb]" },
+  { stroke: "stroke-[#e5508a] dark:stroke-[#f2729f]", fill: "bg-[#e5508a] dark:bg-[#f2729f]" },
+  { stroke: "stroke-[#12a5b9] dark:stroke-[#3cc9dc]", fill: "bg-[#12a5b9] dark:bg-[#3cc9dc]" },
+  { stroke: "stroke-[#e39a1f] dark:stroke-[#f2b552]", fill: "bg-[#e39a1f] dark:bg-[#f2b552]" },
 ];
 
 interface Picked { id: string; title: string }
@@ -286,7 +286,7 @@ function WeeklyChart({ rows }: { rows: CompareRow[] }) {
         </svg>
         {hover !== null && (
           <div
-            className="pointer-events-none absolute top-1 rounded-lg border border-[var(--adm-border)] bg-white px-2.5 py-1.5 text-[11px] shadow-lg dark:bg-[#1a1f2e]"
+            className="pointer-events-none absolute top-1 rounded-lg border border-[var(--adm-border)] bg-white px-2.5 py-1.5 text-[11px] shadow-lg dark:bg-gray-800"
             style={x(hover) > W / 2 ? { right: `${((W + 28 - x(hover)) / (W + 28)) * 100 + 2}%` } : { left: `${(x(hover) / (W + 28)) * 100 + 2}%` }}
             dir="rtl"
           >
@@ -351,7 +351,7 @@ function ProductSearch({ exclude, onPick }: { exclude: string[]; onPick: (p: Pic
       <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
       <input className={`${inputCls} pr-9`} placeholder="جستجو و افزودن محصول برای مقایسه" value={q} onChange={(e) => setQ(e.target.value)} />
       {shown.length > 0 && (
-        <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[var(--adm-border)] bg-white shadow-lg dark:bg-[#1a1f2e]">
+        <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[var(--adm-border)] bg-white shadow-lg dark:bg-gray-800">
           {shown.map((p) => (
             <button
               key={p.id}

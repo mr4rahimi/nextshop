@@ -146,7 +146,7 @@ export default function CallbackRequestsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-5 bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-1.5">
+      <div className="flex items-center gap-1 mb-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-1.5">
         {TABS.map((tab) => (
           <button
             key={tab.key}
@@ -174,7 +174,7 @@ export default function CallbackRequestsPage() {
         <div className="lg:col-span-2 space-y-2">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-20 bg-white dark:bg-[#0f1117] rounded-2xl animate-pulse" />
+              <div key={i} className="h-20 bg-white dark:bg-gray-900 rounded-2xl animate-pulse" />
             ))
           ) : items.length === 0 ? (
             <div className="text-center py-16 text-sm text-gray-400">
@@ -191,7 +191,7 @@ export default function CallbackRequestsPage() {
                   className={`w-full text-right p-4 rounded-2xl border transition-all ${
                     selected?.id === item.id
                       ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10"
-                      : "border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0f1117] hover:border-gray-300 dark:hover:border-white/20"
+                      : "border-gray-200 dark:border-white/[0.06] bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-white/20"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -240,7 +240,7 @@ export default function CallbackRequestsPage() {
 
         {/* Detail Panel */}
         <div className="lg:col-span-3">
-          <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 sticky top-8 min-h-[400px]">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 sticky top-8 min-h-[400px]">
             {!selected ? (
               <div className="flex flex-col items-center justify-center h-[360px] gap-3 text-gray-400">
                 <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-3xl">📞</div>

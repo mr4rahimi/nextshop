@@ -18,6 +18,7 @@ import { ChevronDown, LayoutGrid, X, type LucideIcon } from "lucide-react";
 import { TONE_SOFT, TONE_TILE, type AppItem, type AppTone } from "./apps";
 import { pathAllowedByPlan } from "@/lib/plan/features";
 import { useAdminMe } from "./useAdminMe";
+import { fluentIconFor } from "./quickAccess";
 
 /** کاشی‌هایی که امکانشان در بسته‌ی گردانوس نیست پنهان می‌شوند — lib/plan/features.ts */
 function usePlanApps(apps: AppItem[]): AppItem[] {
@@ -31,14 +32,32 @@ export function AppIcon({
   icon: I,
   tone,
   img,
+  href,
   size = "md",
 }: {
   icon: LucideIcon;
   tone: AppTone;
   /** آیکن رنگی `public/panel-icons/<img>.svg` — اگر باشد جای آیکن خطی را می‌گیرد */
   img?: string;
+  /**
+   * مسیر بخش. اگر همین مسیر در پیشخوان آیکن سه‌بعدی دارد (desktop/registry.ts)،
+   * همان نشان داده می‌شود تا هر بخش در پیشخوان، سایدبار و خانه‌ی ماژول یک آیکن
+   * داشته باشد (از ۲.۱۳۷.۰).
+   */
+  href?: string;
   size?: "sm" | "md";
 }) {
+  const fx = href ? fluentIconFor(href) : undefined;
+  if (fx) {
+    const box = size === "sm" ? "h-8 w-8" : "h-14 w-14 sm:h-[60px] sm:w-[60px]";
+    const ico = size === "sm" ? "h-7 w-7" : "h-12 w-12 sm:h-[52px] sm:w-[52px]";
+    return (
+      <span className={`flex flex-shrink-0 items-center justify-center ${box}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- آیکن ثابت محلی ۱۲۸ پیکسلی */}
+        <img src={fx} alt="" aria-hidden className={`adm-fx ${ico}`} draggable={false} />
+      </span>
+    );
+  }
   if (img) {
     // آیکن‌های رنگی خودشان رنگ دارند؛ روی کاشی روشن و آرام می‌نشینند تا در
     // روز و شب هر دو خوانا بمانند.
@@ -95,9 +114,9 @@ function Tile({
       } ${className}`}
     >
       <span className="relative transition-transform duration-200 ease-out group-hover:-translate-y-0.5 group-active:scale-95">
-        <AppIcon icon={app.icon} tone={app.tone} img={app.img} />
+        <AppIcon icon={app.icon} tone={app.tone} img={app.img} href={app.href} />
         {!!badge && badge > 0 && (
-          <span className="absolute -left-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-black text-white ring-2 ring-[var(--adm-bg)]">
+          <span className="absolute -left-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-pink-600 px-1.5 text-[10px] font-black text-white ring-2 ring-[var(--adm-bg)]">
             {badge > 99 ? "۹۹+" : badge.toLocaleString("fa-IR")}
           </span>
         )}
@@ -276,7 +295,7 @@ export function ModuleBar({
           {current ? (
             <>
               {current.img ? (
-                <AppIcon icon={current.icon} tone={current.tone} img={current.img} size="sm" />
+                <AppIcon icon={current.icon} tone={current.tone} img={current.img} href={current.href} size="sm" />
               ) : (
                 <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] ${TONE_SOFT[current.tone]}`}>
                   <current.icon className="h-[18px] w-[18px]" aria-hidden />

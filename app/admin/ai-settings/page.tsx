@@ -39,7 +39,7 @@ const SOURCE_LABEL: Record<ClientSettings["keySource"], string> = {
   none: "کلیدی تنظیم نشده",
 };
 
-const card = "bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5";
+const card = "bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5";
 const inputClass =
   "w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all";
 
@@ -119,7 +119,7 @@ export default function AiSettingsPage() {
     return (
       <div className="p-6 space-y-4">
         {msg && <p className="text-sm text-red-500">{msg.text}</p>}
-        {[0, 1].map(i => <div key={i} className="h-32 bg-white dark:bg-[#0f1117] rounded-2xl animate-pulse" />)}
+        {[0, 1].map(i => <div key={i} className="h-32 bg-white dark:bg-gray-900 rounded-2xl animate-pulse" />)}
       </div>
     );
   }

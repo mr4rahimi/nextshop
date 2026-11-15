@@ -76,7 +76,7 @@ function PricePreviewModal({ item, title, onClose }: {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg max-h-[80vh] overflow-auto rounded-2xl bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/10 shadow-2xl"
+        className="w-full max-w-lg max-h-[80vh] overflow-auto rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 shadow-2xl"
       >
         <div className="px-5 py-4 border-b border-gray-100 dark:border-white/[0.06] flex items-start gap-3">
           <div className="flex-1 min-w-0">
@@ -230,7 +230,7 @@ export default function PricingClient({ initialItems, initialTotal }: { initialI
         <p className="text-xs text-gray-400 mr-auto">{initialTotal} محصول نگاشت‌شده</p>
       </div>
 
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
         {items.length === 0 ? (
           <p className="text-center text-gray-400 text-sm py-12">هنوز محصولی نگاشت نشده</p>
         ) : (

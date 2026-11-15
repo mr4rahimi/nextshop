@@ -56,7 +56,7 @@ export default function PriceRulesClient({ initialRules, platformLabels }: Props
 
   if (rules.length === 0) {
     return (
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-12 text-center">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-12 text-center">
         <div className="text-4xl mb-4 opacity-20">⚖</div>
         <p className="text-gray-400 text-sm font-bold">هنوز قانونی تعریف نشده</p>
         <p className="text-gray-400 text-xs mt-2">قانون جدید بسازید</p>
@@ -69,7 +69,7 @@ export default function PriceRulesClient({ initialRules, platformLabels }: Props
       {rules.map((rule) => (
         <div
           key={rule.id}
-          className={`bg-white dark:bg-[#0f1117] rounded-2xl border p-4 transition-colors ${
+          className={`bg-white dark:bg-gray-900 rounded-2xl border p-4 transition-colors ${
             rule.isActive
               ? "border-gray-200 dark:border-white/[0.06]"
               : "border-gray-100 dark:border-white/[0.03] opacity-60"

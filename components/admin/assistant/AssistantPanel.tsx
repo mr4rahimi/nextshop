@@ -122,7 +122,7 @@ export default function AssistantPanel({
 
   return (
     <div
-      className="adm-pop-in fixed inset-x-0 top-0 z-[70] flex h-dvh flex-col bg-white text-gray-900 dark:bg-[#111620] dark:text-gray-100 md:inset-y-3 md:left-3 md:right-auto md:h-auto md:w-[26rem] md:rounded-[1.25rem] md:border md:border-[var(--adm-border)] md:shadow-[var(--adm-shadow-lg)]"
+      className="adm-pop-in fixed inset-x-0 top-0 z-[70] flex h-dvh flex-col bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 md:inset-y-3 md:left-3 md:right-auto md:h-auto md:w-[26rem] md:rounded-[1.25rem] md:border md:border-[var(--adm-border)] md:shadow-[var(--adm-shadow-lg)]"
       dir="rtl"
       role="dialog"
       aria-label="راهنمای هوشمند"

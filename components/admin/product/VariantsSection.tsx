@@ -145,7 +145,7 @@ export default function VariantsSection({ productId }: { productId: string }) {
   const setRow = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   return (
-    <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-5">
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-5">
       <div>
         <p className="text-sm font-black text-gray-900 dark:text-white">🎨 تنوع (رنگ، سایز…)</p>
         <p className="text-[11px] text-gray-400 mt-1 leading-5">

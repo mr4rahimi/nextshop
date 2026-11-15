@@ -1,65 +1,195 @@
 /*
- * پایه‌ی بصری پنل مدیریت — رنگ سطح‌ها، سایه‌ها و حرکت‌ها.
+ * پایه‌ی بصری پنل مدیریت (از ۲.۱۳۷.۰) — پالت، سطح‌ها، سایه‌ها و حرکت‌ها.
  *
- * فقط زیر `.admin-shell` اثر دارد، پس فروشگاه دست نمی‌خورد. رنگ‌ها متغیرند تا
- * حالت روز و شب از یک جا عوض شوند؛ کامپوننت‌ها با `bg-[var(--adm-…)]`
- * یا کلاس‌های `adm-*` از آن‌ها استفاده می‌کنند.
+ * ── دو لایه ──
+ * ۱. توکن‌های `--adm-*`: رنگ سطح، متن، لبه، تأکید و سایه — اجزای تازه با
+ *    `bg-[var(--adm-surface)]` و مانند آن از این‌ها استفاده می‌کنند.
+ * ۲. بازنگاشت پالت Tailwind: `--color-gray-*`، `--color-slate-*` و
+ *    `--color-blue-*` زیر پنل با یک طیف سرمه‌ای‑نیلی عوض می‌شوند. Tailwind ۴ همه‌ی
+ *    کلاس‌های رنگ را با همین متغیرها می‌سازد، پس ۲۰۰+ صفحه‌ی پنل که هنوز
+ *    `bg-white dark:bg-gray-900` یا `bg-blue-600` دارند بی‌تغییر کد هم‌رنگ
+ *    پنل می‌شوند. «آبی» در پنل یعنی رنگ برند (نیلی‑بنفش).
+ *
+ * انتخابگر `:root:has(.admin-shell)` است نه `.admin-shell`، تا پنجره‌ها و
+ * منوهایی که با portal روی `body` می‌نشینند هم همین رنگ‌ها را بگیرند.
+ * فروشگاه `.admin-shell` ندارد و دست نمی‌خورد.
  *
  * مستندات: docs/features/admin-ui.md
  */
 
-.admin-shell {
-  --adm-bg: #f4f6fa;
-  --adm-chrome: rgb(255 255 255 / 0.86);
+:root:has(.admin-shell) {
+  /* ── طیف خنثی (سرمه‌ای) — روشن‌ها برای روز، تیره‌ها برای شب ── */
+  --color-gray-50: #f6f7fc;
+  --color-gray-100: #eef0f8;
+  --color-gray-200: #e2e5f1;
+  --color-gray-300: #c9cde1;
+  --color-gray-400: #9ba1bf;
+  --color-gray-500: #6c7393;
+  --color-gray-600: #50577a;
+  --color-gray-700: #353b62;
+  --color-gray-800: #232749;
+  --color-gray-900: #171a3a;
+  --color-gray-950: #0e1027;
+  --color-slate-50: var(--color-gray-50);
+  --color-slate-100: var(--color-gray-100);
+  --color-slate-200: var(--color-gray-200);
+  --color-slate-300: var(--color-gray-300);
+  --color-slate-400: var(--color-gray-400);
+  --color-slate-500: var(--color-gray-500);
+  --color-slate-600: var(--color-gray-600);
+  --color-slate-700: var(--color-gray-700);
+  --color-slate-800: var(--color-gray-800);
+  --color-slate-900: var(--color-gray-900);
+  --color-slate-950: var(--color-gray-950);
+
+  /* ── رنگ برند (جای «آبی») — نیلی‑بنفش؛ سفید روی ۶۰۰ کنتراست ۵٫۵ دارد ── */
+  --color-blue-50: #f2f1ff;
+  --color-blue-100: #e6e4ff;
+  --color-blue-200: #cfcbff;
+  --color-blue-300: #b0a8ff;
+  --color-blue-400: #9186fb;
+  --color-blue-500: #7568f3;
+  --color-blue-600: #6152e3;
+  --color-blue-700: #5243c6;
+  --color-blue-800: #43389e;
+  --color-blue-900: #38317c;
+  --color-blue-950: #221d4b;
+
+  /* ── توکن‌های پنل — روز ── */
+  --adm-bg: #f3f4fb;
+  --adm-chrome: rgb(255 255 255 / 0.78);
   --adm-surface: #ffffff;
-  --adm-border: rgb(15 23 42 / 0.08);
-  --adm-border-strong: rgb(15 23 42 / 0.14);
-  --adm-hover: rgb(15 23 42 / 0.045);
-  --adm-text: #0f172a;
-  --adm-muted: #64748b;
-  --adm-accent: #2563eb;
-  --adm-accent-soft: rgb(37 99 235 / 0.09);
-  --adm-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.03);
-  --adm-shadow-lg: 0 12px 32px -12px rgb(16 24 40 / 0.18), 0 2px 6px rgb(16 24 40 / 0.05);
+  --adm-surface-2: #f6f7fc;
+  --adm-border: rgb(35 39 90 / 0.08);
+  --adm-border-strong: rgb(35 39 90 / 0.15);
+  --adm-hover: rgb(97 82 227 / 0.06);
+  --adm-text: #171a3a;
+  --adm-muted: #6c7393;
+  --adm-accent: #6152e3;
+  --adm-accent-soft: rgb(97 82 227 / 0.1);
+  --adm-pink: #e5508a;
+  --adm-cyan: #129fb3;
+  --adm-amber: #e39a1f;
+  --adm-grad: linear-gradient(135deg, #7568f3 0%, #a35cf0 52%, #ec5b95 100%);
+  --adm-grad-cool: linear-gradient(135deg, #6152e3 0%, #4b7cf3 55%, #22b8cf 100%);
+  --adm-shadow: 0 1px 2px rgb(35 39 90 / 0.05), 0 2px 8px -2px rgb(35 39 90 / 0.06);
+  --adm-shadow-lg: 0 18px 40px -16px rgb(40 36 120 / 0.22), 0 2px 6px rgb(35 39 90 / 0.05);
+  --adm-glow: 0 10px 24px -10px rgb(97 82 227 / 0.55);
+
+  /* ── سایدبار — در هر دو حالت تیره، مثل قاب یک اپ ── */
+  --nav-bg: linear-gradient(180deg, #1d1f4a 0%, #16183a 55%, #121433 100%);
+  --nav-text: rgb(226 228 255 / 0.66);
+  --nav-text-strong: #ffffff;
+  --nav-muted: rgb(200 204 255 / 0.38);
+  --nav-hover: rgb(255 255 255 / 0.06);
+  --nav-active: rgb(255 255 255 / 0.09);
+  --nav-line: rgb(255 255 255 / 0.08);
+  --nav-field: rgb(255 255 255 / 0.06);
+}
+
+:root.dark:has(.admin-shell) {
+  --adm-bg: #0c0e22;
+  --adm-chrome: rgb(14 16 39 / 0.78);
+  --adm-surface: #171a3a;
+  --adm-surface-2: #1d2046;
+  --adm-border: rgb(165 172 255 / 0.09);
+  --adm-border-strong: rgb(165 172 255 / 0.17);
+  --adm-hover: rgb(165 172 255 / 0.06);
+  --adm-text: #e9eaf8;
+  --adm-muted: #959bc2;
+  --adm-accent: #9186fb;
+  --adm-accent-soft: rgb(145 134 251 / 0.15);
+  --adm-pink: #f2729f;
+  --adm-cyan: #3cc9dc;
+  --adm-amber: #f2b552;
+  --adm-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 0 0 1px rgb(165 172 255 / 0.03);
+  --adm-shadow-lg: 0 20px 44px -18px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(165 172 255 / 0.06);
+  --adm-glow: 0 10px 26px -10px rgb(145 134 251 / 0.6);
+
+  --nav-bg: linear-gradient(180deg, #14163a 0%, #101231 60%, #0e1029 100%);
+}
+
+.admin-shell {
   background: var(--adm-bg);
   color: var(--adm-text);
 }
 
-.dark .admin-shell {
-  --adm-bg: #090c12;
-  --adm-chrome: rgb(14 18 26 / 0.86);
-  --adm-surface: #111620;
-  --adm-border: rgb(255 255 255 / 0.07);
-  --adm-border-strong: rgb(255 255 255 / 0.13);
-  --adm-hover: rgb(255 255 255 / 0.05);
-  --adm-text: #e8ecf3;
-  --adm-muted: #8b95a7;
-  --adm-accent: #5b8def;
-  --adm-accent-soft: rgb(91 141 239 / 0.13);
-  --adm-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-  --adm-shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.05);
+/* هاله‌ی رنگی بسیار ملایم بالای ناحیه‌ی محتوا — عمق می‌دهد، حواس را پرت نمی‌کند */
+.adm-main {
+  background:
+    radial-gradient(48rem 22rem at 100% -6rem, rgb(117 104 243 / 0.09), transparent 70%),
+    radial-gradient(40rem 20rem at 0% -4rem, rgb(236 91 149 / 0.06), transparent 70%),
+    var(--adm-bg);
 }
+.dark .adm-main {
+  background:
+    radial-gradient(48rem 24rem at 100% -6rem, rgb(117 104 243 / 0.16), transparent 70%),
+    radial-gradient(40rem 22rem at 0% -4rem, rgb(236 91 149 / 0.08), transparent 70%),
+    var(--adm-bg);
+}
+
+/* ── سطح‌های عمومی (برای اجزای تازه و صفحه‌های یکدست‌شده) ───────────── */
+
+.adm-card {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 1.25rem;
+  box-shadow: var(--adm-shadow);
+}
+.adm-grad-text {
+  background: var(--adm-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.adm-grad-bg { background: var(--adm-grad); }
+
+/*
+ * دکمه‌ی اصلی پنل: هر `bg-blue-600` (و ۵۰۰) که دکمه یا لینک است شیب برند می‌گیرد.
+ * فقط پس‌زمینه عوض می‌شود؛ اندازه و فاصله دست Tailwind می‌ماند. نوار پیشرفت و
+ * نشانه‌های کوچک (span/div) تخت می‌مانند.
+ */
+:root:has(.admin-shell) :is(button:not(:disabled), a).bg-blue-600,
+:root:has(.admin-shell) :is(button:not(:disabled), a).bg-blue-500 {
+  background-image: linear-gradient(135deg, #7568f3 0%, #6152e3 55%, #8a52e6 100%);
+  box-shadow: 0 6px 16px -8px rgb(97 82 227 / 0.65), inset 0 1px 0 rgb(255 255 255 / 0.18);
+}
+:root:has(.admin-shell) :is(button:not(:disabled), a).bg-blue-600:hover,
+:root:has(.admin-shell) :is(button:not(:disabled), a).bg-blue-500:hover {
+  filter: brightness(1.06);
+}
+
+/* فیلدها: هاله‌ی فوکوس برند، یکدست در همه‌ی فرم‌ها */
+.admin-shell :where(input:not([type="checkbox"], [type="radio"], [type="range"]), select, textarea):focus {
+  border-color: var(--adm-accent);
+}
+.admin-shell :where(input[type="checkbox"], input[type="radio"]) { accent-color: var(--adm-accent); }
+
+/* جدول‌ها: سرستون آرام و ردیف‌های هاوردار */
+.admin-shell table thead :where(th) { color: var(--adm-muted); }
 
 /* نوار اسکرول باریک و بی‌صدا در همه‌ی پنل */
 .admin-shell * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(148 163 184 / 0.35) transparent;
+  scrollbar-color: rgb(155 161 191 / 0.4) transparent;
 }
 .admin-shell *::-webkit-scrollbar { width: 8px; height: 8px; }
 .admin-shell *::-webkit-scrollbar-track { background: transparent; }
 .admin-shell *::-webkit-scrollbar-thumb {
-  background: rgb(148 163 184 / 0.28);
+  background: rgb(155 161 191 / 0.3);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
-.admin-shell *::-webkit-scrollbar-thumb:hover { background-color: rgb(148 163 184 / 0.5); }
+.admin-shell *::-webkit-scrollbar-thumb:hover { background-color: rgb(155 161 191 / 0.55); }
 
 /* حلقه‌ی فوکوس یکدست برای کیبورد — با ماوس دیده نمی‌شود */
 .admin-shell :where(a, button, [role="button"], input, select, textarea):focus-visible {
   outline: 2px solid var(--adm-accent);
   outline-offset: 2px;
 }
+
+::selection { background: rgb(117 104 243 / 0.25); }
 
 /* ── حرکت‌ها ─────────────────────────────────────────────────────────── */
 
@@ -84,6 +214,15 @@
 
 /* کاشی‌های شبکه‌ی بخش‌ها پشت سر هم ظاهر می‌شوند؛ تأخیر از `--i` می‌آید */
 .adm-rise { animation: adm-rise 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 18ms); }
+
+/* آیکن سه‌بعدی بخش‌ها (Fluent) — همه‌جا یک رفتار: سایه‌ی نرم، با هاور کمی بالا */
+.adm-fx {
+  filter: drop-shadow(0 5px 7px rgb(35 39 90 / 0.16));
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.22s ease;
+}
+.dark .adm-fx { filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.5)); }
+.group:hover .adm-fx,
+.group:focus-visible .adm-fx { transform: translateY(-3px) scale(1.06); }
 
 @media (prefers-reduced-motion: reduce) {
   .admin-shell *,

@@ -171,6 +171,7 @@ export function useIsDark(): boolean {
 
 /** پالت سری‌ها — اعتبارسنجی‌شده برای هر دو حالت (dataviz: `validate_palette.js --pairs all`) */
 export const SERIES = {
-  light: { sales: "#2a78d6", gross: "#1baf7a", expenses: "#eb6834", net: "#4a3aa7" },
-  dark: { sales: "#3987e5", gross: "#199e70", expenses: "#d95926", net: "#9085e9" },
+  // ۲.۱۳۷.۰: هم‌رنگ پالت پنل — فروش بنفش برند، سود ناخالص سبز، هزینه نارنجی، خالص فیروزه‌ای
+  light: { sales: "#6f60ee", gross: "#14a37a", expenses: "#ee7a3c", net: "#12a5b9" },
+  dark: { sales: "#9186fb", gross: "#2fbf8f", expenses: "#f08a4f", net: "#3cc9dc" },
 };

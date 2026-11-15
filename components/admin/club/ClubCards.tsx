@@ -540,7 +540,7 @@ function Sheet({ title, children, onClose, wide }: { title: string; children: Re
   return (
     <div className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto p-3 sm:p-8" role="dialog" aria-modal="true">
       <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative w-full ${wide ? "max-w-4xl" : "max-w-xl"} space-y-4 rounded-3xl bg-white p-5 shadow-2xl dark:bg-[#111620]`} dir="rtl">
+      <div className={`relative w-full ${wide ? "max-w-4xl" : "max-w-xl"} space-y-4 rounded-3xl bg-white p-5 shadow-2xl dark:bg-gray-900`} dir="rtl">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-black">{title}</h2>
           <button onClick={onClose} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-black dark:bg-white/10">بستن</button>

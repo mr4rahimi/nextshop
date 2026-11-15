@@ -1030,7 +1030,7 @@ function Overlay({ title, children, onClose, wide }: { title: string; children: 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-3" role="dialog" aria-modal="true">
       <div className="adm-fade-in absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={onClose} />
-      <div className={`adm-sheet-in relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-[#111620] ${wide ? "max-w-4xl" : "max-w-lg"}`}>
+      <div className={`adm-sheet-in relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-gray-900 ${wide ? "max-w-4xl" : "max-w-lg"}`}>
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/5">
           <h3 className="text-lg font-black text-gray-900 dark:text-white">{title}</h3>
           <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-white/5" aria-label="بستن">
@@ -1066,7 +1066,7 @@ function SellerPicker({ sellers, current, onPick, onClose }: { sellers: Boot["se
   return (
     <div className="fixed inset-0 z-[75] flex items-center justify-center p-3" role="dialog" aria-modal="true">
       <div className="adm-fade-in absolute inset-0 bg-slate-950/60 backdrop-blur-md" onClick={onClose} />
-      <div className="adm-sheet-in relative w-full max-w-3xl rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#111620]">
+      <div className="adm-sheet-in relative w-full max-w-3xl rounded-3xl bg-white p-6 shadow-2xl dark:bg-gray-900">
         <h3 className="text-center text-xl font-black text-gray-900 dark:text-white">فروشنده کیست؟</h3>
         <p className="mt-1 text-center text-xs text-gray-400">روی نام بزنید یا کد را بنویسید و Enter {code && <b className="text-violet-600">— کد {faNum(Number(code))}</b>}</p>
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">

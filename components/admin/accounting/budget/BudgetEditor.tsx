@@ -195,7 +195,7 @@ export default function BudgetEditor() {
       ))}
 
       {(dirty.size > 0 || notice) && (
-        <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-white/10 dark:bg-[#111620]">
+        <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-white/10 dark:bg-gray-900">
           <span className="text-sm font-bold">{dirty.size > 0 ? `${faNum(dirty.size)} حساب تغییر کرده` : notice}</span>
           {dirty.size > 0 && (
             <div className="mr-auto flex gap-2">

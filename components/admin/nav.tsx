@@ -8,7 +8,7 @@
  */
 
 import {
-  ArrowDownUp, Blocks, BookOpen, BriefcaseBusiness, Calculator, ChartColumn, ChevronDown, ClipboardList,
+  ArrowDownUp, Blocks, Warehouse, BookOpen, BriefcaseBusiness, Calculator, ChartColumn, ChevronDown, ClipboardList,
   Crown, ExternalLink, FolderOpen, Image, LayoutDashboard, LayoutGrid, ListOrdered, LogOut, Menu,
   MessageCircle, MessageSquare, MessageSquareText, MessagesSquare, Package, Palette, PanelBottom, Plug,
   Rocket, ScrollText, SearchCheck, Settings, ShieldCheck, ShoppingCart, Tag, Truck, Users, Wallet, Wrench,
@@ -99,30 +99,57 @@ export const ICONS = {
   club: Crown,
   seo: SearchCheck,
   tools: Wrench,
+  inventory: Warehouse,
 } satisfies Record<string, LucideIcon>;
 
+/**
+ * درخت منو — هم‌ترتیب با دسته‌های پیشخوان (`desktop/registry.ts`) تا کاربر هر
+ * بخش را در منو و پیشخوان در یک جا پیدا کند. هر بخش بزرگ (حسابداری، انبار،
+ * گزارش‌ها، فروش…) زیرمنوی «موارد اصلی» خودش را دارد؛ فهرست کامل همان بخش در
+ * پیشخوان و خانه‌ی خود ماژول است.
+ *
+ * ⚠️ یک مسیر را در دو آیتم نگذارید: ردیف فعال با طولانی‌ترین مسیرِ منطبق در
+ * کل منو پیدا می‌شود و مسیر تکراری دو ردیف را هم‌زمان فعال می‌کند.
+ */
 export const MENU_GROUPS: NavGroup[] = [
   {
     label: "اصلی",
     items: [
-      { href: "/admin", label: "داشبورد", icon: "dashboard", exact: true },
-      { href: "/admin/reports", label: "گزارش عملکرد", icon: "reports" },
-    ],
-  },
-  {
-    // کارتابل — مدیریت کار و عملکرد کارکنان.
-    // مستندات: docs/features/staff-worklist.md
-    label: "کارتابل",
-    items: [
+      { href: "/admin", label: "پیشخوان", icon: "dashboard", exact: true },
       {
+        // کارتابل — docs/features/staff-worklist.md. از همان فهرست کاشی‌ها
         href: "/admin/worklist", label: "کارتابل", icon: "worklist",
-        // از همان فهرست کاشی‌های کارتابل — بخش تازه فقط در apps.ts اضافه می‌شود
-        children: WORKLIST_APPS.map((a) => ({ href: a.href, label: a.label })),
+        children: WORKLIST_APPS.filter((a) => a.href !== "/admin/worklist/phone-order").map((a) => ({ href: a.href, label: a.label })),
       },
     ],
   },
   {
-    label: "فروشگاه",
+    label: "فروش",
+    items: [
+      {
+        href: "/admin/orders", label: "فروش و سفارش‌ها", icon: "orders",
+        children: [
+          { href: "/admin/orders", label: "سفارش‌ها" },
+          { href: "/admin/worklist/phone-order", label: "سفارش تلفنی" },
+          { href: "/admin/accounting/pos", label: "صندوق فروشگاه" },
+          { href: "/admin/accounting/price-check", label: "چک کردن قیمت" },
+          { href: "/admin/shipping", label: "ارسال و پرداخت" },
+          { href: "/admin/wallet", label: "کیف پول مشتری" },
+          { href: "/admin/callback-requests", label: "درخواست‌های تماس" },
+          { href: "/admin/tools/cart-recovery", label: "سبد رهاشده" },
+        ],
+      },
+      {
+        href: "/admin/guaranty", label: "گارانتی", icon: "guaranty",
+        children: [
+          { href: "/admin/guaranty", label: "لیست گارانتی‌ها" },
+          { href: "/admin/guaranty/requests", label: "درخواست‌های گارانتی" },
+        ],
+      },
+    ],
+  },
+  {
+    label: "کالا",
     items: [
       {
         href: "/admin/products", label: "محصولات", icon: "products",
@@ -132,162 +159,185 @@ export const MENU_GROUPS: NavGroup[] = [
           { href: "/admin/categories", label: "دسته‌بندی‌ها" },
           { href: "/admin/brands", label: "برندها" },
           { href: "/admin/spec-groups", label: "گروه مشخصات" },
-          { href: "/admin/attribute-groups", label: "گروه ویژگی ها" },
-          { href: "/admin/landing-pages", label: "صفحات فرود سئو" },
-          { href: "/admin/products/bulk-price", label: "ویرایش گروهی قیمت", icon: "🏷️" },
-          { href: "/admin/products/bulk-stock", label: "ویرایش گروهی موجودی", icon: "📦" },
-          { href: "/admin/products/ai-text", label: "متن گروهی با هوش مصنوعی", icon: "✨" },
-
-        ],
-        
-      },
-      {
-            href: "/admin/guaranty", label: "گارانتی", icon: "guaranty",
-            children: [
-              { href: "/admin/guaranty", label: "لیست گارانتی‌ها" },
-              { href: "/admin/guaranty/requests", label: "درخواست‌های گارانتی" },
-            ],
-          },
-      { href: "/admin/orders", label: "سفارشات", icon: "orders" },
-      { href: "/admin/wallet", label: "کیف پول", icon: "wallet" },
-      { href: "/admin/users", label: "کاربران", icon: "users" },
-      { href: "/admin/shipping", label: "ارسال و پرداخت", icon: "shipping" },
-      
-    ],
-  },
-  {
-    label: "محتوا",
-    items: [
-      { href: "/admin/media", label: "کتابخانه رسانه", icon: "media" },
-      {
-        href: "/admin/comments", label: "نظرات", icon: "chat",
-        children: [
-          { href: "/admin/comments", label: "نظرات فروشگاه" },
-          { href: "/admin/comments?tab=blog", label: "نظرات مقالات" },
+          { href: "/admin/attribute-groups", label: "گروه ویژگی‌ها" },
+          { href: "/admin/products/bulk-price", label: "قیمت گروهی" },
+          { href: "/admin/products/bulk-stock", label: "موجودی گروهی" },
+          { href: "/admin/products/bulk-edit", label: "ویرایش گروهی" },
+          { href: "/admin/products/ai-text", label: "متن با هوش مصنوعی" },
         ],
       },
       {
-        href: "/admin/blog", label: "مجله / بلاگ", icon: "blog",
+        href: "/admin/accounting/inventory", label: "انبار", icon: "inventory",
         children: [
-          { href: "/admin/blog", label: "مطالب" },
-          { href: "/admin/blog/create", label: "مطلب جدید" },
-          { href: "/admin/blog/categories", label: "دسته‌بندی‌ها" },
-          { href: "/admin/comments?tab=blog", label: "نظرات" },
-        ],
-      },
-      {
-        href: "/admin/widgets", label: "صفحه اصلی", icon: "widgets",
-        children: [
-          { href: "/admin/widgets", label: "ویجت‌ها" },
-          { href: "/admin/hero-slides", label: "اسلایدر Hero" },
-          { href: "/admin/stories", label: "استوری‌ها" },
+          { href: "/admin/accounting/inventory", label: "کالا و انبار" },
+          { href: "/admin/accounting/inventory/quick", label: "ورود سریع کالا" },
+          { href: "/admin/accounting/inventory/warehouses", label: "انبارها" },
+          { href: "/admin/accounting/inventory/transfers", label: "حواله‌ها" },
+          { href: "/admin/accounting/inventory/adjustments", label: "ورود و خروج دستی" },
+          { href: "/admin/accounting/inventory/counts", label: "انبارگردانی" },
+          { href: "/admin/accounting/inventory/places", label: "مکان کالا" },
+          { href: "/admin/accounting/inventory/serials", label: "شماره سریال" },
+          { href: "/admin/accounting/inventory/relabel", label: "برچسب بارکد" },
+          { href: "/admin/accounting/inventory/prices", label: "قیمت فروشگاه" },
+          { href: "/admin/accounting/inventory/online-prices", label: "قیمت فروش آنلاین" },
+          { href: "/admin/tools/reorder", label: "نقطه‌ی سفارش" },
+          { href: "/admin/tools/stock-capital", label: "سرمایه‌ی انبار" },
         ],
       },
     ],
   },
   {
     // حسابداری — docs/plans/accounting.md
-    label: "حسابداری",
+    label: "مالی",
     items: [
       {
         href: "/admin/accounting", label: "حسابداری", icon: "accounting",
         children: [
-          { href: "/admin/accounting",        label: "خانه‌ی حسابداری" },
-          { href: "/admin/accounting/sales",     label: "فروش" },
+          { href: "/admin/accounting", label: "خانه‌ی حسابداری" },
+          { href: "/admin/accounting/sales", label: "فروش و فاکتورها" },
           { href: "/admin/accounting/purchases", label: "خرید" },
           { href: "/admin/accounting/purchases/orders", label: "سفارش خرید" },
-          { href: "/admin/accounting/money",     label: "دریافت و پرداخت" },
-          { href: "/admin/accounting/cheques",   label: "چک‌ها" },
-          { href: "/admin/accounting/expenses",  label: "هزینه‌ها و درآمدها" },
+          { href: "/admin/accounting/money", label: "دریافت و پرداخت" },
+          { href: "/admin/accounting/cheques", label: "چک‌ها" },
+          { href: "/admin/accounting/expenses", label: "هزینه‌ها و درآمدها" },
           { href: "/admin/accounting/installments", label: "اقساط" },
-          { href: "/admin/accounting/calendar",  label: "تقویم سررسیدها" },
-          { href: "/admin/accounting/pos",       label: "صندوق فروشگاه" },
-          { href: "/admin/accounting/reports",   label: "گزارش‌ها" },
+          { href: "/admin/accounting/calendar", label: "تقویم سررسیدها" },
+          { href: "/admin/accounting/parties", label: "اشخاص" },
+          { href: "/admin/accounting/treasury", label: "صندوق و بانک" },
+          { href: "/admin/accounting/loans", label: "وام و تسهیلات" },
+          { href: "/admin/accounting/vouchers", label: "اسناد" },
+          { href: "/admin/accounting/accounts", label: "سرفصل حساب‌ها" },
           { href: "/admin/accounting/events", label: "رویدادهای مالی" },
+          { href: "/admin/accounting/import", label: "ورود از اکسل" },
+          { href: "/admin/accounting/settings", label: "تنظیمات حسابداری" },
         ],
       },
-    ],
-  },
-  {
-    label: "یکپارچه‌سازی",
-    items: [
       {
-        href: "/admin/integration", label: "یکپارچه‌سازی", icon: "integration",
+        href: "/admin/accounting/reports", label: "گزارش‌ها", icon: "reports",
         children: [
-          { href: "/admin/integration",                       label: "داشبورد" },
-          { href: "/admin/integration/connections",           label: "اتصالات" },
-          { href: "/admin/integration/mapping",               label: "نگاشت محصولات" },
-          { href: "/admin/integration/orders",                label: "سفارش‌های بازارگاه" },
-          { href: "/admin/integration/messages",              label: "پیام‌های بازارگاه" },
-          { href: "/admin/integration/product-suggestions",   label: "پیشنهادات اضافه کردن محصول" },
-          { href: "/admin/integration/price-rules",           label: "قوانین قیمت" },
-          { href: "/admin/integration/pricing",               label: "مدیریت قیمت خرید" },
-          { href: "/admin/integration/discounts",             label: "تخفیف بازارگاه‌ها" },
-          { href: "/admin/integration/inventory",             label: "مدیریت موجودی" },
-          { href: "/admin/integration/bale-bot",              label: "ربات بله" },
-          { href: "/admin/integration/queue",                 label: "صف عملیات" },
-          { href: "/admin/integration/logs",                  label: "گزارش لاگ‌ها" },
+          { href: "/admin/accounting/reports", label: "همه‌ی گزارش‌ها" },
+          { href: "/admin/reports", label: "عملکرد ادمین‌ها" },
+          { href: "/admin/accounting/reports/pl", label: "سود و زیان" },
+          { href: "/admin/accounting/reports/balance", label: "ترازنامه" },
+          { href: "/admin/accounting/reports/trial", label: "تراز آزمایشی" },
+          { href: "/admin/accounting/reports/sales", label: "تحلیل فروش کالا" },
+          { href: "/admin/accounting/reports/movers", label: "راکد و پرفروش" },
+          { href: "/admin/accounting/reports/profit", label: "سود کالا و کانال" },
+          { href: "/admin/accounting/reports/trend", label: "روند ماهانه" },
+          { href: "/admin/accounting/reports/parties", label: "حساب اشخاص" },
+          { href: "/admin/accounting/reports/aging", label: "سنی بدهی" },
+          { href: "/admin/accounting/reports/treasury", label: "گردش صندوق و بانک" },
+          { href: "/admin/accounting/reports/inventory", label: "ارزش موجودی" },
+          { href: "/admin/accounting/reports/vat", label: "ارزش افزوده" },
         ],
       },
     ],
   },
-
   {
-    label: "باشگاه مشتریان",
+    label: "مشتریان",
     items: [
+      { href: "/admin/users", label: "کاربران", icon: "users" },
       {
         href: "/admin/club/members", label: "باشگاه مشتریان", icon: "club",
         children: [
-          { href: "/admin/club/members",     label: "اعضا" },
-          { href: "/admin/club/tiers",       label: "سطوح عضویت" },
-          { href: "/admin/club/cards",       label: "کارت اشتراک" },
-          { href: "/admin/club/legacy",      label: "انتقال مشتریان" },
-          { href: "/admin/club/coupons",     label: "کدهای تخفیف" },
-          { href: "/admin/club/qr",          label: "QR عضویت" },
-          { href: "/admin/club/bale",        label: "ربات بله" },
-          { href: "/admin/club/templates",   label: "قالب‌های پیامک" },   // فاز ۲
-          { href: "/admin/club/campaigns",   label: "کمپین‌ها" },          // فاز ۲
-          { href: "/admin/club/sms-log",     label: "گزارش ارسال" },       // فاز ۲
-          { href: "/admin/club/settings",    label: "تنظیمات باشگاه" },  
-          { href: "/seller/register",    label: " ورود به شماره گیر", target: "new_blank" },  
+          { href: "/admin/club/members", label: "اعضا" },
+          { href: "/admin/club/tiers", label: "سطوح عضویت" },
+          { href: "/admin/club/cards", label: "کارت اشتراک" },
+          { href: "/admin/club/legacy", label: "انتقال مشتریان" },
+          { href: "/admin/club/coupons", label: "کدهای تخفیف" },
+          { href: "/admin/club/campaigns", label: "کمپین‌ها" },
+          { href: "/admin/club/templates", label: "قالب‌های پیامک" },
+          { href: "/admin/club/qr", label: "QR عضویت" },
+          { href: "/admin/club/bale", label: "ربات بله" },
+          { href: "/admin/club/sms-log", label: "گزارش ارسال" },
+          { href: "/admin/club/settings", label: "تنظیمات باشگاه" },
+          { href: "/seller/register", label: "ورود به شماره‌گیر", target: "new_blank" },
         ],
       },
-    ],
-  },
-  {
-    label: "پیامک",
-    items: [
       {
-        href: "/admin/sms", label: "پنل پیامک", icon: "sms",
+        href: "/admin/comments", label: "نظرات و گفتگو", icon: "chat",
         children: [
-          { href: "/admin/sms",              label: "داشبورد" },
-          { href: "/admin/sms/send",         label: "ارسال پیامک" },
-          { href: "/admin/sms/patterns",     label: "پترن‌ها" },
-          { href: "/admin/sms/phonebook",    label: "دفترچه تلفن" },
-          { href: "/admin/sms/reports",      label: "گزارش ارسال" },
-          { href: "/admin/sms/inbox",        label: "پیام‌های دریافتی" },
-          { href: "/admin/sms/wallet",       label: "خرید اعتبار" },
-          { href: "/admin/sms/advanced",     label: "امکانات ویژه" },
+          { href: "/admin/comments", label: "نظرات فروشگاه" },
+          { href: "/admin/comments?tab=blog", label: "نظرات مقالات" },
+          { href: "/admin/chat-history", label: "تاریخچه چت" },
         ],
       },
     ],
   },
   {
-    // ابزارها — docs/features/tools.md. زیرمنو از همان فهرست کاشی‌ها
-    label: "ابزارها",
+    label: "رشد و اتصال",
     items: [
       {
+        // ابزارها — docs/features/tools.md. زیرمنو از همان فهرست کاشی‌ها
         href: "/admin/tools", label: "ابزارها", icon: "tools",
         children: [
           { href: "/admin/tools", label: "همه‌ی ابزارها" },
-          ...TOOLS_APPS.map((a) => ({ href: a.href, label: a.label })),
+          ...TOOLS_APPS.filter((a) => !["/admin/tools/cart-recovery", "/admin/tools/reorder", "/admin/tools/stock-capital"].includes(a.href))
+            .map((a) => ({ href: a.href, label: a.label })),
+        ],
+      },
+      {
+        href: "/admin/sms", label: "پیامک", icon: "sms",
+        children: [
+          { href: "/admin/sms", label: "داشبورد پیامک" },
+          { href: "/admin/sms/send", label: "ارسال پیامک" },
+          { href: "/admin/sms/patterns", label: "پترن‌ها" },
+          { href: "/admin/sms/phonebook", label: "دفترچه تلفن" },
+          { href: "/admin/sms/reports", label: "گزارش ارسال" },
+          { href: "/admin/sms/inbox", label: "پیام‌های دریافتی" },
+          { href: "/admin/sms/wallet", label: "خرید اعتبار" },
+          { href: "/admin/sms/advanced", label: "امکانات ویژه" },
+        ],
+      },
+      {
+        href: "/admin/integration", label: "یکپارچه‌سازی", icon: "integration",
+        children: [
+          { href: "/admin/integration", label: "داشبورد اتصال" },
+          { href: "/admin/integration/connections", label: "اتصالات" },
+          { href: "/admin/integration/mapping", label: "نگاشت محصولات" },
+          { href: "/admin/integration/orders", label: "سفارش‌های بازارگاه" },
+          { href: "/admin/integration/messages", label: "پیام‌های بازارگاه" },
+          { href: "/admin/integration/product-suggestions", label: "پیشنهاد محصول" },
+          { href: "/admin/integration/price-rules", label: "قوانین قیمت" },
+          { href: "/admin/integration/pricing", label: "قیمت خرید" },
+          { href: "/admin/integration/discounts", label: "تخفیف بازارگاه‌ها" },
+          { href: "/admin/integration/inventory", label: "موجودی بازارگاه" },
+          { href: "/admin/integration/bale-bot", label: "ربات بله" },
+          { href: "/admin/integration/queue", label: "صف عملیات" },
+          { href: "/admin/integration/logs", label: "لاگ‌ها" },
         ],
       },
     ],
   },
   {
-    label: "سئو",
+    label: "محتوا و سایت",
     items: [
+      {
+        href: "/admin/blog", label: "مجله", icon: "blog",
+        children: [
+          { href: "/admin/blog", label: "مطالب" },
+          { href: "/admin/blog/create", label: "مطلب جدید" },
+          { href: "/admin/blog/categories", label: "دسته‌ی مطالب" },
+        ],
+      },
+      {
+        href: "/admin/widgets", label: "صفحه‌ی اصلی", icon: "widgets",
+        children: [
+          { href: "/admin/widgets", label: "ویجت‌ها" },
+          { href: "/admin/hero-slides", label: "اسلایدر" },
+          { href: "/admin/stories", label: "استوری‌ها" },
+        ],
+      },
+      {
+        href: "/admin/appearance", label: "ظاهر و برگه‌ها", icon: "appearance",
+        children: [
+          { href: "/admin/appearance", label: "ظاهر سایت" },
+          { href: "/admin/menu", label: "منوی هدر" },
+          { href: "/admin/footer", label: "فوتر" },
+          { href: "/admin/pages", label: "برگه‌ها" },
+        ],
+      },
+      { href: "/admin/media", label: "کتابخانه رسانه", icon: "media" },
       {
         href: "/admin/seo/redirects", label: "سئو", icon: "seo",
         children: [
@@ -299,33 +349,26 @@ export const MENU_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "تنظیمات",
+    label: "سیستم",
     items: [
       {
-        href: "/admin/site-settings", label: "سایت", icon: "settings",
+        href: "/admin/site-settings", label: "تنظیمات", icon: "settings",
         children: [
-          { href: "/admin/site-settings", label: "تنظیمات عمومی" },
-          { href: "/admin/pages", label: "برگه‌ها" },
-          { href: "/admin/menu", label: "منوی هدر" },
-          { href: "/admin/footer", label: "فوتر" },
-          { href: "/admin/appearance", label: "ظاهر سایت", icon: "appearance" },
-          { href: "/admin/admins", label: "مدیریت ادمین‌ها", icon: "🔐" },
-          { href: "/admin/ai-settings", label: "تنظیمات هوش مصنوعی", icon: "✨" },
-          { href: "/admin/chat-settings", label: "تنظیمات چت", icon: "💬" },
-          { href: "/admin/chat-history", label: "تاریخچه چت", icon: "💬" },
-          { href: "/admin/callback-requests", label: "درخواست‌های تماس", icon: "💬" },
-          { href: "/admin/plan", label: "بسته‌ی من", icon: "📦" },
-          { href: "/admin/changelog", label: "نسخه برنامه", icon: "🚀" }
+          { href: "/admin/site-settings", label: "تنظیمات سایت" },
+          { href: "/admin/admins", label: "مدیریت ادمین‌ها" },
+          { href: "/admin/ai-settings", label: "هوش مصنوعی" },
+          { href: "/admin/chat-settings", label: "تنظیمات چت" },
+          { href: "/admin/plan", label: "بسته‌ی من" },
+          { href: "/admin/changelog", label: "نسخه برنامه" },
         ],
       },
     ],
   },
-  
 ];
 
 /** برچسب‌های فارسی نوار مسیر. کلید نیامده، خودِ قطعه‌ی مسیر نشان داده می‌شود. */
 export const BREADCRUMB_LABELS: Record<string, string> = {
-  admin: "داشبورد", products: "محصولات", categories: "دسته‌بندی‌ها",
+  admin: "پیشخوان", products: "محصولات", categories: "دسته‌بندی‌ها",
   brands: "برندها", orders: "سفارشات", users: "کاربران",
   "spec-groups": "مشخصات", blog: "بلاگ", widgets: "ویجت‌ها",
   stories: "استوری‌ها", "hero-slides": "اسلایدر", shipping: "ارسال",

@@ -503,10 +503,10 @@ function Sparkline({ id, data, color }: { id: string; data: number[]; color: str
 const KIND_LABEL: Record<string, string> = { CASH: "صندوق", BANK: "بانک", POS: "کارتخوان", GATEWAY: "درگاه" };
 /** رنگ نوع حساب — خانه‌های ۱ تا ۴ پالت دسته‌ای اعتبارسنجی‌شده (dataviz)، به ترتیب ثابت */
 const KIND_COLOR: Record<string, { light: string; dark: string }> = {
-  BANK: { light: "#2a78d6", dark: "#3987e5" },
-  CASH: { light: "#eb6834", dark: "#d95926" },
-  POS: { light: "#1baf7a", dark: "#199e70" },
-  GATEWAY: { light: "#eda100", dark: "#c98500" },
+  BANK: { light: "#6f60ee", dark: "#9186fb" },
+  CASH: { light: "#e5508a", dark: "#f2729f" },
+  POS: { light: "#12a5b9", dark: "#3cc9dc" },
+  GATEWAY: { light: "#e39a1f", dark: "#f2b552" },
 };
 
 /** ترکیب پول نقد به تفکیک نوع حساب — فقط مانده‌های مثبت */

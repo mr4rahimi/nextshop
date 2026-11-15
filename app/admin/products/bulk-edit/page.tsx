@@ -181,7 +181,7 @@ export default function BulkEditPage() {
       </div>
 
       {}
-      <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-xl p-4">
         <p className="text-sm font-black text-gray-900 dark:text-white mb-3">فیلتر محصولات</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <select
@@ -246,7 +246,7 @@ export default function BulkEditPage() {
       </div>
 
       {}
-      <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-xl p-4">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-xl p-4">
         <p className="text-sm font-black text-gray-900 dark:text-white mb-3">نوع ویرایش</p>
         
         <div className="flex gap-2 mb-4">
@@ -366,7 +366,7 @@ export default function BulkEditPage() {
       </div>
 
       {}
-      <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-3 bg-gray-50 dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/[0.06]">
           <input
             type="checkbox"

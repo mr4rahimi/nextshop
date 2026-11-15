@@ -310,7 +310,7 @@ function ProductPicker({ value, onChange }: { value: PickedProduct | null; onCha
       <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
       <input className={`${inputCls} pr-9`} placeholder="مقایسه با قیمت یک محصول سایت (اختیاری)" value={q} onChange={(e) => setQ(e.target.value)} />
       {items.length > 0 && (
-        <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[var(--adm-border)] bg-white shadow-lg dark:bg-[#1a1f2e]">
+        <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[var(--adm-border)] bg-white shadow-lg dark:bg-gray-800">
           {items.map((p) => (
             <button
               key={p.id}

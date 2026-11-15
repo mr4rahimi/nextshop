@@ -98,7 +98,7 @@ export default function PaySheet({
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-3" role="dialog" aria-modal="true">
       <div className="adm-fade-in absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="adm-sheet-in relative w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-[#111620]">
+      <div className="adm-sheet-in relative w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-gray-900">
         <div className={`px-6 pb-5 pt-5 text-white ${refund ? "bg-gradient-to-br from-rose-500 to-rose-700" : "bg-gradient-to-br from-emerald-500 to-emerald-700"}`}>
           <div className="flex items-center justify-between">
             <p className="text-sm font-bold opacity-90">{refund ? "پس دادن به مشتری" : "مبلغ قابل پرداخت"}</p>

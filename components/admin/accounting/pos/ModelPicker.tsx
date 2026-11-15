@@ -92,7 +92,7 @@ export default function ModelPicker({
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-3" role="dialog" aria-modal="true">
       <div className="adm-fade-in absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="adm-sheet-in relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-[#111620]">
+      <div className="adm-sheet-in relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-gray-900">
         <div className="flex items-start gap-3 border-b border-gray-100 px-5 py-4 dark:border-white/5">
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-bold text-gray-400">{pick.legacyCode ? `کد قبلی ${pick.legacyCode} — رنگ و سایز را انتخاب کنید` : "تنوع را انتخاب کنید"}</p>

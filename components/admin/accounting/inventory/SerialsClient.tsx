@@ -343,7 +343,7 @@ function HistorySheet({ id, canEdit, onClose, onChanged }: { id: string; canEdit
           <ol className="relative space-y-3 border-r-2 border-gray-100 pr-4 dark:border-white/10">
             {h.moves.map((m) => (
               <li key={m.id} className="relative">
-                <span className="absolute -right-[23px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-blue-500 dark:border-[#111620]" />
+                <span className="absolute -right-[23px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-blue-500 dark:border-gray-900" />
                 <p className="text-sm font-bold">
                   {m.label}
                   {m.doc.href ? (

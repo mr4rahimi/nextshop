@@ -146,42 +146,42 @@ export default async function IntegrationDashboardPage() {
       {/* آمار کلی */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <Link href="/admin/integration/mapping"
-          className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-blue-300 dark:hover:border-blue-500/30 transition-colors">
+          className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-blue-300 dark:hover:border-blue-500/30 transition-colors">
           <p className="text-xs text-gray-500 font-bold">نگاشت فعال</p>
           <p className="text-3xl font-black mt-1 text-blue-600 dark:text-blue-400">{mappingCount}</p>
           <p className="text-[10px] text-gray-400 mt-0.5">محصول ↔ پلتفرم</p>
         </Link>
 
         <Link href="/admin/integration/mapping/suggestions"
-          className="bg-white dark:bg-[#0f1117] rounded-2xl border border-amber-200 dark:border-amber-500/20 p-4 hover:border-amber-400 dark:hover:border-amber-500/40 transition-colors">
+          className="bg-white dark:bg-gray-900 rounded-2xl border border-amber-200 dark:border-amber-500/20 p-4 hover:border-amber-400 dark:hover:border-amber-500/40 transition-colors">
           <p className="text-xs text-gray-500 font-bold">پیشنهاد در انتظار</p>
           <p className="text-3xl font-black mt-1 text-amber-500">{suggestionCount}</p>
           <p className="text-[10px] text-gray-400 mt-0.5">نیاز به تأیید</p>
         </Link>
 
         <Link href="/admin/integration/create-products"
-          className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-orange-300 dark:hover:border-orange-500/30 transition-colors">
+          className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-orange-300 dark:hover:border-orange-500/30 transition-colors">
           <p className="text-xs text-gray-500 font-bold">ساخت محصول</p>
           <p className="text-3xl font-black mt-1 text-orange-500">+</p>
           <p className="text-[10px] text-gray-400 mt-0.5">سایت → بازارگاه</p>
         </Link>
 
         <Link href="/admin/integration/price-rules"
-          className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-purple-300 dark:hover:border-purple-500/30 transition-colors">
+          className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-purple-300 dark:hover:border-purple-500/30 transition-colors">
           <p className="text-xs text-gray-500 font-bold">قوانین قیمت فعال</p>
           <p className="text-3xl font-black mt-1 text-purple-600 dark:text-purple-400">{priceRuleCount}</p>
           <p className="text-[10px] text-gray-400 mt-0.5">اعمال در sync</p>
         </Link>
 
         <Link href="/admin/integration/messages"
-          className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-rose-300 dark:hover:border-rose-500/30 transition-colors">
+          className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-rose-300 dark:hover:border-rose-500/30 transition-colors">
           <p className="text-xs text-gray-500 font-bold">پیام خوانده‌نشده</p>
           <p className={`text-3xl font-black mt-1 ${unseenCount > 0 ? "text-rose-500" : "text-gray-900 dark:text-white"}`}>{unseenCount}</p>
           <p className="text-[10px] text-gray-400 mt-0.5">گفت‌وگوی مشتریان</p>
         </Link>
 
         <Link href="/admin/integration/queue"
-          className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-gray-300 dark:hover:border-white/10 transition-colors">
+          className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 hover:border-gray-300 dark:hover:border-white/10 transition-colors">
           <p className="text-xs text-gray-500 font-bold">Queue</p>
           <p className={`text-3xl font-black mt-1 ${queueStats.failed > 0 ? "text-red-500" : "text-gray-900 dark:text-white"}`}>
             {queueStats.pending + queueStats.processing}
@@ -193,7 +193,7 @@ export default async function IntegrationDashboardPage() {
       </div>
 
       {/* آمار ۲۴ ساعت */}
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
         <p className="text-xs font-bold text-gray-500 mb-3">آمار ۲۴ ساعت اخیر</p>
         <div className="flex gap-6">
           <div>
@@ -218,7 +218,7 @@ export default async function IntegrationDashboardPage() {
 
             return (
               <div key={p.code}
-                className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 flex items-center gap-4">
+                className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4 flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-lg font-black text-gray-400">
                   {p.name[0]}
                 </div>
@@ -259,7 +259,7 @@ export default async function IntegrationDashboardPage() {
               مشاهده همه ←
             </Link>
           </div>
-          <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-red-200 dark:border-red-800/30 overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-red-200 dark:border-red-800/30 overflow-hidden">
             <div className="divide-y divide-gray-100 dark:divide-white/[0.04]">
               {failedJobs.map(job => (
                 <div key={job.id} className="px-4 py-3 flex items-center gap-3 text-sm">
@@ -284,7 +284,7 @@ export default async function IntegrationDashboardPage() {
             همه لاگ‌ها ←
           </Link>
         </div>
-        <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] overflow-hidden">
           {recentLogs.length === 0 ? (
             <p className="text-center text-gray-400 text-sm py-8">هنوز فعالیتی ثبت نشده</p>
           ) : (

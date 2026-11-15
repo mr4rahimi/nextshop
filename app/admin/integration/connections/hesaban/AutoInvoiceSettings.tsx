@@ -78,7 +78,7 @@ export default function AutoInvoiceSettings() {
   }
 
   return (
-    <div className="p-5 rounded-2xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-[#0f1117] space-y-4">
+    <div className="p-5 rounded-2xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-gray-900 space-y-4">
       <div>
         <h3 className="font-black text-gray-900 dark:text-white text-sm">ثبت خودکار فاکتور فروش</h3>
         <p className="text-xs text-gray-500 mt-1 leading-5">

@@ -290,7 +290,7 @@ export default function TeamReportClient() {
   return (
     <div className="space-y-5">
       {/* ── نوار بازه و فیلتر ─────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 -mx-1 px-1 py-2 bg-gray-50/85 dark:bg-[#0b0f17]/85 backdrop-blur-md rounded-2xl">
+      <div className="sticky top-0 z-20 -mx-1 px-1 py-2 bg-gray-50/85 dark:bg-gray-900/85 backdrop-blur-md rounded-2xl">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex p-1 rounded-2xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-sm">
             {PRESETS.map((p) => (

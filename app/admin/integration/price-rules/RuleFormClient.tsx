@@ -204,7 +204,7 @@ export default function RuleFormClient({ mode, initial }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
         <h2 className="font-black text-sm text-gray-900 dark:text-white">اطلاعات قانون</h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
@@ -229,7 +229,7 @@ export default function RuleFormClient({ mode, initial }: Props) {
         </label>
       </div>
 
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-3">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-3">
         <h2 className="font-black text-sm text-gray-900 dark:text-white">پلتفرم هدف</h2>
         <p className="text-xs text-gray-400 -mt-1">اگر هیچی انتخاب نشود، برای همه اعمال می‌شود (شامل فروشگاه)</p>
         <div className="flex gap-3 flex-wrap">
@@ -242,7 +242,7 @@ export default function RuleFormClient({ mode, initial }: Props) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
         <h2 className="font-black text-sm text-gray-900 dark:text-white">هزینه‌ها و کارمزد</h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
@@ -268,7 +268,7 @@ export default function RuleFormClient({ mode, initial }: Props) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-black text-sm text-gray-900 dark:text-white">قوانین پلکانی سود بر اساس موجودی</h2>
@@ -299,7 +299,7 @@ export default function RuleFormClient({ mode, initial }: Props) {
         )}
       </div>
 
-      <div className="bg-white dark:bg-[#0f1117] rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-5 space-y-4">
         <h2 className="font-black text-sm text-gray-900 dark:text-white">پیش‌نمایش</h2>
         <div className="grid grid-cols-2 gap-3">
           <div>

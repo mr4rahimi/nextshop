@@ -120,7 +120,7 @@ export default function ChatSettingsPage() {
     return (
       <div className="p-6 space-y-4">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-32 bg-white dark:bg-[#0f1117] rounded-2xl animate-pulse" />
+          <div key={i} className="h-32 bg-white dark:bg-gray-900 rounded-2xl animate-pulse" />
         ))}
       </div>
     );
@@ -171,7 +171,7 @@ export default function ChatSettingsPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         {}
-        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 xl:col-span-2">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 xl:col-span-2">
           <h2 className="text-sm font-black text-gray-900 dark:text-white mb-1">کلید هوش مصنوعی</h2>
           <p className="text-[11px] text-gray-400 leading-6">
             کلید GapGPT حالا در «تنظیمات هوش مصنوعی» نگه داشته می‌شود و چت و ساخت تصویر محصول هر دو از همان استفاده می‌کنند.
@@ -184,7 +184,7 @@ export default function ChatSettingsPage() {
         </div>
 
         {}
-        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
           <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">پیام خوش‌آمدگویی</h2>
           <Field label="اولین پیامی که کاربر هنگام باز کردن چت می‌بیند">
             <textarea
@@ -197,7 +197,7 @@ export default function ChatSettingsPage() {
         </div>
 
         {}
-        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5">
           <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">حافظه‌ی گفتگو</h2>
           <Field
             label="تعداد پیام‌های تاریخچه"
@@ -221,7 +221,7 @@ export default function ChatSettingsPage() {
         </div>
 
         {}
-        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-4">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-4">
           <h2 className="text-sm font-black text-gray-900 dark:text-white">اطلاعات تماس</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="تلفن">
@@ -260,7 +260,7 @@ export default function ChatSettingsPage() {
         </div>
 
         {}
-        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-4">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-4">
           <h2 className="text-sm font-black text-gray-900 dark:text-white">شبکه‌های اجتماعی</h2>
           <Field label="اینستاگرام">
             <input
@@ -298,7 +298,7 @@ export default function ChatSettingsPage() {
         </div>
 
         {}
-        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-4">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 space-y-4">
           <h2 className="text-sm font-black text-gray-900 dark:text-white">ارسال و گارانتی</h2>
           <Field label="روش‌های ارسال" hint="مثلاً: پست پیشتاز، تیپاکس، پیک موتوری">
             <textarea
@@ -327,7 +327,7 @@ export default function ChatSettingsPage() {
         </div>
 
         {}
-        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 xl:col-span-2">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 xl:col-span-2">
           <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4">درباره کسب‌وکار</h2>
           <Field
             label="اطلاعات کلی"
@@ -343,7 +343,7 @@ export default function ChatSettingsPage() {
         </div>
 
         {}
-        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 xl:col-span-2">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 xl:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-black text-gray-900 dark:text-white">سوالات متداول</h2>
             <button
@@ -400,7 +400,7 @@ export default function ChatSettingsPage() {
         </div>
 
         {}
-        <div className="bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 xl:col-span-2">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/[0.06] rounded-2xl p-5 xl:col-span-2">
           <div className="mb-4">
             <h2 className="text-sm font-black text-gray-900 dark:text-white">
               دکمه‌های هدایت‌گر چت
