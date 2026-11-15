@@ -14,6 +14,7 @@
  *   اشخاص با «ضریب» تعداد؛ برای هرکدام یک فاکتور جدا صادر می‌شود (همه یا هیچ).
  */
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { amountToWords, faNum, formatAmount, toLatinDigits } from "@/lib/accounting/money";
@@ -373,7 +374,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
     [type, date, dueDate, validUntil, party, warehouseId, inclVat, invDiscount, additions, additionsTitle, note, refInvoice, active, id, router, hasRef, batch, batchParties, salesSide],
   );
 
-  const canSubmit = (batch ? batchParties.length > 0 : !!party) && active.length > 0 && !!calc.r && !busy;
+  const canSubmit = cfg?.mode === "INTERNAL" && (batch ? batchParties.length > 0 : !!party) && active.length > 0 && !!calc.r && !busy;
   const issueRef = useRef(save);
   issueRef.current = save;
   saveRef.current = save;
@@ -423,7 +424,14 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
         </p>
       )}
       {cfg.mode !== "INTERNAL" && (
-        <p className="text-xs rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 px-3 py-2">حسابداری داخلی فعال نیست؛ فاکتور فقط وقتی حسابداری داخلی راه‌اندازی شده ثبت می‌شود.</p>
+        <div className="text-xs rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-3 py-2 leading-6 space-y-1">
+          <p className="font-bold">حسابداری داخلی هنوز راه‌اندازی نشده؛ این فاکتور ذخیره نمی‌شود.</p>
+          <p>فاکتور باید روی حساب‌هایی مثل «موجودی کالا»، «فروش» و «بدهی به فروشندگان» بنشیند. این حساب‌ها (سرفصل حساب‌ها) و سال مالی فقط با راه‌اندازی ساخته می‌شوند.</p>
+          <p>
+            <Link href="/admin/accounting/setup" className="font-bold underline">راه‌اندازی حسابداری داخلی</Link>
+            {" "}یک بار انجام می‌شود: سال مالی را انتخاب کنید و «راه‌اندازی» را بزنید. بعد همین فاکتور را دوباره باز کنید و ثبت کنید.
+          </p>
+        </div>
       )}
 
       <Card className="p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">

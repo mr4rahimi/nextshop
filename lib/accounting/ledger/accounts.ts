@@ -14,8 +14,22 @@ type Db = Prisma.TransactionClient | typeof prisma;
 
 export async function accountByKey(db: Db, key: string): Promise<AccAccount> {
   const acc = await db.accAccount.findUnique({ where: { systemKey: key } });
-  if (!acc) throw new AccError(`حساب سیستمی «${key}» در سرفصل نیست — سرفصل پیش‌فرض را دوباره بسازید`);
+  if (!acc) throw new AccError(await missingAccountMessage(db, [key]));
   return acc;
+}
+
+/**
+ * متن خطای «حساب سیستمی نیست». بیشترِ وقت‌ها علتش این است که حسابداری داخلی
+ * هنوز راه‌اندازی نشده و اصلاً سرفصلی ساخته نشده — همان را به زبان ساده بگو.
+ */
+export async function missingAccountMessage(db: Db, keys: string[]): Promise<string> {
+  const settings = await db.accSettings.findUnique({ where: { id: "singleton" }, select: { mode: true } });
+  if (settings?.mode !== "INTERNAL" || !(await db.accAccount.count())) {
+    return "حسابداری داخلی هنوز راه‌اندازی نشده و سرفصل حساب‌ها ساخته نشده است؛ از «حسابداری ← راه‌اندازی» یک بار راه‌اندازی کنید، بعد دوباره ثبت کنید.";
+  }
+  const names = new Map(DEFAULT_CHART.filter((r) => r[6]).map((r) => [r[6] as string, r[1]]));
+  const list = keys.map((k) => `«${names.get(k) ?? k}»`).join("، ");
+  return `حساب سیستمی ${list} در سرفصل حساب‌ها نیست. در «حسابداری ← سرفصل حساب‌ها» ببینید این حساب حذف یا جابه‌جا نشده باشد؛ اگر کدش را حساب دیگری گرفته، با پشتیبانی تماس بگیرید.`;
 }
 
 /**

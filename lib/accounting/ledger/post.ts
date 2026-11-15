@@ -17,6 +17,7 @@ import { assertPostable } from "./fiscal-year";
 import { nextNumber } from "./sequence";
 import { faNum, formatAmount } from "../money";
 import { logDoc } from "../doc-log";
+import { missingAccountMessage } from "./accounts";
 
 export interface LineInput {
   accountId?: string;
@@ -61,7 +62,8 @@ async function resolveLines(tx: Tx, lines: LineInput[]): Promise<{ lines: Resolv
   const byKey = new Map(
     (await tx.accAccount.findMany({ where: { systemKey: { in: keys } } })).map((a) => [a.systemKey!, a.id]),
   );
-  for (const k of keys) if (!byKey.has(k)) throw new AccError(`حساب سیستمی «${k}» در سرفصل نیست`);
+  const missing = keys.filter((k) => !byKey.has(k));
+  if (missing.length) throw new AccError(await missingAccountMessage(tx, missing));
 
   const resolved = lines.map((l, i) => {
     const accountId = l.accountId ?? (l.accountKey ? byKey.get(l.accountKey) : undefined);
