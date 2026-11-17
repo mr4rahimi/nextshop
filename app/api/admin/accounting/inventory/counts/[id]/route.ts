@@ -91,8 +91,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 /**
  * POST { action, … }
- *   scan { code, qty?, zone? }      اسکن/کد — کالا ← افزوده؛ کد چندتنوعی/متن ← انتخاب
- *   add { productId, qty?, zone? }  افزودن ± (بعد از انتخاب)
+ *   scan { code, qty?, zone?, ref? } اسکن/کد — کالا ← افزوده؛ کد چندتنوعی/متن ← انتخاب
+ *   add { productId, qty?, zone?, ref? } افزودن ± (بعد از انتخاب)
+ *     `ref`: شناسه‌ی اسکن از دستگاه — فرستادن دوباره (صف بی‌اینترنت) دو بار نمی‌شمارد
  *   undo                            برگرداندن آخرین اسکن همین کاربر
  *   import { text, zone? }          متن اکسل/CSV — کد، تعداد اختیاری          (ACC_INVENTORY)
  *   fill                            شمرده‌نشده‌ها با عدد دفتری               (ACC_INVENTORY)
@@ -105,15 +106,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
   try {
     const { id } = await params;
-    const b = await readJson<{ action?: string; code?: string; productId?: string; qty?: unknown; zone?: string; text?: string; applyTo?: string; reason?: string }>(req);
+    const b = await readJson<{ action?: string; code?: string; productId?: string; qty?: unknown; zone?: string; ref?: string; text?: string; applyTo?: string; reason?: string }>(req);
     const actor = actorOf(guard.access);
     const r = rights(guard.access);
     const qty = b.qty === undefined || b.qty === null || b.qty === "" ? 1 : Number(b.qty);
 
-    if (b.action === "scan") return NextResponse.json(serialize({ ok: true, ...(await scanIntoCount(id, { code: String(b.code ?? ""), qty, zone: b.zone }, actor)) }));
+    if (b.action === "scan") return NextResponse.json(serialize({ ok: true, ...(await scanIntoCount(id, { code: String(b.code ?? ""), qty, zone: b.zone, ref: b.ref }, actor)) }));
     if (b.action === "add") {
       if (!b.productId) throw new AccError("کالا را انتخاب کنید");
-      const line = await prisma.$transaction((tx) => addCount(tx, id, { productId: b.productId!, qty, zone: b.zone, source: "scan" }, actor));
+      const line = await prisma.$transaction((tx) => addCount(tx, id, { productId: b.productId!, qty, zone: b.zone, source: "scan", ref: b.ref }, actor));
       return NextResponse.json(serialize({ ok: true, line }));
     }
     if (b.action === "undo") return NextResponse.json(serialize({ ok: true, undone: await prisma.$transaction((tx) => undoLast(tx, id, actor)) }));

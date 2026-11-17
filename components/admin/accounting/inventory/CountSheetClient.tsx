@@ -4,14 +4,17 @@
  * برگه‌ی انبارگردانی — docs/plans/inventory-items.md بخش ۱۵. برای گوشی و بارکدخوان.
  *
  * «شمارش»: هر اسکن در سرور اتمی اضافه می‌شود (چند گوشی هم‌زمان)، با بخش/قفسه و
- * تعداد هر اسکن؛ کد قبلی چندرنگ/سایز پنجره‌ی رنگ × سایز باز می‌کند.
+ * تعداد هر اسکن («۱۲*کد» فقط همان اسکن)؛ کد قبلی چندرنگ/سایز پنجره‌ی رنگ × سایز باز می‌کند.
+ * بی‌اینترنت: اسکن با شناسه‌ی `ref` در localStorage صف می‌شود و دوباره فرستادنش دو بار
+ * نمی‌شمارد. بارکدخوان لپ‌تاپ: تایپ بیرون از کادرها به کادر اسکن برمی‌گردد. دوربین گوشی
+ * با BarcodeDetector مرورگر (کروم اندروید).
  * «بازبینی»: فیلتر اختلاف/شمرده‌نشده/بخش، اصلاح عدد، خروجی CSV.
  * «ورود از فایل»: چسباندن ستون کد و تعداد از اکسل.
  * شمارنده‌ی کور (فقط ACC_STOCK_COUNT) عدد دفتری و اختلاف را نمی‌بیند.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ClipboardList, Download, ListChecks, RotateCcw, ScanBarcode, Undo2, Upload } from "lucide-react";
+import { Camera, ClipboardList, Download, ListChecks, RotateCcw, ScanBarcode, Undo2, Upload, WifiOff } from "lucide-react";
 import { formatJalali } from "@/lib/club/jalali";
 import { faNum, formatAmount, toLatinDigits } from "@/lib/accounting/money";
 import ModelPicker from "../pos/ModelPicker";
@@ -274,6 +277,52 @@ export default function CountSheetClient({ id }: { id: string }) {
 
 // ── شمارش ─────────────────────────────────────────────────────────────────
 
+/** یک اسکن در صف بی‌اینترنت — با کد (اسکن) یا شناسه‌ی کالا (بعد از انتخاب) */
+interface Job {
+  ref: string;
+  code?: string;
+  productId?: string;
+  title?: string;
+  qty: number;
+  zone: string;
+}
+/** اسکنی که از صف برگشت و انتخاب یا بررسی می‌خواهد */
+interface Attention {
+  ref: string;
+  code: string;
+  qty: number;
+  why: string;
+}
+type Sent<T> = { ok: true; data: T } | { ok: false; retry: boolean; error: string };
+
+const newRef = () => {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  }
+};
+
+/** «۱۲*کد» یا «۱۲×کد» ← ۱۲ عدد فقط برای همین اسکن */
+function splitQty(raw: string, fallback: number): { code: string; qty: number } {
+  const m = toLatinDigits(raw.trim()).match(/^(\d{1,5})\s*[*×]\s*(.+)$/);
+  if (m && Number(m[1]) > 0) return { code: m[2].trim(), qty: Number(m[1]) };
+  return { code: raw.trim(), qty: fallback };
+}
+
+/** مثل `api` ولی قطعی شبکه و خطای ۵xx (پراکسی/CDN) را «دوباره بفرست» می‌داند، نه خطای کاربر */
+async function send<T>(url: string, json: unknown): Promise<Sent<T>> {
+  try {
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(json) });
+    const d = await r.json().catch(() => null);
+    if (r.ok && d) return { ok: true, data: d as T };
+    if (r.status >= 500 || r.status === 408 || r.status === 429 || !d) return { ok: false, retry: true, error: "ارتباط با سرور برقرار نشد" };
+    return { ok: false, retry: false, error: (d as { error?: string }).error ?? "ثبت نشد" };
+  } catch {
+    return { ok: false, retry: true, error: "اینترنت قطع است" };
+  }
+}
+
 function CountTab({
   data,
   id,
@@ -285,79 +334,171 @@ function CountTab({
   onLine: (line: LineView | null, productId: string, meta?: { title: string; code: string }) => void;
   onChanged: () => void;
 }) {
+  const url = `/api/admin/accounting/inventory/counts/${id}`;
   const [code, setCode] = useState("");
   const [zone, setZone] = useState(() => local.get(`count:${id}:zone`, ""));
   const [step, setStep] = useState("1");
-  const [flash, setFlash] = useState<{ ok: boolean; text: string; big?: string } | null>(null);
-  const [pick, setPick] = useState<ModelPick | null>(null);
-  const [list, setList] = useState<PosItem[] | null>(null);
+  const [flash, setFlash] = useState<{ tone: "ok" | "bad" | "wait"; text: string; big?: string } | null>(null);
+  const [pick, setPick] = useState<{ pick: ModelPick; qty: number } | null>(null);
+  const [list, setList] = useState<{ items: PosItem[]; qty: number } | null>(null);
   const [mine, setMine] = useState(data.entries);
+  const [queue, setQueue] = useState<Job[]>(() => local.get(`count:${id}:queue`, []));
+  const [attention, setAttention] = useState<Attention[]>(() => local.get(`count:${id}:attention`, []));
+  const [camera, setCamera] = useState(false);
+  const [canCamera, setCanCamera] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const flushing = useRef(false);
+  const queueRef = useRef(queue);
   const qty = Math.max(1, Number(toLatinDigits(step)) || 1);
 
   useEffect(() => setMine(data.entries), [data.entries]);
   useEffect(() => local.set(`count:${id}:zone`, zone), [id, zone]);
+  useEffect(() => {
+    queueRef.current = queue;
+    local.set(`count:${id}:queue`, queue);
+  }, [id, queue]);
+  useEffect(() => local.set(`count:${id}:attention`, attention), [id, attention]);
+  useEffect(() => setCanCamera(typeof window !== "undefined" && "BarcodeDetector" in window && !!navigator.mediaDevices?.getUserMedia), []);
 
-  const added = (r: Extract<ScanReply, { kind: "added" }>) => {
+  const remember = (productId: string, title: string, n: number, z: string) =>
+    setMine((m) => [{ id: `local-${Date.now()}-${Math.random()}`, productId, title, qty: n, zone: z || null, createdAt: new Date().toISOString() }, ...m].slice(0, 25));
+
+  const added = (r: Extract<ScanReply, { kind: "added" }>, n: number, z: string) => {
     beep(true);
     onLine(r.line, r.line.productId, { title: r.title, code: r.code });
-    setFlash({ ok: true, text: `${r.title} · ${r.code}`, big: faNum(r.line.final) });
-    setMine((m) => [{ id: `local-${Date.now()}`, productId: r.line.productId, title: r.title, qty, zone: zone || null, createdAt: new Date().toISOString() }, ...m].slice(0, 25));
+    setFlash({ tone: "ok", text: `${r.title} · ${r.code}${n > 1 ? ` · +${faNum(n)}` : ""}`, big: faNum(r.line.final) });
+    remember(r.line.productId, r.title, n, z);
     onChanged();
   };
   const failed = (msg: string) => {
     beep(false);
-    setFlash({ ok: false, text: msg });
+    setFlash({ tone: "bad", text: msg });
+  };
+  const queued = (job: Job) => {
+    beep(true);
+    setQueue((q) => [...q, job]);
+    setFlash({ tone: "wait", text: `بی‌اینترنت — «${job.title ?? job.code}» در این دستگاه ماند و با برگشت اینترنت ثبت می‌شود` });
   };
   const refocus = () => setTimeout(() => input.current?.focus(), 30);
 
-  async function scan() {
-    const term = code.trim();
-    if (!term) return;
-    setCode("");
-    setList(null);
+  // ── صف: به ترتیب، یکی‌یکی؛ قطع شبکه ← چند ثانیه بعد دوباره ─────────────
+  const flush = useCallback(async () => {
+    if (flushing.current) return;
+    flushing.current = true;
     try {
-      const r = await api<ScanReply>(`/api/admin/accounting/inventory/counts/${id}`, { method: "POST", json: { action: "scan", code: term, qty, zone } });
-      if (r.kind === "added") added(r);
-      else if (r.kind === "model") setPick(r.pick);
+      while (queueRef.current.length) {
+        const job = queueRef.current[0];
+        const res = job.productId
+          ? await send<{ line: LineView }>(url, { action: "add", productId: job.productId, qty: job.qty, zone: job.zone, ref: job.ref })
+          : await send<ScanReply>(url, { action: "scan", code: job.code, qty: job.qty, zone: job.zone, ref: job.ref });
+        if (!res.ok && res.retry) return;
+        const drop = () => {
+          queueRef.current = queueRef.current.filter((j) => j.ref !== job.ref);
+          setQueue(queueRef.current);
+        };
+        const later = (why: string) => setAttention((a) => [...a, { ref: job.ref, code: job.code ?? job.title ?? "", qty: job.qty, why }]);
+        if (!res.ok) later(res.error);
+        else if ("line" in res.data && !("kind" in res.data)) {
+          onLine(res.data.line, res.data.line.productId);
+          remember(res.data.line.productId, job.title ?? "", job.qty, job.zone);
+        } else {
+          const r = res.data as ScanReply;
+          if (r.kind === "added") {
+            onLine(r.line, r.line.productId, { title: r.title, code: r.code });
+            remember(r.line.productId, r.title, job.qty, job.zone);
+          } else if (r.kind === "model") later("رنگ و سایز را انتخاب کنید");
+          else later(r.items.length ? "چند کالا پیدا شد — انتخاب کنید" : "پیدا نشد");
+        }
+        drop();
+      }
+      onChanged();
+    } finally {
+      flushing.current = false;
+    }
+  }, [url, onLine, onChanged]);
+
+  useEffect(() => {
+    if (!queue.length) return;
+    const t = setInterval(flush, 5000);
+    window.addEventListener("online", flush);
+    flush();
+    return () => {
+      clearInterval(t);
+      window.removeEventListener("online", flush);
+    };
+  }, [queue.length > 0, flush]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── بارکدخوان لپ‌تاپ: اگر فوکوس از کادر رفته بود، تایپ بعدی به کادر اسکن برمی‌گردد ──
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (pick || camera || e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.closest("input, textarea, select, [contenteditable=true]") || t.isContentEditable)) return;
+      e.preventDefault();
+      setCode((c) => c + e.key);
+      input.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pick, camera]);
+
+  async function scanTerm(raw: string) {
+    const { code: term, qty: n } = splitQty(raw, qty);
+    if (!term) return;
+    setList(null);
+    const job: Job = { ref: newRef(), code: term, qty: n, zone };
+    // تا صف خالی نشده، اسکن تازه هم پشت صف می‌رود تا ترتیب به هم نخورد
+    if (queueRef.current.length) return queued(job);
+    try {
+      const res = await send<ScanReply>(url, { action: "scan", code: term, qty: n, zone, ref: job.ref });
+      if (!res.ok) return res.retry ? queued(job) : failed(res.error);
+      const r = res.data;
+      if (r.kind === "added") added(r, n, zone);
+      else if (r.kind === "model") setPick({ pick: r.pick, qty: n });
       else if (!r.items.length) failed(`«${term}» پیدا نشد`);
-      else setList(r.items);
-    } catch (e) {
-      failed(e instanceof Error ? e.message : "ثبت نشد");
+      else setList({ items: r.items, qty: n });
     } finally {
       refocus();
     }
   }
 
-  async function addItem(item: PosItem) {
+  function scan() {
+    const term = code.trim();
+    setCode("");
+    if (term) void scanTerm(term);
+  }
+
+  async function addItem(item: PosItem, n: number) {
     setPick(null);
     setList(null);
+    const job: Job = { ref: newRef(), productId: item.id, title: item.title, qty: n, zone };
     try {
-      const r = await api<{ line: LineView }>(`/api/admin/accounting/inventory/counts/${id}`, {
-        method: "POST",
-        json: { action: "add", productId: item.id, qty, zone },
-      });
-      added({ kind: "added", line: r.line, title: item.title, code: item.code });
-    } catch (e) {
-      failed(e instanceof Error ? e.message : "ثبت نشد");
+      if (queueRef.current.length) return queued(job);
+      const res = await send<{ line: LineView }>(url, { action: "add", productId: item.id, qty: n, zone, ref: job.ref });
+      if (!res.ok) return res.retry ? queued(job) : failed(res.error);
+      added({ kind: "added", line: res.data.line, title: item.title, code: item.code }, n, zone);
     } finally {
       refocus();
     }
   }
 
   async function undo() {
+    if (queueRef.current.length) {
+      // آخرین اسکنِ هنوز نرفته را از همین دستگاه برمی‌دارد
+      const last = queueRef.current[queueRef.current.length - 1];
+      setQueue(queueRef.current.slice(0, -1));
+      setFlash({ tone: "ok", text: `از صف برداشته شد: ${last.title ?? last.code}` });
+      return refocus();
+    }
     try {
-      const r = await api<{ undone: { productId: string; qty: number; line: LineView | null } | null }>(
-        `/api/admin/accounting/inventory/counts/${id}`,
-        { method: "POST", json: { action: "undo" } },
-      );
+      const r = await api<{ undone: { productId: string; qty: number; line: LineView | null } | null }>(url, { method: "POST", json: { action: "undo" } });
       if (!r.undone) return failed("اسکنی از شما برای برگرداندن نمانده");
       onLine(r.undone.line, r.undone.productId);
       setMine((m) => {
         const i = m.findIndex((e) => e.productId === r.undone!.productId);
         return i < 0 ? m : m.filter((_, k) => k !== i);
       });
-      setFlash({ ok: true, text: `برگشت: ${faNum(r.undone.qty)} عدد` });
+      setFlash({ tone: "ok", text: `برگشت: ${faNum(r.undone.qty)} عدد` });
       onChanged();
     } catch (e) {
       failed(e instanceof Error ? e.message : "برنگشت");
@@ -365,6 +506,9 @@ function CountTab({
       refocus();
     }
   }
+
+  const flashCls = { ok: "bg-emerald-50 dark:bg-emerald-500/10", bad: "bg-red-50 dark:bg-red-500/10", wait: "bg-amber-50 dark:bg-amber-500/10" };
+  const flashText = { ok: "text-emerald-700 dark:text-emerald-300", bad: "text-red-600", wait: "text-amber-700 dark:text-amber-300" };
 
   return (
     <div className="space-y-3">
@@ -384,51 +528,98 @@ function CountTab({
             <input value={step} onChange={(e) => setStep(e.target.value)} onBlur={() => setStep(String(qty))} inputMode="numeric" className={`${inputCls} mt-1 text-center font-black`} />
           </label>
         </div>
-        <div className="relative">
-          <ScanBarcode className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" aria-hidden />
-          <input
-            ref={input}
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                scan();
-              }
-            }}
-            autoFocus
-            enterKeyHint="send"
-            placeholder="بارکد را اسکن کنید یا کد/نام کالا را بنویسید"
-            className={`${inputCls} pr-10 text-base`}
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1 min-w-0">
+            <ScanBarcode className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" aria-hidden />
+            <input
+              ref={input}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  scan();
+                }
+              }}
+              autoFocus
+              enterKeyHint="send"
+              autoComplete="off"
+              placeholder="بارکد را اسکن کنید — برای چند عدد: ۱۲*کد"
+              className={`${inputCls} pr-10 text-base`}
+            />
+          </div>
+          {canCamera && (
+            <button onClick={() => setCamera(true)} className={btn.soft} aria-label="اسکن با دوربین" title="اسکن با دوربین گوشی">
+              <Camera className="h-5 w-5" aria-hidden />
+            </button>
+          )}
         </div>
         {flash && (
-          <div className={`flex items-center gap-3 rounded-xl px-3 py-2 ${flash.ok ? "bg-emerald-50 dark:bg-emerald-500/10" : "bg-red-50 dark:bg-red-500/10"}`}>
+          <div className={`flex items-center gap-3 rounded-xl px-3 py-2 ${flashCls[flash.tone]}`}>
             {flash.big && <span className="text-3xl font-black tabular-nums text-emerald-600">{flash.big}</span>}
-            <span className={`flex-1 min-w-0 text-xs font-bold truncate ${flash.ok ? "text-emerald-700 dark:text-emerald-300" : "text-red-600"}`}>{flash.text}</span>
+            <span className={`flex-1 min-w-0 text-xs font-bold ${flash.tone === "wait" ? "" : "truncate"} ${flashText[flash.tone]}`}>{flash.text}</span>
+          </div>
+        )}
+        {queue.length > 0 && (
+          <div className="flex items-center gap-2 rounded-xl px-3 py-2 bg-amber-50 dark:bg-amber-500/10 text-xs font-bold text-amber-700 dark:text-amber-300">
+            <WifiOff className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="flex-1">{faNum(queue.length)} اسکن در این دستگاه منتظر اینترنت — به شمردن ادامه دهید، خودکار ثبت می‌شوند. صفحه را نبندید.</span>
+            <button onClick={() => void flush()} className={btn.small}>
+              الان بفرست
+            </button>
           </div>
         )}
         {list && (
           <div className="divide-y divide-gray-100 dark:divide-white/5 rounded-xl border border-gray-200 dark:border-white/10 max-h-72 overflow-y-auto">
-            {list.map((it) => (
-              <button key={it.id} onClick={() => addItem(it)} className="w-full flex items-center gap-3 px-3 py-2.5 text-right hover:bg-gray-50 dark:hover:bg-white/5">
+            {list.items.map((it) => (
+              <button key={it.id} onClick={() => addItem(it, list.qty)} className="w-full flex items-center gap-3 px-3 py-2.5 text-right hover:bg-gray-50 dark:hover:bg-white/5">
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-bold truncate">{it.title}</span>
                   <span className="block text-[11px] text-gray-400">{it.code}</span>
                 </span>
-                <span className="text-xs font-bold text-blue-600">+ {faNum(qty)}</span>
+                <span className="text-xs font-bold text-blue-600">+ {faNum(list.qty)}</span>
               </button>
             ))}
           </div>
         )}
-        <div className="flex justify-between items-center">
-          <span className="text-[11px] text-gray-400">هر اسکن {faNum(qty)} عدد به شمارش اضافه می‌کند — چند گوشی هم‌زمان می‌شمارند.</span>
-          <button onClick={undo} className={btn.small}>
+        <div className="flex justify-between items-center gap-2">
+          <span className="text-[11px] text-gray-400">هر اسکن {faNum(qty)} عدد اضافه می‌کند؛ «۱۲*کد» فقط همان اسکن را ۱۲ می‌شمارد. چند دستگاه هم‌زمان می‌شمارند.</span>
+          <button onClick={undo} className={`${btn.small} shrink-0`}>
             <Undo2 className="h-3.5 w-3.5" aria-hidden />
             برگرداندن آخرین اسکن من
           </button>
         </div>
       </Card>
+
+      {attention.length > 0 && (
+        <section>
+          <h3 className="text-xs font-black text-amber-700 dark:text-amber-300 mb-2">اسکن‌های بی‌اینترنت که انتخاب می‌خواهند ({faNum(attention.length)})</h3>
+          <Card className="overflow-hidden divide-y divide-gray-100 dark:divide-white/5">
+            {attention.map((a) => (
+              <div key={a.ref} className="flex items-center gap-3 px-3 py-2">
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-bold truncate" dir="auto">
+                    {a.code} {a.qty > 1 && <span className="text-gray-400">× {faNum(a.qty)}</span>}
+                  </span>
+                  <span className="block text-[11px] text-gray-400">{a.why}</span>
+                </span>
+                <button
+                  onClick={() => {
+                    setAttention((x) => x.filter((y) => y.ref !== a.ref));
+                    void scanTerm(`${a.qty}*${a.code}`);
+                  }}
+                  className={btn.small}
+                >
+                  ثبت دوباره
+                </button>
+                <button onClick={() => setAttention((x) => x.filter((y) => y.ref !== a.ref))} className="text-gray-300 hover:text-red-600 px-1" aria-label="کنار گذاشتن">
+                  ✕
+                </button>
+              </div>
+            ))}
+          </Card>
+        </section>
+      )}
 
       {data.count.round === 2 && !data.can.blind && <RecountList rows={data.rows} />}
 
@@ -454,7 +645,79 @@ function CountTab({
         </Card>
       </section>
 
-      {pick && <ModelPicker pick={pick} terminalId="" canCreate={false} onPick={addItem} onClose={() => (setPick(null), refocus())} />}
+      {pick && <ModelPicker pick={pick.pick} terminalId="" canCreate={false} onPick={(it) => addItem(it, pick.qty)} onClose={() => (setPick(null), refocus())} />}
+      {camera && <CameraScanner onCode={(c) => void scanTerm(c)} onClose={() => (setCamera(false), refocus())} />}
+    </div>
+  );
+}
+
+// ── اسکن با دوربین گوشی (BarcodeDetector مرورگر — کروم اندروید) ─────────────
+
+interface Detector {
+  detect(src: HTMLVideoElement): Promise<{ rawValue: string }[]>;
+}
+
+function CameraScanner({ onCode, onClose }: { onCode: (code: string) => void; onClose: () => void }) {
+  const video = useRef<HTMLVideoElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [last, setLast] = useState<string | null>(null);
+  const seen = useRef<{ code: string; at: number }>({ code: "", at: 0 });
+  const onCodeRef = useRef(onCode);
+  useEffect(() => {
+    onCodeRef.current = onCode;
+  }, [onCode]);
+
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let stopped = false;
+    (async () => {
+      try {
+        const Ctor = (window as unknown as { BarcodeDetector: new (o: { formats: string[] }) => Detector }).BarcodeDetector;
+        const det = new Ctor({ formats: ["code_128", "ean_13", "ean_8", "code_39", "upc_a", "itf", "qr_code"] });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        if (stopped || !video.current) return;
+        video.current.srcObject = stream;
+        await video.current.play();
+        const tick = async () => {
+          if (stopped || !video.current) return;
+          try {
+            const found = await det.detect(video.current);
+            const v = found[0]?.rawValue?.trim();
+            const now = Date.now();
+            // یک برچسب جلوی دوربین بماند، فقط یک بار شمرده شود (۲ ثانیه)
+            if (v && (v !== seen.current.code || now - seen.current.at > 2000)) {
+              onCodeRef.current(v);
+              setLast(v);
+            }
+            if (v) seen.current = { code: v, at: now };
+          } catch {
+            /* فریم خراب */
+          }
+          timer = setTimeout(tick, 180);
+        };
+        tick();
+      } catch (e) {
+        setError(e instanceof Error && e.name === "NotAllowedError" ? "اجازه‌ی دوربین داده نشد" : "دوربین باز نشد");
+      }
+    })();
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      stream?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+      <video ref={video} playsInline muted className="flex-1 min-h-0 w-full object-cover" />
+      <div className="pointer-events-none absolute inset-x-8 top-1/3 h-1/4 rounded-2xl border-4 border-emerald-400/80" aria-hidden />
+      <div className="p-3 flex items-center gap-3 bg-black/80 text-white">
+        <span className="flex-1 min-w-0 text-xs font-bold truncate">{error ?? (last ? `آخرین: ${last}` : "برچسب را جلوی دوربین بگیرید")}</span>
+        <button onClick={onClose} className={btn.primary}>
+          بستن
+        </button>
+      </div>
     </div>
   );
 }

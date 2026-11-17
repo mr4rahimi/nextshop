@@ -36,6 +36,7 @@ export type EntrySource = "scan" | "set" | "import" | "fill";
 export const finalQty = (l: Pick<AccStockCountLine, "countedQty" | "recountQty">) => l.recountQty ?? l.countedQty;
 
 const cleanZone = (z: string | null | undefined) => z?.trim().slice(0, 40) || null;
+const cleanRef = (r: string | null | undefined) => (typeof r === "string" && /^[\w-]{8,64}$/.test(r) ? r : null);
 
 async function lockCount(tx: Tx, countId: string): Promise<AccStockCount> {
   await tx.$queryRaw`SELECT id FROM "AccStockCount" WHERE id = ${countId} FOR UPDATE`;
@@ -143,20 +144,26 @@ const view = (l: AccStockCountLine): CountedLine => ({ productId: l.productId, c
 export async function addCount(
   tx: Tx,
   countId: string,
-  input: { productId: string; qty: number; zone?: string | null; source: EntrySource },
+  input: { productId: string; qty: number; zone?: string | null; source: EntrySource; ref?: string | null },
   actor: Actor,
 ): Promise<CountedLine> {
   if (!Number.isInteger(input.qty) || input.qty === 0) throw new AccError("تعداد باید عدد صحیح غیرصفر باشد");
   if (Math.abs(input.qty) > 100_000) throw new AccError("تعداد بیش از حد است");
   const c = await lockCount(tx, countId);
   assertDraft(c);
-  return addLocked(tx, c, input, actor);
+  // اسکنی که قبلاً رسیده بود (جواب در راه گم شد و صف دوباره فرستاد) ← همان ردیف، بی افزودن
+  const ref = cleanRef(input.ref);
+  if (ref && (await tx.accStockCountEntry.findUnique({ where: { countId_ref: { countId, ref } }, select: { id: true } }))) {
+    const cur = await tx.accStockCountLine.findUnique({ where: { countId_productId: { countId, productId: input.productId } } });
+    if (cur) return view(cur);
+  }
+  return addLocked(tx, c, { ...input, ref }, actor);
 }
 
 async function addLocked(
   tx: Tx,
   c: AccStockCount,
-  input: { productId: string; qty: number; zone?: string | null; source: EntrySource; bookSnap?: number },
+  input: { productId: string; qty: number; zone?: string | null; source: EntrySource; bookSnap?: number; ref?: string | null },
   actor: Actor,
 ): Promise<CountedLine> {
   const zone = cleanZone(input.zone);
@@ -185,7 +192,7 @@ async function addLocked(
     });
   }
   await tx.accStockCountEntry.create({
-    data: { countId: c.id, productId: input.productId, round: c.round, qty: input.qty, zone, byName: actor.name, source: input.source },
+    data: { countId: c.id, productId: input.productId, round: c.round, qty: input.qty, zone, byName: actor.name, source: input.source, ref: input.ref ?? null },
   });
   return view(line);
 }
@@ -255,7 +262,7 @@ export async function undoLast(tx: Tx, countId: string, actor: Actor): Promise<{
 /** اسکن در برگه: کالا ← افزوده می‌شود؛ کد چندتنوعی/متن ← نتیجه برای انتخاب برمی‌گردد */
 export async function scanIntoCount(
   countId: string,
-  input: { code: string; qty: number; zone?: string | null },
+  input: { code: string; qty: number; zone?: string | null; ref?: string | null },
   actor: Actor,
 ): Promise<{ kind: "added"; line: CountedLine; title: string; code: string } | Exclude<ScanResult, { kind: "item" }>> {
   const c = await prisma.accStockCount.findUnique({ where: { id: countId } });
@@ -264,7 +271,7 @@ export async function scanIntoCount(
   const r = await scanCode(input.code, c.warehouseId);
   if (r.kind === "ticket") throw new AccError("این بارکد رسید صندوق است، نه کالا");
   if (r.kind !== "item") return r;
-  const line = await prisma.$transaction((tx) => addCount(tx, countId, { productId: r.item.id, qty: input.qty, zone: input.zone, source: "scan" }, actor));
+  const line = await prisma.$transaction((tx) => addCount(tx, countId, { productId: r.item.id, qty: input.qty, zone: input.zone, source: "scan", ref: input.ref }, actor));
   return { kind: "added", line, title: r.item.title, code: r.item.code };
 }
 
