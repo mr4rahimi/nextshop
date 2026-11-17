@@ -28,6 +28,7 @@ export default function PaySheet({
   hasCard,
   canCredit,
   clubCredit = null,
+  giftPaid = 0n,
   start,
   busy,
   error,
@@ -43,6 +44,8 @@ export default function PaySheet({
   canCredit: boolean;
   /** اعتبار قابل خرج کارت اشتراک مشتری؛ null = ندارد */
   clubCredit?: bigint | null;
+  /** بخشی که با بن کارت اسکن‌شده پرداخت می‌شود (از `net` کم شده) */
+  giftPaid?: bigint;
   start: "cash" | "card";
   busy: boolean;
   error: string | null;
@@ -112,6 +115,7 @@ export default function PaySheet({
             <span className="mr-2 text-base font-bold opacity-80">تومان</span>
           </p>
           {due > 0n && <p className="mt-1 text-[11px] opacity-80">{amountToWords(due)} تومان</p>}
+          {giftPaid > 0n && <p className="mt-1 text-xs font-bold opacity-90">{formatAmount(giftPaid)} تومان با بن کارت پرداخت شد؛ این مبلغ باقی است</p>}
         </div>
 
         <div className="space-y-4 p-5">

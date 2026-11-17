@@ -29,7 +29,7 @@ import ModelPicker from "./ModelPicker";
 import PaySheet, { type PayResult } from "./PaySheet";
 import ReturnSheet, { type Returnable } from "./ReturnSheet";
 import { CloseShift, OpenShift } from "./ShiftPanels";
-import { B, Kbd, TICKET_KIND, abs, beep, faNum, formatAmount, local, timeFa, type ModelPick, type PosItem, type PosMember, type ScanResult, type ShiftSummary } from "./shared";
+import { B, Kbd, TICKET_KIND, abs, beep, faNum, formatAmount, local, timeFa, type ModelPick, type PosGift, type PosItem, type PosMember, type ScanResult, type ShiftSummary } from "./shared";
 
 interface Boot {
   terminal: {
@@ -130,6 +130,8 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   const [blind, setBlind] = useState(false);
   const [discount, setDiscount] = useState("");
   const [coupon, setCoupon] = useState<PosCoupon | null>(null);
+  /** بن کارت‌های اسکن‌شده برای پرداخت (بخش ۲۷) — به ترتیب اسکن خرج می‌شوند */
+  const [gifts, setGifts] = useState<PosGift[]>([]);
   const [sel, setSel] = useState(0);
   const [modal, setModal] = useState<Modal>(null);
   const [payStart, setPayStart] = useState<"cash" | "card">("cash");
@@ -139,7 +141,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   const [q, setQ] = useState("");
   const [scanning, setScanning] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: "ok" | "err" } | null>(null);
-  const [quote, setQuote] = useState<{ saleTotal: string; returnTotal: string; net: string; clubRestored?: string } | null>(null);
+  const [quote, setQuote] = useState<{ saleTotal: string; returnTotal: string; net: string; clubRestored?: string; giftRestored?: string } | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
@@ -242,7 +244,19 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   const saleTotal = hasRet && quote ? B(quote.saleTotal) : sale.total;
   const retTotal = hasRet && quote ? B(quote.returnTotal) : retApprox;
   const clubRestored = hasRet && quote?.clubRestored ? B(quote.clubRestored) : 0n;
+  const giftRestored = hasRet && quote?.giftRestored ? B(quote.giftRestored) : 0n;
   const net = hasRet && quote ? B(quote.net) : saleTotal - retTotal;
+  // سهم هر بن: به ترتیب اسکن، تا مبلغ قابل پرداخت؛ بنی که حداقل خریدش نرسیده صفر
+  const giftUses = useMemo(() => {
+    let left = net > 0n ? net : 0n;
+    return gifts.map((g) => {
+      const blocked = B(g.minInvoice) > 0n && saleTotal < B(g.minInvoice);
+      const use = blocked ? 0n : B(g.balance) < left ? B(g.balance) : left;
+      left -= use;
+      return { ...g, use, blocked };
+    });
+  }, [gifts, net, saleTotal]);
+  const giftTotal = giftUses.reduce((s, g) => s + g.use, 0n);
   const exact = !hasRet || !!quote;
   const itemCount = lines.reduce((s, l) => s + l.qty, 0);
 
@@ -339,6 +353,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     setBlind(false);
     setDiscount("");
     setCoupon(null);
+    setGifts([]);
     setParty(null);
     setMember(null);
     setSel(0);
@@ -393,6 +408,13 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
         else {
           setCardDraft(r.number);
           setModal("card");
+        }
+      } else if (r.kind === "gift") {
+        if (gifts.some((g) => g.number === r.gift.number)) flash(`بن ${r.gift.number} قبلاً اسکن شده`, "err");
+        else {
+          setGifts((g) => [...g, r.gift]);
+          beep();
+          flash(`بن ${r.gift.number} — مانده ${formatAmount(B(r.gift.balance))} تومان${r.gift.singleUse ? " (یک‌بارمصرف)" : ""}`);
         }
       } else if (r.kind === "item") addItem(r.item, r.serial);
       else if (r.kind === "model") {
@@ -454,7 +476,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     try {
       const r = await api<{ ticket: { id: string; number: number; saleTotal: string; returnTotal: string; change: string; kind: string } }>("/api/admin/accounting/pos/tickets", {
         method: "POST",
-        json: { ...ticketBody(), pay: { cash: p.cash === null ? "rest" : p.cash.toString(), card: p.card.toString() }, clubSpend: p.club.toString(), tendered: p.tendered?.toString() ?? null, overrideCredit: override },
+        json: { ...ticketBody(), gifts: giftUses.filter((g) => g.use > 0n).map((g) => ({ number: g.number, amount: g.use.toString() })), pay: { cash: p.cash === null ? "rest" : p.cash.toString(), card: p.card.toString() }, clubSpend: p.club.toString(), tendered: p.tendered?.toString() ?? null, overrideCredit: override },
       });
       const t = r.ticket;
       if (win) win.location.href = `/admin/accounting/pos/tickets/${t.id}/print?auto=1`;
@@ -853,6 +875,26 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
                 <span className="tabular-nums">{formatAmount(clubRestored)}</span>
               </div>
             )}
+            {giftRestored > 0n && (
+              <div className="mt-1 flex justify-between text-xs font-bold text-violet-700 dark:text-violet-300">
+                <span>از مرجوعی، برگشت به بن کارت</span>
+                <span className="tabular-nums">{formatAmount(giftRestored)}</span>
+              </div>
+            )}
+            {giftUses.map((g) => (
+              <div key={g.number} className="mt-1 flex items-center justify-between gap-2 text-xs font-bold text-violet-700 dark:text-violet-300">
+                <span className="min-w-0 truncate">
+                  بن <span dir="ltr">{g.number}</span>
+                  {g.blocked ? ` — از خرید ${formatAmount(B(g.minInvoice))} به بالا` : ` — مانده ${formatAmount(B(g.balance) - g.use)}${g.singleUse && B(g.balance) > g.use ? " می‌سوزد" : ""}`}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="tabular-nums">−{formatAmount(g.use)}</span>
+                  <button onClick={() => setGifts((x) => x.filter((y) => y.number !== g.number))} className="rounded-full p-0.5 hover:bg-violet-100 dark:hover:bg-violet-500/10" aria-label="برداشتن بن" title="برداشتن بن">
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </span>
+              </div>
+            ))}
             <button onClick={() => setModal("discount")} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-blue-600">
               <Percent className="h-3.5 w-3.5" aria-hidden /> تخفیف <Kbd>F4</Kbd>
             </button>
@@ -1019,7 +1061,8 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
       )}
       {modal === "pay" && (
         <PaySheet
-          net={net}
+          net={net - giftTotal}
+          giftPaid={giftTotal}
           exact={exact}
           hasCard={!!boot.terminal.card}
           canCredit={ret?.src ? !ret.src.walkIn : !!party}

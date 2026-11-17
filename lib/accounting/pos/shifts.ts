@@ -59,6 +59,9 @@ export interface ShiftSummary {
   cardIn: bigint;
   cardOut: bigint;
   credit: bigint;
+  /** خالص پرداخت با کارت اشتراک و بن کارت فروشگاه (خرج − برگشت) — پول نقد نیستند */
+  club: bigint;
+  gift: bigint;
   /** گردش‌های دیگر صندوق نقد در این شیفت (هزینه، انتقال، …) */
   otherCash: bigint;
   expectedCash: bigint;
@@ -111,6 +114,8 @@ export async function shiftSummary(db: Db, shiftId: string): Promise<ShiftSummar
     cardIn,
     cardOut,
     credit: sum((t) => t.credit),
+    club: sum((t) => t.clubSpent - t.clubRestored),
+    gift: sum((t) => t.giftSpent - t.giftRestored),
     otherCash: book - shift.openingBook - (cashIn - cashOut),
     expectedCash: book,
     expectedCard: shift.status === "OPEN" ? cardIn - cardOut : shift.expectedCard ?? cardIn - cardOut,

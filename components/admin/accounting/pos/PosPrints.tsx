@@ -30,6 +30,8 @@ interface TicketData {
     change: string;
     couponCode?: string | null;
     couponDiscount?: string;
+    giftSpent?: string;
+    giftRestored?: string;
   };
   terminal: { name: string; header: string | null; footer: string | null; paperMm: number };
   store: { name: string | null; phone: string | null; address: string | null; footer: string | null };
@@ -126,7 +128,7 @@ export function TicketPrint({ id }: { id: string }) {
   const t = d.ticket;
   const mm = d.terminal.paperMm === 58 ? 58 : 80;
   // سهم مرجوعی که به کارت اشتراک برگشت، نقد پس داده نمی‌شود
-  const net = (d.sale ? B(d.sale.total) : 0n) - (d.ret ? B(d.ret.total) : 0n) + (d.club ? B(d.club.restored) : 0n);
+  const net = (d.sale ? B(d.sale.total) : 0n) - (d.ret ? B(d.ret.total) : 0n) + (d.club ? B(d.club.restored) : 0n) + B(d.ticket.giftRestored ?? "0");
   const cash = B(t.cash);
   const card = B(t.card);
   return (
@@ -178,6 +180,8 @@ export function TicketPrint({ id }: { id: string }) {
         {B(t.credit) !== 0n && <Kv k={B(t.credit) > 0n ? "نسیه" : "روی حساب مشتری"} v={formatAmount(abs(B(t.credit)))} />}
         {d.club && B(d.club.spent) > 0n && <Kv k="کارت اشتراک" v={formatAmount(d.club.spent)} />}
         {d.club && B(d.club.restored) > 0n && <Kv k="برگشت به کارت اشتراک" v={formatAmount(d.club.restored)} />}
+        {B(d.ticket.giftSpent ?? "0") > 0n && <Kv k="بن کارت" v={formatAmount(d.ticket.giftSpent!)} />}
+        {B(d.ticket.giftRestored ?? "0") > 0n && <Kv k="برگشت به بن کارت" v={formatAmount(d.ticket.giftRestored!)} />}
         {t.tendered && <Kv k="دریافتی" v={formatAmount(t.tendered)} />}
         {B(t.change) > 0n && <Kv k="باقی پول" v={formatAmount(t.change)} bold />}
         {d.club && (

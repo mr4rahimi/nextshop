@@ -4200,6 +4200,7 @@ model AccParty {
   cheques          AccCheque[]
   installmentPlans AccInstallmentPlan[]
   suppliedItems    AccItem[]
+  giftCards        AccGiftCard[]
 
   @@index([mobile])
   @@index([name])
@@ -4265,6 +4266,7 @@ enum AccSource {
   INSTALLMENT // کارمزد فروش/خرید اقساطی (فاز ۱۰)
   POS // صندوق فروشگاهی: پس دادن پول مرجوعی و مغایرت بستن صندوق (۲.۹۵.۰)
   LOAN // وام و تسهیلات: دریافت وام و پرداخت قسط (۲.۱۳۰.۰)
+  GIFT // بن کارت فروشگاه: فروش، مرجوع و سوخت (webhesab-parity.md بخش ۲۷)
 }
 
 /// سند حسابداری. ⚠️ فقط از `lib/accounting/ledger/post.ts` نوشته می‌شود —
@@ -5486,6 +5488,9 @@ model AccPosTicket {
   clubReversed    Int              @default(0)
   /// مرجوعی: رسید فروش اصلی
   refTicketId     String?
+  /// بن کارت فروشگاه (بخش ۲۷): خرج‌شده در این رسید، و در مرجوعی برگشته به بن
+  giftSpent       BigInt           @default(0)
+  giftRestored    BigInt           @default(0)
   /// کد تخفیف صندوق — webhesab-parity.md بخش ۲۶. تخفیفش داخل `invoiceDiscount` فاکتور فروش است
   couponId        String?
   couponCode      String?
@@ -5526,6 +5531,7 @@ enum AccMoneyMethod {
   GIFT_CARD // بن و کارت هدیه — روی صندوق یا بانک (فاز ۱۰)
   OFFSET // تهاتر — طلب و بدهی همان شخص هم را صاف می‌کنند، بی‌خزانه (فاز ۱۰)
   CLUB_CREDIT // اعتبار کارت اشتراک — بی‌خزانه، بدهکار «تخفیفات فروش» (webhesab-parity.md بخش ۲۳)
+  STORE_GIFT // بن کارت خود فروشگاه — بی‌خزانه، بدهکار «بن کارت فروخته‌شده» (webhesab-parity.md بخش ۲۷)
 }
 
 /// دریافت از شخص، پرداخت به شخص، یا انتقال بین صندوق و بانک.
@@ -6285,4 +6291,77 @@ model LegacyCustomer {
   @@index([mobile])
   @@index([partyId])
   @@index([userId])
+}
+
+// ───────────────────────── بن کارت فروشگاه — docs/plans/webhesab-parity.md بخش ۲۷ ─────────────────────────
+
+enum AccGiftStatus {
+  ACTIVE
+  /// مانده صفر شد، یا مانده‌ی بن یک‌بارمصرف/منقضی سوخت شد
+  CLOSED
+  /// خریدار بن خرج‌نشده را پس داد
+  RETURNED
+}
+
+enum AccGiftTxKind {
+  ISSUE
+  SPEND
+  /// مرجوعی رسیدی که با بن پرداخت شده بود
+  RESTORE
+  RETURN
+  /// مانده‌ی بن یک‌بارمصرف بعد از خرج، یا بن منقضی ← «سایر درآمدها»
+  FORFEIT
+}
+
+/// بن کارت فروشگاه (کارت هدیه با مبلغ از پیش پرداخت‌شده). مانده = بدهی فروشگاه (`GIFT_LIABILITY`).
+/// ⚠️ فقط از `lib/accounting/gift-cards.ts` نوشته می‌شود؛ `balance` = Σ `AccGiftTx.amount`.
+model AccGiftCard {
+  id             String        @id @default(cuid())
+  /// شماره‌ی روی کارت (یکدست: حروف بزرگ لاتین و رقم)
+  number         String        @unique
+  /// نام دسته‌ی صدور — بن‌های یک فروش با هم
+  batch          String?
+  /// مبلغ اسمی
+  amount         BigInt
+  balance        BigInt
+  /// تخفیفی که هنگام فروش همین بن داده شد (خریدار amount − saleDiscount پرداخت)
+  saleDiscount   BigInt        @default(0)
+  /// حداقل مبلغ خرید برای استفاده
+  minInvoice     BigInt        @default(0)
+  /// «فقط یک‌بار پرداخت شود»: بعد از اولین خرج، باقی می‌سوزد
+  singleUse      Boolean       @default(false)
+  expiresAt      DateTime?     @db.Date
+  status         AccGiftStatus @default(ACTIVE)
+  /// خریدار (شخص یا سازمان)؛ خالی = فروش نقد به «مشتری حضوری»
+  buyerPartyId   String?
+  issueVoucherId String?
+  note           String?
+  createdByName  String
+  createdAt      DateTime      @default(now())
+  closedAt       DateTime?
+
+  buyer AccParty?  @relation(fields: [buyerPartyId], references: [id], onDelete: SetNull)
+  txs   AccGiftTx[]
+
+  @@index([batch])
+  @@index([buyerPartyId])
+  @@index([status, expiresAt])
+}
+
+model AccGiftTx {
+  id        String        @id @default(cuid())
+  cardId    String
+  kind      AccGiftTxKind
+  /// اثر روی مانده: + صدور/برگشت به بن، − خرج/مرجوع/سوخت
+  amount    BigInt
+  ticketId  String?
+  voucherId String?
+  note      String?
+  actorName String
+  createdAt DateTime      @default(now())
+
+  card AccGiftCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId, createdAt])
+  @@index([ticketId])
 }

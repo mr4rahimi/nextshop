@@ -9,7 +9,7 @@
  */
 
 import {
-  Activity, ArrowLeftRight, Banknote, HandCoins, CalendarClock, ChartColumn, ChartPie, ClipboardList,
+  Activity, ArrowLeftRight, Banknote, Gift, Paperclip, ScanSearch, HandCoins, CalendarClock, ChartColumn, ChartPie, ClipboardList,
   ClockCheck, Coins, FileSpreadsheet, FolderTree, House, Landmark, Link2, ListTodo, NotebookPen,
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
@@ -108,7 +108,10 @@ export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting", label: "خانه", icon: House, tone: "blue", perm: ["ACC_VIEW", "ACC_SETTINGS"], exact: true, img: "acc-home" },
   { href: "/admin/accounting/sales", label: "فروش", icon: Receipt, tone: "emerald", perm: ["ACC_VIEW", "ACC_SALES"], img: "acc-sales" },
   { href: "/admin/accounting/pos", label: "صندوق فروشگاه", icon: ShoppingCart, tone: "emerald", perm: ["ACC_POS", "ACC_POS_MANAGE", "ACC_SALES"], img: "quick-pos" },
+  { href: "/admin/accounting/price-check", label: "چک کردن قیمت", icon: ScanSearch, tone: "sky", perm: ["ACC_PRICE_CHECK", "ACC_VIEW", "ACC_INVENTORY", "ACC_SALES", "ACC_POS", "ACC_POS_MANAGE"] },
+  { href: "/admin/accounting/gift-cards", label: "بن کارت", icon: Gift, tone: "violet", perm: ["ACC_VIEW", "ACC_TREASURY", "ACC_POS_MANAGE"] },
   { href: "/admin/accounting/purchases", label: "خرید", icon: ShoppingBag, tone: "orange", perm: ["ACC_VIEW", "ACC_PURCHASE"], img: "acc-purchases" },
+  { href: "/admin/accounting/purchases/orders", label: "سفارش خرید", icon: ClipboardList, tone: "orange", perm: ["ACC_VIEW", "ACC_PURCHASE", "ACC_INVENTORY"] },
   { href: "/admin/accounting/money", label: "دریافت و پرداخت", icon: ArrowLeftRight, tone: "sky", perm: ["ACC_VIEW", "ACC_TREASURY"], img: "acc-money" },
   { href: "/admin/accounting/cheques", label: "چک‌ها", icon: Banknote, tone: "teal", perm: ["ACC_VIEW", "ACC_CHEQUE"], img: "acc-cheques" },
   { href: "/admin/accounting/expenses", label: "هزینه‌ها", icon: Wallet, tone: "rose", perm: ["ACC_VIEW", "ACC_EXPENSE"], img: "acc-expenses" },
@@ -116,11 +119,13 @@ export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting/installments", label: "اقساط", icon: CalendarClock, tone: "blue", perm: ["ACC_VIEW", "ACC_SALES", "ACC_PURCHASE"], img: "acc-installments" },
   { href: "/admin/accounting/calendar", label: "تقویم سررسیدها", icon: CalendarDays, tone: "teal", perm: ["ACC_VIEW", "ACC_CHEQUE", "ACC_SALES", "ACC_PURCHASE"], img: "acc-calendar" },
   { href: "/admin/accounting/reports", label: "گزارش‌ها", icon: ChartPie, tone: "violet", perm: ["ACC_REPORTS"], img: "acc-reports" },
+  { href: "/admin/accounting/reports/budget", label: "بودجه", icon: PiggyBank, tone: "lime", perm: ["ACC_REPORTS"] },
   { href: "/admin/accounting/parties", label: "اشخاص", icon: Users, tone: "indigo", perm: ["ACC_VIEW", "ACC_PARTY_MANAGE"], img: "acc-parties" },
   { href: "/admin/accounting/treasury", label: "صندوق و بانک", icon: Landmark, tone: "cyan", perm: ["ACC_VIEW", "ACC_SETTINGS"], img: "acc-treasury" },
   { href: "/admin/accounting/loans", label: "وام و تسهیلات", icon: HandCoins, tone: "orange", perm: ["ACC_VIEW", "ACC_TREASURY"] },
   { href: "/admin/accounting/inventory", label: "کالا و انبار", icon: Warehouse, tone: "amber", perm: ["ACC_VIEW", "ACC_INVENTORY"], img: "acc-inventory" },
   { href: "/admin/accounting/vouchers", label: "اسناد", icon: NotebookPen, tone: "fuchsia", perm: ["ACC_VOUCHER", "ACC_VIEW"], tag: "حسابدار", img: "acc-vouchers" },
+  { href: "/admin/accounting/attachments", label: "پیوست مدارک", icon: Paperclip, tone: "slate", perm: ["ACC_VIEW"] },
   { href: "/admin/accounting/accounts", label: "سرفصل حساب‌ها", icon: FolderTree, tone: "lime", perm: ["ACC_VOUCHER", "ACC_SETTINGS"], tag: "حسابدار", img: "acc-accounts" },
   { href: "/admin/accounting/events", label: "رویدادهای مالی", icon: Zap, tone: "red", perm: ["ACC_VIEW", "ACC_SETTINGS"], img: "acc-events" },
   { href: "/admin/accounting/settings", label: "تنظیمات", icon: Settings, tone: "slate", perm: ["ACC_VIEW", "ACC_SETTINGS"], img: "acc-settings" },

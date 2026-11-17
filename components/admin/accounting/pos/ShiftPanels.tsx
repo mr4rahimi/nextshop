@@ -115,6 +115,8 @@ export function ShiftReport({ s, names }: { s: ShiftSummary; names?: Record<stri
         <Row label="خالص کارتخوان" value={s.expectedCard} strong />
         {cardDiff !== null && <Row label={`رسید پایان روز دستگاه${cardDiff !== 0n ? " — اختلاف " + formatAmount(abs(cardDiff)) : ""}`} value={s.shift.countedCard ?? "0"} tone={cardDiff === 0n ? "gray" : "red"} />}
         {B(s.credit) !== 0n && <Row label="نسیه / روی حساب مشتری" value={s.credit} />}
+        {!!s.club && B(s.club) !== 0n && <Row label="پرداخت با کارت اشتراک" value={s.club} />}
+        {!!s.gift && B(s.gift) !== 0n && <Row label="پرداخت با بن کارت" value={s.gift} />}
       </div>
     </div>
   );

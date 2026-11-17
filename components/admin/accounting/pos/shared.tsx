@@ -34,7 +34,18 @@ export type ScanResult =
   | { kind: "ticket"; code: string }
   | { kind: "list"; items: PosItem[] }
   | { kind: "member"; member: PosMember }
-  | { kind: "newCard"; number: string };
+  | { kind: "newCard"; number: string }
+  | { kind: "gift"; gift: PosGift };
+
+/** بن کارت فروشگاه اسکن‌شده — `lib/accounting/gift-cards.ts` */
+export interface PosGift {
+  number: string;
+  balance: string;
+  amount: string;
+  minInvoice: string;
+  singleUse: boolean;
+  expiresAt: string | null;
+}
 
 /** دارنده‌ی کارت اشتراک در صندوق — `lib/accounting/pos/club.ts` */
 export interface PosMember {
@@ -82,6 +93,8 @@ export interface ShiftSummary {
   cardIn: string;
   cardOut: string;
   credit: string;
+  club?: string;
+  gift?: string;
   otherCash: string;
   expectedCash: string;
   expectedCard: string;

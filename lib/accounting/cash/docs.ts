@@ -57,10 +57,11 @@ export const METHOD_LABELS: Record<AccMoneyMethod, string> = {
   GIFT_CARD: "بن و کارت هدیه",
   OFFSET: "تهاتر",
   CLUB_CREDIT: "کارت اشتراک",
+  STORE_GIFT: "بن کارت فروشگاه",
 };
 
 /** هر روش روی کدام نوع خزانه می‌نشیند */
-const METHOD_TREASURY: Record<Exclude<AccMoneyMethod, "CHEQUE" | "WALLET" | "OFFSET" | "CLUB_CREDIT">, AccTreasuryKind[]> = {
+const METHOD_TREASURY: Record<Exclude<AccMoneyMethod, "CHEQUE" | "WALLET" | "OFFSET" | "CLUB_CREDIT" | "STORE_GIFT">, AccTreasuryKind[]> = {
   CASH: ["CASH"],
   CARD_TRANSFER: ["BANK"],
   BANK_TRANSFER: ["BANK"],
@@ -182,6 +183,11 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
       if (kind !== "RECEIPT" || !party) throw new AccError(`${at}: کارت اشتراک فقط در دریافت از مشتری است`);
       return;
     }
+    if (it.method === "STORE_GIFT") {
+      // فقط از رسید صندوق (lib/accounting/gift-cards.ts) — مانده‌ی بن همان‌جا کم می‌شود
+      if (kind !== "RECEIPT" || !party) throw new AccError(`${at}: بن کارت فروشگاه فقط در دریافت از مشتری است`);
+      return;
+    }
     if (it.method === "CHEQUE") {
       if (!party) throw new AccError(`${at}: چک به نام یک شخص است — ${inbound ? "«از چه کسی»" : "«به چه کسی»"} را انتخاب کنید`);
       if (inbound && !it.cheque) throw new AccError(`${at}: مشخصات چک را وارد کنید`);
@@ -284,6 +290,8 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
     } else if (it.method === "CLUB_CREDIT") {
       // مثل وب حساب: خرج اعتبار کارت = تخفیف فروش در لحظه‌ی استفاده (شارژ سند نمی‌خورد)
       lines.push({ accountKey: "SALES_DISCOUNT", debit: it.amount, description: "پرداخت با کارت اشتراک" });
+    } else if (it.method === "STORE_GIFT") {
+      lines.push({ accountKey: "GIFT_LIABILITY", debit: it.amount, description: [`پرداخت با بن کارت فروشگاه`, it.trackingCode].filter(Boolean).join(" — ") });
     } else if (it.method === "WALLET") {
       lines.push({ accountKey: "WALLET_LIABILITY", partyId: party!.id, debit: it.amount, description: "پرداخت از کیف پول" });
     } else {
@@ -298,7 +306,7 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
         moneyDocId: doc.id,
         seq: i + 1,
         method: kind === "TRANSFER" ? "BANK_TRANSFER" : it.method,
-        treasuryId: (it.method === "CHEQUE" && inbound) || it.method === "WALLET" || it.method === "OFFSET" || it.method === "CLUB_CREDIT" ? null : it.treasuryId ?? null,
+        treasuryId: (it.method === "CHEQUE" && inbound) || it.method === "WALLET" || it.method === "OFFSET" || it.method === "CLUB_CREDIT" || it.method === "STORE_GIFT" ? null : it.treasuryId ?? null,
         toTreasuryId: it.toTreasuryId ?? null,
         chequeId,
         amount: it.amount,

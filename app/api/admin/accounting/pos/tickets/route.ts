@@ -39,6 +39,7 @@ interface Body {
   overrideCredit?: boolean;
   clubSpend?: unknown;
   couponCode?: unknown;
+  gifts?: { number?: unknown; amount?: unknown }[];
 }
 
 /** POST — ثبت رسید صندوق: فروش، مرجوعی یا تعویض. `?quote=1` فقط جمع دقیق (بی ثبت) */
@@ -71,6 +72,7 @@ export async function POST(req: Request) {
       tendered: b.tendered ? toAmount(b.tendered, "پول دریافتی") : null,
       overrideCredit: !!b.overrideCredit,
       clubSpend: b.clubSpend ? toAmount(b.clubSpend, "کارت اشتراک") : 0n,
+      gifts: (Array.isArray(b.gifts) ? b.gifts : []).slice(0, 20).map((x, i) => ({ number: String(x.number ?? "").slice(0, 40), amount: toAmount(x.amount, `بن ${faNum(i + 1)}`) })),
       couponCode: typeof b.couponCode === "string" && b.couponCode.trim() ? b.couponCode.trim().slice(0, 40) : null,
     };
     if (new URL(req.url).searchParams.get("quote") === "1") {

@@ -19,6 +19,7 @@ import { findBySerial } from "../inventory/serials";
 import { posMemberByCard, type PosMember } from "./club";
 import { looksLikeCard, normalizeCardNumber } from "@/lib/club/credit-calc";
 import { creditSettings } from "@/lib/club/credit";
+import { giftForPos, type GiftBrief } from "../gift-cards";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -41,7 +42,9 @@ export type ScanResult =
   | { kind: "list"; items: PosItem[] }
   /** کارت اشتراک — مشتری رسید می‌شود (بخش ۲۳ هم‌ترازی) */
   | { kind: "member"; member: PosMember }
-  | { kind: "newCard"; number: string };
+  | { kind: "newCard"; number: string }
+  /** بن کارت فروشگاه — روش پرداخت (webhesab-parity.md بخش ۲۷) */
+  | { kind: "gift"; gift: GiftBrief };
 
 const pairs = (raw: unknown): { axisId: string; valueId: string }[] =>
   Array.isArray(raw) ? raw.filter((a): a is { axisId: string; valueId: string } => !!a && typeof a.axisId === "string" && typeof a.valueId === "string") : [];
@@ -95,6 +98,9 @@ export async function scanCode(raw: string, warehouseId: string, db: Db = prisma
   }
   const code = normalizeItemCode(term) ?? "";
   if (code.startsWith(TICKET_BARCODE_PREFIX) && /^\d+$/.test(code.slice(TICKET_BARCODE_PREFIX.length))) return { kind: "ticket", code };
+  // بن کارت — جست‌وجوی یکتا و ارزان؛ بن بی‌اعتبار پیام روشن می‌دهد
+  const gift = await giftForPos(db, term);
+  if (gift) return { kind: "gift", gift };
 
   const legacy = await db.accLegacyItem.findUnique({ where: { code }, select: { code: true, modelId: true, itemId: true } });
   if (legacy?.itemId) {

@@ -53,6 +53,7 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["33", "پیش‌دریافت‌ها", L, "LIABILITY", "CREDIT", "NONE", null],
   ["3301", "کیف پول مشتریان", S, "LIABILITY", "CREDIT", "PARTY", "WALLET_LIABILITY"],
   ["3302", "پیش‌دریافت فروش", S, "LIABILITY", "CREDIT", "PARTY", "CUSTOMER_ADVANCE"],
+  ["3303", "بن کارت فروخته‌شده", S, "LIABILITY", "CREDIT", "NONE", "GIFT_LIABILITY"],
   ["34", "تسهیلات مالی", L, "LIABILITY", "CREDIT", "NONE", null],
   ["3401", "تسهیلات دریافتی", S, "LIABILITY", "CREDIT", "NONE", "LOAN_PAYABLE"],
 
