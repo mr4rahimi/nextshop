@@ -2217,6 +2217,11 @@ model Coupon {
   clubOnly Boolean  @default(false)
 
   isActive   Boolean  @default(true)
+  /// کجا پذیرفته می‌شود — webhesab-parity.md بخش ۲۶. کدهای پیش از ۲.۱۴۰.۰ فقط سایت
+  onlineEnabled Boolean @default(true)
+  posEnabled    Boolean @default(false)
+  /// برچسب «ساخت دسته‌ای» (کارت تخفیف چاپی) — کدهای یک دسته در فهرست جدا جمع می‌شوند
+  batch         String?
   /// دستیار خرید سایت این کد را به مشتری پیشنهاد می‌دهد — docs/plans/storefront-chat.md فاز ۲.
   /// پیش‌فرض خاموش: کدهای خصوصی (همکار، اینفلوئنسر) نباید به هر بازدیدکننده‌ای گفته شوند
   showInChat Boolean  @default(false)
@@ -2228,6 +2233,7 @@ model Coupon {
 
   @@index([isActive, expiresAt])
   @@index([userId])
+  @@index([batch])
 }
 
 /// مصرف یک کد تخفیف روی یک سفارش
@@ -2238,8 +2244,12 @@ model Coupon {
 model CouponRedemption {
   id        String   @id @default(cuid())
   couponId  String
-  userId    String
-  orderId   String
+  /// خالی = مشتری بی حساب کاربری در صندوق
+  userId    String?
+  /// سفارش سایت، یا خالی برای رسید صندوق
+  orderId   String?
+  /// رسید صندوق (`AccPosTicket`) — webhesab-parity.md بخش ۲۶
+  posTicketId String?
   /// مبلغ تخفیف واقعی اعمال‌شده (تومان)
   discount  BigInt   @default(0)
   createdAt DateTime @default(now())
@@ -2247,6 +2257,7 @@ model CouponRedemption {
   coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
 
   @@unique([couponId, orderId])
+  @@unique([couponId, posTicketId])
   @@index([userId])
   @@index([orderId])
 }
@@ -5475,6 +5486,10 @@ model AccPosTicket {
   clubReversed    Int              @default(0)
   /// مرجوعی: رسید فروش اصلی
   refTicketId     String?
+  /// کد تخفیف صندوق — webhesab-parity.md بخش ۲۶. تخفیفش داخل `invoiceDiscount` فاکتور فروش است
+  couponId        String?
+  couponCode      String?
+  couponDiscount  BigInt           @default(0)
   createdAt       DateTime         @default(now())
 
   terminal AccPosTerminal @relation(fields: [terminalId], references: [id])

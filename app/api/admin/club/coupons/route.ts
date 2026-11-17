@@ -21,17 +21,36 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const q = url.searchParams.get("q")?.trim();
+  const batch = url.searchParams.get("batch");
 
-  const coupons = await prisma.coupon.findMany({
-    where: q
-      ? { OR: [{ code: { contains: q, mode: "insensitive" } }, { title: { contains: q, mode: "insensitive" } }] }
-      : undefined,
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: { _count: { select: { redemptions: true } } },
-  });
+  // کدهای یک دسته (برای خروجی چاپ) — webhesab-parity.md بخش ۲۶
+  if (batch) {
+    const coupons = await prisma.coupon.findMany({ where: { batch }, orderBy: { code: "asc" }, take: 5000, include: { _count: { select: { redemptions: true } } } });
+    return NextResponse.json(serialize({ coupons }));
+  }
 
-  return NextResponse.json(serialize({ coupons }));
+  const [coupons, batches] = await Promise.all([
+    prisma.coupon.findMany({
+      where: {
+        // کدهای دسته‌ای جدا جمع می‌شوند، مگر جستجو
+        ...(q ? { OR: [{ code: { contains: q, mode: "insensitive" } }, { title: { contains: q, mode: "insensitive" } }] } : { batch: null }),
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: { _count: { select: { redemptions: true } } },
+    }),
+    prisma.coupon.groupBy({ by: ["batch"], where: { batch: { not: null } }, _count: true, _sum: { usedCount: true }, _min: { createdAt: true, expiresAt: true } }),
+  ]);
+  const batchInfo = await Promise.all(
+    batches.map(async (b) => {
+      const sample = await prisma.coupon.findFirst({ where: { batch: b.batch }, select: { type: true, value: true, title: true, posEnabled: true, onlineEnabled: true } });
+      const active = await prisma.coupon.count({ where: { batch: b.batch, isActive: true } });
+      return { batch: b.batch!, count: b._count, used: b._sum.usedCount ?? 0, active, createdAt: b._min.createdAt, expiresAt: b._min.expiresAt, ...sample };
+    }),
+  );
+  batchInfo.sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+
+  return NextResponse.json(serialize({ coupons, batches: batchInfo }));
 }
 
 export async function POST(req: Request) {
@@ -40,6 +59,9 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => null);
+  const bulk = (body as { bulk?: { count?: unknown; prefix?: unknown; batch?: unknown } } | null)?.bulk;
+  if (bulk) return createBulk(body, bulk);
+
   const parsed = parse(body);
   if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
@@ -77,7 +99,13 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "دسترسی غیرمجاز" }, { status: 403 });
   }
 
-  const id = new URL(req.url).searchParams.get("id") ?? "";
+  const sp = new URL(req.url).searchParams;
+  // غیرفعال کردن یک دسته‌ی کامل (کارت‌های چاپی گم‌شده یا تمام‌شده)
+  if (sp.get("batch")) {
+    const r = await prisma.coupon.updateMany({ where: { batch: sp.get("batch")!, isActive: true }, data: { isActive: false } });
+    return NextResponse.json({ success: true, deactivated: true, message: `${r.count.toLocaleString("fa-IR")} کد این دسته غیرفعال شد` });
+  }
+  const id = sp.get("id") ?? "";
   if (!id) return NextResponse.json({ error: "شناسه کد لازم است" }, { status: 400 });
 
   const used = await prisma.couponRedemption.count({ where: { couponId: id } });
@@ -95,6 +123,36 @@ export async function DELETE(req: Request) {
   return NextResponse.json({ success: true });
 }
 
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+/**
+ * ساخت دسته‌ای — معادل «تعداد کارت، طول قسمت ثابت/متغیر» کارت تخفیف وب حساب (webhesab-parity.md بخش ۲۶).
+ * هر کد = پیشوند + ۶ نویسه‌ی تصادفی (بی ۰/O و ۱/I)؛ همه‌ی تنظیمات فرم روی همه می‌نشیند.
+ */
+async function createBulk(body: unknown, bulk: { count?: unknown; prefix?: unknown; batch?: unknown }) {
+  const count = Math.floor(Number(bulk.count));
+  if (!Number.isFinite(count) || count < 1 || count > 2000) return NextResponse.json({ error: "تعداد کارت باید ۱ تا ۲٬۰۰۰ باشد" }, { status: 400 });
+  const prefix = String(bulk.prefix ?? "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
+  const batch = String(bulk.batch ?? "").trim().slice(0, 60);
+  if (!batch) return NextResponse.json({ error: "برای دسته نامی بنویسید؛ مثلاً «کارت تخفیف نوروز»" }, { status: 400 });
+  if (await prisma.coupon.findFirst({ where: { batch }, select: { id: true } })) return NextResponse.json({ error: "دسته‌ای با همین نام هست؛ نام دیگری بنویسید" }, { status: 400 });
+  const parsed = parse({ ...(body as object), code: `${prefix || "CARD"}000` });
+  if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
+
+  const codes = new Set<string>();
+  const rnd = () => Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("");
+  for (let guard = 0; codes.size < count && guard < count * 20; guard++) {
+    const want = [...Array(Math.min(500, count - codes.size))].map(() => `${prefix}${rnd()}`);
+    const taken = new Set((await prisma.coupon.findMany({ where: { code: { in: want } }, select: { code: true } })).map((c) => c.code));
+    for (const c of want) if (!taken.has(c)) codes.add(c);
+  }
+  const { code: _ignored, ...rest } = parsed;
+  void _ignored;
+  await prisma.coupon.createMany({ data: [...codes].slice(0, count).map((code) => ({ ...rest, code, batch })), skipDuplicates: true });
+  const created = await prisma.coupon.count({ where: { batch } });
+  return NextResponse.json({ success: true, batch, count: created });
+}
+
 function parse(body: unknown) {
   const b = (body ?? {}) as Record<string, unknown>;
 
@@ -105,6 +163,10 @@ function parse(body: unknown) {
   }
 
   const type = TYPES.includes(b.type as CouponType) ? (b.type as CouponType) : "PERCENT";
+  const onlineEnabled = b.onlineEnabled !== false;
+  const posEnabled = b.posEnabled === true;
+  if (!onlineEnabled && !posEnabled) return { error: "دست‌کم یکی از «در سایت» یا «در صندوق فروشگاه» را تیک بزنید" };
+  if (type === "FREE_SHIP" && !onlineEnabled) return { error: "ارسال رایگان فقط برای خرید از سایت معنا دارد" };
 
   const value = Number(b.value);
   if (type !== "FREE_SHIP") {
@@ -142,6 +204,8 @@ function parse(body: unknown) {
     clubOnly: b.clubOnly === true,
     isActive: b.isActive !== false,
     showInChat: b.showInChat === true,
+    onlineEnabled,
+    posEnabled,
     note: typeof b.note === "string" && b.note.trim() ? b.note.trim() : null,
   };
 }

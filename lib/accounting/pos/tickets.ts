@@ -33,6 +33,7 @@ import { posItems } from "./setup";
 import { posClubOf } from "./club";
 import { addPoints, creditSettings, expiryFrom, ledgerState, lockProfile } from "@/lib/club/credit";
 import { earnPoints, pointsToToman, proportional, tomanToPoints } from "@/lib/club/credit-calc";
+import { validatePosCoupon } from "@/lib/club/coupons";
 
 type Tx = Prisma.TransactionClient;
 type Db = Tx | typeof prisma;
@@ -57,6 +58,8 @@ export interface TicketInput {
   overrideCredit?: boolean;
   /** تومانی که از اعتبار کارت اشتراک خرج می‌شود (فقط وقتی مشتری چیزی می‌دهد) */
   clubSpend?: bigint;
+  /** کد تخفیف (webhesab-parity.md بخش ۲۶) — مبلغش را فقط سرور حساب می‌کند */
+  couponCode?: string | null;
 }
 
 export interface TicketPerms {
@@ -147,6 +150,31 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   // ── گرد کردن جمع فروش به پایین — اختلاف تخفیف فاکتور می‌شود ──
   let invoiceDiscount = input.invoiceDiscount;
   if (invoiceDiscount < 0n) throw new AccError("تخفیف منفی نمی‌شود");
+  const preTotal = (disc: bigint) => {
+    try {
+      return calcInvoice({ lines: saleLines.map((l) => ({ qty: l.qty, unitPrice: l.unitPrice, discount: l.discount, vatRateBp: l.vatRateBp })), invoiceDiscount: disc, additions: 0n, pricesIncludeVat: true }).total;
+    } catch (e) {
+      if (e instanceof CalcError) throw new AccError(e.message);
+      throw e;
+    }
+  };
+
+  // ── کد تخفیف: روی جمع بعد از تخفیف‌های صندوقدار، پیش از تخفیف سطح و گرد کردن ──
+  let coupon: { id: string; code: string; userId: string | null } | null = null;
+  let couponDiscount = 0n;
+  const couponCode = input.couponCode?.trim();
+  if (couponCode) {
+    if (!saleLines.length) throw new AccError("کد تخفیف فقط روی خرید می‌نشیند، نه مرجوعی");
+    const userId = walkIn ? null : (party.userId ?? (party.mobile ? (await tx.user.findUnique({ where: { phone: party.mobile }, select: { id: true } }))?.id : null) ?? null);
+    // قفل ردیف کد — دو رسید هم‌زمان سقف استفاده را نشکنند
+    await tx.$executeRaw`SELECT 1 FROM "Coupon" WHERE "code" = ${couponCode.toUpperCase()} FOR UPDATE`;
+    const v = await validatePosCoupon(tx, { code: couponCode, userId, itemsTotal: preTotal(invoiceDiscount) });
+    if (!v.ok || !v.coupon) throw new AccError(`کد تخفیف: ${v.error}`);
+    coupon = { id: v.coupon.id, code: v.coupon.code, userId };
+    couponDiscount = v.discount;
+    invoiceDiscount += couponDiscount;
+  }
+
   // تخفیف مستقیم سطح کارت — روی جمع بعد از تخفیف‌های صندوقدار، پیش از گرد کردن
   let memberDiscount = 0n;
   if (saleLines.length && club?.tier?.posDiscountBp) {
@@ -272,8 +300,16 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
       clubRestored: restore,
       clubReversed: reversePts,
       refTicketId: orig?.id ?? null,
+      couponId: coupon?.id ?? null,
+      couponCode: coupon?.code ?? null,
+      couponDiscount,
     },
   });
+
+  if (coupon) {
+    await tx.couponRedemption.create({ data: { couponId: coupon.id, userId: coupon.userId, posTicketId: ticket.id, discount: couponDiscount } });
+    await tx.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } });
+  }
 
   // ── دفتر اعتبار: برگشت سهم کارت ← کسر شارژ مرجوعی ← خرج ← شارژ این خرید ──
   const now = new Date();
@@ -448,7 +484,7 @@ async function ticketClub(db: Db, t: { clubProfileId: string | null; clubSpent: 
 }
 
 class QuoteDone extends Error {
-  constructor(public readonly totals: { saleTotal: bigint; returnTotal: bigint; net: bigint; discount: bigint; clubRestored: bigint; clubEarned: number }) {
+  constructor(public readonly totals: { saleTotal: bigint; returnTotal: bigint; net: bigint; discount: bigint; clubRestored: bigint; clubEarned: number; couponDiscount: bigint }) {
     super("quote");
   }
 }
@@ -462,7 +498,7 @@ export async function quoteTicket(input: TicketInput, perms: TicketPerms, actor:
     await prisma.$transaction(
       async (tx) => {
         const t = await createTicket(tx, { ...input, pay: { cash: "rest", card: 0n }, clubSpend: 0n, partyId: input.partyId, overrideCredit: true }, { ...perms, quote: true }, actor);
-        throw new QuoteDone({ saleTotal: t.saleTotal, returnTotal: t.returnTotal, net: t.saleTotal - t.returnTotal + t.clubRestored, discount: t.discount, clubRestored: t.clubRestored, clubEarned: t.clubEarned });
+        throw new QuoteDone({ saleTotal: t.saleTotal, returnTotal: t.returnTotal, net: t.saleTotal - t.returnTotal + t.clubRestored, discount: t.discount, clubRestored: t.clubRestored, clubEarned: t.clubEarned, couponDiscount: t.couponDiscount });
       },
       { timeout: 30_000 },
     );

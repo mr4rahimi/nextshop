@@ -28,6 +28,8 @@ interface TicketData {
     credit: string;
     tendered: string | null;
     change: string;
+    couponCode?: string | null;
+    couponDiscount?: string;
   };
   terminal: { name: string; header: string | null; footer: string | null; paperMm: number };
   store: { name: string | null; phone: string | null; address: string | null; footer: string | null };
@@ -166,6 +168,7 @@ export function TicketPrint({ id }: { id: string }) {
         )}
         <Dash />
         {d.sale && B(d.sale.discount) > 0n && <Kv k="تخفیف" v={`−${formatAmount(d.sale.discount)}`} />}
+        {d.ticket.couponCode && B(d.ticket.couponDiscount ?? "0") > 0n && <Kv k={`از آن، کد ${d.ticket.couponCode}`} v={`−${formatAmount(d.ticket.couponDiscount!)}`} />}
         {d.sale && d.ret && <Kv k="خرید" v={formatAmount(d.sale.total)} />}
         {d.ret && <Kv k="مرجوعی" v={`−${formatAmount(d.ret.total)}`} />}
         {d.sale && B(d.sale.vat) > 0n && <Kv k="مالیات (داخل قیمت)" v={formatAmount(d.sale.vat)} />}

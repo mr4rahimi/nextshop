@@ -38,6 +38,7 @@ interface Body {
   tendered?: unknown;
   overrideCredit?: boolean;
   clubSpend?: unknown;
+  couponCode?: unknown;
 }
 
 /** POST — ثبت رسید صندوق: فروش، مرجوعی یا تعویض. `?quote=1` فقط جمع دقیق (بی ثبت) */
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
       tendered: b.tendered ? toAmount(b.tendered, "پول دریافتی") : null,
       overrideCredit: !!b.overrideCredit,
       clubSpend: b.clubSpend ? toAmount(b.clubSpend, "کارت اشتراک") : 0n,
+      couponCode: typeof b.couponCode === "string" && b.couponCode.trim() ? b.couponCode.trim().slice(0, 40) : null,
     };
     if (new URL(req.url).searchParams.get("quote") === "1") {
       return NextResponse.json(serialize({ ok: true, quote: await quoteTicket(input, { manage: g.manage }, actorOf(g.access)) }));

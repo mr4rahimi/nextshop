@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { calcInvoice } from "@/lib/accounting/invoices/calc";
 import { parseAmountInput } from "@/lib/accounting/money";
+import { couponAmount } from "@/lib/club/coupon-calc";
 import HelpButton from "@/components/admin/worklist/HelpButton";
 import PartyPicker, { type PartyOption } from "../PartyPicker";
 import { api } from "../ui";
@@ -99,6 +100,16 @@ interface Held {
   ret: RetState | null;
   party: PartyOption | null;
   discount: string;
+  coupon?: PosCoupon | null;
+}
+/** کد تخفیف پذیرفته‌شده (webhesab-parity.md بخش ۲۶) — مبلغ را صندوق با هر تغییر سبد دوباره حساب می‌کند */
+interface PosCoupon {
+  code: string;
+  title: string | null;
+  type: "PERCENT" | "FIXED" | "FREE_SHIP";
+  value: string;
+  maxDiscount: string;
+  minOrderTotal: string;
 }
 type Modal = null | "seller" | "party" | "card" | "pay" | "return" | "model" | "list" | "discount" | "held" | "close" | "tickets" | "serial";
 
@@ -118,6 +129,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   const [ret, setRet] = useState<RetState | null>(null);
   const [blind, setBlind] = useState(false);
   const [discount, setDiscount] = useState("");
+  const [coupon, setCoupon] = useState<PosCoupon | null>(null);
   const [sel, setSel] = useState(0);
   const [modal, setModal] = useState<Modal>(null);
   const [payStart, setPayStart] = useState<"cash" | "card">("cash");
@@ -197,7 +209,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
 
   // ── جمع‌ها ──
   const sale = useMemo(() => {
-    if (!lines.length) return { subtotal: 0n, discount: 0n, total: 0n, rounding: 0n, member: 0n, valid: true };
+    if (!lines.length) return { subtotal: 0n, discount: 0n, total: 0n, rounding: 0n, member: 0n, coupon: 0n, belowMin: false, pre: 0n, valid: true };
     try {
       const c = calcInvoice({
         lines: lines.map((l) => ({ qty: l.qty, unitPrice: B(l.unitPrice), discount: B(l.discount), vatRateBp: 0 })),
@@ -205,14 +217,26 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
         additions: 0n,
         pricesIncludeVat: true,
       });
-      // تخفیف مستقیم سطح کارت — همان ترتیب سرور: بعد از تخفیف‌ها، پیش از گرد کردن
-      const md = (c.total * memberBp) / 10_000n;
-      const rounding = roundTo > 0n ? (c.total - md) % roundTo : 0n;
-      return { subtotal: c.subtotal, discount: c.lineDiscount + c.invoiceDiscount + md + rounding, total: c.total - md - rounding, rounding, member: md, valid: true };
+      // همان ترتیب سرور: کد تخفیف ← تخفیف سطح کارت ← گرد کردن
+      const belowMin = !!coupon && c.total < B(coupon.minOrderTotal);
+      const cd = coupon && !belowMin ? couponAmount({ type: coupon.type, value: B(coupon.value), maxDiscount: B(coupon.maxDiscount) }, c.total) : 0n;
+      const md = ((c.total - cd) * memberBp) / 10_000n;
+      const rounding = roundTo > 0n ? (c.total - cd - md) % roundTo : 0n;
+      return {
+        subtotal: c.subtotal,
+        discount: c.lineDiscount + c.invoiceDiscount + cd + md + rounding,
+        total: c.total - cd - md - rounding,
+        rounding,
+        member: md,
+        coupon: cd,
+        belowMin,
+        pre: c.total,
+        valid: true,
+      };
     } catch {
-      return { subtotal: 0n, discount: 0n, total: 0n, rounding: 0n, member: 0n, valid: false };
+      return { subtotal: 0n, discount: 0n, total: 0n, rounding: 0n, member: 0n, coupon: 0n, belowMin: false, pre: 0n, valid: false };
     }
-  }, [lines, discount, roundTo, memberBp]);
+  }, [lines, discount, roundTo, memberBp, coupon]);
   const retApprox = useMemo(() => (ret?.lines ?? []).reduce((s, l) => s + B(l.each) * BigInt(l.qty), 0n), [ret]);
   const hasRet = !!ret?.lines.length;
   const saleTotal = hasRet && quote ? B(quote.saleTotal) : sale.total;
@@ -228,10 +252,11 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
       sellerId,
       partyId: ret?.src ? (ret.src.walkIn ? null : ret.src.partyId) : party?.id ?? null,
       invoiceDiscount: discount || "0",
+      couponCode: coupon?.code ?? null,
       sale: lines.map((l) => ({ productId: l.productId, qty: l.qty, unitPrice: l.unitPrice || "0", discount: l.discount || "0", serials: l.serials })),
       ret: ret?.lines.length ? { invoiceId: ret.src?.invoiceId ?? null, lines: ret.lines.map((l) => ({ refLineId: l.refLineId, productId: l.productId, qty: l.qty, serials: l.serials })) } : null,
     }),
-    [terminalId, sellerId, party, discount, lines, ret],
+    [terminalId, sellerId, party, discount, lines, ret, coupon],
   );
 
   // پیش‌نمایش دقیق وقتی مرجوعی در سبد است
@@ -313,10 +338,39 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     setRet(null);
     setBlind(false);
     setDiscount("");
+    setCoupon(null);
     setParty(null);
     setMember(null);
     setSel(0);
     setQuote(null);
+  }
+
+  /** کد تخفیف: از کادر اسکن (وقتی کالایی نبود) یا پنجره‌ی تخفیف. `quiet` = پیام «پیدا نشد» اسکن */
+  async function applyCoupon(raw: string, quiet = false): Promise<boolean> {
+    const code = raw.trim();
+    if (!code) return false;
+    const pid = ret?.src ? (ret.src.walkIn ? "" : ret.src.partyId) : party?.id ?? "";
+    try {
+      const r = await api<{ ok: boolean; error?: string; code?: string; coupon?: PosCoupon; belowMin?: boolean }>(
+        `/api/admin/accounting/pos/coupon?code=${encodeURIComponent(code)}&partyId=${pid}&total=${sale.pre}`,
+      );
+      if (!r.ok || !r.coupon) {
+        flash(quiet && r.code === "NOT_FOUND" ? `«${code}» پیدا نشد` : (r.error ?? "کد پذیرفته نشد"), "err");
+        return false;
+      }
+      setCoupon(r.coupon);
+      beep();
+      const c = r.coupon;
+      flash(
+        r.belowMin
+          ? `کد ${c.code} ثبت شد، ولی از خرید ${formatAmount(B(c.minOrderTotal))} تومان به بالا اعمال می‌شود`
+          : `کد ${c.code}: ${c.type === "PERCENT" ? `${faNum(c.value)}٪` : `${formatAmount(B(c.value))} تومان`} تخفیف`,
+      );
+      return true;
+    } catch (e) {
+      flash(e instanceof Error ? e.message : "کد بررسی نشد", "err");
+      return false;
+    }
   }
 
   async function scan(raw: string) {
@@ -350,7 +404,11 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
       } else if (r.kind === "ticket") {
         setReturnCode(r.code);
         setModal("return");
-      } else if (!r.items.length) flash(`«${code}» پیدا نشد`, "err");
+      } else if (!r.items.length) {
+        // کالایی نبود ← شاید کد تخفیف (کارت تخفیف چاپی) است
+        if (/^[A-Za-z0-9_-]{3,40}$/.test(code)) await applyCoupon(code, true);
+        else flash(`«${code}» پیدا نشد`, "err");
+      }
       else if (r.items.length === 1) addItem(r.items[0]);
       else {
         setList(r.items);
@@ -366,7 +424,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   // ── سبد معلق (فقط همین دستگاه) ──
   function hold() {
     if (!lines.length && !ret?.lines.length) return setModal("held");
-    const next = [...held, { at: new Date().toISOString(), lines, ret, party, discount }];
+    const next = [...held, { at: new Date().toISOString(), lines, ret, party, discount, coupon }];
     setHeld(next);
     local.set(`pos:held:${terminalId}`, next);
     clearCart();
@@ -383,6 +441,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     setRet(h.ret ? { ...h.ret, lines: h.ret.lines.map((l) => ({ ...l, serialChoices: l.serialChoices ?? [], serials: l.serials ?? [] })) } : null);
     setParty(h.party);
     setDiscount(h.discount);
+    setCoupon(h.coupon ?? null);
     setModal(null);
   }
 
@@ -765,6 +824,20 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
                 <span className="tabular-nums">−{formatAmount(sale.discount)}</span>
               </div>
             )}
+            {coupon && (
+              <div className={`mt-1 flex items-center justify-between gap-2 text-xs font-bold ${sale.belowMin ? "text-amber-700 dark:text-amber-300" : "text-rose-600"}`}>
+                <span className="min-w-0 truncate">
+                  کد <span dir="ltr">{coupon.code}</span>
+                  {sale.belowMin ? ` — از ${formatAmount(B(coupon.minOrderTotal))} تومان به بالا` : coupon.title ? ` — ${coupon.title}` : ""}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  {!sale.belowMin && <span className="tabular-nums">−{formatAmount(sale.coupon)}</span>}
+                  <button onClick={() => setCoupon(null)} className="rounded-full p-0.5 hover:bg-rose-100 dark:hover:bg-rose-500/10" aria-label="برداشتن کد تخفیف" title="برداشتن کد">
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </span>
+              </div>
+            )}
             {hasRet && (
               <div className="mt-1 flex justify-between text-sm font-bold text-rose-600">
                 <span>مرجوعی {quoting && "…"}</span>
@@ -965,6 +1038,8 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           invoiceDiscount={discount}
           onLine={(v) => setLines((x) => x.map((l, k) => (k === sel ? { ...l, discount: v } : l)))}
           onInvoice={setDiscount}
+          coupon={coupon?.code ?? null}
+          onCoupon={(c) => applyCoupon(c)}
           onClose={() => setModal(null)}
         />
       )}
@@ -1132,6 +1207,8 @@ function DiscountSheet({
   invoiceDiscount,
   onLine,
   onInvoice,
+  coupon,
+  onCoupon,
   onClose,
 }: {
   line: Line | null;
@@ -1139,9 +1216,12 @@ function DiscountSheet({
   invoiceDiscount: string;
   onLine: (v: string) => void;
   onInvoice: (v: string) => void;
+  coupon: string | null;
+  onCoupon: (code: string) => Promise<boolean>;
   onClose: () => void;
 }) {
-  const [target, setTarget] = useState<"line" | "invoice">(line ? "line" : "invoice");
+  const [target, setTarget] = useState<"line" | "invoice" | "coupon">(line ? "line" : "invoice");
+  const [code, setCode] = useState(coupon ?? "");
   const [mode, setMode] = useState<"pct" | "amount">("pct");
   const [v, setV] = useState("");
   const base = target === "line" && line ? B(line.unitPrice) * BigInt(line.qty) : subtotal;
@@ -1155,14 +1235,40 @@ function DiscountSheet({
   return (
     <Overlay title="تخفیف" onClose={onClose}>
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button disabled={!line} onClick={() => setTarget("line")} className={`truncate rounded-2xl border-2 px-3 py-3 text-sm font-black disabled:opacity-40 ${target === "line" ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "border-gray-200 dark:border-white/10"}`}>
             {line ? `ردیف: ${line.title}` : "ردیفی انتخاب نشده"}
           </button>
           <button onClick={() => setTarget("invoice")} className={`rounded-2xl border-2 px-3 py-3 text-sm font-black ${target === "invoice" ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "border-gray-200 dark:border-white/10"}`}>
             کل خرید
           </button>
+          <button onClick={() => setTarget("coupon")} className={`rounded-2xl border-2 px-3 py-3 text-sm font-black ${target === "coupon" ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "border-gray-200 dark:border-white/10"}`}>
+            کد تخفیف
+          </button>
         </div>
+        {target === "coupon" ? (
+          <form
+            className="space-y-3"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (await onCoupon(code)) onClose();
+            }}
+          >
+            <input
+              autoFocus
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="کد یا بارکد کارت تخفیف"
+              className="w-full rounded-2xl border-2 border-gray-200 bg-white px-4 py-3 text-left text-2xl font-black tracking-wider outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-white/5"
+              dir="ltr"
+            />
+            <p className="text-xs text-gray-500">کدهای تخفیفی که در «باشگاه ← کدهای تخفیف» تیک «در صندوق فروشگاه» دارند. کارت تخفیف چاپی را می‌شود مستقیم در کادر اسکن هم زد.</p>
+            <button type="submit" disabled={!code.trim()} className="w-full rounded-2xl bg-emerald-600 py-3 text-sm font-black text-white disabled:opacity-40">
+              اعمال کد
+            </button>
+          </form>
+        ) : (
+          <>
         <div className="flex gap-2">
           {(["pct", "amount"] as const).map((m) => (
             <button key={m} onClick={() => setMode(m)} className={`flex-1 rounded-xl py-2 text-xs font-black ${mode === m ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "bg-gray-100 text-gray-500 dark:bg-white/5"}`}>
@@ -1200,6 +1306,8 @@ function DiscountSheet({
             بدون تخفیف
           </button>
         </div>
+          </>
+        )}
       </div>
     </Overlay>
   );
