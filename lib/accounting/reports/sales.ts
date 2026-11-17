@@ -16,14 +16,14 @@ import { CHANNEL_LABELS } from "./profit";
 import type { Db, DateRange } from "./common";
 
 /** بُعدهای ثابت؛ به‌علاوه‌ی `axis:<id>` و `spec:<نام>` */
-export const FIXED_DIMS = ["item", "model", "group", "group1", "supplier", "warehouse", "channel", "terminal", "seller", "month"] as const;
+export const FIXED_DIMS = ["item", "model", "group", "group1", "supplier", "customer", "warehouse", "channel", "terminal", "seller", "month"] as const;
 export type FixedDim = (typeof FIXED_DIMS)[number];
 export type SalesDim = FixedDim | `axis:${string}` | `spec:${string}`;
-export const COL_DIMS = ["warehouse", "month", "channel"] as const;
+export const COL_DIMS = ["warehouse", "month", "channel", "group1"] as const;
 export type ColDim = (typeof COL_DIMS)[number];
 
-/** سطرهایی که «موجودی فعلی» دارند — کانال، صندوق، فروشنده و ماه موجودی ندارند */
-const STOCK_DIMS = (d: SalesDim) => !["channel", "terminal", "seller", "month"].includes(d);
+/** سطرهایی که «موجودی فعلی» دارند — کانال، صندوق، فروشنده، مشتری و ماه موجودی ندارند */
+const STOCK_DIMS = (d: SalesDim) => !["channel", "terminal", "seller", "customer", "month"].includes(d);
 
 export function parseDim(raw: string | null): SalesDim {
   if (raw && ((FIXED_DIMS as readonly string[]).includes(raw) || /^axis:[\w-]+$/.test(raw) || /^spec:.{1,60}$/.test(raw))) return raw as SalesDim;
@@ -34,6 +34,8 @@ export interface SalesFilters {
   groupId?: string | null;
   warehouseId?: string | null;
   supplierId?: string | null;
+  /** فقط خریدهای این شخص (webhesab-parity.md بخش ۲۵) */
+  partyId?: string | null;
 }
 
 interface Fact {
@@ -85,6 +87,11 @@ export interface SalesRow {
   marginBp: number | null;
   /** سهم از فروش خالص کل × ۱۰۰ */
   shareBp: number;
+  /** فاکتورهای فروش (نه برگشت) پشت این سطر و تاریخ آخرینشان */
+  invoices: number;
+  lastDate: Date | null;
+  /** زیرنویس سطر — موبایل مشتری */
+  sub: string | null;
   stock: number | null;
   cells: Record<string, Cell> | null;
 }
@@ -101,6 +108,7 @@ export async function salesAnalysis(
     where: {
       status: "ISSUED",
       type: { in: ["SALES", "SALES_RETURN"] },
+      ...(filters.partyId ? { partyId: filters.partyId } : {}),
       ...(range.from || range.to ? { date: { ...(range.from ? { gte: range.from } : {}), ...(range.to ? { lte: range.to } : {}) } } : {}),
     },
     select: {
@@ -230,7 +238,10 @@ export async function salesAnalysis(
   };
 
   /** کلید و برچسب یک بُعد برای یک کالا/ردیف */
-  function dimOf(d: SalesDim | ColDim, f: { productId: string | null; title?: string; warehouseId: string | null; channel?: AccChannel; platformCode?: string | null; date?: Date; invoiceId?: string }): [string, string] {
+  function dimOf(
+    d: SalesDim | ColDim,
+    f: { productId: string | null; title?: string; warehouseId: string | null; channel?: AccChannel; platformCode?: string | null; date?: Date; invoiceId?: string; partyId?: string; partyName?: string },
+  ): [string, string] {
     const it = f.productId ? itemOf.get(f.productId) : undefined;
     switch (d) {
       case "item":
@@ -249,6 +260,8 @@ export async function salesAnalysis(
         const s = f.productId ? supplierOf.get(f.productId) : undefined;
         return s ? [s, partyName.get(s) ?? "—"] : [NONE, "نامعلوم"];
       }
+      case "customer":
+        return f.partyId ? [f.partyId, f.partyName ?? "—"] : [NONE, "—"];
       case "warehouse":
         return f.warehouseId ? [f.warehouseId, whName.get(f.warehouseId) ?? "—"] : [NONE, "بی‌انبار (خدمات)"];
       case "channel":
@@ -323,18 +336,23 @@ export async function salesAnalysis(
   }
 
   // ── جمع ──
-  const rows = new Map<string, SalesRow & { _cost: bigint }>();
+  type Acc = SalesRow & { _cost: bigint; _inv: Set<string> };
+  const rows = new Map<string, Acc>();
   const colLabels = new Map<string, { label: string; revenue: bigint }>();
   for (const f of facts) {
     const [key, label] = dimOf(by, f);
     const r =
       rows.get(key) ??
-      ({ key, label, soldQty: 0, returnQty: 0, netQty: 0, revenue: 0n, cost: null, profit: null, marginBp: null, shareBp: 0, stock: null, cells: col ? {} : null, _cost: 0n } as SalesRow & { _cost: bigint });
+      ({ key, label, soldQty: 0, returnQty: 0, netQty: 0, revenue: 0n, cost: null, profit: null, marginBp: null, shareBp: 0, invoices: 0, lastDate: null, sub: null, stock: null, cells: col ? {} : null, _cost: 0n, _inv: new Set<string>() } as Acc);
     if (f.sign > 0) r.soldQty += f.qty;
     else r.returnQty += f.qty;
     r.netQty += f.sign * f.qty;
     r.revenue += BigInt(f.sign) * f.revenue;
     r._cost += BigInt(f.sign) * f.cost;
+    if (f.sign > 0) {
+      r._inv.add(f.invoiceId);
+      if (!r.lastDate || f.date > r.lastDate) r.lastDate = f.date;
+    }
     if (col && r.cells) {
       const [ck, cl] = dimOf(col, f);
       const c = r.cells[ck] ?? { qty: 0, revenue: 0n };
@@ -358,9 +376,19 @@ export async function salesAnalysis(
     for (const r of rows.values()) r.stock ??= 0;
   }
 
+  if (by === "customer") {
+    // نام امروز شخص (نه اسنپ‌شات فاکتور) + موبایل
+    const ps = await db.accParty.findMany({ where: { id: { in: [...rows.keys()] } }, select: { id: true, name: true, mobile: true } });
+    for (const p of ps) {
+      const r = rows.get(p.id)!;
+      r.label = p.name;
+      r.sub = p.mobile;
+    }
+  }
+
   const total = [...rows.values()].reduce((s, r) => s + r.revenue, 0n);
-  const list: SalesRow[] = [...rows.values()].map(({ _cost, ...r }) => {
-    const out: SalesRow = { ...r, shareBp: total > 0n ? Number((r.revenue * 10_000n) / total) : 0 };
+  const list: SalesRow[] = [...rows.values()].map(({ _cost, _inv, ...r }) => {
+    const out: SalesRow = { ...r, invoices: _inv.size, shareBp: total > 0n ? Number((r.revenue * 10_000n) / total) : 0 };
     if (opts.costs) {
       out.cost = _cost;
       out.profit = r.revenue - _cost;

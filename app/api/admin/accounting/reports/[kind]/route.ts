@@ -14,6 +14,7 @@ import { monthlyTrend } from "@/lib/accounting/reports/trend";
 import { partyBalances, type PartyRole } from "@/lib/accounting/reports/parties";
 import { movers } from "@/lib/accounting/reports/movers";
 import { budgetReport } from "@/lib/accounting/budget";
+import { dailyCustomers, firstPurchases, topCustomers, type CustomerSort } from "@/lib/accounting/reports/customers";
 import { COL_DIMS, parseDim, salesAnalysis, salesDims, type ColDim } from "@/lib/accounting/reports/sales";
 
 export const runtime = "nodejs";
@@ -21,7 +22,7 @@ export const dynamic = "force-dynamic";
 
 /** گزارش‌هایی که بها یا سود نشان می‌دهند — `ACC_COST_VIEW` هم لازم است */
 const COST_REPORTS = ["pl", "balance", "trial", "profit", "inventory", "trend", "budget"];
-const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties", "sales", "movers"];
+const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties", "sales", "movers", "customers"];
 
 /**
  * GET /reports/<kind>?from&to&… — docs/plans/accounting.md بخش ۱۱.
@@ -38,7 +39,8 @@ const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties
  *   parties   ?role&show=all|debtor|creditor|active&q   کل حساب اشخاص (فاز ۱۰)
  *   movers    ?mode=slow|fast&groupBy=item|model&maxSold&maxRate&minSold&top&groupId&warehouseId&supplierId   راکد و پرفروش (بخش ۶)
  *   budget    ?yearId&fromSeq&toSeq      بودجه در برابر عملکرد (webhesab-parity.md بخش ۲۲)
- *   sales     ?by&col&groupId&warehouseId&supplierId[&row&cell]   تحلیل فروش کالا (row ← جزئیات سطر) — بها و سود فقط با ACC_COST_VIEW (webhesab-parity.md بخش ۵)
+ *   customers ?mode=top|first|daily&warehouseId&q&sort=net|invoices|last&limit&legacy=1   مشتریان (webhesab-parity.md بخش ۲۵)
+ *   sales     ?by&col&groupId&warehouseId&supplierId&partyId[&row&cell]   تحلیل فروش کالا (row ← جزئیات سطر) — بها و سود فقط با ACC_COST_VIEW (webhesab-parity.md بخش ۵)
  */
 export async function GET(req: Request, { params }: { params: Promise<{ kind: string }> }) {
   const { kind } = await params;
@@ -110,7 +112,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
           range,
           by: parseDim(q("by")),
           col,
-          filters: { groupId: q("groupId"), warehouseId: q("warehouseId"), supplierId: q("supplierId") },
+          filters: { groupId: q("groupId"), warehouseId: q("warehouseId"), supplierId: q("supplierId"), partyId: q("partyId") },
           costs: can(guard.access, "ACC_COST_VIEW"),
         };
         // ?row=&cell= ← پنجره‌ی جزئیات همان سطر (و خانه)
@@ -118,14 +120,32 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
           data = await salesAnalysis(prisma, { ...base, detail: { row: q("row")!, col: q("cell") } });
           break;
         }
-        const [report, dims, suppliers, groups, warehouses] = await Promise.all([
+        const [report, dims, suppliers, groups, warehouses, party] = await Promise.all([
           salesAnalysis(prisma, base),
           salesDims(prisma),
           prisma.accParty.findMany({ where: { isSupplier: true, isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true }, take: 500 }),
           prisma.accItemGroup.findMany({ select: { id: true, name: true, parentId: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
           prisma.accWarehouse.findMany({ where: { isActive: true }, orderBy: { code: "asc" }, select: { id: true, name: true } }),
+          q("partyId") ? prisma.accParty.findUnique({ where: { id: q("partyId")! }, select: { id: true, name: true } }) : null,
         ]);
-        data = { ...report, dims, suppliers, groups, warehouses };
+        data = { ...report, dims, suppliers, groups, warehouses, party };
+        break;
+      }
+      case "customers": {
+        const mode = q("mode") === "first" ? "first" : q("mode") === "daily" ? "daily" : "top";
+        const f = { warehouseId: q("warehouseId"), q: q("q") };
+        const report =
+          mode === "first"
+            ? await firstPurchases(prisma, range, { ...f, withLegacy: q("legacy") === "1" })
+            : mode === "daily"
+              ? await dailyCustomers(prisma, range, f)
+              : await topCustomers(prisma, range, {
+                  ...f,
+                  sort: (["invoices", "last"].includes(q("sort") ?? "") ? q("sort") : "net") as CustomerSort,
+                  limit: Number.isInteger(Number(q("limit"))) ? Number(q("limit")) : 100,
+                });
+        const warehouses = await prisma.accWarehouse.findMany({ where: { isActive: true }, orderBy: { code: "asc" }, select: { id: true, name: true } });
+        data = { mode, ...report, warehouses };
         break;
       }
       case "budget": {

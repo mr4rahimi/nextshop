@@ -31,6 +31,9 @@ interface Row {
   profit: string | null;
   marginBp: number | null;
   shareBp: number;
+  invoices: number;
+  lastDate: string | null;
+  sub: string | null;
   stock: number | null;
   cells: Record<string, Cell> | null;
 }
@@ -44,6 +47,7 @@ interface Data {
   suppliers: { id: string; name: string }[];
   groups: { id: string; name: string; parentId: string | null }[];
   warehouses: { id: string; name: string }[];
+  party: { id: string; name: string } | null;
 }
 interface Detail {
   label: string;
@@ -59,6 +63,7 @@ const FIXED: { value: string; label: string }[] = [
   { value: "item", label: "کالا" },
   { value: "model", label: "مدل" },
   { value: "supplier", label: "عرضه‌کننده" },
+  { value: "customer", label: "مشتری" },
   { value: "warehouse", label: "انبار" },
   { value: "channel", label: "کانال فروش" },
   { value: "terminal", label: "صندوق" },
@@ -70,9 +75,16 @@ const COLS = [
   { value: "warehouse", label: "به تفکیک انبار" },
   { value: "month", label: "به تفکیک ماه" },
   { value: "channel", label: "به تفکیک کانال" },
+  { value: "group1", label: "به تفکیک گروه اصلی" },
 ];
 /** بُعدهایی که «فقط همین» معنا دارد — فیلتر گزارش می‌شوند */
-const FILTERABLE: Record<string, "groupId" | "warehouseId" | "supplierId"> = { group: "groupId", group1: "groupId", warehouse: "warehouseId", supplier: "supplierId" };
+const FILTERABLE: Record<string, "groupId" | "warehouseId" | "supplierId" | "partyId"> = {
+  group: "groupId",
+  group1: "groupId",
+  warehouse: "warehouseId",
+  supplier: "supplierId",
+  customer: "partyId",
+};
 
 const pct = (bp: number | null) => (bp === null ? "—" : `${(bp / 100).toLocaleString("fa-IR", { maximumFractionDigits: 1 })}٪`);
 const NONE = "_none";
@@ -89,11 +101,13 @@ export function groupOptions(groups: { id: string; name: string; parentId: strin
   return out;
 }
 
-export default function SalesAnalysisReport() {
-  const [range, setRange] = useState<Range>(() => rangeFor("month"));
-  const [by, setBy] = useState("group");
+export default function SalesAnalysisReport({ initial }: { initial?: { by?: string; partyId?: string; from?: string; to?: string } }) {
+  const [range, setRange] = useState<Range>(() =>
+    initial?.from || initial?.to ? { preset: "custom", from: initial.from ?? "", to: initial.to ?? "" } : rangeFor(initial?.partyId ? "all" : "month"),
+  );
+  const [by, setBy] = useState(initial?.by && (FIXED.some((x) => x.value === initial.by) || /^(axis|spec):/.test(initial.by)) ? initial.by : "group");
   const [col, setCol] = useState("");
-  const [f, setF] = useState({ groupId: "", warehouseId: "", supplierId: "" });
+  const [f, setF] = useState({ groupId: "", warehouseId: "", supplierId: "", partyId: initial?.partyId ?? "" });
   const [q, setQ] = useState("");
   const [detail, setDetail] = useState<{ row: Row; cell: string | null } | null>(null);
   const params = { from: range.from, to: range.to, by, col, ...f };
@@ -111,11 +125,13 @@ export default function SalesAnalysisReport() {
 
   function exportCsv() {
     if (!data) return;
-    const head = [dimLabel, ...(cols.length ? cols.map((c) => c.label) : []), "فروخته", "برگشتی", "خالص", "فروش خالص (تومان)", "سهم ٪", "میانگین قیمت"];
+    const cust = by === "customer";
+    const head = [dimLabel, ...(cust ? ["موبایل", "فاکتور", "آخرین خرید"] : []), ...(cols.length ? cols.map((c) => c.label) : []), "فروخته", "برگشتی", "خالص", "فروش خالص (تومان)", "سهم ٪", "میانگین قیمت"];
     if (data.costs) head.push("بهای تمام‌شده", "سود", "درصد سود");
     if (data.stock) head.push("موجودی فعلی", "نرخ فروش ٪");
     downloadCsv(`sales-by-${by.replace(":", "-")}${col ? `-${col}` : ""}`, head, rows.map((r) => [
       r.label,
+      ...(cust ? [r.sub ?? "", r.invoices, r.lastDate ? formatJalali(new Date(r.lastDate)) : ""] : []),
       ...cols.map((c) => r.cells?.[c.key]?.qty ?? 0),
       r.soldQty,
       r.returnQty,
@@ -208,6 +224,15 @@ export default function SalesAnalysisReport() {
                 ))}
               </select>
             )}
+            {f.partyId && (
+              <button
+                onClick={() => setF({ ...f, partyId: "" })}
+                className="inline-flex items-center gap-1 rounded-xl bg-blue-50 dark:bg-blue-500/10 px-3 text-xs font-bold text-blue-700 dark:text-blue-300"
+                title="برداشتن فیلتر مشتری"
+              >
+                مشتری: {data?.party?.name ?? "…"} ✕
+              </button>
+            )}
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`جستجو در ${dimLabel}`} className={`${inputCls} flex-1 min-w-[9rem]`} />
           </div>
         </>
@@ -250,6 +275,12 @@ export default function SalesAnalysisReport() {
             head={
               <tr>
                 <th className={th}>{dimLabel}</th>
+                {by === "customer" && (
+                  <>
+                    <th className={thNum}>فاکتور</th>
+                    <th className={thNum}>آخرین خرید</th>
+                  </>
+                )}
                 {cols.map((c) => (
                   <th key={c.key} className={thNum}>
                     {c.label}
@@ -284,6 +315,12 @@ export default function SalesAnalysisReport() {
             foot={
               <tr>
                 <td className={td}>جمع</td>
+                {by === "customer" && (
+                  <>
+                    <td className={`${tdNum} tabular-nums`}>{faNum(rows.reduce((s, r) => s + r.invoices, 0))}</td>
+                    <td className={tdNum} />
+                  </>
+                )}
                 {cols.map((c) => (
                   <td key={c.key} className={`${tdNum} tabular-nums`}>
                     {faNum(rows.reduce((s, r) => s + (r.cells?.[c.key]?.qty ?? 0), 0))}
@@ -324,8 +361,15 @@ export default function SalesAnalysisReport() {
                   <button onClick={() => open(r)} className="block max-w-full truncate text-right font-bold text-blue-700 dark:text-blue-300 hover:underline" title="کالاها و فاکتورهای این سطر">
                     {r.label}
                   </button>
+                  {r.sub && <span className="ml-2 text-[11px] tabular-nums text-gray-400">{faNum(r.sub)}</span>}
                   <RowLinks by={by} row={r} />
                 </td>
+                {by === "customer" && (
+                  <>
+                    <td className={`${tdNum} tabular-nums`}>{faNum(r.invoices)}</td>
+                    <td className={`${tdNum} text-xs text-gray-500`}>{r.lastDate ? formatJalali(new Date(r.lastDate)) : "—"}</td>
+                  </>
+                )}
                 {cols.map((c) => {
                   const v = r.cells?.[c.key];
                   return (
@@ -396,11 +440,12 @@ export default function SalesAnalysisReport() {
           title={detail.row.label}
           onClose={() => setDetail(null)}
           filterKey={detail.row.key !== NONE ? FILTERABLE[by] : undefined}
+          onlyLabel={by === "customer" ? "به تفکیک گروه کالا" : undefined}
           onOnly={() => {
             const k = FILTERABLE[by];
             if (!k) return;
             setF({ ...f, [k]: detail.row.key });
-            setBy("item");
+            setBy(by === "customer" ? "group" : "item");
             setDetail(null);
           }}
         />
@@ -418,7 +463,12 @@ function sellThrough(r: Row): number | null {
 /** پیوند مستقیم به صفحه‌ی خودِ سطر، اگر صفحه دارد */
 function RowLinks({ by, row }: { by: string; row: Row }) {
   if (row.key === NONE) return null;
-  const link = by === "item" ? { href: `/admin/accounting/inventory/${row.key}`, label: "کاردکس" } : by === "supplier" ? { href: `/admin/accounting/parties/${row.key}`, label: "صورت‌حساب" } : null;
+  const link =
+    by === "item"
+      ? { href: `/admin/accounting/inventory/${row.key}`, label: "کاردکس" }
+      : by === "supplier" || by === "customer"
+        ? { href: `/admin/accounting/parties/${row.key}`, label: "صورت‌حساب" }
+        : null;
   if (!link) return null;
   return (
     <Link href={link.href} className="text-[10px] font-bold text-gray-400 hover:text-blue-600">
@@ -434,12 +484,14 @@ export function DetailSheet({
   onClose,
   filterKey,
   onOnly,
+  onlyLabel = "به تفکیک کالا",
 }: {
   params: Record<string, string | null>;
   title: string;
   onClose: () => void;
   filterKey?: string;
   onOnly?: () => void;
+  onlyLabel?: string;
 }) {
   const [tab, setTab] = useState<"items" | "lines">("items");
   const { data, error, loading } = useReport<{ detail: Detail }>("sales", params);
@@ -454,7 +506,7 @@ export function DetailSheet({
       footer={
         filterKey && onOnly && (
           <button onClick={onOnly} className={`${btn.soft} w-full`}>
-            کل گزارش فقط برای «{title}»، به تفکیک کالا
+            کل گزارش فقط برای «{title}»، {onlyLabel}
           </button>
         )
       }
