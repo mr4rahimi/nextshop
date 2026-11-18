@@ -19,6 +19,8 @@ interface ItemData {
     code: string;
     title: string;
     unit: string;
+    packUnit: string | null;
+    packSize: number | null;
     salePrice: string | null;
     onlinePrice: string | null;
     reorderPoint: number | null;
@@ -90,6 +92,8 @@ export default function ItemForm({
     code: "",
     title: initial?.title ?? "",
     unit: initial?.unit ?? "عدد",
+    packUnit: "",
+    packSize: "",
     salePrice: initial?.salePrice ?? "",
     onlinePrice: "",
     reorderPoint: "",
@@ -119,6 +123,8 @@ export default function ItemForm({
           code: i.code,
           title: i.title,
           unit: i.unit,
+          packUnit: i.packUnit ?? "",
+          packSize: i.packSize ? String(i.packSize) : "",
           salePrice: i.salePrice ?? "",
           onlinePrice: i.onlinePrice ?? "",
           reorderPoint: i.reorderPoint == null ? "" : String(i.reorderPoint),
@@ -142,6 +148,8 @@ export default function ItemForm({
         code: f.code.trim() || null,
         title: f.title,
         unit: f.unit,
+        packUnit: f.packSize.trim() ? f.packUnit : null,
+        packSize: f.packSize.trim() ? f.packSize : null,
         salePrice: f.salePrice || null,
         ...(online?.enabled ? { onlinePrice: f.onlinePrice || null } : {}),
         reorderPoint: f.reorderPoint.trim() === "" ? null : f.reorderPoint,
@@ -251,6 +259,15 @@ export default function ItemForm({
               <input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} className={inputCls} placeholder="عدد، بسته، متر…" />
             </Field>
           </div>
+          <Field label="واحد بسته (اختیاری)" hint="برای خرید و فروش عمده — در فاکتور و سفارش خرید تعداد و فی به بسته وارد می‌شود؛ موجودی همیشه به واحد اصلی است">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="shrink-0">هر</span>
+              <input value={f.packUnit} onChange={(e) => setF({ ...f, packUnit: e.target.value })} className={`${inputCls} w-28`} placeholder="کارتن" />
+              <span className="shrink-0">=</span>
+              <input value={f.packSize} onChange={(e) => setF({ ...f, packSize: e.target.value.replace(/[^\d۰-۹]/g, "") })} className={`${inputCls} w-20 text-center`} inputMode="numeric" placeholder="۱۲" />
+              <span className="shrink-0">{f.unit || "عدد"}</span>
+            </div>
+          </Field>
           {!!data?.item.aliases.length && (
             <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-gray-500">
               کدهای قبلی:

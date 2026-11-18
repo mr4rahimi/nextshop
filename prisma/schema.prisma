@@ -4640,6 +4640,10 @@ model AccItem {
   code         String           @unique
   title        String
   unit         String           @default("عدد")
+  /// واحد بسته (کارتن، جین…) — هر بسته `packSize` واحد پایه؛ موجودی همیشه به واحد پایه است (webhesab-parity.md بخش ۲۹)
+  packUnit     String?
+  /// تعداد واحد پایه در هر بسته (≥ ۲)؛ با `packUnit` با هم پر یا خالی‌اند
+  packSize     Int?
   /// قیمت فروش پیش‌فرض فاکتور دستی — فقط برای کالایی که محصول ندارد (تصمیم ۱۰)
   salePrice    BigInt?
   /// قیمت آنلاین دستی همین کالا — جای قاعده‌ی درصد را می‌گیرد (۲.۹۶.۰)
@@ -5321,6 +5325,9 @@ model AccInvoiceLine {
   productId            String?
   title                String
   unit                 String?
+  /// ردیف بسته‌ای (webhesab-parity.md بخش ۲۹): `qty` باز هم به واحد پایه و مضرب `packSize` است،
+  /// `unit` نام بسته و `unitPrice` فی هر **بسته**؛ ناخالص = فی × qty ÷ packSize (`lineGross` در calc.ts)
+  packSize             Int?
   qty                  Int
   unitPrice            BigInt
   /// تخفیف همین ردیف (کل ردیف)
@@ -6241,6 +6248,8 @@ model AccPurchaseOrderLine {
   productId String
   title     String
   unit      String?
+  /// مثل `AccInvoiceLine.packSize` — qty به واحد پایه، فی برای هر بسته
+  packSize  Int?
   qty       Int
   /// فی پیشنهادی؛ ۰ = هنوز معلوم نیست (در فاکتور پر می‌شود)
   unitPrice BigInt  @default(0)

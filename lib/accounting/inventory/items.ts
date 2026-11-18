@@ -77,6 +77,9 @@ export interface ItemCard {
   /// `sku` در پاسخ‌های قبلی — رابط‌ها کد کالا را با همین نام نشان می‌دادند
   sku: string;
   unit: string;
+  /** واحد بسته (کارتن) و تعدادش — webhesab-parity.md بخش ۲۹ */
+  packUnit: string | null;
+  packSize: number | null;
   image: string | null;
   isActive: boolean;
   /** محصول فروشگاهِ هم‌شناسه دارد؟ */
@@ -108,6 +111,8 @@ export async function itemCards(ids: string[], db: Db = prisma): Promise<Map<str
       code: i.code,
       sku: i.code,
       unit: i.unit,
+      packUnit: i.packSize ? i.packUnit : null,
+      packSize: i.packSize,
       image: p?.mainImage ?? null,
       isActive: i.isActive,
       hasProduct: !!p,
@@ -124,6 +129,9 @@ export interface ItemInput {
   code?: string | null;
   title?: string;
   unit?: string | null;
+  /** بسته: هر دو با هم؛ `packSize` خالی یا ۰ = بی‌بسته */
+  packUnit?: string | null;
+  packSize?: number | null;
   salePrice?: bigint | null;
   /** قیمت آنلاین دستی (۲.۹۶.۰) — null = از قاعده‌ی درصد */
   onlinePrice?: bigint | null;
@@ -137,6 +145,16 @@ export interface ItemInput {
   hasSerial?: boolean;
   /** مدت گارانتی (روز) — فقط کالای سریال‌دار معنا دارد */
   warrantyDays?: number | null;
+}
+
+/** بسته‌ی کالا — نام و تعداد با هم؛ تعداد ۰/خالی یعنی کالا بسته ندارد */
+export function cleanPack(unit: string | null | undefined, size: number | null | undefined, base: string): { packUnit: string | null; packSize: number | null } {
+  if (size === null || size === undefined || size === 0) return { packUnit: null, packSize: null };
+  if (!Number.isInteger(size) || size < 2 || size > 100_000) throw new AccError("تعداد هر بسته باید عدد صحیح ۲ یا بیشتر باشد");
+  const name = unit?.trim();
+  if (!name) throw new AccError("نام بسته را بنویسید (مثلاً کارتن)");
+  if (name === base.trim()) throw new AccError("نام بسته با واحد اصلی کالا یکی است");
+  return { packUnit: name.slice(0, 20), packSize: size };
 }
 
 function cleanWarranty(v: number | null | undefined): number | null {
@@ -195,6 +213,7 @@ export async function createItem(db: Prisma.TransactionClient, input: ItemInput,
       code,
       title,
       unit: input.unit?.trim() || "عدد",
+      ...cleanPack(input.packUnit, input.packSize, input.unit?.trim() || "عدد"),
       salePrice: input.salePrice ?? null,
       reorderPoint: input.reorderPoint ?? null,
       sellOnline: input.sellOnline ?? true,
@@ -230,6 +249,9 @@ export async function updateItem(db: Prisma.TransactionClient, id: string, input
     }
   }
   if (input.unit !== undefined) data.unit = input.unit?.trim() || "عدد";
+  if (input.packSize !== undefined || input.packUnit !== undefined) {
+    Object.assign(data, cleanPack(input.packUnit !== undefined ? input.packUnit : cur.packUnit, input.packSize !== undefined ? input.packSize : cur.packSize, (data.unit as string | undefined) ?? cur.unit));
+  }
   if (input.salePrice !== undefined) data.salePrice = input.salePrice;
   if (input.onlinePrice !== undefined) data.onlinePrice = input.onlinePrice && input.onlinePrice > 0n ? input.onlinePrice : null;
   if (input.reorderPoint !== undefined) data.reorderPoint = input.reorderPoint;

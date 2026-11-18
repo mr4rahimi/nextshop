@@ -26,6 +26,10 @@ export interface ProductOption {
   vatRateBp?: number | null;
   taxCode?: string | null;
   hasSerial?: boolean;
+  unit?: string;
+  /** بسته‌ی کالا (کارتن = ۱۲) — webhesab-parity.md بخش ۲۹ */
+  packUnit?: string | null;
+  packSize?: number | null;
   /** جستجو شماره سریالِ همین کالا بود */
   serial?: string;
 }

@@ -3,7 +3,7 @@
  * تا عددی که کاربر می‌بیند همان باشد که ذخیره می‌شود.
  *
  * ترتیب هر ردیف:
- *   ناخالص = تعداد × فی
+ *   ناخالص = تعداد × فی   (ردیف بسته‌ای: تعداد ÷ اندازه‌ی بسته × فی بسته — `lineGross`)
  *   − تخفیف ردیف
  *   − سهم تخفیف فاکتور  (به نسبت مبلغ پس از تخفیف ردیف؛ باقی گرد به ردیف آخر — تله‌ی ۱۲)
  *   = پس از تخفیف
@@ -15,8 +15,12 @@
  */
 
 export interface CalcLineInput {
+  /** همیشه به واحد پایه — ردیف بسته‌ای مضرب `packSize` */
   qty: number;
+  /** ردیف بسته‌ای: فی هر بسته */
   unitPrice: bigint;
+  /** ردیف بسته‌ای (کارتن = ۱۲) — webhesab-parity.md بخش ۲۹ */
+  packSize?: number | null;
   discount?: bigint;
   vatRateBp?: number;
 }
@@ -54,6 +58,30 @@ export class CalcError extends Error {}
 
 const faIdx = (i: number) => String(i + 1).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
 
+/** ناخالص ردیف — تنها جای ضرب تعداد در فی؛ ردیف بسته‌ای فی را برای هر بسته دارد */
+export function lineGross(l: { qty: number; unitPrice: bigint; packSize?: number | null }): bigint {
+  return l.packSize && l.packSize > 1 ? l.unitPrice * BigInt(Math.floor(l.qty / l.packSize)) : l.unitPrice * BigInt(l.qty);
+}
+
+/** تعداد ردیف به واحد خودش — ردیف بسته‌ای تعداد بسته */
+export const packQty = (l: { qty: number; packSize?: number | null }) => (l.packSize && l.packSize > 1 ? l.qty / l.packSize : l.qty);
+
+/** موجودی به بسته: «۲ کارتن و ۳ عدد» — null اگر کالا بسته ندارد یا کمتر از یک بسته است */
+export function packBreakdown(qty: number, unit: string, packUnit: string | null | undefined, packSize: number | null | undefined, faNum: (n: number) => string): string | null {
+  if (!packSize || packSize < 2 || !packUnit || Math.abs(qty) < packSize) return null;
+  const sign = qty < 0 ? "−" : "";
+  const a = Math.abs(qty);
+  const packs = Math.floor(a / packSize);
+  const rest = a % packSize;
+  return `${sign}${faNum(packs)} ${packUnit}${rest ? ` و ${faNum(rest)} ${unit}` : ""}`;
+}
+
+/** تعداد ردیف به زبان خودش: «۵ کارتن» یا «۷ عدد» */
+export function lineQtyText(l: { qty: number; unit?: string | null; packSize?: number | null }, faNum: (n: number) => string): string {
+  if (l.packSize && l.packSize > 1) return `${faNum(l.qty / l.packSize)} ${l.unit || "بسته"}`;
+  return `${faNum(l.qty)}${l.unit ? ` ${l.unit}` : ""}`;
+}
+
 /** تقسیم با گرد کردن نیمه به بالا — فقط برای اعداد نامنفی */
 export function divRound(a: bigint, b: bigint): bigint {
   return (a * 2n + b) / (b * 2n);
@@ -85,7 +113,11 @@ export function calcInvoice(input: CalcInput): CalcResult {
   const base = input.lines.map((l, i) => {
     if (!Number.isInteger(l.qty) || l.qty <= 0) throw new CalcError(`ردیف ${faIdx(i)}: تعداد باید عدد صحیح مثبت باشد`);
     if (l.unitPrice < 0n) throw new CalcError(`ردیف ${faIdx(i)}: فی منفی نمی‌شود`);
-    const gross = l.unitPrice * BigInt(l.qty);
+    if (l.packSize !== undefined && l.packSize !== null) {
+      if (!Number.isInteger(l.packSize) || l.packSize < 2) throw new CalcError(`ردیف ${faIdx(i)}: اندازه‌ی بسته نامعتبر است`);
+      if (l.qty % l.packSize) throw new CalcError(`ردیف ${faIdx(i)}: تعداد باید بسته‌ی کامل باشد (مضرب ${faIdx(l.packSize - 1)})`);
+    }
+    const gross = lineGross(l);
     const discount = l.discount ?? 0n;
     if (discount < 0n) throw new CalcError(`ردیف ${faIdx(i)}: تخفیف منفی نمی‌شود`);
     if (discount > gross) throw new CalcError(`ردیف ${faIdx(i)}: تخفیف از مبلغ ردیف بیشتر است`);

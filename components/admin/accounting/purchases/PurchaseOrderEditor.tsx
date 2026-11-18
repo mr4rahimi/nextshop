@@ -14,6 +14,7 @@ import { faNum, formatAmount, toLatinDigits } from "@/lib/accounting/money";
 import AmountInput from "../AmountInput";
 import PartyPicker, { type PartyOption } from "../PartyPicker";
 import ProductPicker from "../ProductPicker";
+import PackToggle, { packBaseQty, PerUnitHint } from "../PackToggle";
 import { api, btn, Card, ErrorText, Field, inputCls, PageHeader, SectionTitle, Sheet } from "../ui";
 
 interface Line {
@@ -27,6 +28,10 @@ interface Line {
   unitPrice: string;
   /** فاکتورشده (صادر + پیش‌نویس) — کف تعداد */
   used: number;
+  /** بسته (webhesab-parity.md بخش ۲۹) — `packSize` پر: `qty` تعداد بسته، فی هر بسته */
+  unit?: string | null;
+  pack?: { unit: string; size: number } | null;
+  packSize?: number;
 }
 interface Suggestion {
   productId: string;
@@ -76,7 +81,7 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
             supplierRef: string | null;
             note: string | null;
             party: { id: string; code: number; name: string; mobile: string | null };
-            lines: { id: string; productId: string; title: string; code: string; image: string | null; qty: number; unitPrice: string | null; received: number; draft: number }[];
+            lines: { id: string; productId: string; title: string; code: string; image: string | null; qty: number; unitPrice: string | null; received: number; draft: number; unit: string | null; packSize: number | null; itemUnit: string | null; itemPack: { unit: string; size: number } | null }[];
           };
           state: string;
         }>(`/api/admin/accounting/purchase-orders/${id}`);
@@ -88,7 +93,7 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
         if (o.warehouseId) setWarehouseId(o.warehouseId);
         setSupplierRef(o.supplierRef ?? "");
         setNote(o.note ?? "");
-        setLines(o.lines.map((l) => ({ key: nextKey(), id: l.id, productId: l.productId, title: l.title, code: l.code, image: l.image, qty: String(l.qty), unitPrice: l.unitPrice ?? "0", used: l.received + l.draft })));
+        setLines(o.lines.map((l) => ({ key: nextKey(), id: l.id, productId: l.productId, title: l.title, code: l.code, image: l.image, qty: String(l.packSize ? l.qty / l.packSize : l.qty), unitPrice: l.unitPrice ?? "0", used: l.received + l.draft, unit: l.itemUnit, pack: l.packSize ? { unit: l.unit ?? "بسته", size: l.packSize } : l.itemPack, ...(l.packSize ? { packSize: l.packSize } : {}) })));
       } catch (e) {
         setError(e instanceof Error ? e.message : "بارگذاری نشد");
       }
@@ -96,11 +101,11 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
   }, [id]);
 
   const patch = (key: number, p: Partial<Line>) => setLines((x) => x.map((l) => (l.key === key ? { ...l, ...p } : l)));
-  function add(p: { productId: string; title: string; code: string; image: string | null; qty?: number; unitPrice?: string }) {
+  function add(p: { productId: string; title: string; code: string; image: string | null; qty?: number; unitPrice?: string; unit?: string | null; pack?: { unit: string; size: number } | null }) {
     setLines((x) => {
       const hit = x.find((l) => l.productId === p.productId);
       if (hit) return x.map((l) => (l.key === hit.key ? { ...l, qty: String(Number(l.qty || 0) + (p.qty ?? 1)) } : l));
-      return [...x, { key: nextKey(), productId: p.productId, title: p.title, code: p.code, image: p.image, qty: String(p.qty ?? 1), unitPrice: p.unitPrice && p.unitPrice !== "0" ? p.unitPrice : "", used: 0 }];
+      return [...x, { key: nextKey(), productId: p.productId, title: p.title, code: p.code, image: p.image, qty: String(p.qty ?? 1), unitPrice: p.unitPrice && p.unitPrice !== "0" ? p.unitPrice : "", used: 0, unit: p.unit, pack: p.pack }];
     });
   }
 
@@ -118,7 +123,7 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
     }
   }
 
-  const total = useMemo(() => lines.reduce((s, l) => s + BigInt(l.unitPrice || "0") * BigInt(Number(digits(l.qty) || "0")), 0n), [lines]);
+  const total = useMemo(() => lines.reduce((s, l) => s + BigInt(l.unitPrice || "0") * BigInt(Number(digits(l.qty) || "0")), 0n), [lines]); // ردیف بسته‌ای: تعداد بسته × فی بسته
 
   async function save() {
     setBusy(true);
@@ -131,7 +136,7 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
         warehouseId: warehouseId || null,
         supplierRef,
         note,
-        lines: lines.map((l) => ({ id: l.id ?? null, productId: l.productId, qty: digits(l.qty), unitPrice: l.unitPrice || "0" })),
+        lines: lines.map((l) => ({ id: l.id ?? null, productId: l.productId, qty: String(packBaseQty(l)), packSize: l.packSize ?? null, unitPrice: l.unitPrice || "0" })),
       };
       const r = id
         ? await api<{ id: string }>(`/api/admin/accounting/purchase-orders/${id}`, { method: "PUT", json })
@@ -192,14 +197,14 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
           }
         />
         <ProductPicker
-          onPick={(p) => add({ productId: p.id, title: p.title, code: p.sku ?? "", image: p.image, unitPrice: p.price })}
+          onPick={(p) => add({ productId: p.id, title: p.title, code: p.sku ?? "", image: p.image, unitPrice: p.price, unit: p.unit, pack: p.packSize && p.packUnit ? { unit: p.packUnit, size: p.packSize } : null })}
           warehouseId={warehouseId || undefined}
           priceFor="purchase"
           partyId={party?.id}
         />
         <div className="space-y-2">
           {lines.map((l) => {
-            const qty = Number(digits(l.qty) || "0");
+            const qty = packBaseQty(l);
             return (
               <div key={l.key} className="flex flex-wrap items-center gap-2 rounded-xl bg-gray-50 p-2.5 dark:bg-white/5">
                 <div className="flex min-w-0 flex-1 basis-48 items-center gap-2">
@@ -216,16 +221,22 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
                     </p>
                   </div>
                 </div>
-                <label className="flex items-center gap-1 text-[11px] text-gray-500">
-                  تعداد
-                  <input value={faNum(l.qty)} onChange={(e) => patch(l.key, { qty: digits(e.target.value) })} inputMode="numeric" className={`${inputCls} !w-20 !py-1.5 text-center font-bold`} />
-                </label>
-                <label className="flex items-center gap-1 text-[11px] text-gray-500">
-                  فی
-                  <span className="w-36">
-                    <AmountInput compact value={l.unitPrice} onChange={(v) => patch(l.key, { unitPrice: v })} />
-                  </span>
-                </label>
+                <div className="text-[11px] text-gray-500">
+                  <label className="flex items-center gap-1">
+                    تعداد
+                    <input value={faNum(l.qty)} onChange={(e) => patch(l.key, { qty: digits(e.target.value) })} inputMode="numeric" className={`${inputCls} !w-20 !py-1.5 text-center font-bold`} />
+                  </label>
+                  {l.pack && <PackToggle row={l} pack={l.pack} unit={l.unit} onChange={(p) => patch(l.key, p)} />}
+                </div>
+                <div className="text-[11px] text-gray-500">
+                  <label className="flex items-center gap-1">
+                    {l.packSize ? `فی هر ${l.pack?.unit ?? "بسته"}` : "فی"}
+                    <span className="w-36">
+                      <AmountInput compact value={l.unitPrice} onChange={(v) => patch(l.key, { unitPrice: v })} />
+                    </span>
+                  </label>
+                  <PerUnitHint row={l} unit={l.unit} formatAmount={formatAmount} />
+                </div>
                 <button
                   type="button"
                   onClick={() => setLines((x) => x.filter((y) => y.key !== l.key))}
@@ -243,7 +254,7 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
         </div>
         {lines.length > 0 && (
           <p className="text-left text-sm">
-            {faNum(lines.length)} قلم، {faNum(lines.reduce((s, l) => s + Number(digits(l.qty) || "0"), 0))} عدد
+            {faNum(lines.length)} قلم، {faNum(lines.reduce((s, l) => s + packBaseQty(l), 0))} عدد
             {total > 0n && <> — جمع تقریبی {formatAmount(total)} تومان</>}
           </p>
         )}

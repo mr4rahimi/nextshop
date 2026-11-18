@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatJalali } from "@/lib/club/jalali";
 import { faNum, formatAmount } from "@/lib/accounting/money";
+import { lineGross, packQty } from "@/lib/accounting/invoices/calc";
 import { api } from "../ui";
 import type { PoData } from "./PurchaseOrderDetail";
 
@@ -103,11 +104,11 @@ export default function PurchaseOrderPrint({ id }: { id: string }) {
                   {l.code}
                 </td>
                 <td className="border border-gray-300 px-2 py-1">{l.title}</td>
-                <td className="border border-gray-300 px-2 py-1 text-center font-bold">{faNum(l.qty)}</td>
+                <td className="border border-gray-300 px-2 py-1 text-center font-bold">{faNum(packQty(l))}</td>
                 <td className="border border-gray-300 px-2 py-1 text-center">{l.unit ?? ""}</td>
                 {showPrice && <td className="border border-gray-300 px-2 py-1 text-center">{l.unitPrice && l.unitPrice !== "0" ? formatAmount(l.unitPrice) : ""}</td>}
                 {showPrice && (
-                  <td className="border border-gray-300 px-2 py-1 text-center">{l.unitPrice && l.unitPrice !== "0" ? formatAmount(BigInt(l.unitPrice) * BigInt(l.qty)) : ""}</td>
+                  <td className="border border-gray-300 px-2 py-1 text-center">{l.unitPrice && l.unitPrice !== "0" ? formatAmount(lineGross({ qty: l.qty, unitPrice: BigInt(l.unitPrice), packSize: l.packSize })) : ""}</td>
                 )}
               </tr>
             ))}
@@ -117,7 +118,10 @@ export default function PurchaseOrderPrint({ id }: { id: string }) {
               <td colSpan={3} className="border border-gray-300 px-2 py-1.5 text-left">
                 جمع
               </td>
-              <td className="border border-gray-300 px-2 py-1.5 text-center">{faNum(o.lines.reduce((s, l) => s + l.qty, 0))}</td>
+              <td className="border border-gray-300 px-2 py-1.5 text-center">
+                {faNum(o.lines.reduce((s, l) => s + l.qty, 0))}
+                {o.lines.some((l) => l.packSize) && <span className="block text-[10px] font-normal">عدد</span>}
+              </td>
               <td className="border border-gray-300" />
               {showPrice && <td className="border border-gray-300" />}
               {showPrice && <td className="border border-gray-300 px-2 py-1.5 text-center">{d.total && d.total !== "0" ? formatAmount(d.total) : ""}</td>}

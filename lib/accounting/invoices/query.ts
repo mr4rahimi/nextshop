@@ -37,6 +37,7 @@ interface LineBody {
   productId?: string | null;
   title?: string | null;
   unit?: string | null;
+  packSize?: unknown;
   qty?: unknown;
   unitPrice?: unknown;
   discount?: unknown;
@@ -79,6 +80,7 @@ export function inputFromBody(b: InvoiceBody): InvoiceInput {
       productId: l.productId || null,
       title: l.title ?? null,
       unit: l.unit ?? null,
+      packSize: l.packSize === undefined || l.packSize === null || l.packSize === "" ? null : Number(l.packSize) || null,
       qty,
       unitPrice: toAmount(l.unitPrice, "فی"),
       discount: toAmount(l.discount, "تخفیف"),
@@ -207,6 +209,9 @@ export async function invoiceDetail(id: string, access: StaffAccess) {
     returnedQty: returned.get(l.id) ?? 0,
     poLeft: l.poLineId ? poLeft.get(l.poLineId) ?? 0 : null,
     hasSerial: l.productId ? byProduct.get(l.productId)?.hasSerial ?? false : false,
+    // بسته‌ی فعلی کارت کالا — دکمه‌ی «عدد / کارتن» فرم (webhesab-parity.md بخش ۲۹)
+    itemUnit: l.productId ? byProduct.get(l.productId)?.unit ?? null : null,
+    itemPack: l.productId && byProduct.get(l.productId)?.packSize ? { unit: byProduct.get(l.productId)!.packUnit!, size: byProduct.get(l.productId)!.packSize! } : null,
     ...(withCost && l.productId ? { cost: costByLine.get(l.id) ?? 0n } : {}),
   }));
   // تسویه — دریافت/پرداخت‌های تخصیص‌یافته و مانده‌ی باز (فاز ۵)

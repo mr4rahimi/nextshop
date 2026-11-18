@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { FileText, Pencil, Printer } from "lucide-react";
 import { formatJalali } from "@/lib/club/jalali";
 import { faNum } from "@/lib/accounting/money";
+import { lineGross, packQty } from "@/lib/accounting/invoices/calc";
 import { api, Badge, btn, Card, ErrorText, Money, PageHeader, SectionTitle } from "../ui";
 import { PO_STATE, type PoState } from "./PurchaseOrdersList";
 import Attachments from "../Attachments";
@@ -23,6 +24,8 @@ export interface PoLine {
   unit: string | null;
   image: string | null;
   qty: number;
+  /** ردیف بسته‌ای — qty به واحد پایه، فی برای هر بسته (webhesab-parity.md بخش ۲۹) */
+  packSize?: number | null;
   unitPrice: string | null;
   note: string | null;
   received: number;
@@ -196,7 +199,10 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
                         {l.code}
                       </span>
                     </td>
-                    <td className="px-2 py-2 text-center tabular-nums">{faNum(l.qty)}</td>
+                    <td className="px-2 py-2 text-center tabular-nums">
+                      {faNum(l.qty)}
+                      {l.packSize && <span className="block text-[10px] text-gray-400">{faNum(packQty(l))} {l.unit ?? "بسته"}</span>}
+                    </td>
                     <td className="px-2 py-2 text-center tabular-nums">
                       <button onClick={() => setShowInv(true)} className={l.received ? "font-bold text-emerald-600" : "text-gray-400"}>
                         {faNum(l.received)}
@@ -204,9 +210,14 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
                       {l.draft > 0 && <span className="block text-[10px] text-amber-600">پیش‌نویس {faNum(l.draft)}</span>}
                     </td>
                     <td className={`px-2 py-2 text-center font-bold tabular-nums ${rest > 0 && open ? "text-amber-600" : "text-gray-400"}`}>{faNum(Math.max(rest, 0))}</td>
-                    {d.can.price && <td className="px-2 py-2 text-center">{l.unitPrice && l.unitPrice !== "0" ? <Money value={l.unitPrice} /> : "—"}</td>}
                     {d.can.price && (
-                      <td className="px-4 py-2 text-left">{l.unitPrice && l.unitPrice !== "0" ? <Money value={(BigInt(l.unitPrice) * BigInt(l.qty)).toString()} /> : "—"}</td>
+                      <td className="px-2 py-2 text-center">
+                        {l.unitPrice && l.unitPrice !== "0" ? <Money value={l.unitPrice} /> : "—"}
+                        {l.packSize && l.unitPrice && l.unitPrice !== "0" && <span className="block text-[10px] text-gray-400">هر {l.unit ?? "بسته"}</span>}
+                      </td>
+                    )}
+                    {d.can.price && (
+                      <td className="px-4 py-2 text-left">{l.unitPrice && l.unitPrice !== "0" ? <Money value={lineGross({ qty: l.qty, unitPrice: BigInt(l.unitPrice), packSize: l.packSize }).toString()} /> : "—"}</td>
                     )}
                   </tr>
                 );

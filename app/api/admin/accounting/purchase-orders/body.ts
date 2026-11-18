@@ -16,7 +16,7 @@ interface Body {
   warehouseId?: string | null;
   supplierRef?: string | null;
   note?: string | null;
-  lines?: { id?: string | null; productId?: string; qty?: unknown; unitPrice?: unknown; note?: string | null }[];
+  lines?: { id?: string | null; productId?: string; qty?: unknown; unitPrice?: unknown; packSize?: unknown; note?: string | null }[];
 }
 
 export function poFromBody(b: Body): PoInput {
@@ -35,6 +35,7 @@ export function poFromBody(b: Body): PoInput {
       productId: String(l.productId ?? ""),
       qty: Number(toLatinDigits(String(l.qty ?? ""))),
       unitPrice: toAmount(l.unitPrice, "فی"),
+      packSize: l.packSize === undefined || l.packSize === null || l.packSize === "" ? null : Number(l.packSize) || null,
       note: l.note ?? null,
     })),
   };

@@ -22,7 +22,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatJalali } from "@/lib/club/jalali";
 import { amountToWords, faNum, formatAmount } from "@/lib/accounting/money";
-import { INVOICE_TYPE_LABELS, type InvoiceTypeKey } from "@/lib/accounting/invoices/calc";
+import { INVOICE_TYPE_LABELS, lineGross, packQty, type InvoiceTypeKey } from "@/lib/accounting/invoices/calc";
 import { api } from "../ui";
 import type { InvoiceData } from "./InvoiceDetail";
 
@@ -260,7 +260,10 @@ function Shop({ d }: { d: PrintData }) {
                 {l.sku && <span className="text-[10px] text-gray-500 mr-1">({faNum(l.sku)})</span>}
                 {l.serials?.length > 0 && <span className="block text-[10px] font-mono" dir="ltr">{l.serials.join("، ")}</span>}
               </td>
-              <td className="border border-gray-400 px-1.5 py-1 text-center tabular-nums">{faNum(l.qty)}</td>
+              <td className="border border-gray-400 px-1.5 py-1 text-center tabular-nums">
+                {faNum(packQty(l))}
+                {l.packSize && <span className="block text-[10px]">{l.unit ?? "بسته"}</span>}
+              </td>
               <td className="border border-gray-400 px-1.5 py-1 text-left tabular-nums">{formatAmount(l.unitPrice)}</td>
               <td className="border border-gray-400 px-1.5 py-1 text-left tabular-nums">{formatAmount(b(l.discount) + b(l.invoiceDiscountShare))}</td>
               {showVat && <td className="border border-gray-400 px-1.5 py-1 text-left tabular-nums">{formatAmount(l.vatAmount)}</td>}
@@ -361,7 +364,7 @@ function Official({ d }: { d: PrintData }) {
         </thead>
         <tbody>
           {inv.lines.map((l) => {
-            const gross = b(l.unitPrice) * BigInt(l.qty);
+            const gross = lineGross({ qty: l.qty, unitPrice: b(l.unitPrice), packSize: l.packSize });
             const disc = b(l.discount) + b(l.invoiceDiscountShare);
             return (
               <tr key={l.id}>
@@ -371,8 +374,8 @@ function Official({ d }: { d: PrintData }) {
                   {l.title}
                   {l.serials?.length > 0 && <span className="block text-[9px] font-mono" dir="ltr">سریال: {l.serials.join("، ")}</span>}
                 </td>
-                <td className="border border-black px-1 py-1 text-center">{faNum(l.qty)}</td>
-                <td className="border border-black px-1 py-1 text-center">عدد</td>
+                <td className="border border-black px-1 py-1 text-center">{faNum(packQty(l))}</td>
+                <td className="border border-black px-1 py-1 text-center">{l.unit || "عدد"}</td>
                 <td className="border border-black px-1 py-1 text-left tabular-nums">{r(l.unitPrice)}</td>
                 <td className="border border-black px-1 py-1 text-left tabular-nums">{r(gross)}</td>
                 <td className="border border-black px-1 py-1 text-left tabular-nums">{r(disc)}</td>
@@ -449,7 +452,7 @@ function Receipt({ d }: { d: PrintData }) {
             {l.serials?.length > 0 && <p className="font-mono text-[10px]" dir="ltr">{l.serials.join("، ")}</p>}
             <div className="flex justify-between tabular-nums">
               <span>
-                {faNum(l.qty)} × {formatAmount(l.unitPrice)}
+                {faNum(packQty(l))}{l.packSize ? ` ${l.unit ?? "بسته"}` : ""} × {formatAmount(l.unitPrice)}
               </span>
               <span className="font-bold">{formatAmount(l.lineTotal)}</span>
             </div>

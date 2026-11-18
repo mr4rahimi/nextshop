@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatJalali } from "@/lib/club/jalali";
 import { faNum, formatAmount } from "@/lib/accounting/money";
+import { packBreakdown } from "@/lib/accounting/invoices/calc";
 import { RangeBar, rangeFor, rangeQuery, type Range } from "../Statement";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, Money, PageHeader, Stat } from "../ui";
 import ItemForm from "./ItemForm";
@@ -53,7 +54,7 @@ interface Row {
   note?: string | null;
 }
 interface Data {
-  product: { id: string; title: string; sku: string; unit: string; mainImage: string | null; isActive: boolean; hasProduct: boolean; link: { productId: string; product: string; variant: string | null } | null; stock: number | null; lowStockThreshold: number };
+  product: { id: string; title: string; sku: string; unit: string; packUnit: string | null; packSize: number | null; mainImage: string | null; isActive: boolean; hasProduct: boolean; link: { productId: string; product: string; variant: string | null } | null; stock: number | null; lowStockThreshold: number };
   stocks: { warehouseId: string; qty: number }[];
   places: { warehouseId: string; zone: string | null; aisle: string | null; shelf: string | null; level: string | null }[];
   serials: { inStock: number; transit: number; out: number; warehouses: { warehouseId: string; qty: number; serials: number }[] } | null;
@@ -133,7 +134,12 @@ export default function KardexClient({ productId }: { productId: string }) {
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Stat label="موجودی دفتری" value={faNum(total)} sub={transit ? `+ ${faNum(transit)} در راه` : undefined} tone={total < 0 ? "red" : "gray"} />
+        <Stat
+          label="موجودی دفتری"
+          value={faNum(total)}
+          sub={[packBreakdown(total, data.product.unit, data.product.packUnit, data.product.packSize, faNum), transit ? `+ ${faNum(transit)} در راه` : null].filter(Boolean).join(" · ") || undefined}
+          tone={total < 0 ? "red" : "gray"}
+        />
         {data.product.stock !== null && (
           <Stat label="موجودی سایت" value={faNum(data.product.stock)} sub={sellable !== data.product.stock ? `انبارهای قابل فروش: ${faNum(sellable)}` : undefined} tone={sellable !== data.product.stock ? "amber" : "gray"} />
         )}

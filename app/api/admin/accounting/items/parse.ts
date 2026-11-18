@@ -8,6 +8,12 @@ export function parseItemInput(b: Record<string, unknown>): ItemInput {
   if (b.code !== undefined) out.code = b.code === null ? null : String(b.code);
   if (b.title !== undefined) out.title = String(b.title ?? "");
   if (b.unit !== undefined) out.unit = b.unit === null ? null : String(b.unit);
+  if (b.packUnit !== undefined) out.packUnit = b.packUnit === null ? null : String(b.packUnit);
+  if (b.packSize !== undefined) {
+    const n = b.packSize === null || b.packSize === "" ? null : Number(toLatinDigits(String(b.packSize)));
+    if (n !== null && !Number.isInteger(n)) throw new AccError("تعداد هر بسته باید عدد صحیح باشد");
+    out.packSize = n;
+  }
   if (b.salePrice !== undefined) out.salePrice = b.salePrice === null || b.salePrice === "" ? null : toAmount(b.salePrice, "قیمت فروش");
   if (b.onlinePrice !== undefined) out.onlinePrice = b.onlinePrice === null || b.onlinePrice === "" ? null : toAmount(b.onlinePrice, "قیمت آنلاین");
   if (b.reorderPoint !== undefined) {

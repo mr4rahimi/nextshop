@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { divRound } from "@/lib/accounting/invoices/calc";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import { can, requirePermission } from "@/lib/permissions";
@@ -48,6 +49,8 @@ export async function GET(req: Request) {
         sku: c.code,
         code: c.code,
         unit: c.unit,
+        packUnit: c.packUnit,
+        packSize: c.packSize,
         image: c.image,
         siteStock: c.siteStock ?? 0,
         hasProduct: c.hasProduct,
@@ -70,11 +73,13 @@ async function defaultPrices(ids: string[], forType: "sales" | "purchase", party
       ? await prisma.accInvoiceLine.findMany({
           where: { productId: { in: ids }, invoice: { type: "PURCHASE", status: "ISSUED", partyId } },
           orderBy: { invoice: { date: "desc" } },
-          select: { productId: true, unitPrice: true },
+          select: { productId: true, unitPrice: true, packSize: true },
         })
       : [];
     for (const id of ids) {
-      const hit = last.find((l) => l.productId === id)?.unitPrice;
+      // فی همیشه برای یک واحد پایه — ردیف بسته‌ای فی بسته را دارد (webhesab-parity.md بخش ۲۹)
+      const row0 = last.find((l) => l.productId === id);
+      const hit = row0 ? (row0.packSize ? divRound(row0.unitPrice, BigInt(row0.packSize)) : row0.unitPrice) : undefined;
       const fallback = seeCost ? costs.find((c) => c.productId === id)?.lastCost : undefined;
       const row = out.get(id) ?? { vatRateBp: null, taxCode: null };
       out.set(id, { ...row, price: hit ?? (fallback && fallback > 0n ? fallback : 0n) });

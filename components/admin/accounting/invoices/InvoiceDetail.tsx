@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatJalali } from "@/lib/club/jalali";
 import { amountToWords, faNum, formatAmount } from "@/lib/accounting/money";
-import { CHANNEL_LABELS, INVOICE_TYPE_LABELS, type InvoiceTypeKey } from "@/lib/accounting/invoices/calc";
+import { CHANNEL_LABELS, INVOICE_TYPE_LABELS, packQty, type InvoiceTypeKey } from "@/lib/accounting/invoices/calc";
 import { api, Badge, btn, Card, ErrorText, Money, PageHeader, SectionTitle } from "../ui";
 import InstallmentsPanel from "../installments/InstallmentsPanel";
 import { invoiceTitle, isExpired, StatusBadge } from "./InvoicesList";
@@ -22,6 +22,9 @@ interface Line {
   productId: string | null;
   title: string;
   qty: number;
+  /** ردیف بسته‌ای (webhesab-parity.md بخش ۲۹): qty به واحد پایه، فی برای هر بسته، `unit` نام بسته */
+  packSize?: number | null;
+  unit?: string | null;
   unitPrice: string;
   discount: string;
   invoiceDiscountShare: string;
@@ -323,7 +326,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold">{l.title}</p>
                 <p className="text-[11px] text-gray-400">
-                  {faNum(l.qty)} × {formatAmount(l.unitPrice)}
+                  {l.packSize ? `${faNum(packQty(l))} ${l.unit ?? "بسته"} (${faNum(l.qty)} عدد)` : faNum(l.qty)} × {formatAmount(l.unitPrice)}
                   {BigInt(l.discount) + BigInt(l.invoiceDiscountShare) > 0n && ` − تخفیف ${formatAmount(BigInt(l.discount) + BigInt(l.invoiceDiscountShare))}`}
                   {BigInt(l.vatAmount) > 0n && ` · مالیات ${formatAmount(l.vatAmount)}`}
                 </p>
@@ -380,7 +383,10 @@ export default function InvoiceDetail({ id }: { id: string }) {
                   </span>
                 )}
                 </td>
-                <td className="px-3 py-2 text-center tabular-nums">{faNum(l.qty)}</td>
+                <td className="px-3 py-2 text-center tabular-nums">
+                  {faNum(packQty(l))}
+                  {l.packSize && <span className="block text-[10px] text-gray-400">{l.unit ?? "بسته"} — {faNum(l.qty)} عدد</span>}
+                </td>
                 <td className="px-3 py-2 text-left tabular-nums">{formatAmount(l.unitPrice)}</td>
                 <td className="px-3 py-2 text-left tabular-nums text-emerald-600">
                   {BigInt(l.discount) + BigInt(l.invoiceDiscountShare) > 0n ? formatAmount(BigInt(l.discount) + BigInt(l.invoiceDiscountShare)) : "—"}

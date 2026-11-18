@@ -22,7 +22,7 @@ import { nextNumber } from "../ledger/sequence";
 import { applyMoves, registerCostRebuilder, removeMoves, type MoveInput } from "../inventory/stock";
 import { ensureDefaultWarehouse } from "../inventory/docs";
 import { faNum, formatAmount } from "../money";
-import { calcInvoice, CalcError, divRound, INVOICE_TYPE_LABELS, allocate } from "./calc";
+import { calcInvoice, CalcError, divRound, INVOICE_TYPE_LABELS, allocate, lineGross, lineQtyText } from "./calc";
 import { ensureItems } from "../inventory/items";
 import { poLineProgress } from "../purchases/progress";
 import { cleanSerialList, clearSerials, postSerials, type SerialEntry, type SerialMoveType } from "../inventory/serials";
@@ -61,6 +61,8 @@ export interface InvoiceLineInput {
   productId?: string | null;
   title?: string | null;
   unit?: string | null;
+  /** ردیف بسته‌ای (webhesab-parity.md بخش ۲۹): qty به واحد پایه، فی برای هر بسته؛ باید با بسته‌ی کالا یکی باشد */
+  packSize?: number | null;
   qty: number;
   unitPrice: bigint;
   discount?: bigint;
@@ -206,7 +208,7 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
   const productIds = [...new Set(input.lines.map((l) => (l.refLineId ? refLines.get(l.refLineId)?.productId : l.productId)).filter((x): x is string => !!x))];
   await ensureItems(tx, productIds);
   const products = new Map(
-    (await tx.accItem.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true, hasSerial: true } })).map((p) => [p.id, p]),
+    (await tx.accItem.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true, hasSerial: true, unit: true, packUnit: true, packSize: true } })).map((p) => [p.id, p]),
   );
 
   // ── سفارش خرید ── هر ردیف حداکثر تا مانده‌ی ردیف سفارش (منهای فاکتورهای دیگر، پیش‌نویس هم)
@@ -218,6 +220,10 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
   const poUsed = await poLineProgress(tx, poIds, id);
   const poOrderIds = new Set([...poLines.values()].map((l) => l.order.id));
   if (poOrderIds.size > 1) throw new AccError("ردیف‌های یک فاکتور فقط از یک سفارش خرید می‌آیند");
+  // بسته‌ی ردیف‌های همین فاکتور — ویرایش فاکتور قدیمی بعد از عوض شدن بسته‌ی کالا نمی‌ایستد
+  const prevPack = current
+    ? new Set((await tx.accInvoiceLine.findMany({ where: { invoiceId: current.id, packSize: { not: null } }, select: { productId: true, packSize: true } })).map((l) => `${l.productId}|${l.packSize}`))
+    : new Set<string>();
   const prevPo = current ? new Set((await tx.accInvoiceLine.findMany({ where: { invoiceId: current.id, poLineId: { not: null } }, select: { poLineId: true } })).map((l) => l.poLineId)) : new Set();
 
   const lines: (Required<Omit<InvoiceLineInput, "discount" | "vatRateBp" | "title" | "serials">> & { title: string; discount: bigint; vatRateBp: number; serials: string[] })[] = [];
@@ -244,14 +250,18 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
       if (!rl) throw new AccError(`${at}: ردیف در فاکتور مرجع نیست`);
       const left = rl.qty - (already.get(rl.id) ?? 0) - lines.filter((x) => x.refLineId === rl.id).reduce((s, x) => s + x.qty, 0);
       if (l.qty > left) throw new AccError(`${at}: از «${rl.title}» فقط ${faNum(Math.max(0, left))} عدد قابل برگشت است`);
-      // مبلغ برگشت همان مبلغ فروش/خرید اولیه است، به نسبت تعداد
+      // مبلغ برگشت همان مبلغ فروش/خرید اولیه است، به نسبت تعداد. ردیف بسته‌ای: بسته‌ی کامل
+      // همان فی بسته را می‌گیرد؛ برگشت تکی فی هر عدد = فی بسته ÷ اندازه (گرد)
       const disc = rl.discount + rl.invoiceDiscountShare;
+      const wholePacks = !!rl.packSize && l.qty % rl.packSize === 0;
+      const unitItem = rl.productId ? products.get(rl.productId) : null;
       lines.push({
         productId: rl.productId,
         title: rl.title,
-        unit: rl.unit,
+        unit: rl.packSize && !wholePacks ? unitItem?.unit ?? "عدد" : rl.unit,
+        packSize: wholePacks ? rl.packSize : null,
         qty: l.qty,
-        unitPrice: rl.unitPrice,
+        unitPrice: rl.packSize && !wholePacks ? divRound(rl.unitPrice, BigInt(rl.packSize)) : rl.unitPrice,
         discount: l.qty === rl.qty ? disc : divRound(disc * BigInt(l.qty), BigInt(rl.qty)),
         vatRateBp: rl.vatRateBp,
         accountId: rl.accountId,
@@ -277,6 +287,19 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
     const productId = l.productId || null;
     if (productId && !products.has(productId)) throw new AccError(`${at}: کالا پیدا نشد`);
     const title = l.title?.trim() || (productId ? products.get(productId)!.title : "");
+    // ── بسته ── فقط کالایی که در کارتش بسته دارد (یا همین فاکتور قبلاً با همان بسته داشت)
+    let packSize: number | null = null;
+    let unit = l.unit?.trim() || null;
+    if (l.packSize) {
+      const p = productId ? products.get(productId) : null;
+      if (!p) throw new AccError(`${at}: ردیف خدمت بسته ندارد`);
+      if (p.packSize !== l.packSize && !prevPack.has(`${productId}|${l.packSize}`)) {
+        throw new AccError(p.packSize ? `${at}: هر ${p.packUnit} از «${p.title}» ${faNum(p.packSize)} ${p.unit} است، نه ${faNum(l.packSize)}` : `${at}: «${p.title}» در کارت کالا بسته ندارد`);
+      }
+      if (l.qty % l.packSize) throw new AccError(`${at}: تعداد «${p.title}» باید ${p.packUnit ?? "بسته"}ی کامل باشد (مضرب ${faNum(l.packSize)})`);
+      packSize = l.packSize;
+      unit = (p.packSize === l.packSize ? p.packUnit : unit) || unit || "بسته";
+    }
     if (!title) throw new AccError(`${at}: شرح ردیف خدمت را بنویسید`);
     let accountId = productId ? null : l.accountId || null;
     if (!productId) {
@@ -289,7 +312,8 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
     lines.push({
       productId,
       title,
-      unit: l.unit?.trim() || null,
+      unit,
+      packSize,
       qty: l.qty,
       unitPrice: l.unitPrice,
       discount: l.discount ?? 0n,
@@ -409,6 +433,7 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
       productId: l.productId,
       title: l.title,
       unit: l.unit,
+      packSize: l.packSize,
       qty: l.qty,
       unitPrice: l.unitPrice,
       discount: l.discount,
@@ -465,7 +490,7 @@ async function invoiceSnapshot(tx: Tx, id: string) {
   const inv = await tx.accInvoice.findUniqueOrThrow({ where: { id }, include: { lines: { orderBy: { seq: "asc" } } } });
   const wh = inv.warehouseId ? await tx.accWarehouse.findUnique({ where: { id: inv.warehouseId }, select: { name: true } }) : null;
   const items = new Map<string, string>();
-  for (const l of inv.lines) items.set(l.title, `${items.has(l.title) ? `${items.get(l.title)} + ` : ""}${faNum(l.qty)} × ${formatAmount(l.unitPrice)}`);
+  for (const l of inv.lines) items.set(l.title, `${items.has(l.title) ? `${items.get(l.title)} + ` : ""}${l.packSize ? lineQtyText(l, faNum) : faNum(l.qty)} × ${formatAmount(l.unitPrice)}`);
   return {
     date: inv.date.toISOString().slice(0, 10),
     party: inv.partyName,
@@ -589,7 +614,7 @@ export async function buildInvoiceVoucher(tx: Tx, invoiceId: string, actor: Acto
       put({ accountKey: "AR" }, "debit", inv.total, "فروش", party);
       put({ accountKey: "SALES_DISCOUNT" }, "debit", inv.lineDiscount + inv.invoiceDiscount, "تخفیف فروش");
       for (const l of inv.lines) {
-        const gross = l.unitPrice * BigInt(l.qty) - (inv.pricesIncludeVat ? l.vatAmount : 0n);
+        const gross = lineGross(l) - (inv.pricesIncludeVat ? l.vatAmount : 0n);
         put(l.productId ? { accountKey: "SALES" } : { accountId: l.accountId! }, "credit", gross, l.productId ? "فروش کالا" : l.title);
       }
       put({ accountKey: "SHIPPING_REVENUE" }, "credit", inv.additions, inv.additionsTitle ?? "درآمد ارسال");
@@ -721,6 +746,7 @@ export async function convertProforma(tx: Tx, id: string, date: Date, actor: Act
         productId: l.productId,
         title: l.title,
         unit: l.unit,
+        packSize: l.packSize,
         qty: l.qty,
         unitPrice: l.unitPrice,
         discount: l.discount,

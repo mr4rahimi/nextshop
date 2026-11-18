@@ -24,6 +24,7 @@ import AmountInput from "../AmountInput";
 import PartyPicker, { type PartyOption } from "../PartyPicker";
 import ProductPicker, { type ProductOption } from "../ProductPicker";
 import SerialField from "../inventory/SerialField";
+import PackToggle, { PerUnitHint } from "../PackToggle";
 import { api, btn, Card, ErrorText, Field, inputCls, Money, PageHeader, SectionTitle } from "../ui";
 import { Plus } from "lucide-react";
 
@@ -65,6 +66,12 @@ interface Line {
   serials: string[];
   /** برگشتی: سریال‌های ردیف مرجع */
   serialChoices?: string[];
+  /** بسته‌ی کالا (webhesab-parity.md بخش ۲۹) — `packSize` پر یعنی همین ردیف به بسته است: `qty` تعداد بسته و فی برای هر بسته */
+  unit?: string;
+  pack?: { unit: string; size: number } | null;
+  packSize?: number;
+  /** برگشتی از ردیف بسته‌ای — `qty` به واحد پایه */
+  refPack?: number;
 }
 
 interface DetailLine {
@@ -85,6 +92,10 @@ interface DetailLine {
   poLeft: number | null;
   hasSerial: boolean;
   serials: string[];
+  unit: string | null;
+  packSize: number | null;
+  itemUnit: string | null;
+  itemPack: { unit: string; size: number } | null;
 }
 
 interface Detail {
@@ -117,6 +128,8 @@ const nextKey = () => ++seq;
 const digits = (v: string) => toLatinDigits(v).replace(/[^\d.]/g, "");
 const pctToBp = (v: string) => Math.round(Number(digits(v) || "0") * 100);
 const bpToPct = (bp: number) => (bp ? String(bp / 100) : "");
+/** تعداد ردیف به واحد پایه (کاردکس) */
+const baseQty = (l: Pick<Line, "qty" | "packSize">) => Number(digits(l.qty) || "0") * (l.packSize ?? 1);
 
 const RETURN_OF: Partial<Record<InvoiceTypeKey, InvoiceTypeKey>> = { SALES: "SALES_RETURN", PURCHASE: "PURCHASE_RETURN" };
 
@@ -212,7 +225,10 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
       key: nextKey(),
       productId: l.productId,
       title: l.title,
-      qty: String(l.qty),
+      qty: String(l.packSize ? l.qty / l.packSize : l.qty),
+      unit: l.itemUnit ?? undefined,
+      pack: l.packSize ? { unit: l.unit ?? "بسته", size: l.packSize } : l.itemPack,
+      ...(l.packSize ? { packSize: l.packSize } : {}),
       unitPrice: l.unitPrice,
       discount: l.discount === "0" ? "" : l.discount,
       vatPct: bpToPct(l.vatRateBp),
@@ -242,6 +258,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
       maxQty: rl.qty - rl.returnedQty + own,
       refQty: rl.qty,
       refDisc: BigInt(rl.discount) + BigInt(rl.invoiceDiscountShare),
+      ...(rl.packSize ? { refPack: rl.packSize, unit: rl.unit ?? undefined } : {}),
       hasSerial: rl.hasSerial,
       serials: [],
       serialChoices: rl.serials ?? [],
@@ -275,6 +292,8 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
           image: p.image,
           sku: p.sku,
           stock: p.byWarehouse,
+          unit: p.unit,
+          pack: p.packSize && p.packUnit ? { unit: p.packUnit, size: p.packSize } : null,
           hasSerial: !!p.hasSerial,
           serials: p.serial ? [p.serial] : [],
         },
@@ -301,7 +320,14 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
                 ? l.refDisc
                 : divRound(l.refDisc * BigInt(qty), BigInt(l.refQty))
               : BigInt(l.discount || "0");
-          return { qty, unitPrice: BigInt(l.unitPrice || "0"), discount, vatRateBp: cfg?.vatEnabled || hasRef || channel !== "MANUAL" ? pctToBp(l.vatPct) : 0 };
+          const vatRateBp = cfg?.vatEnabled || hasRef || channel !== "MANUAL" ? pctToBp(l.vatPct) : 0;
+          const price = BigInt(l.unitPrice || "0");
+          // برگشت از ردیف بسته‌ای: بسته‌ی کامل با فی بسته، تکی با فی هر عدد (همان قاعده‌ی سرور)
+          if (hasRef && l.refPack) {
+            const whole = qty % l.refPack === 0;
+            return { qty, unitPrice: whole ? price : divRound(price, BigInt(l.refPack)), packSize: whole ? l.refPack : null, discount, vatRateBp };
+          }
+          return { qty: baseQty(l), unitPrice: price, packSize: l.packSize ?? null, discount, vatRateBp };
         }),
         invoiceDiscount: hasRef ? 0n : BigInt(invDiscount || "0"),
         additions: BigInt(additions || "0"),
@@ -336,7 +362,8 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
           lines: active.map((l) => ({
             productId: l.productId,
             title: l.title,
-            qty: digits(l.qty),
+            qty: String(baseQty(l)),
+            packSize: l.packSize ?? null,
             unitPrice: l.unitPrice || "0",
             discount: l.discount || "0",
             vatRateBp: pctToBp(l.vatPct),
@@ -552,7 +579,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
             const idx = active.indexOf(l);
             const cl = idx >= 0 && r ? r.lines[idx] : null;
             const avail = l.stock && warehouseId ? l.stock[warehouseId] ?? 0 : null;
-            const short = salesSide && type !== "PROFORMA" && avail !== null && Number(l.qty || 0) > avail;
+            const short = salesSide && type !== "PROFORMA" && avail !== null && baseQty(l) > avail;
             return (
               <div key={l.key} className={`rounded-xl bg-gray-50 dark:bg-white/5 p-2.5 ${hasRef && !Number(l.qty) ? "opacity-50" : ""}`}>
                 <LineGrid showVat={showVat} hasRef={hasRef}>
@@ -573,14 +600,14 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
                         {hasRef
                           ? `حداکثر ${faNum(l.maxQty ?? 0)} از ${faNum(l.refQty ?? 0)}`
                           : l.productId
-                            ? [l.sku && `کد ${faNum(l.sku)}`, l.poLineId && `مانده‌ی سفارش ${faNum(l.poLeft ?? 0)}${Number(l.qty || 0) > (l.poLeft ?? 0) ? " — بیشتر از سفارش؛ اضافه را ردیف جدا بزنید" : ""}`, avail !== null && `موجودی ${faNum(avail)}${short ? " — کمتر از تعداد؛ ثبت می‌شود ولی موجودی منفی می‌شود" : ""}`].filter(Boolean).join(" · ") || "کالا"
+                            ? [l.sku && `کد ${faNum(l.sku)}`, l.poLineId && `مانده‌ی سفارش ${faNum(l.poLeft ?? 0)}${baseQty(l) > (l.poLeft ?? 0) ? " — بیشتر از سفارش؛ اضافه را ردیف جدا بزنید" : ""}`, avail !== null && `موجودی ${faNum(avail)}${short ? " — کمتر از تعداد؛ ثبت می‌شود ولی موجودی منفی می‌شود" : ""}`].filter(Boolean).join(" · ") || "کالا"
                             : null}
                       </p>
                       {l.productId && l.hasSerial && type !== "PROFORMA" && (!hasRef || Number(l.qty) > 0) && (
                         <SerialField
                           value={l.serials}
                           onChange={(serials) => patch(l.key, { serials })}
-                          qty={Number(digits(l.qty) || "0")}
+                          qty={baseQty(l)}
                           itemId={l.productId}
                           warehouseId={warehouseId || null}
                           pick={type === "SALES" || type === "PURCHASE_RETURN" ? "stock" : undefined}
@@ -623,9 +650,15 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
                         +
                       </button>
                     </div>
+                    {l.pack && !hasRef && <PackToggle row={l} pack={l.pack} unit={l.unit} onChange={(p) => patch(l.key, p)} />}
                   </Cell>
-                  <Cell label="فی">
-                    {hasRef ? <span className="text-sm font-bold tabular-nums">{formatAmount(l.unitPrice)}</span> : <AmountInput compact value={l.unitPrice} onChange={(v) => patch(l.key, { unitPrice: v })} />}
+                  <Cell label={l.packSize ? `فی هر ${l.pack?.unit ?? "بسته"}` : "فی"}>
+                    {hasRef ? (
+                      <span className="text-sm font-bold tabular-nums">{formatAmount(l.refPack && cl && Number(l.qty) % l.refPack ? divRound(BigInt(l.unitPrice), BigInt(l.refPack)) : l.unitPrice)}</span>
+                    ) : (
+                      <AmountInput compact value={l.unitPrice} onChange={(v) => patch(l.key, { unitPrice: v })} />
+                    )}
+                    <PerUnitHint row={l} unit={l.unit} formatAmount={formatAmount} />
                   </Cell>
                   {!hasRef && (
                     <Cell label="تخفیف ردیف">
@@ -760,3 +793,4 @@ function Row({ k, v }: { k: string; v: bigint | undefined | null }) {
     </div>
   );
 }
+

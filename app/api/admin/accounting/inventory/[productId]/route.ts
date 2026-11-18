@@ -32,6 +32,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ productI
     title: card.title,
     sku: card.code,
     unit: card.unit,
+    packUnit: card.packUnit,
+    packSize: card.packSize,
     mainImage: card.image,
     isActive: card.isActive,
     hasProduct: card.hasProduct || !!link,

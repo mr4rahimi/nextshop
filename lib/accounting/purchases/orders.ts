@@ -16,6 +16,7 @@ import type { Actor } from "../ledger/post";
 import { GLOBAL_SEQ, nextNumber } from "../ledger/sequence";
 import { ensureItems, itemCards } from "../inventory/items";
 import { saveInvoice } from "../invoices/service";
+import { divRound, lineGross } from "../invoices/calc";
 import { poLineProgress } from "./progress";
 
 export { poLineProgress };
@@ -43,6 +44,8 @@ export interface PoLineInput {
   productId: string;
   qty: number;
   unitPrice?: bigint;
+  /** ردیف بسته‌ای — qty به واحد پایه، فی برای هر بسته (webhesab-parity.md بخش ۲۹) */
+  packSize?: number | null;
   note?: string | null;
 }
 
@@ -103,7 +106,7 @@ export async function savePurchaseOrder(tx: Tx, id: string | null, input: PoInpu
   if (input.lines.length > PO_MAX_LINES) throw new AccError(`حداکثر ${faNum(PO_MAX_LINES)} ردیف`);
   const productIds = [...new Set(input.lines.map((l) => l.productId).filter(Boolean))];
   await ensureItems(tx, productIds);
-  const items = new Map((await tx.accItem.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true, unit: true } })).map((i) => [i.id, i]));
+  const items = new Map((await tx.accItem.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true, unit: true, packUnit: true, packSize: true } })).map((i) => [i.id, i]));
   const old = new Map((current?.lines ?? []).map((l) => [l.id, l]));
   const prog = await poLineProgress(tx, [...old.keys()]);
   const used = (lineId: string) => (prog.get(lineId)?.received ?? 0) + (prog.get(lineId)?.draft ?? 0);
@@ -114,6 +117,12 @@ export async function savePurchaseOrder(tx: Tx, id: string | null, input: PoInpu
     if (!items.has(l.productId)) throw new AccError(`${at}: کالا پیدا نشد`);
     if (!Number.isInteger(l.qty) || l.qty <= 0) throw new AccError(`${at}: تعداد باید عدد صحیح مثبت باشد`);
     if ((l.unitPrice ?? 0n) < 0n) throw new AccError(`${at}: فی منفی نمی‌شود`);
+    if (l.packSize) {
+      const it = items.get(l.productId)!;
+      const prev = l.id ? old.get(l.id)?.packSize : null;
+      if (it.packSize !== l.packSize && prev !== l.packSize) throw new AccError(it.packSize ? `${at}: هر ${it.packUnit} از «${it.title}» ${faNum(it.packSize)} ${it.unit} است` : `${at}: «${it.title}» در کارت کالا بسته ندارد`);
+      if (l.qty % l.packSize) throw new AccError(`${at}: تعداد «${it.title}» باید بسته‌ی کامل باشد (مضرب ${faNum(l.packSize)})`);
+    }
     if (l.id) {
       const o = old.get(l.id);
       if (!o) throw new AccError(`${at}: ردیف مال این سفارش نیست`);
@@ -145,7 +154,9 @@ export async function savePurchaseOrder(tx: Tx, id: string | null, input: PoInpu
   if (gone.length) await tx.accPurchaseOrderLine.deleteMany({ where: { id: { in: gone } } });
   for (const [i, l] of input.lines.entries()) {
     const it = items.get(l.productId)!;
-    const row = { seq: i + 1, productId: l.productId, title: it.title, unit: it.unit, qty: l.qty, unitPrice: l.unitPrice ?? 0n, note: l.note?.trim() || null };
+    const pack = l.packSize || null;
+    const unit = pack ? (it.packSize === pack ? it.packUnit : old.get(l.id ?? "")?.unit) ?? "بسته" : it.unit;
+    const row = { seq: i + 1, productId: l.productId, title: it.title, unit, packSize: pack, qty: l.qty, unitPrice: l.unitPrice ?? 0n, note: l.note?.trim() || null };
     if (l.id) await tx.accPurchaseOrderLine.update({ where: { id: l.id }, data: row });
     else await tx.accPurchaseOrderLine.create({ data: { ...row, orderId: po.id } });
   }
@@ -204,7 +215,13 @@ export async function invoiceFromOrder(tx: Tx, id: string, actor: Actor, date: D
       partyId: po.partyId,
       warehouseId: po.warehouseId,
       note: `سفارش خرید ${faNum(po.number)}${po.supplierRef ? ` — پیگیری عرضه‌کننده ${po.supplierRef}` : ""}`,
-      lines: left.map(({ l, qty }) => ({ productId: l.productId, title: l.title, unit: l.unit, qty, unitPrice: l.unitPrice, poLineId: l.id })),
+      // مانده‌ی ردیف بسته‌ای اگر بسته‌ی کامل نیست، تکی و با فی هر عدد می‌آید
+      lines: left.map(({ l, qty }) => {
+        const whole = !!l.packSize && qty % l.packSize === 0;
+        return l.packSize && !whole
+          ? { productId: l.productId, title: l.title, qty, unitPrice: divRound(l.unitPrice, BigInt(l.packSize)), poLineId: l.id }
+          : { productId: l.productId, title: l.title, unit: l.unit, packSize: l.packSize, qty, unitPrice: l.unitPrice, poLineId: l.id };
+      }),
     },
     {},
     actor,
@@ -236,7 +253,7 @@ export async function listPurchaseOrders(db: Db, f: PoFilter) {
     where,
     orderBy: [{ date: "desc" }, { number: "desc" }],
     take: 500,
-    include: { lines: { select: { id: true, qty: true, unitPrice: true, productId: true } }, party: { select: { id: true, name: true } } },
+    include: { lines: { select: { id: true, qty: true, unitPrice: true, packSize: true, productId: true } }, party: { select: { id: true, name: true } } },
   });
   const prog = await poLineProgress(db, orders.flatMap((o) => o.lines.map((l) => l.id)));
   const today = todayKey();
@@ -261,7 +278,7 @@ export async function listPurchaseOrders(db: Db, f: PoFilter) {
       ordered,
       received,
       hasDraft: lines.some((l) => l.draft > 0),
-      total: lines.reduce((s, l) => s + l.unitPrice * BigInt(l.qty), 0n),
+      total: lines.reduce((s, l) => s + lineGross(l), 0n),
       /** با فیلتر کالا: سفارش و دریافت همان کالا */
       product: product ? { qty: product.reduce((s, l) => s + l.qty, 0), received: product.reduce((s, l) => s + l.received, 0) } : null,
     };
@@ -294,6 +311,8 @@ export async function purchaseOrderDetail(db: Db, id: string) {
     ...l,
     code: cards.get(l.productId)?.code ?? "",
     image: cards.get(l.productId)?.image ?? null,
+    itemUnit: cards.get(l.productId)?.unit ?? null,
+    itemPack: cards.get(l.productId)?.packSize ? { unit: cards.get(l.productId)!.packUnit!, size: cards.get(l.productId)!.packSize! } : null,
     received: prog.get(l.id)?.received ?? 0,
     draft: prog.get(l.id)?.draft ?? 0,
   }));
@@ -302,7 +321,7 @@ export async function purchaseOrderDetail(db: Db, id: string) {
     order: { ...po, lines },
     state: st,
     overdue: !!po.dueDate && po.dueDate < todayKey() && (st === "OPEN" || st === "PARTIAL"),
-    total: lines.reduce((s, l) => s + l.unitPrice * BigInt(l.qty), 0n),
+    total: lines.reduce((s, l) => s + lineGross(l), 0n),
     invoices,
     warehouse,
   };
