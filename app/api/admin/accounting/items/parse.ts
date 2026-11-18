@@ -28,6 +28,7 @@ export function parseItemInput(b: Record<string, unknown>): ItemInput {
   if (b.isActive !== undefined) out.isActive = !!b.isActive;
   if (b.groupId !== undefined) out.groupId = b.groupId ? String(b.groupId) : null;
   if (b.supplierId !== undefined) out.supplierId = b.supplierId ? String(b.supplierId) : null;
+  if (b.taxCode !== undefined) out.taxCode = b.taxCode === null ? null : String(b.taxCode);
   if (b.hasSerial !== undefined) out.hasSerial = !!b.hasSerial;
   if (b.warrantyDays !== undefined) {
     const n = b.warrantyDays === null || b.warrantyDays === "" ? null : Number(toLatinDigits(String(b.warrantyDays)));

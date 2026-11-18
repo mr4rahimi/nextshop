@@ -13,6 +13,7 @@ interface G {
   parentId: string | null;
   name: string;
   code: string | null;
+  taxCode?: string | null;
   path: string;
   items: number;
 }
@@ -107,13 +108,14 @@ function GroupForm({ item, parentId, groups, onClose, onSaved }: { item: G | nul
   const [name, setName] = useState(item?.name ?? "");
   const [parent, setParent] = useState(item?.parentId ?? parentId ?? "");
   const [code, setCode] = useState(item?.code ?? "");
+  const [taxCode, setTaxCode] = useState(item?.taxCode ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function save() {
     setBusy(true);
     setError(null);
     try {
-      const json = { name, parentId: parent || null, code: code.trim() || null };
+      const json = { name, parentId: parent || null, code: code.trim() || null, taxCode: taxCode.trim() || null };
       if (item) await api(`/api/admin/accounting/items/groups/${item.id}`, { method: "PATCH", json });
       else await api("/api/admin/accounting/items/groups", { method: "POST", json });
       onSaved();
@@ -141,6 +143,9 @@ function GroupForm({ item, parentId, groups, onClose, onSaved }: { item: G | nul
         </Field>
         <Field label="کد گروه" hint="برای الگوی کد کالای «گروه + مدل + تنوع» — مثلاً ۱۱. خالی = بی‌کد">
           <input value={code} onChange={(e) => setCode(e.target.value)} className={`${inputCls} font-mono`} dir="ltr" placeholder="11" />
+        </Field>
+        <Field label="شناسه‌ی مالیاتی کالا (مودیان)" hint="۱۳ رقم از stuffid.tax.gov.ir — برای همه‌ی کالاهای این گروه و زیرگروه‌هایش که شناسه‌ی خودشان را ندارند">
+          <input value={taxCode} onChange={(e) => setTaxCode(e.target.value)} className={`${inputCls} font-mono`} dir="ltr" inputMode="numeric" placeholder="2330000000000" />
         </Field>
         <Field label="زیرمجموعه‌ی">
           <select value={parent} onChange={(e) => setParent(e.target.value)} className={inputCls}>

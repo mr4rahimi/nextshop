@@ -118,6 +118,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/treasury/reconcile", label: "تطبیق بانک", icon: fx("Bank"), keywords: "تطبیق حساب بانک مغایرت صورت حساب مغایرت گیری" },
       { href: "/admin/accounting/loans", label: "وام و تسهیلات", icon: fx("Classical building"), keywords: "وام تسهیلات قسط بانک بدهی بانکی" },
       { href: "/admin/accounting/gift-cards", label: "بن کارت", icon: fx("Wrapped gift"), keywords: "بن کارت هدیه گیفت کارت کارت هدیه سازمانی بن خرید" },
+      { href: "/admin/accounting/moadian", label: "سامانه‌ی مودیان", icon: fx("Outbox tray"), keywords: "مودیان سامانه مودیان مالیات صورتحساب الکترونیکی ارسال اکسل کارپوشه شناسه کالا مالیاتی" },
       { href: "/admin/accounting/reports/budget", label: "بودجه", icon: fx("Bookmark tabs"), keywords: "بودجه برنامه مالی عملکرد مقایسه بودجه هزینه سالانه" },
       { href: "/admin/accounting/vouchers", label: "اسناد", icon: fx("Notebook") },
       { href: "/admin/accounting/vouchers/templates", label: "ورودی سریع", icon: fx("Ledger"), keywords: "سند الگو ثبت تکراری اجاره قالب سند ورودی سریع" },

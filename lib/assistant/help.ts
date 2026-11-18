@@ -95,6 +95,7 @@ const TOPIC_PAGES: Record<string, string> = {
   accountingPurchaseAnalysis: "/admin/accounting/reports/purchases",
   accountingCustomers: "/admin/accounting/reports/customers",
   accountingGiftCards: "/admin/accounting/gift-cards",
+  accountingMoadian: "/admin/accounting/moadian",
   accountingMovers: "/admin/accounting/reports/movers",
   accountingAdjustments: "/admin/accounting/inventory/adjustments",
   accountingPosRegister: "/admin/accounting/pos",

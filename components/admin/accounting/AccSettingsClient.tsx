@@ -29,6 +29,9 @@ interface Settings {
   sellerName: string | null;
   sellerNationalId: string | null;
   sellerEconomicCode: string | null;
+  sellerBranchCode: string | null;
+  moadianSstid: string | null;
+  moadianShippingSstid: string | null;
   sellerRegNo: string | null;
   sellerPostalCode: string | null;
   sellerAddress: string | null;
@@ -277,6 +280,19 @@ export default function AccSettingsClient() {
             <Field label="آدرس" className="sm:col-span-2">
               <textarea value={s.sellerAddress ?? ""} onChange={(e) => set("sellerAddress", e.target.value)} className={inputCls} rows={2} disabled={ro} />
             </Field>
+            <div className="sm:col-span-2 border-t border-gray-100 pt-3 dark:border-white/10">
+              <p className="text-sm font-bold">سامانه‌ی مودیان</p>
+              <p className="text-[11px] text-gray-500 leading-5">برای «خروجی اکسل مودیان». شناسه‌ی هر کالا اول از کارت خودش، بعد از گروهش و آخر از شناسه‌ی پیش‌فرض همین‌جا خوانده می‌شود.</p>
+            </div>
+            <Field label="شناسه‌ی پیش‌فرض کالا/خدمت" hint="۱۳ رقم از stuffid.tax.gov.ir">
+              <input value={s.moadianSstid ?? ""} onChange={(e) => set("moadianSstid", e.target.value)} className={`${inputCls} font-mono`} dir="ltr" inputMode="numeric" disabled={ro} />
+            </Field>
+            <Field label="شناسه‌ی خدمت «هزینه‌ی ارسال»" hint="برای فاکتورهایی که هزینه‌ی ارسال دارند">
+              <input value={s.moadianShippingSstid ?? ""} onChange={(e) => set("moadianShippingSstid", e.target.value)} className={`${inputCls} font-mono`} dir="ltr" inputMode="numeric" disabled={ro} />
+            </Field>
+            <Field label="کد شعبه (اختیاری)" hint="۴ رقم، اگر در سامانه شعبه تعریف کرده‌اید">
+              <input value={s.sellerBranchCode ?? ""} onChange={(e) => set("sellerBranchCode", e.target.value)} className={`${inputCls} font-mono`} dir="ltr" inputMode="numeric" disabled={ro} />
+            </Field>
             <ImageField label="تصویر مهر" value={s.stampImage} onChange={(v) => set("stampImage", v)} disabled={ro} />
             <ImageField label="تصویر امضا" value={s.signatureImage} onChange={(v) => set("signatureImage", v)} disabled={ro} />
             <Field label="متن پایین فاکتور" className="sm:col-span-2" hint="مثلاً شرایط گارانتی یا شماره حساب برای واریز">
@@ -297,6 +313,9 @@ export default function AccSettingsClient() {
                   stampImage: s.stampImage,
                   signatureImage: s.signatureImage,
                   invoiceFooterNote: s.invoiceFooterNote,
+                  sellerBranchCode: s.sellerBranchCode,
+                  moadianSstid: s.moadianSstid,
+                  moadianShippingSstid: s.moadianShippingSstid,
                 })
               }
               disabled={busy}

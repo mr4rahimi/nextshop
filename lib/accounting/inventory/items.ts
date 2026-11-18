@@ -145,6 +145,22 @@ export interface ItemInput {
   hasSerial?: boolean;
   /** مدت گارانتی (روز) — فقط کالای سریال‌دار معنا دارد */
   warrantyDays?: number | null;
+  /** شناسه‌ی ۱۳ رقمی مالیاتی (مودیان) — در `AccProductCost.taxCode`؛ خالی = از گروه یا پیش‌فرض (webhesab-parity.md بخش ۳۰) */
+  taxCode?: string | null;
+}
+
+/** شناسه‌ی مالیاتی کالا — فقط ۱۳ رقم یا خالی */
+export function cleanTaxCode(v: string | null | undefined): string | null {
+  const d = (v ?? "").replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(c))).replace(/\D/g, "");
+  if (!d) return null;
+  if (d.length !== 13) throw new AccError("شناسه‌ی مالیاتی کالا ۱۳ رقم است (از stuffid.tax.gov.ir)");
+  return d;
+}
+
+async function saveTaxCode(db: Prisma.TransactionClient, id: string, v: string | null | undefined) {
+  if (v === undefined) return;
+  const taxCode = cleanTaxCode(v);
+  await db.accProductCost.upsert({ where: { productId: id }, create: { productId: id, taxCode }, update: { taxCode } });
 }
 
 /** بسته‌ی کالا — نام و تعداد با هم؛ تعداد ۰/خالی یعنی کالا بسته ندارد */
@@ -222,6 +238,7 @@ export async function createItem(db: Prisma.TransactionClient, input: ItemInput,
     },
   });
   if (input.barcodes) await setBarcodes(db, item.id, input.barcodes);
+  await saveTaxCode(db, item.id, input.taxCode);
   return item;
 }
 
@@ -275,6 +292,7 @@ export async function updateItem(db: Prisma.TransactionClient, id: string, input
   }
   const item = await db.accItem.update({ where: { id }, data });
   if (input.barcodes) await setBarcodes(db, id, input.barcodes);
+  await saveTaxCode(db, id, input.taxCode);
   if (priceMoved)
     await recordPriceChanges(db, [{ itemId: id, fromPrice: before?.price ?? 0n, prevRaw: cur.salePrice, toPrice: input.salePrice ?? null }], { source: "FORM", actor });
   // قیمت فروشگاه، قیمت آنلاین دستی یا گروه عوض شد ← قیمت سایت (اگر کلید روشن است)

@@ -9,6 +9,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AccError } from "../errors";
 import { toLatinDigits } from "../money";
+import { cleanTaxCode } from "./items";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 type Tx = Prisma.TransactionClient;
@@ -23,6 +24,8 @@ export interface GroupRow {
   name: string;
   /** کد عددی گروه برای الگوی کد کالا */
   code: string | null;
+  /** شناسه‌ی مالیاتی مودیان (webhesab-parity.md بخش ۳۰) */
+  taxCode: string | null;
   /** «پوشاک ← پیراهن» */
   path: string;
   items: number;
@@ -42,7 +45,7 @@ export async function listGroups(db: Db = prisma): Promise<GroupRow[]> {
     return `${pathOf(g.parentId, seen)} ← ${g.name}`;
   };
   return groups
-    .map((g) => ({ id: g.id, parentId: g.parentId, name: g.name, code: g.code, path: pathOf(g.id), items: n.get(g.id) ?? 0 }))
+    .map((g) => ({ id: g.id, parentId: g.parentId, name: g.name, code: g.code, taxCode: g.taxCode, path: pathOf(g.id), items: n.get(g.id) ?? 0 }))
     .sort((a, b) => a.path.localeCompare(b.path, "fa"));
 }
 
@@ -51,7 +54,7 @@ async function assertNameFree(db: Db, parentId: string | null, name: string, sel
   if (dup) throw new AccError(`گروه «${name}» همین‌جا هست`, 409);
 }
 
-export async function saveGroup(db: Tx, id: string | null, input: { name?: unknown; parentId?: unknown; code?: unknown }) {
+export async function saveGroup(db: Tx, id: string | null, input: { name?: unknown; parentId?: unknown; code?: unknown; taxCode?: unknown }) {
   const name = clean(input.name);
   if (!name) throw new AccError("نام گروه را بنویسید");
   const code = input.code === undefined ? undefined : toLatinDigits(clean(input.code)).toUpperCase() || null;
@@ -73,7 +76,8 @@ export async function saveGroup(db: Tx, id: string | null, input: { name?: unkno
     }
   }
   await assertNameFree(db, parentId, name, id);
-  const data = { name, parentId, ...(code !== undefined ? { code } : {}) };
+  const taxCode = input.taxCode === undefined ? undefined : cleanTaxCode(input.taxCode === null ? null : String(input.taxCode));
+  const data = { name, parentId, ...(code !== undefined ? { code } : {}), ...(taxCode !== undefined ? { taxCode } : {}) };
   return id ? db.accItemGroup.update({ where: { id }, data }) : db.accItemGroup.create({ data });
 }
 

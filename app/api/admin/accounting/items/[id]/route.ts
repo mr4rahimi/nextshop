@@ -26,11 +26,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     },
   });
   if (!item) return NextResponse.json({ error: "کالا پیدا نشد" }, { status: 404 });
-  const [product, rule] = await Promise.all([prisma.product.findUnique({ where: { id }, select: { id: true, title: true, slug: true } }), onlineRule()]);
+  const [product, rule, cost] = await Promise.all([
+    prisma.product.findUnique({ where: { id }, select: { id: true, title: true, slug: true } }),
+    onlineRule(),
+    prisma.accProductCost.findUnique({ where: { productId: id }, select: { taxCode: true } }),
+  ]);
   // قیمت آنلاین (۲.۹۶.۰): کلید روشن ← قیمت فروشگاه برای همه‌ی کالاها و قیمت آنلاین ساخته‌شده
   const o = rule.enabled ? (await onlinePricesOf(prisma, [id], rule)).get(id) ?? null : null;
   const online = rule.enabled ? { enabled: true, price: o?.price ?? null, pctBp: o?.pctBp ?? rule.pctBp, source: o?.source ?? null, manual: !!o?.manual } : { enabled: false };
-  return NextResponse.json(serialize({ item, product, online, can: { manage: can(guard.access, "ACC_INVENTORY") } }));
+  return NextResponse.json(serialize({ item: { ...item, taxCode: cost?.taxCode ?? null }, product, online, can: { manage: can(guard.access, "ACC_INVENTORY") } }));
 }
 
 /** PATCH — ویرایش؛ کد عوض‌شده در «کدهای قبلی» می‌ماند */

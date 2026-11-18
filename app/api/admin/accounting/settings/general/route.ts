@@ -16,7 +16,15 @@ export const dynamic = "force-dynamic";
 const TEXT_FIELDS = [
   "sellerName", "sellerNationalId", "sellerEconomicCode", "sellerRegNo", "sellerPostalCode",
   "sellerAddress", "sellerPhone", "stampImage", "signatureImage", "invoiceFooterNote",
+  "sellerBranchCode", "moadianSstid", "moadianShippingSstid",
 ] as const;
+
+/** مودیان (webhesab-parity.md بخش ۳۰) — فقط رقم با طول ثابت */
+const DIGIT_FIELDS: Partial<Record<(typeof TEXT_FIELDS)[number], { len: number[]; label: string }>> = {
+  sellerBranchCode: { len: [4], label: "کد شعبه" },
+  moadianSstid: { len: [13], label: "شناسه‌ی پیش‌فرض کالا" },
+  moadianShippingSstid: { len: [13], label: "شناسه‌ی خدمت ارسال" },
+};
 
 /** تنظیمات عمومی حسابداری — مالیات، تاریخ قفل، سال جاری، اطلاعات فروشنده، صندوقِ ثبت خودکار */
 export async function GET() {
@@ -38,7 +46,14 @@ export async function PATCH(req: Request) {
     const data: Prisma.AccSettingsUpdateInput = {};
 
     for (const k of TEXT_FIELDS) {
-      if (k in body) data[k] = typeof body[k] === "string" && (body[k] as string).trim() ? (body[k] as string).trim() : null;
+      if (!(k in body)) continue;
+      let v = typeof body[k] === "string" && (body[k] as string).trim() ? (body[k] as string).trim() : null;
+      const rule = DIGIT_FIELDS[k];
+      if (v && rule) {
+        v = v.replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(c))).replace(/\D/g, "");
+        if (!rule.len.includes(v.length)) throw new AccError(`${rule.label} باید ${rule.len.join(" یا ")} رقم باشد`);
+      }
+      data[k] = v;
     }
     if ("vatRateBp" in body) {
       const v = Number(body.vatRateBp);

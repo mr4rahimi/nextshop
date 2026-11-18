@@ -30,6 +30,7 @@ interface ItemData {
     supplierId: string | null;
     hasSerial: boolean;
     warrantyDays: number | null;
+    taxCode: string | null;
     barcodes: { barcode: string }[];
     aliases: { id: string; code: string; source: string }[];
     model: { id: string; title: string } | null;
@@ -104,6 +105,7 @@ export default function ItemForm({
     supplierId: "",
     hasSerial: false,
     warrantyDays: "",
+    taxCode: "",
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,6 +137,7 @@ export default function ItemForm({
           supplierId: i.supplierId ?? "",
           hasSerial: i.hasSerial,
           warrantyDays: i.warrantyDays == null ? "" : String(i.warrantyDays),
+          taxCode: i.taxCode ?? "",
         });
       })
       .catch((e) => setError(e.message));
@@ -158,6 +161,7 @@ export default function ItemForm({
         groupId: f.groupId || null,
         hasSerial: f.hasSerial,
         warrantyDays: f.hasSerial && f.warrantyDays.trim() ? f.warrantyDays : null,
+        taxCode: f.taxCode.trim() || null,
         ...(suppliers.length || f.supplierId ? { supplierId: f.supplierId || null } : {}),
         ...(itemId ? { isActive: f.isActive } : {}),
       };
@@ -327,6 +331,9 @@ export default function ItemForm({
               <input value={f.reorderPoint} onChange={(e) => setF({ ...f, reorderPoint: e.target.value })} className={inputCls} inputMode="numeric" />
             </Field>
           </div>
+          <Field label="شناسه‌ی مالیاتی (مودیان)" hint="۱۳ رقم از stuffid.tax.gov.ir — خالی = از گروه کالا یا شناسه‌ی پیش‌فرض تنظیمات">
+            <input value={f.taxCode} onChange={(e) => setF({ ...f, taxCode: e.target.value })} className={`${inputCls} font-mono`} dir="ltr" inputMode="numeric" placeholder="2330000000000" />
+          </Field>
           <div className="rounded-lg border border-gray-100 p-2.5 dark:border-gray-800">
             <label className="flex items-start gap-2 text-sm">
               <input type="checkbox" className="mt-1" checked={f.hasSerial} onChange={(e) => setF({ ...f, hasSerial: e.target.checked })} />

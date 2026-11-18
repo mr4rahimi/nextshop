@@ -4042,6 +4042,12 @@ model AccSettings {
   sellerPostalCode      String?
   sellerAddress         String?
   sellerPhone           String?
+  /// مودیان (webhesab-parity.md بخش ۳۰): کد شعبه‌ی فروشنده (۴ رقم، اختیاری)
+  sellerBranchCode      String?
+  /// شناسه‌ی ۱۳ رقمی پیش‌فرض کالا/خدمت — وقتی نه کالا و نه گروهش شناسه ندارند
+  moadianSstid          String?
+  /// شناسه‌ی خدمت «هزینه‌ی ارسال» برای اضافات فاکتور فروش
+  moadianShippingSstid  String?
   stampImage            String?
   signatureImage        String?
   invoiceFooterNote     String?
@@ -4781,6 +4787,8 @@ model AccItemGroup {
   sortOrder   Int            @default(0)
   /// درصد قیمت آنلاین این گروه (و زیرگروه‌های بی‌درصد)؛ خالی = از گروه بالاتر یا پیش‌فرض
   onlinePctBp Int?
+  /// شناسه‌ی مالیاتی (مودیان) کالاهای این گروه و زیرگروه‌های بی‌شناسه — webhesab-parity.md بخش ۳۰
+  taxCode     String?
   createdAt   DateTime       @default(now())
   parent      AccItemGroup?  @relation("AccItemGroupTree", fields: [parentId], references: [id], onDelete: Restrict)
   children    AccItemGroup[] @relation("AccItemGroupTree")
@@ -5294,9 +5302,17 @@ model AccInvoice {
   /// فاکتور خرید از روی سفارش خرید (webhesab-parity.md بخش ۱۳)
   purchaseOrderId   String?
   batchId           String?
-  /// مودیان — فاز ۹
+  /// مودیان — webhesab-parity.md بخش ۳۰. `taxId` = شماره‌ی منحصربه‌فرد مالیاتی همین فاکتور (از فایل نتیجه)
   taxId             String?
+  /// EXPORTED (در فایل، منتظر نتیجه) | SENT | FAILED | CANCEL_EXPORTED | CANCELED — خالی = هنوز نرفته
   taxStatus         String?
+  /// سریال داخلی آخرین ارسال (inno، ۱۰ رقم هگز) — فایل نتیجه با همین به فاکتور برمی‌گردد
+  moadianInno       String?           @unique
+  /// نوع صورتحساب ارسالی (۱/۲) — برگشتی و ابطالی همان را می‌فرستند
+  moadianInty       Int?
+  moadianAt         DateTime?
+  /// پیام فایل نتیجه (خطا) یا شماره‌ی مالیاتی ابطالیه
+  moadianNote       String?
   createdById       String?
   createdByName     String
   issuedAt          DateTime?
@@ -5309,6 +5325,7 @@ model AccInvoice {
   installmentPlan AccInstallmentPlan?
 
   @@unique([yearId, type, number])
+  @@index([taxStatus])
   @@index([batchId])
   @@index([partyId, date])
   @@index([type, status, date])

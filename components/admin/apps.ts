@@ -10,7 +10,7 @@
 
 import {
   Activity, ArrowLeftRight, Banknote, Gift, Paperclip, ScanSearch, HandCoins, CalendarClock, ChartColumn, ChartPie, ClipboardList,
-  ClockCheck, Coins, FileSpreadsheet, FolderTree, House, Landmark, Link2, ListTodo, NotebookPen,
+  ClockCheck, Coins, FileSpreadsheet, FileUp, FolderTree, House, Landmark, Link2, ListTodo, NotebookPen,
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
@@ -110,6 +110,7 @@ export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting/pos", label: "صندوق فروشگاه", icon: ShoppingCart, tone: "emerald", perm: ["ACC_POS", "ACC_POS_MANAGE", "ACC_SALES"], img: "quick-pos" },
   { href: "/admin/accounting/price-check", label: "چک کردن قیمت", icon: ScanSearch, tone: "sky", perm: ["ACC_PRICE_CHECK", "ACC_VIEW", "ACC_INVENTORY", "ACC_SALES", "ACC_POS", "ACC_POS_MANAGE"] },
   { href: "/admin/accounting/gift-cards", label: "بن کارت", icon: Gift, tone: "violet", perm: ["ACC_VIEW", "ACC_TREASURY", "ACC_POS_MANAGE"] },
+  { href: "/admin/accounting/moadian", label: "سامانه‌ی مودیان", icon: FileUp, tone: "teal", perm: ["ACC_VIEW", "ACC_SALES"] },
   { href: "/admin/accounting/purchases", label: "خرید", icon: ShoppingBag, tone: "orange", perm: ["ACC_VIEW", "ACC_PURCHASE"], img: "acc-purchases" },
   { href: "/admin/accounting/purchases/orders", label: "سفارش خرید", icon: ClipboardList, tone: "orange", perm: ["ACC_VIEW", "ACC_PURCHASE", "ACC_INVENTORY"] },
   { href: "/admin/accounting/money", label: "دریافت و پرداخت", icon: ArrowLeftRight, tone: "sky", perm: ["ACC_VIEW", "ACC_TREASURY"], img: "acc-money" },
