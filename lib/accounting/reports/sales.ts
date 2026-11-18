@@ -1,5 +1,7 @@
 /**
  * تحلیل فروش کالا — docs/plans/webhesab-parity.md بخش ۵.
+ * با `side: "purchase"` همان گزارش برای خرید (بخش ۲۸): فاکتور خرید و برگشت از خرید، عرضه‌کننده = طرف
+ * همان فاکتور، بی سود و بی کانال/صندوق/فروشنده/مشتری.
  *
  * یک گزارش به‌جای گزارش‌های جدای وب حساب (دسته، عرضه‌کننده، مشخصه، انبار، صندوق، ماه):
  * سطر «بر اساس» یکی از بُعدها، ستون اختیاری (انبار، ماه، کانال).
@@ -25,10 +27,23 @@ export type ColDim = (typeof COL_DIMS)[number];
 /** سطرهایی که «موجودی فعلی» دارند — کانال، صندوق، فروشنده، مشتری و ماه موجودی ندارند */
 const STOCK_DIMS = (d: SalesDim) => !["channel", "terminal", "seller", "customer", "month"].includes(d);
 
-export function parseDim(raw: string | null): SalesDim {
+export type Side = "sales" | "purchase";
+/** بُعدهایی که در خرید معنا ندارند */
+const SALES_ONLY: readonly string[] = ["customer", "channel", "terminal", "seller"];
+
+export function parseDim(raw: string | null, side: Side = "sales"): SalesDim {
+  if (side === "purchase" && raw && SALES_ONLY.includes(raw)) return "group";
   if (raw && ((FIXED_DIMS as readonly string[]).includes(raw) || /^axis:[\w-]+$/.test(raw) || /^spec:.{1,60}$/.test(raw))) return raw as SalesDim;
   return "group";
 }
+
+export function parseCol(raw: string | null, side: Side = "sales"): ColDim | null {
+  if (!raw || !(COL_DIMS as readonly string[]).includes(raw)) return null;
+  if (side === "purchase" && raw === "channel") return null;
+  return raw as ColDim;
+}
+
+type InvType = "SALES" | "SALES_RETURN" | "PURCHASE" | "PURCHASE_RETURN";
 
 export interface SalesFilters {
   groupId?: string | null;
@@ -50,7 +65,7 @@ interface Fact {
   platformCode: string | null;
   warehouseId: string | null;
   invoiceId: string;
-  invoiceType: "SALES" | "SALES_RETURN";
+  invoiceType: InvType;
   number: number | null;
   partyId: string;
   partyName: string;
@@ -59,7 +74,7 @@ interface Fact {
 /** ردیف‌های فاکتورِ پشت یک سطر/خانه — پنجره‌ی جزئیات */
 export interface DetailLine {
   invoiceId: string;
-  type: "SALES" | "SALES_RETURN";
+  type: InvType;
   number: number | null;
   date: Date;
   partyId: string;
@@ -101,13 +116,17 @@ const MAX_COLS = 24;
 
 export async function salesAnalysis(
   db: Db,
-  opts: { range: DateRange; by: SalesDim; col: ColDim | null; filters: SalesFilters; costs: boolean; detail?: { row: string; col?: string | null } | null },
+  opts: { range: DateRange; by: SalesDim; col: ColDim | null; filters: SalesFilters; costs: boolean; side?: Side; detail?: { row: string; col?: string | null } | null },
 ) {
   const { range, by, col, filters } = opts;
+  const purchase = opts.side === "purchase";
+  // در خرید «بها» همان مبلغ خرید است؛ سود معنا ندارد
+  const costs = opts.costs && !purchase;
+  const [FWD, BACK] = purchase ? (["PURCHASE", "PURCHASE_RETURN"] as const) : (["SALES", "SALES_RETURN"] as const);
   const invs = await db.accInvoice.findMany({
     where: {
       status: "ISSUED",
-      type: { in: ["SALES", "SALES_RETURN"] },
+      type: { in: [FWD, BACK] },
       ...(filters.partyId ? { partyId: filters.partyId } : {}),
       ...(range.from || range.to ? { date: { ...(range.from ? { gte: range.from } : {}), ...(range.to ? { lte: range.to } : {}) } } : {}),
     },
@@ -139,7 +158,7 @@ export async function salesAnalysis(
     inv.lines.map((l) => ({
       productId: l.productId,
       title: l.title,
-      sign: inv.type === "SALES" ? (1 as const) : (-1 as const),
+      sign: inv.type === FWD ? (1 as const) : (-1 as const),
       qty: l.qty,
       revenue: l.lineTotal - l.vatAmount,
       cost: moveOf.get(l.id)?.cost ?? 0n,
@@ -148,7 +167,7 @@ export async function salesAnalysis(
       platformCode: inv.platformCode,
       warehouseId: moveOf.get(l.id)?.warehouseId ?? inv.warehouseId,
       invoiceId: inv.id,
-      invoiceType: inv.type as "SALES" | "SALES_RETURN",
+      invoiceType: inv.type as InvType,
       number: inv.number,
       partyId: inv.partyId,
       partyName: inv.partyName,
@@ -156,7 +175,8 @@ export async function salesAnalysis(
   );
 
   // ── اطلاعات کالاها (فروخته‌ها + دارای موجودی برای ستون موجودی) ──
-  const withStock = STOCK_DIMS(by);
+  // در خرید، عرضه‌کننده طرف فاکتور است و به موجودی کالا وصل نیست
+  const withStock = STOCK_DIMS(by) && !(purchase && by === "supplier");
   const stocks = withStock
     ? await db.accStock.findMany({ where: { qty: { not: 0 }, ...(filters.warehouseId ? { warehouseId: filters.warehouseId } : {}) }, select: { productId: true, warehouseId: true, qty: true } })
     : [];
@@ -174,8 +194,8 @@ export async function salesAnalysis(
   const groupOf = new Map(groups.map((g) => [g.id, g]));
   const whName = new Map(warehouses.map((w) => [w.id, w.name]));
 
-  // عرضه‌کننده: فیلد کالا، وگرنه طرف آخرین فاکتور خرید صادرشده
-  const needSupplier = by === "supplier" || !!filters.supplierId;
+  // عرضه‌کننده: فیلد کالا، وگرنه طرف آخرین فاکتور خرید صادرشده. در خرید: طرف همان فاکتور
+  const needSupplier = !purchase && (by === "supplier" || !!filters.supplierId);
   const supplierOf = new Map<string, string>();
   const partyName = new Map<string, string>();
   if (needSupplier) {
@@ -189,10 +209,13 @@ export async function salesAnalysis(
   const keep = (productId: string | null, warehouseId: string | null) => {
     if (inGroup && !(productId && inGroup.has(itemOf.get(productId)?.groupId ?? ""))) return false;
     if (filters.warehouseId && warehouseId !== filters.warehouseId) return false;
-    if (filters.supplierId && !(productId && supplierOf.get(productId) === filters.supplierId)) return false;
+    if (!purchase && filters.supplierId && !(productId && supplierOf.get(productId) === filters.supplierId)) return false;
     return true;
   };
-  facts = facts.filter((f) => keep(f.productId, f.warehouseId));
+  facts = facts.filter((f) => keep(f.productId, f.warehouseId) && (!purchase || !filters.supplierId || f.partyId === filters.supplierId));
+  // موجودی در خرید فقط برای کالاهایی که در همین گزارش خریده شده‌اند (نه همه‌ی انبار)
+  const bought = purchase ? new Set(facts.map((f) => f.productId)) : null;
+  const keepStock = (productId: string, warehouseId: string) => keep(productId, warehouseId) && (!bought || bought.has(productId));
 
   // ── صندوق و فروشنده ──
   const ticketOf = new Map<string, { terminal: string; seller: string | null }>();
@@ -257,6 +280,7 @@ export async function salesAnalysis(
         return r ? [r.id, r.name] : [NONE, "بی‌گروه"];
       }
       case "supplier": {
+        if (purchase) return f.partyId ? [f.partyId, f.partyName ?? "—"] : [NONE, "—"];
         const s = f.productId ? supplierOf.get(f.productId) : undefined;
         return s ? [s, partyName.get(s) ?? "—"] : [NONE, "نامعلوم"];
       }
@@ -305,7 +329,7 @@ export async function salesAnalysis(
     }
     for (const s of stocks) {
       const r = byItem.get(s.productId);
-      if (r && keep(s.productId, s.warehouseId)) r.stock = (r.stock ?? 0) + s.qty;
+      if (r && keepStock(s.productId, s.warehouseId)) r.stock = (r.stock ?? 0) + s.qty;
     }
     const lines: DetailLine[] = [...picked]
       .sort((a, b) => b.date.getTime() - a.date.getTime() || (b.number ?? 0) - (a.number ?? 0))
@@ -368,7 +392,7 @@ export async function salesAnalysis(
 
   if (withStock) {
     for (const s of stocks) {
-      if (!keep(s.productId, s.warehouseId)) continue;
+      if (!keepStock(s.productId, s.warehouseId)) continue;
       const [key] = dimOf(by, { productId: s.productId, warehouseId: s.warehouseId });
       const r = rows.get(key);
       if (r) r.stock = (r.stock ?? 0) + s.qty;
@@ -376,7 +400,7 @@ export async function salesAnalysis(
     for (const r of rows.values()) r.stock ??= 0;
   }
 
-  if (by === "customer") {
+  if (by === "customer" || (purchase && by === "supplier")) {
     // نام امروز شخص (نه اسنپ‌شات فاکتور) + موبایل
     const ps = await db.accParty.findMany({ where: { id: { in: [...rows.keys()] } }, select: { id: true, name: true, mobile: true } });
     for (const p of ps) {
@@ -389,7 +413,7 @@ export async function salesAnalysis(
   const total = [...rows.values()].reduce((s, r) => s + r.revenue, 0n);
   const list: SalesRow[] = [...rows.values()].map(({ _cost, _inv, ...r }) => {
     const out: SalesRow = { ...r, invoices: _inv.size, shareBp: total > 0n ? Number((r.revenue * 10_000n) / total) : 0 };
-    if (opts.costs) {
+    if (costs) {
       out.cost = _cost;
       out.profit = r.revenue - _cost;
       out.marginBp = r.revenue > 0n ? Number(((r.revenue - _cost) * 10_000n) / r.revenue) : null;
@@ -423,12 +447,12 @@ export async function salesAnalysis(
       returnQty: t.returnQty + r.returnQty,
       netQty: t.netQty + r.netQty,
       revenue: t.revenue + r.revenue,
-      cost: opts.costs ? (t.cost ?? 0n) + (r.cost ?? 0n) : null,
+      cost: costs ? (t.cost ?? 0n) + (r.cost ?? 0n) : null,
       stock: withStock ? (t.stock ?? 0) + (r.stock ?? 0) : null,
     }),
     { soldQty: 0, returnQty: 0, netQty: 0, revenue: 0n, cost: null as bigint | null, stock: null as number | null },
   );
-  return { rows: list, columns: columns.map(({ key, label }) => ({ key, label })), totals, costs: opts.costs, stock: withStock };
+  return { rows: list, columns: columns.map(({ key, label }) => ({ key, label })), totals, costs, stock: withStock, side: opts.side ?? "sales" };
 }
 
 /** عرضه‌کننده‌ی هر کالا: فیلد کالا، وگرنه طرف آخرین فاکتور خرید صادرشده */

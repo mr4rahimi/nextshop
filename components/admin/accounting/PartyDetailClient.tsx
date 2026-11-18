@@ -89,6 +89,11 @@ export default function PartyDetailClient({ id }: { id: string }) {
             <Link href={`/admin/accounting/money/new?kind=PAYMENT&partyId=${id}`} className={btn.soft}>
               📤 پرداخت
             </Link>
+            {p.isSupplier && (
+              <Link href={`/admin/accounting/reports/purchases?by=item&supplierId=${id}`} className={btn.soft} title="هر چه از این عرضه‌کننده خریده‌اید، به تفکیک کالا">
+                🛒 تحلیل خرید
+              </Link>
+            )}
             {data.can.manage && !data.links.mergedInto && (
               <button onClick={() => setEdit(true)} className={btn.soft}>
                 ✏️ ویرایش

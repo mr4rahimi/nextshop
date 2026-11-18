@@ -30,6 +30,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     title: "فروش و سود",
     items: [
       { href: "/admin/accounting/reports/sales", icon: "🛍️", title: "تحلیل فروش کالا", desc: "فروش به تفکیک گروه، کالا، عرضه‌کننده، رنگ و سایز، انبار، صندوق، مشتری و ماه — با جزئیات هر عدد", perm: ["ACC_REPORTS"] },
+      { href: "/admin/accounting/reports/purchases", icon: "🛒", title: "تحلیل خرید کالا", desc: "خرید هر کالا و هر عرضه‌کننده در یک بازه — به تفکیک گروه، رنگ و سایز، انبار و ماه، با فاکتورهای پشت هر عدد", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/reports/customers", icon: "👥", title: "مشتریان", desc: "نفرات برتر خرید، اولین خرید (مشتری تازه) و تعداد مشتری هر روز", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/reports/movers", icon: "🐢", title: "کالای راکد و پرفروش", desc: "پول خوابیده در انبار، پرفروش‌ها و کالاهایی که به‌زودی تمام می‌شوند", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/reports/profit", icon: "🏷️", title: "سود هر کالا، دسته و کانال", desc: "فروش، بهای تمام‌شده و درصد سود؛ سایت، تلفنی و بازارگاه‌ها", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },

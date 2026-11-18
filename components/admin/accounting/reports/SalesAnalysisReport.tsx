@@ -5,6 +5,7 @@
  * سطر «بر اساس» (گروه، کالا، مدل، عرضه‌کننده، رنگ/سایز، مشخصه، انبار، کانال، صندوق، فروشنده، ماه)،
  * ستون اختیاری (انبار، ماه، کانال). کلیک روی هر سطر یا خانه ← پنجره‌ی جزئیات: کالاهای پشت آن عدد
  * (لینک کاردکس) و فاکتورها (لینک فاکتور و شخص).
+ * `side="purchase"` ← تحلیل خرید کالا (بخش ۲۸): همان گزارش روی فاکتور خرید و برگشت از خرید.
  */
 
 import Link from "next/link";
@@ -53,7 +54,7 @@ interface Detail {
   label: string;
   colLabel: string | null;
   items: { productId: string | null; label: string; netQty: number; revenue: string; stock: number | null }[];
-  lines: { invoiceId: string; type: "SALES" | "SALES_RETURN"; number: number | null; date: string; partyId: string; partyName: string; productId: string | null; title: string; qty: number; revenue: string }[];
+  lines: { invoiceId: string; type: string; number: number | null; date: string; partyId: string; partyName: string; productId: string | null; title: string; qty: number; revenue: string }[];
   lineCount: number;
 }
 
@@ -86,6 +87,35 @@ const FILTERABLE: Record<string, "groupId" | "warehouseId" | "supplierId" | "par
   customer: "partyId",
 };
 
+/** بُعد و ستون‌هایی که در خرید نیستند */
+const SALES_ONLY = ["customer", "channel", "terminal", "seller"];
+
+type Side = "sales" | "purchase";
+const WORDS = {
+  sales: {
+    title: "تحلیل فروش کالا",
+    help: "accountingSalesAnalysis",
+    desc: "فروش خالص (بعد از تخفیف، بی مالیات، منهای برگشتی) به تفکیک هر چه بخواهید. روی هر سطر یا عدد بزنید تا کالاها و فاکتورهای پشتش را ببینید.",
+    fwd: "فروخته",
+    net: "فروش خالص",
+    avg: "میانگین قیمت",
+    empty: "در این بازه و با این فیلترها فروشی نیست.",
+    none: "در این بازه فروشی نداشته.",
+    file: "sales",
+  },
+  purchase: {
+    title: "تحلیل خرید کالا",
+    help: "accountingPurchaseAnalysis",
+    desc: "خرید خالص (بعد از تخفیف، بی مالیات، منهای برگشت به عرضه‌کننده) به تفکیک کالا، گروه، عرضه‌کننده، رنگ و سایز، انبار و ماه. روی هر سطر یا عدد بزنید تا کالاها و فاکتورهای خرید پشتش را ببینید.",
+    fwd: "خریده",
+    net: "خرید خالص",
+    avg: "میانگین قیمت خرید",
+    empty: "در این بازه و با این فیلترها خریدی نیست.",
+    none: "در این بازه خریدی نداشته.",
+    file: "purchases",
+  },
+} as const;
+
 const pct = (bp: number | null) => (bp === null ? "—" : `${(bp / 100).toLocaleString("fa-IR", { maximumFractionDigits: 1 })}٪`);
 const NONE = "_none";
 
@@ -101,20 +131,24 @@ export function groupOptions(groups: { id: string; name: string; parentId: strin
   return out;
 }
 
-export default function SalesAnalysisReport({ initial }: { initial?: { by?: string; partyId?: string; from?: string; to?: string } }) {
+export default function SalesAnalysisReport({ initial, side = "sales" }: { initial?: { by?: string; partyId?: string; supplierId?: string; from?: string; to?: string }; side?: Side }) {
+  const w = WORDS[side];
+  const purchase = side === "purchase";
+  const fixed = purchase ? FIXED.filter((x) => !SALES_ONLY.includes(x.value)) : FIXED;
+  const colOpts = purchase ? COLS.filter((x) => x.value !== "channel") : COLS;
   const [range, setRange] = useState<Range>(() =>
-    initial?.from || initial?.to ? { preset: "custom", from: initial.from ?? "", to: initial.to ?? "" } : rangeFor(initial?.partyId ? "all" : "month"),
+    initial?.from || initial?.to ? { preset: "custom", from: initial.from ?? "", to: initial.to ?? "" } : rangeFor(initial?.partyId || initial?.supplierId ? "all" : "month"),
   );
-  const [by, setBy] = useState(initial?.by && (FIXED.some((x) => x.value === initial.by) || /^(axis|spec):/.test(initial.by)) ? initial.by : "group");
+  const [by, setBy] = useState(initial?.by && (fixed.some((x) => x.value === initial.by) || /^(axis|spec):/.test(initial.by)) ? initial.by : "group");
   const [col, setCol] = useState("");
-  const [f, setF] = useState({ groupId: "", warehouseId: "", supplierId: "", partyId: initial?.partyId ?? "" });
+  const [f, setF] = useState({ groupId: "", warehouseId: "", supplierId: initial?.supplierId ?? "", partyId: purchase ? "" : (initial?.partyId ?? "") });
   const [q, setQ] = useState("");
   const [detail, setDetail] = useState<{ row: Row; cell: string | null } | null>(null);
-  const params = { from: range.from, to: range.to, by, col, ...f };
+  const params = { from: range.from, to: range.to, by, col, ...f, ...(purchase ? { side } : {}) };
   const { data, error, loading } = useReport<Data>("sales", params);
 
   const dimLabel =
-    FIXED.find((x) => x.value === by)?.label ??
+    fixed.find((x) => x.value === by)?.label ??
     (by.startsWith("axis:") ? data?.dims.axes.find((a) => `axis:${a.id}` === by)?.name : by.startsWith("spec:") ? by.slice(5) : null) ??
     "سطر";
   const rows = useMemo(() => {
@@ -126,10 +160,10 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
   function exportCsv() {
     if (!data) return;
     const cust = by === "customer";
-    const head = [dimLabel, ...(cust ? ["موبایل", "فاکتور", "آخرین خرید"] : []), ...(cols.length ? cols.map((c) => c.label) : []), "فروخته", "برگشتی", "خالص", "فروش خالص (تومان)", "سهم ٪", "میانگین قیمت"];
+    const head = [dimLabel, ...(cust ? ["موبایل", "فاکتور", "آخرین خرید"] : []), ...(cols.length ? cols.map((c) => c.label) : []), w.fwd, "برگشتی", "خالص", `${w.net} (تومان)`, "سهم ٪", w.avg];
     if (data.costs) head.push("بهای تمام‌شده", "سود", "درصد سود");
-    if (data.stock) head.push("موجودی فعلی", "نرخ فروش ٪");
-    downloadCsv(`sales-by-${by.replace(":", "-")}${col ? `-${col}` : ""}`, head, rows.map((r) => [
+    if (data.stock) head.push("موجودی فعلی", ...(purchase ? [] : ["نرخ فروش ٪"]));
+    downloadCsv(`${w.file}-by-${by.replace(":", "-")}${col ? `-${col}` : ""}`, head, rows.map((r) => [
       r.label,
       ...(cust ? [r.sub ?? "", r.invoices, r.lastDate ? formatJalali(new Date(r.lastDate)) : ""] : []),
       ...cols.map((c) => r.cells?.[c.key]?.qty ?? 0),
@@ -140,7 +174,7 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
       r.shareBp / 100,
       r.netQty > 0 ? (BigInt(r.revenue) / BigInt(r.netQty)).toString() : "",
       ...(data.costs ? [r.cost, r.profit, r.marginBp === null ? "" : r.marginBp / 100] : []),
-      ...(data.stock ? [r.stock, sellThrough(r) ?? ""] : []),
+      ...(data.stock ? [r.stock, ...(purchase ? [] : [sellThrough(r) ?? ""])] : []),
     ]));
   }
 
@@ -149,9 +183,9 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
 
   return (
     <ReportFrame
-      title="تحلیل فروش کالا"
-      help="accountingSalesAnalysis"
-      desc="فروش خالص (بعد از تخفیف، بی مالیات، منهای برگشتی) به تفکیک هر چه بخواهید. روی هر سطر یا عدد بزنید تا کالاها و فاکتورهای پشتش را ببینید."
+      title={w.title}
+      help={w.help}
+      desc={w.desc}
       printSub={`${rangeText(range)} — بر اساس ${dimLabel}`}
       onExport={exportCsv}
       error={error}
@@ -162,7 +196,7 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
           <div className="flex flex-wrap gap-2">
             <select value={by} onChange={(e) => setBy(e.target.value)} className={`${inputCls} w-auto`} aria-label="بر اساس">
               <optgroup label="بر اساس">
-                {FIXED.map((o) => (
+                {fixed.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
@@ -188,7 +222,7 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
               )}
             </select>
             <select value={col} onChange={(e) => setCol(e.target.value)} className={`${inputCls} w-auto`} aria-label="ستون‌ها">
-              {COLS.map((o) => (
+              {colOpts.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
@@ -242,7 +276,7 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Card className="p-4">
-              <p className="text-[11px] text-gray-500">فروش خالص</p>
+              <p className="text-[11px] text-gray-500">{w.net}</p>
               <p className="text-lg mt-1">
                 <Amt v={data.totals.revenue} strong />
               </p>
@@ -251,7 +285,7 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
               <p className="text-[11px] text-gray-500">تعداد خالص</p>
               <p className="text-lg mt-1 font-black tabular-nums">{faNum(data.totals.netQty)}</p>
               <p className="text-[11px] text-gray-400">
-                {faNum(data.totals.soldQty)} فروخته · {faNum(data.totals.returnQty)} برگشتی
+                {faNum(data.totals.soldQty)} {w.fwd} · {faNum(data.totals.returnQty)} برگشتی
               </p>
             </Card>
             {data.costs && (
@@ -288,14 +322,14 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
                 ))}
                 {!cols.length && (
                   <>
-                    <th className={thNum}>فروخته</th>
+                    <th className={thNum}>{w.fwd}</th>
                     <th className={thNum}>برگشتی</th>
                   </>
                 )}
                 <th className={thNum}>خالص</th>
-                <th className={thNum}>فروش خالص</th>
+                <th className={thNum}>{w.net}</th>
                 <th className={thNum}>سهم</th>
-                {!cols.length && <th className={thNum}>میانگین قیمت</th>}
+                {!cols.length && <th className={thNum}>{w.avg}</th>}
                 {data.costs && !cols.length && (
                   <>
                     <th className={thNum}>سود</th>
@@ -305,9 +339,11 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
                 {data.stock && (
                   <>
                     <th className={thNum}>موجودی</th>
-                    <th className={thNum} title="خالص فروش ÷ (خالص فروش + موجودی)">
-                      نرخ فروش
-                    </th>
+                    {!purchase && (
+                      <th className={thNum} title="خالص فروش ÷ (خالص فروش + موجودی)">
+                        نرخ فروش
+                      </th>
+                    )}
                   </>
                 )}
               </tr>
@@ -349,7 +385,7 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
                 {data.stock && (
                   <>
                     <td className={`${tdNum} tabular-nums`}>{faNum(data.totals.stock ?? 0)}</td>
-                    <td className={tdNum} />
+                    {!purchase && <td className={tdNum} />}
                   </>
                 )}
               </tr>
@@ -414,7 +450,7 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
                 {data.stock && (
                   <>
                     <td className={`${tdNum} tabular-nums`}>{faNum(r.stock ?? 0)}</td>
-                    <td className={`${tdNum} tabular-nums text-gray-500`}>{sellThrough(r) === null ? "—" : `${sellThrough(r)!.toLocaleString("fa-IR")}٪`}</td>
+                    {!purchase && <td className={`${tdNum} tabular-nums text-gray-500`}>{sellThrough(r) === null ? "—" : `${sellThrough(r)!.toLocaleString("fa-IR")}٪`}</td>}
                   </>
                 )}
               </tr>
@@ -422,15 +458,21 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
             {!rows.length && (
               <tr>
                 <td className={`${td} text-center text-xs text-gray-400 py-8`} colSpan={12}>
-                  در این بازه و با این فیلترها فروشی نیست.
+                  {w.empty}
                 </td>
               </tr>
             )}
           </Table>
+          {purchase ? (
+            <p className="text-[11px] text-gray-400 leading-5">
+              «عرضه‌کننده» طرف همان فاکتور خرید است. «موجودی» موجودی فعلی کالاهایی است که در همین بازه خریده شده‌اند. کرایه و مالیات در این گزارش نیستند.
+            </p>
+          ) : (
           <p className="text-[11px] text-gray-400 leading-5">
             «نرخ فروش» = فروش خالص ÷ (فروش خالص + موجودی فعلی) — هرچه بیشتر، کالا زودتر تمام می‌شود. عرضه‌کننده‌ی کالایی که در فرم کالا خالی است از
             آخرین فاکتور خرید می‌آید. کرایه و مالیات در این گزارش نیستند.
           </p>
+          )}
         </>
       )}
 
@@ -440,6 +482,7 @@ export default function SalesAnalysisReport({ initial }: { initial?: { by?: stri
           title={detail.row.label}
           onClose={() => setDetail(null)}
           filterKey={detail.row.key !== NONE ? FILTERABLE[by] : undefined}
+          emptyText={w.none}
           onlyLabel={by === "customer" ? "به تفکیک گروه کالا" : undefined}
           onOnly={() => {
             const k = FILTERABLE[by];
@@ -485,6 +528,7 @@ export function DetailSheet({
   filterKey,
   onOnly,
   onlyLabel = "به تفکیک کالا",
+  emptyText = "در این بازه فروشی نداشته.",
 }: {
   params: Record<string, string | null>;
   title: string;
@@ -492,6 +536,7 @@ export function DetailSheet({
   filterKey?: string;
   onOnly?: () => void;
   onlyLabel?: string;
+  emptyText?: string;
 }) {
   const [tab, setTab] = useState<"items" | "lines">("items");
   const { data, error, loading } = useReport<{ detail: Detail }>("sales", params);
@@ -513,7 +558,7 @@ export function DetailSheet({
     >
       {error && <p className="text-xs font-bold text-red-600">{error}</p>}
       {loading && !d && <p className="text-xs text-gray-400">در حال بارگذاری…</p>}
-      {d && !d.lineCount && <p className="py-6 text-center text-xs text-gray-400">در این بازه فروشی نداشته.</p>}
+      {d && !d.lineCount && <p className="py-6 text-center text-xs text-gray-400">{emptyText}</p>}
       {d && !!d.lineCount && (
         <div className={`space-y-3 ${loading ? "opacity-60" : ""}`}>
           <Segmented
@@ -554,7 +599,7 @@ export function DetailSheet({
                       <span className="block truncate text-sm font-bold">{l.title}</span>
                       <span className="block text-[11px] text-gray-400">
                         <Link href={`/admin/accounting/invoices/${l.invoiceId}`} className="font-bold text-blue-600 hover:underline">
-                          {l.type === "SALES" ? "فاکتور" : "برگشت"} {l.number ? faNum(l.number) : ""}
+                          {l.type.endsWith("_RETURN") ? "برگشت" : "فاکتور"} {l.number ? faNum(l.number) : ""}
                         </Link>
                         {" · "}
                         {formatJalali(new Date(l.date))}

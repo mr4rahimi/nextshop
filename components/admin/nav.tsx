@@ -221,6 +221,7 @@ export const MENU_GROUPS: NavGroup[] = [
           { href: "/admin/accounting/reports/balance", label: "ترازنامه" },
           { href: "/admin/accounting/reports/trial", label: "تراز آزمایشی" },
           { href: "/admin/accounting/reports/sales", label: "تحلیل فروش کالا" },
+          { href: "/admin/accounting/reports/purchases", label: "تحلیل خرید کالا" },
           { href: "/admin/accounting/reports/movers", label: "راکد و پرفروش" },
           { href: "/admin/accounting/reports/profit", label: "سود کالا و کانال" },
           { href: "/admin/accounting/reports/trend", label: "روند ماهانه" },

@@ -15,7 +15,7 @@ import { partyBalances, type PartyRole } from "@/lib/accounting/reports/parties"
 import { movers } from "@/lib/accounting/reports/movers";
 import { budgetReport } from "@/lib/accounting/budget";
 import { dailyCustomers, firstPurchases, topCustomers, type CustomerSort } from "@/lib/accounting/reports/customers";
-import { COL_DIMS, parseDim, salesAnalysis, salesDims, type ColDim } from "@/lib/accounting/reports/sales";
+import { parseCol, parseDim, salesAnalysis, salesDims, type Side } from "@/lib/accounting/reports/sales";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +40,7 @@ const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties
  *   movers    ?mode=slow|fast&groupBy=item|model&maxSold&maxRate&minSold&top&groupId&warehouseId&supplierId   راکد و پرفروش (بخش ۶)
  *   budget    ?yearId&fromSeq&toSeq      بودجه در برابر عملکرد (webhesab-parity.md بخش ۲۲)
  *   customers ?mode=top|first|daily&warehouseId&q&sort=net|invoices|last&limit&legacy=1   مشتریان (webhesab-parity.md بخش ۲۵)
- *   sales     ?by&col&groupId&warehouseId&supplierId&partyId[&row&cell]   تحلیل فروش کالا (row ← جزئیات سطر) — بها و سود فقط با ACC_COST_VIEW (webhesab-parity.md بخش ۵)
+ *   sales     ?by&col&groupId&warehouseId&supplierId&partyId[&row&cell][&side=purchase]   تحلیل فروش کالا (row ← جزئیات سطر) — بها و سود فقط با ACC_COST_VIEW (webhesab-parity.md بخش ۵)؛ side=purchase ← تحلیل خرید (بخش ۲۸)
  */
 export async function GET(req: Request, { params }: { params: Promise<{ kind: string }> }) {
   const { kind } = await params;
@@ -107,11 +107,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
         break;
       }
       case "sales": {
-        const col = (COL_DIMS as readonly string[]).includes(q("col") ?? "") ? (q("col") as ColDim) : null;
+        const side: Side = q("side") === "purchase" ? "purchase" : "sales";
         const base = {
           range,
-          by: parseDim(q("by")),
-          col,
+          side,
+          by: parseDim(q("by"), side),
+          col: parseCol(q("col"), side),
           filters: { groupId: q("groupId"), warehouseId: q("warehouseId"), supplierId: q("supplierId"), partyId: q("partyId") },
           costs: can(guard.access, "ACC_COST_VIEW"),
         };

@@ -139,6 +139,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/reports/balance", label: "ترازنامه", icon: fx("Balance scale") },
       { href: "/admin/accounting/reports/trial", label: "تراز آزمایشی", icon: fx("Straight ruler") },
       { href: "/admin/accounting/reports/sales", label: "تحلیل فروش کالا", icon: fx("Magnifying glass tilted left") },
+      { href: "/admin/accounting/reports/purchases", label: "تحلیل خرید کالا", icon: fx("Shopping bags"), keywords: "گزارش خرید کالا عرضه کننده تامین کننده کالاهای خریداری شده" },
       { href: "/admin/accounting/reports/movers", label: "راکد و پرفروش", icon: fx("Fire") },
       { href: "/admin/accounting/reports/profit", label: "سود کالا و کانال", icon: fx("Trophy") },
       { href: "/admin/accounting/reports/trend", label: "روند ماهانه", icon: fx("Chart decreasing") },
