@@ -59,6 +59,7 @@ interface Data {
   places: { warehouseId: string; zone: string | null; aisle: string | null; shelf: string | null; level: string | null }[];
   serials: { inStock: number; transit: number; out: number; warehouses: { warehouseId: string; qty: number; serials: number }[] } | null;
   onOrder: number;
+  committed: number;
   transit: { id: string; number: number; toWarehouseId: string; qty: number }[];
   warehouses: { id: string; name: string; sellable: boolean }[];
   opening: number;
@@ -152,6 +153,17 @@ export default function KardexClient({ productId }: { productId: string }) {
           <Card className="flex items-center gap-2 p-3 text-xs hover:opacity-80">
             <span className="font-bold text-gray-500">📋 در سفارش خرید:</span>
             <Badge tone="blue">{faNum(data.onOrder)} عدد در راه</Badge>
+          </Card>
+        </Link>
+      )}
+      {data.committed > 0 && (
+        <Link href={`/admin/accounting/sales/orders?productId=${data.product.id}`} className="block">
+          <Card className="flex flex-wrap items-center gap-2 p-3 text-xs hover:opacity-80">
+            <span className="font-bold text-gray-500">🧾 در سفارش فروش:</span>
+            <Badge tone="amber">{faNum(data.committed)} عدد تعهدشده</Badge>
+            <span className="text-gray-500">
+              قابل فروش آزاد {faNum(data.stocks.reduce((s, x) => s + x.qty, 0) - data.committed)} عدد
+            </span>
           </Card>
         </Link>
       )}

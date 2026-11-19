@@ -25,6 +25,7 @@ import { faNum, formatAmount } from "../money";
 import { calcInvoice, CalcError, divRound, INVOICE_TYPE_LABELS, allocate, lineGross, lineQtyText } from "./calc";
 import { ensureItems } from "../inventory/items";
 import { poLineProgress } from "../purchases/progress";
+import { ORDER_KINDS } from "../purchases/order-kind";
 import { cleanSerialList, clearSerials, postSerials, type SerialEntry, type SerialMoveType } from "../inventory/serials";
 import { diff, fmtAmount, logDoc, type DocChange } from "../doc-log";
 
@@ -211,15 +212,16 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
     (await tx.accItem.findMany({ where: { id: { in: productIds } }, select: { id: true, title: true, hasSerial: true, unit: true, packUnit: true, packSize: true } })).map((p) => [p.id, p]),
   );
 
-  // ── سفارش خرید ── هر ردیف حداکثر تا مانده‌ی ردیف سفارش (منهای فاکتورهای دیگر، پیش‌نویس هم)
+  // ── سفارش خرید/فروش ── هر ردیف حداکثر تا مانده‌ی ردیف سفارش (منهای فاکتورهای دیگر، پیش‌نویس هم)
   const poIds = [...new Set(input.lines.map((l) => l.poLineId).filter((x): x is string => !!x))];
-  if (poIds.length && type !== "PURCHASE") throw new AccError("فقط فاکتور خرید به سفارش خرید وصل می‌شود");
+  if (poIds.length && type !== "PURCHASE" && type !== "SALES") throw new AccError("فقط فاکتور خرید یا فروش به سفارش وصل می‌شود");
   const poLines = new Map(
-    (await tx.accPurchaseOrderLine.findMany({ where: { id: { in: poIds } }, include: { order: { select: { id: true, number: true, status: true, partyId: true } } } })).map((l) => [l.id, l]),
+    (await tx.accPurchaseOrderLine.findMany({ where: { id: { in: poIds } }, include: { order: { select: { id: true, kind: true, number: true, status: true, partyId: true } } } })).map((l) => [l.id, l]),
   );
   const poUsed = await poLineProgress(tx, poIds, id);
   const poOrderIds = new Set([...poLines.values()].map((l) => l.order.id));
-  if (poOrderIds.size > 1) throw new AccError("ردیف‌های یک فاکتور فقط از یک سفارش خرید می‌آیند");
+  if (poOrderIds.size > 1) throw new AccError("ردیف‌های یک فاکتور فقط از یک سفارش می‌آیند");
+  const poKind = (k: string) => ORDER_KINDS[k === "SALES" ? "SALES" : "PURCHASE"];
   // بسته‌ی ردیف‌های همین فاکتور — ویرایش فاکتور قدیمی بعد از عوض شدن بسته‌ی کالا نمی‌ایستد
   const prevPack = current
     ? new Set((await tx.accInvoiceLine.findMany({ where: { invoiceId: current.id, packSize: { not: null } }, select: { productId: true, packSize: true } })).map((l) => `${l.productId}|${l.packSize}`))
@@ -275,10 +277,12 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
     }
     if (l.poLineId) {
       const pl = poLines.get(l.poLineId);
-      if (!pl) throw new AccError(`${at}: ردیف سفارش خرید پیدا نشد`);
+      if (!pl) throw new AccError(`${at}: ردیف سفارش پیدا نشد`);
+      const K = poKind(pl.order.kind);
+      if (K.invoiceType !== type) throw new AccError(`${at}: ${K.title} فقط به ${K.invoiceLabel} وصل می‌شود`);
       // ردیفی که از قبل در همین فاکتور بود با بسته شدن سفارش بیرون نمی‌افتد (ویرایش فاکتور صادرشده)
-      if (pl.order.status !== "OPEN" && !prevPo.has(pl.id)) throw new AccError(`${at}: سفارش خرید ${faNum(pl.order.number)} باز نیست`);
-      if (pl.order.partyId !== partyId) throw new AccError(`${at}: سفارش خرید ${faNum(pl.order.number)} مال عرضه‌کننده‌ی دیگری است`);
+      if (pl.order.status !== "OPEN" && !prevPo.has(pl.id)) throw new AccError(`${at}: ${K.title} ${faNum(pl.order.number)} باز نیست`);
+      if (pl.order.partyId !== partyId) throw new AccError(`${at}: ${K.title} ${faNum(pl.order.number)} مال ${K.party} دیگری است`);
       if (l.productId && l.productId !== pl.productId) throw new AccError(`${at}: کالای ردیف با سفارش یکی نیست`);
       const u = poUsed.get(pl.id);
       const left = pl.qty - (u?.received ?? 0) - (u?.draft ?? 0) - lines.filter((x) => x.poLineId === pl.id).reduce((s, x) => s + x.qty, 0);

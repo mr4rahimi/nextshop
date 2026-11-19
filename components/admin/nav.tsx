@@ -195,6 +195,7 @@ export const MENU_GROUPS: NavGroup[] = [
         children: [
           { href: "/admin/accounting", label: "خانه‌ی حسابداری" },
           { href: "/admin/accounting/sales", label: "فروش و فاکتورها" },
+          { href: "/admin/accounting/sales/orders", label: "سفارش فروش" },
           { href: "/admin/accounting/purchases", label: "خرید" },
           { href: "/admin/accounting/purchases/orders", label: "سفارش خرید" },
           { href: "/admin/accounting/money", label: "دریافت و پرداخت" },
@@ -409,5 +410,5 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   // کلید «پدر/بخش» بر کلید تک‌بخشی مقدم است — همان نام بخش در جای دیگر معنای دیگری دارد
   "accounting/reports": "گزارش‌ها", "reports/treasury": "گردش صندوق و بانک",
   "reports/inventory": "ارزش موجودی کالا", "reports/expenses": "گزارش هزینه‌ها",
-  "purchases/orders": "سفارش خرید",
+  "purchases/orders": "سفارش خرید", "sales/orders": "سفارش فروش",
 };

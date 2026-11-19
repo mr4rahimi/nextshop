@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * فهرست سفارش‌های خرید — docs/plans/webhesab-parity.md بخش ۱۳.
- * `?productId=` سفارش‌های یک کالا (از کاردکس)، `?partyId=` یک عرضه‌کننده، `?state=`.
+ * فهرست سفارش‌های خرید یا فروش — docs/plans/webhesab-parity.md بخش‌های ۱۳ و ۳۱.
+ * `?productId=` سفارش‌های یک کالا (از کاردکس)، `?partyId=` یک طرف حساب، `?state=`.
  */
 
 import Link from "next/link";
@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { formatJalali } from "@/lib/club/jalali";
 import { faNum } from "@/lib/accounting/money";
+import { ORDER_KINDS, type OrderKind } from "@/lib/accounting/purchases/order-kind";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, inputCls, Money, PageHeader } from "../ui";
 
 export type PoState = "OPEN" | "PARTIAL" | "RECEIVED" | "CLOSED" | "CANCELED";
@@ -21,6 +22,9 @@ export const PO_STATE: Record<PoState, { label: string; tone: "blue" | "amber" |
   CLOSED: { label: "بسته", tone: "gray" },
   CANCELED: { label: "باطل", tone: "red" },
 };
+/** برچسب وضعیت هر نوع — سفارش فروش «تحویل» دارد، نه «دریافت» */
+export const orderState = (kind: OrderKind, s: PoState) =>
+  kind === "SALES" && (s === "PARTIAL" || s === "RECEIVED") ? { ...PO_STATE[s], label: s === "PARTIAL" ? "تحویل ناقص" : "کامل تحویل شد" } : PO_STATE[s];
 
 interface Row {
   id: string;
@@ -40,7 +44,8 @@ interface Row {
 }
 type State = "open" | "overdue" | "done" | "all";
 
-export default function PurchaseOrdersList() {
+export default function PurchaseOrdersList({ kind = "PURCHASE" }: { kind?: OrderKind }) {
+  const K = ORDER_KINDS[kind];
   const sp = useSearchParams();
   const router = useRouter();
   const productId = sp.get("productId");
@@ -55,13 +60,13 @@ export default function PurchaseOrdersList() {
     if (q.trim()) p.set("q", q.trim());
     if (productId) p.set("productId", productId);
     if (partyId) p.set("partyId", partyId);
-    api<NonNullable<typeof data>>(`/api/admin/accounting/purchase-orders?${p}`)
+    api<NonNullable<typeof data>>(`${K.api}?${p}`)
       .then((d) => {
         setData(d);
         setError(null);
       })
       .catch((e) => setError(e.message));
-  }, [state, q, productId, partyId]);
+  }, [state, q, productId, partyId, K.api]);
   useEffect(() => {
     const h = setTimeout(load, q ? 250 : 0);
     return () => clearTimeout(h);
@@ -70,13 +75,17 @@ export default function PurchaseOrdersList() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="سفارش خرید"
-        help="accountingPurchaseOrders"
-        back={{ href: "/admin/accounting/purchases", label: "خرید" }}
-        desc="چه چیزی از چه کسی سفارش داده‌اید و چقدرش رسیده. کالا که رسید «فاکتور خرید از روی سفارش» بزنید."
+        title={K.title}
+        help={K.help}
+        back={K.back}
+        desc={
+          kind === "SALES"
+            ? "سفارش مشتری‌های عمده و چقدرش تحویل شده. هر بار که کالا را می‌فرستید «فاکتور فروش از روی سفارش» بزنید؛ همان از انبار کم می‌کند."
+            : "چه چیزی از چه کسی سفارش داده‌اید و چقدرش رسیده. کالا که رسید «فاکتور خرید از روی سفارش» بزنید."
+        }
         actions={
           data?.can.write && (
-            <Link href="/admin/accounting/purchases/orders/new" className={btn.primary}>
+            <Link href={`${K.page}/new`} className={btn.primary}>
               <Plus className="h-4 w-4" aria-hidden />
               سفارش تازه
             </Link>
@@ -88,12 +97,12 @@ export default function PurchaseOrdersList() {
           <span className="flex-1">
             سفارش‌های کالای <b>{data.product.title}</b> <span className="text-xs text-gray-400" dir="ltr">{data.product.code}</span>
           </span>
-          <button onClick={() => router.replace("/admin/accounting/purchases/orders")} className={btn.small}>
+          <button onClick={() => router.replace(K.page)} className={btn.small}>
             همه‌ی کالاها
           </button>
         </Card>
       )}
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="شماره، عرضه‌کننده یا کد پیگیری" className={inputCls} />
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`شماره، ${K.party} یا کد پیگیری`} className={inputCls} />
       <Chips<State>
         value={state}
         onChange={setState}
@@ -109,7 +118,7 @@ export default function PurchaseOrdersList() {
         {data?.items.map((r) => {
           const qty = r.product ?? { qty: r.ordered, received: r.received };
           return (
-            <Link key={r.id} href={`/admin/accounting/purchases/orders/${r.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5">
+            <Link key={r.id} href={`${K.page}/${r.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5">
               <span className="w-12 shrink-0 text-center text-sm font-black tabular-nums text-gray-500">{faNum(r.number)}</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-bold">{r.party.name}</span>
@@ -125,7 +134,7 @@ export default function PurchaseOrdersList() {
                 <span className="block text-sm font-black tabular-nums">
                   {faNum(qty.received)} / {faNum(qty.qty)}
                 </span>
-                <Badge tone={r.overdue ? "red" : PO_STATE[r.state].tone}>{r.overdue ? "موعد گذشته" : PO_STATE[r.state].label}</Badge>
+                <Badge tone={r.overdue ? "red" : PO_STATE[r.state].tone}>{r.overdue ? "موعد گذشته" : orderState(kind, r.state).label}</Badge>
                 {data.can.price && r.total && r.total !== "0" && <Money value={r.total} className="block text-[11px] text-gray-400" />}
               </span>
             </Link>
@@ -134,7 +143,7 @@ export default function PurchaseOrdersList() {
         {data && !data.items.length && (
           <Empty
             title={state === "open" ? "سفارش باز ندارید" : "سفارشی با این شرایط نیست"}
-            desc={state === "open" && data.can.write ? "با «سفارش تازه» شروع کنید؛ «پیشنهاد خرید» کالاهای رو به اتمام را خودش می‌آورد." : undefined}
+            desc={state === "open" && data.can.write ? (kind === "SALES" ? "با «سفارش تازه» سفارش مشتری را ثبت کنید." : "با «سفارش تازه» شروع کنید؛ «پیشنهاد خرید» کالاهای رو به اتمام را خودش می‌آورد.") : undefined}
           />
         )}
       </Card>

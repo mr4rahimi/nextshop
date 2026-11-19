@@ -194,7 +194,7 @@ export async function invoiceDetail(id: string, access: StaffAccess) {
   // سفارش خرید (webhesab-parity.md بخش ۱۳): مانده‌ی هر ردیف برای این فاکتور = سفارش − فاکتورهای دیگر
   const poLineIds = inv.lines.map((l) => l.poLineId).filter((x): x is string => !!x);
   const [purchaseOrder, poLines, poUsed] = await Promise.all([
-    inv.purchaseOrderId ? prisma.accPurchaseOrder.findUnique({ where: { id: inv.purchaseOrderId }, select: { id: true, number: true, status: true } }) : null,
+    inv.purchaseOrderId ? prisma.accPurchaseOrder.findUnique({ where: { id: inv.purchaseOrderId }, select: { id: true, kind: true, number: true, status: true } }) : null,
     prisma.accPurchaseOrderLine.findMany({ where: { id: { in: poLineIds } }, select: { id: true, qty: true } }),
     poLineProgress(prisma, poLineIds, inv.id),
   ]);

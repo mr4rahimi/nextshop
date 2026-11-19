@@ -1,6 +1,9 @@
 "use client";
 
-/** چاپ سفارش خرید برای فرستادن به عرضه‌کننده — docs/plans/webhesab-parity.md بخش ۱۳ */
+/**
+ * چاپ سفارش خرید (برای عرضه‌کننده) یا سفارش فروش (تأیید سفارش / برگه‌ی آماده‌سازی انبار، بی قیمت)
+ * — docs/plans/webhesab-parity.md بخش‌های ۱۳ و ۳۱
+ */
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -9,22 +12,25 @@ import { faNum, formatAmount } from "@/lib/accounting/money";
 import { lineGross, packQty } from "@/lib/accounting/invoices/calc";
 import { api } from "../ui";
 import type { PoData } from "./PurchaseOrderDetail";
+import { ORDER_KINDS, type OrderKind } from "@/lib/accounting/purchases/order-kind";
 
 type PrintData = PoData & { print: { name: string | null; address: string | null; phone: string | null; logo: string | null } };
 
-export default function PurchaseOrderPrint({ id }: { id: string }) {
+export default function PurchaseOrderPrint({ id, kind = "PURCHASE" }: { id: string; kind?: OrderKind }) {
+  const K = ORDER_KINDS[kind];
+  const sales = kind === "SALES";
   const [d, setD] = useState<PrintData | null>(null);
   const [prices, setPrices] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api<PrintData>(`/api/admin/accounting/purchase-orders/${id}?print=1`)
+    api<PrintData>(`${K.api}/${id}?print=1`)
       .then((x) => {
         setD(x);
-        document.title = `سفارش خرید ${x.order.number} — ${x.order.party.name}`;
+        document.title = `${K.title} ${x.order.number} — ${x.order.party.name}`;
       })
       .catch((e) => setError(e.message));
-  }, [id]);
+  }, [id, K.api, K.title]);
 
   // چاپ همیشه روشن
   useEffect(() => {
@@ -54,7 +60,7 @@ export default function PurchaseOrderPrint({ id }: { id: string }) {
         <button onClick={() => window.print()} className="mr-auto rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-bold text-white">
           🖨️ چاپ / PDF
         </button>
-        <Link href={`/admin/accounting/purchases/orders/${id}`} className="text-xs font-bold text-blue-600">
+        <Link href={`${K.page}/${id}`} className="text-xs font-bold text-blue-600">
           بازگشت به سفارش
         </Link>
       </div>
@@ -70,7 +76,7 @@ export default function PurchaseOrderPrint({ id }: { id: string }) {
             {d.print.phone && <p className="text-xs text-gray-600">تلفن {d.print.phone}</p>}
           </div>
           <div className="text-left">
-            <p className="text-lg font-black">سفارش خرید</p>
+            <p className="text-lg font-black">{K.title}</p>
             <p>شماره {faNum(o.number)}</p>
             <p>تاریخ {formatJalali(new Date(o.date))}</p>
             {o.dueDate && <p>موعد تحویل {formatJalali(new Date(o.dueDate))}</p>}
@@ -78,11 +84,11 @@ export default function PurchaseOrderPrint({ id }: { id: string }) {
         </div>
         <div className="grid grid-cols-2 gap-2 py-3 text-xs">
           <p>
-            عرضه‌کننده: <b>{o.party.name}</b>
+            {K.party}: <b>{o.party.name}</b>
           </p>
           <p>{[o.party.mobile ?? o.party.phone, [o.party.city, o.party.address].filter(Boolean).join("، ")].filter(Boolean).join(" — ")}</p>
-          {d.warehouse && <p>تحویل به: {d.warehouse.name}</p>}
-          {o.supplierRef && <p>کد پیگیری شما: {o.supplierRef}</p>}
+          {d.warehouse && <p>{sales ? "از انبار" : "تحویل به"}: {d.warehouse.name}</p>}
+          {o.supplierRef && <p>{sales ? "شماره‌ی سفارش شما" : "کد پیگیری شما"}: {o.supplierRef}</p>}
         </div>
         <table className="w-full border-collapse text-xs">
           <thead>
@@ -130,8 +136,8 @@ export default function PurchaseOrderPrint({ id }: { id: string }) {
         </table>
         {o.note && <p className="mt-3 text-xs">یادداشت: {o.note}</p>}
         <div className="mt-12 grid grid-cols-2 gap-8 text-center text-xs text-gray-500">
-          <p>امضای سفارش‌دهنده</p>
-          <p>امضای عرضه‌کننده</p>
+          <p>{sales ? "امضای فروشنده" : "امضای سفارش‌دهنده"}</p>
+          <p>{sales ? "امضای مشتری" : "امضای عرضه‌کننده"}</p>
         </div>
       </div>
     </div>

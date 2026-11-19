@@ -28,6 +28,8 @@ export type AttachDocType =
   | "AccTransfer"
   | "AccStockCount"
   | "AccPurchaseOrder"
+  /** همان جدول `AccPurchaseOrder` با kind=SALES (webhesab-parity.md بخش ۳۱) */
+  | "AccSalesOrder"
   | "AccCheque"
   | "AccParty";
 
@@ -40,6 +42,7 @@ export const ATTACH_PERMS: Record<AttachDocType, { label: string; view: string[]
   AccTransfer: { label: "حواله", view: ["ACC_VIEW", "ACC_INVENTORY", "ACC_STOCK_RECEIVE"], edit: ["ACC_INVENTORY", "ACC_STOCK_RECEIVE"] },
   AccStockCount: { label: "انبارگردانی", view: ["ACC_VIEW", "ACC_INVENTORY", "ACC_STOCK_COUNT"], edit: ["ACC_INVENTORY", "ACC_STOCK_COUNT"] },
   AccPurchaseOrder: { label: "سفارش خرید", view: ["ACC_VIEW", "ACC_PURCHASE"], edit: ["ACC_PURCHASE"] },
+  AccSalesOrder: { label: "سفارش فروش", view: ["ACC_VIEW", "ACC_SALES"], edit: ["ACC_SALES"] },
   AccCheque: { label: "چک", view: ["ACC_VIEW", "ACC_CHEQUE", "ACC_TREASURY"], edit: ["ACC_CHEQUE", "ACC_TREASURY"] },
   AccParty: { label: "شخص", view: ["ACC_VIEW", "ACC_PARTY_MANAGE"], edit: ["ACC_PARTY_MANAGE"] },
 };
@@ -125,7 +128,9 @@ export async function resolveDocs(db: Db, refs: { docType: string; docId: string
     ids("AccStockAdjust").length ? db.accStockAdjust.findMany({ where: { id: { in: ids("AccStockAdjust") } }, select: { id: true, direction: true, number: true, date: true } }) : [],
     ids("AccTransfer").length ? db.accTransfer.findMany({ where: { id: { in: ids("AccTransfer") } }, select: { id: true, number: true, date: true } }) : [],
     ids("AccStockCount").length ? db.accStockCount.findMany({ where: { id: { in: ids("AccStockCount") } }, select: { id: true, number: true, date: true } }) : [],
-    ids("AccPurchaseOrder").length ? db.accPurchaseOrder.findMany({ where: { id: { in: ids("AccPurchaseOrder") } }, select: { id: true, number: true, date: true, party: { select: { name: true } } } }) : [],
+    ids("AccPurchaseOrder").length || ids("AccSalesOrder").length
+      ? db.accPurchaseOrder.findMany({ where: { id: { in: [...ids("AccPurchaseOrder"), ...ids("AccSalesOrder")] } }, select: { id: true, kind: true, number: true, date: true, party: { select: { name: true } } } })
+      : [],
     ids("AccCheque").length ? db.accCheque.findMany({ where: { id: { in: ids("AccCheque") } }, select: { id: true, serialNo: true, dueDate: true, party: { select: { name: true } } } }) : [],
     ids("AccParty").length ? db.accParty.findMany({ where: { id: { in: ids("AccParty") } }, select: { id: true, code: true, name: true } }) : [],
   ]);
@@ -135,7 +140,10 @@ export async function resolveDocs(db: Db, refs: { docType: string; docId: string
   for (const r of adjusts) set("AccStockAdjust", r.id, { label: `${r.direction === "IN" ? "ورود" : "خروج"} کالا${n(r.number)}`, href: `${A}/inventory/adjustments/${r.id}`, partyName: null, date: r.date });
   for (const r of transfers) set("AccTransfer", r.id, { label: `حواله${n(r.number)}`, href: `${A}/inventory/transfers?id=${r.id}`, partyName: null, date: r.date });
   for (const r of counts) set("AccStockCount", r.id, { label: `انبارگردانی${n(r.number)}`, href: `${A}/inventory/counts/${r.id}`, partyName: null, date: r.date });
-  for (const r of pos) set("AccPurchaseOrder", r.id, { label: `سفارش خرید${n(r.number)}`, href: `${A}/purchases/orders/${r.id}`, partyName: r.party?.name ?? null, date: r.date });
+  for (const r of pos) {
+    if (r.kind === "SALES") set("AccSalesOrder", r.id, { label: `سفارش فروش${n(r.number)}`, href: `${A}/sales/orders/${r.id}`, partyName: r.party?.name ?? null, date: r.date });
+    else set("AccPurchaseOrder", r.id, { label: `سفارش خرید${n(r.number)}`, href: `${A}/purchases/orders/${r.id}`, partyName: r.party?.name ?? null, date: r.date });
+  }
   for (const r of cheques) set("AccCheque", r.id, { label: `چک ${r.serialNo}`, href: `${A}/cheques/${r.id}`, partyName: r.party?.name ?? null, date: r.dueDate });
   for (const r of parties) set("AccParty", r.id, { label: `${r.name} (کد ${faNum(r.code)})`, href: `${A}/parties/${r.id}`, partyName: r.name, date: null });
   return out;

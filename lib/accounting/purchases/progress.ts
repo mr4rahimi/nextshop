@@ -1,5 +1,5 @@
 /**
- * تعداد فاکتورشده‌ی ردیف‌های سفارش خرید — docs/plans/webhesab-parity.md بخش ۱۳.
+ * تعداد فاکتورشده‌ی ردیف‌های سفارش خرید/فروش — docs/plans/webhesab-parity.md بخش‌های ۱۳ و ۳۱.
  * جدا از `orders.ts` تا `invoices/service.ts` بی‌چرخه‌ی import سقف را بسنجد.
  */
 
@@ -16,7 +16,8 @@ export async function poLineProgress(db: Db, poLineIds: string[], excludeInvoice
     by: ["poLineId", "invoiceId"],
     where: {
       poLineId: { in: poLineIds },
-      invoice: { type: "PURCHASE", status: { not: "VOID" }, ...(excludeInvoiceId ? { id: { not: excludeInvoiceId } } : {}) },
+      // برگشتی‌ها poLineId ندارند؛ نوع فاکتور با نوع سفارش در saveInvoice جفت می‌شود
+      invoice: { type: { in: ["PURCHASE", "SALES"] }, status: { not: "VOID" }, ...(excludeInvoiceId ? { id: { not: excludeInvoiceId } } : {}) },
     },
     _sum: { qty: true },
   });

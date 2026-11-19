@@ -165,6 +165,12 @@ export default function InvoicesList({ side }: { side: Side }) {
                 سفارش خرید
               </Link>
             )}
+            {side === "sales" && !isReturn && (
+              <Link href="/admin/accounting/sales/orders" className={btn.soft}>
+                <ClipboardList className="h-4 w-4" aria-hidden />
+                سفارش فروش
+              </Link>
+            )}
             {canWrite && !isReturn && (
               <Link href={`/admin/accounting/invoices/new?type=${type}&batch=1`} className={btn.soft} title="یک فاکتور برای چند مشتری">
                 <Users className="h-4 w-4" aria-hidden />

@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * یک سفارش خرید — docs/plans/webhesab-parity.md بخش ۱۳.
- * «فاکتور خرید از روی سفارش» پیش‌نویس فاکتوری با مانده‌ی هر کالا می‌سازد و فرمش را باز می‌کند.
+ * یک سفارش خرید یا فروش — docs/plans/webhesab-parity.md بخش‌های ۱۳ و ۳۱.
+ * «فاکتور خرید/فروش از روی سفارش» پیش‌نویس فاکتوری با مانده‌ی هر کالا می‌سازد و فرمش را باز می‌کند.
+ * سفارش فروش: ستون «موجودی» انبار سفارش — چقدر الان تحویل‌شدنی است.
  */
 
 import Link from "next/link";
@@ -13,7 +14,8 @@ import { formatJalali } from "@/lib/club/jalali";
 import { faNum } from "@/lib/accounting/money";
 import { lineGross, packQty } from "@/lib/accounting/invoices/calc";
 import { api, Badge, btn, Card, ErrorText, Money, PageHeader, SectionTitle } from "../ui";
-import { PO_STATE, type PoState } from "./PurchaseOrdersList";
+import { orderState, type PoState } from "./PurchaseOrdersList";
+import { ORDER_KINDS, type OrderKind } from "@/lib/accounting/purchases/order-kind";
 import Attachments from "../Attachments";
 
 export interface PoLine {
@@ -30,6 +32,8 @@ export interface PoLine {
   note: string | null;
   received: number;
   draft: number;
+  /** فقط سفارش فروش: موجودی فعلی در انبار سفارش */
+  stock?: number | null;
 }
 export interface PoData {
   order: {
@@ -53,7 +57,9 @@ export interface PoData {
   can: { write: boolean; price: boolean };
 }
 
-export default function PurchaseOrderDetail({ id }: { id: string }) {
+export default function PurchaseOrderDetail({ id, kind = "PURCHASE" }: { id: string; kind?: OrderKind }) {
+  const K = ORDER_KINDS[kind];
+  const sales = kind === "SALES";
   const router = useRouter();
   const [d, setD] = useState<PoData | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,10 +67,10 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
   const [showInv, setShowInv] = useState(false);
 
   const load = useCallback(() => {
-    api<PoData>(`/api/admin/accounting/purchase-orders/${id}`)
+    api<PoData>(`${K.api}/${id}`)
       .then(setD)
       .catch((e) => setError(e.message));
-  }, [id]);
+  }, [id, K.api]);
   useEffect(load, [load]);
 
   async function act(action: "invoice" | "close" | "cancel" | "reopen") {
@@ -77,7 +83,7 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
     setBusy(true);
     setError(null);
     try {
-      const r = await api<{ id?: string }>(`/api/admin/accounting/purchase-orders/${id}`, { method: "POST", json: { action, reason } });
+      const r = await api<{ id?: string }>(`${K.api}/${id}`, { method: "POST", json: { action, reason } });
       if (action === "invoice" && r.id) return router.push(`/admin/accounting/invoices/${r.id}/edit`);
       load();
     } catch (e) {
@@ -90,8 +96,8 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
   async function remove() {
     if (!window.confirm("سفارش برای همیشه پاک شود؟")) return;
     try {
-      await api(`/api/admin/accounting/purchase-orders/${id}`, { method: "DELETE" });
-      router.push("/admin/accounting/purchases/orders");
+      await api(`${K.api}/${id}`, { method: "DELETE" });
+      router.push(K.page);
     } catch (e) {
       setError(e instanceof Error ? e.message : "پاک نشد");
     }
@@ -102,28 +108,28 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
   const open = o.status === "OPEN";
   const left = o.lines.reduce((s, l) => s + Math.max(l.qty - l.received, 0), 0);
   const draft = d.invoices.find((i) => i.status === "DRAFT");
-  const st = PO_STATE[d.state];
+  const st = orderState(kind, d.state);
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title={`سفارش خرید ${faNum(o.number)}`}
-        help="accountingPurchaseOrders"
-        back={{ href: "/admin/accounting/purchases/orders", label: "سفارش خرید" }}
+        title={`${K.title} ${faNum(o.number)}`}
+        help={K.help}
+        back={{ href: K.page, label: K.title }}
         actions={
           <>
             {d.can.write && open && left > 0 && (
               <button onClick={() => act("invoice")} disabled={busy} className={btn.primary}>
                 <FileText className="h-4 w-4" aria-hidden />
-                {draft ? "ادامه‌ی پیش‌نویس فاکتور" : "فاکتور خرید از روی سفارش"}
+                {draft ? "ادامه‌ی پیش‌نویس فاکتور" : `${K.invoiceLabel} از روی سفارش`}
               </button>
             )}
-            <Link href={`/admin/accounting/purchases/orders/${id}/print`} className={btn.soft}>
+            <Link href={`${K.page}/${id}/print`} className={btn.soft}>
               <Printer className="h-4 w-4" aria-hidden />
               چاپ
             </Link>
             {d.can.write && open && (
-              <Link href={`/admin/accounting/purchases/orders/${id}/edit`} className={btn.soft}>
+              <Link href={`${K.page}/${id}/edit`} className={btn.soft}>
                 <Pencil className="h-4 w-4" aria-hidden />
                 ویرایش
               </Link>
@@ -134,7 +140,7 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
 
       <Card className="grid gap-3 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-[11px] text-gray-400">عرضه‌کننده</p>
+          <p className="text-[11px] text-gray-400">{K.party}</p>
           <Link href={`/admin/accounting/parties/${o.party.id}`} className="font-bold text-blue-600">
             {o.party.name}
           </Link>
@@ -161,7 +167,7 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
           <p className="text-xs text-gray-500 sm:col-span-2 lg:col-span-4">
             {o.supplierRef && (
               <>
-                کد پیگیری عرضه‌کننده: <span dir="ltr">{o.supplierRef}</span>
+                {K.ref}: <span dir="ltr">{o.supplierRef}</span>
                 {o.note && " — "}
               </>
             )}
@@ -172,7 +178,7 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
 
       <Card className="overflow-hidden">
         <div className="px-4 pt-4">
-          <SectionTitle title={`کالاها — ${faNum(o.lines.reduce((s, l) => s + Math.min(l.received, l.qty), 0))} از ${faNum(o.lines.reduce((s, l) => s + l.qty, 0))} رسیده`} />
+          <SectionTitle title={`کالاها — ${faNum(o.lines.reduce((s, l) => s + Math.min(l.received, l.qty), 0))} از ${faNum(o.lines.reduce((s, l) => s + l.qty, 0))} ${K.done}`} />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[40rem] text-sm">
@@ -180,8 +186,9 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
               <tr className="border-b border-gray-100 dark:border-white/5">
                 <th className="px-4 py-2 text-right font-normal">کالا</th>
                 <th className="px-2 py-2 font-normal">سفارش</th>
-                <th className="px-2 py-2 font-normal">رسیده</th>
+                <th className="px-2 py-2 font-normal">{K.done}</th>
                 <th className="px-2 py-2 font-normal">مانده</th>
+                {sales && <th className="px-2 py-2 font-normal">موجودی</th>}
                 {d.can.price && <th className="px-2 py-2 font-normal">فی</th>}
                 {d.can.price && <th className="px-4 py-2 text-left font-normal">جمع</th>}
               </tr>
@@ -210,6 +217,11 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
                       {l.draft > 0 && <span className="block text-[10px] text-amber-600">پیش‌نویس {faNum(l.draft)}</span>}
                     </td>
                     <td className={`px-2 py-2 text-center font-bold tabular-nums ${rest > 0 && open ? "text-amber-600" : "text-gray-400"}`}>{faNum(Math.max(rest, 0))}</td>
+                    {sales && (
+                      <td className={`px-2 py-2 text-center tabular-nums ${open && rest > 0 && (l.stock ?? 0) < rest ? "font-bold text-red-600" : "text-gray-500"}`} title={open && rest > 0 && (l.stock ?? 0) < rest ? "کمتر از مانده‌ی سفارش" : undefined}>
+                        {faNum(l.stock ?? 0)}
+                      </td>
+                    )}
                     {d.can.price && (
                       <td className="px-2 py-2 text-center">
                         {l.unitPrice && l.unitPrice !== "0" ? <Money value={l.unitPrice} /> : "—"}
@@ -234,20 +246,20 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
 
       <Card className="p-4" >
         <button onClick={() => setShowInv((x) => !x)} className="w-full text-right">
-          <SectionTitle title={`فاکتورهای خرید این سفارش (${faNum(d.invoices.length)})`} />
+          <SectionTitle title={`${sales ? "فاکتورهای فروش (تحویل‌های)" : "فاکتورهای خرید"} این سفارش (${faNum(d.invoices.length)})`} />
         </button>
         {(showInv || d.invoices.length <= 5) && (
           <div className="mt-2 divide-y divide-gray-100 dark:divide-white/5">
             {d.invoices.map((i) => (
               <Link key={i.id} href={`/admin/accounting/invoices/${i.id}`} className="flex items-center gap-2 py-2 text-sm hover:text-blue-600">
-                <span className="flex-1 font-bold">فاکتور خرید {i.number ? faNum(i.number) : ""}</span>
+                <span className="flex-1 font-bold">{K.invoiceLabel} {i.number ? faNum(i.number) : ""}</span>
                 <span className="text-xs text-gray-400">{formatJalali(new Date(i.date))}</span>
                 {i.status === "DRAFT" && <Badge tone="amber">پیش‌نویس</Badge>}
                 {i.status === "VOID" && <Badge tone="red">باطل</Badge>}
                 {i.total && <Money value={i.total} />}
               </Link>
             ))}
-            {!d.invoices.length && <p className="py-2 text-xs text-gray-400">هنوز کالایی از این سفارش نرسیده.</p>}
+            {!d.invoices.length && <p className="py-2 text-xs text-gray-400">{sales ? "هنوز کالایی از این سفارش تحویل نشده." : "هنوز کالایی از این سفارش نرسیده."}</p>}
           </div>
         )}
       </Card>
@@ -257,7 +269,7 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
         <div className="flex flex-wrap gap-2">
           {open && d.state !== "OPEN" && (
             <button onClick={() => act("close")} disabled={busy} className={btn.soft}>
-              بستن سفارش (بقیه نمی‌آید)
+              {sales ? "بستن سفارش (بقیه تحویل نمی‌شود)" : "بستن سفارش (بقیه نمی‌آید)"}
             </button>
           )}
           {open && d.state === "OPEN" && (
@@ -277,7 +289,7 @@ export default function PurchaseOrderDetail({ id }: { id: string }) {
           )}
         </div>
       )}
-      <Attachments docType="AccPurchaseOrder" docId={id} />
+      <Attachments docType={K.attachType} docId={id} />
     </div>
   );
 }

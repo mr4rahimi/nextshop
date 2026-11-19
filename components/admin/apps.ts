@@ -9,7 +9,7 @@
  */
 
 import {
-  Activity, ArrowLeftRight, Banknote, Gift, Paperclip, ScanSearch, HandCoins, CalendarClock, ChartColumn, ChartPie, ClipboardList,
+  Activity, ArrowLeftRight, Banknote, Gift, Paperclip, ScanSearch, HandCoins, CalendarClock, ChartColumn, ChartPie, ClipboardList, ClipboardCheck,
   ClockCheck, Coins, FileSpreadsheet, FileUp, FolderTree, House, Landmark, Link2, ListTodo, NotebookPen,
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
@@ -107,6 +107,7 @@ export const WORKLIST_APPS: AppItem[] = [
 export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting", label: "خانه", icon: House, tone: "blue", perm: ["ACC_VIEW", "ACC_SETTINGS"], exact: true, img: "acc-home" },
   { href: "/admin/accounting/sales", label: "فروش", icon: Receipt, tone: "emerald", perm: ["ACC_VIEW", "ACC_SALES"], img: "acc-sales" },
+  { href: "/admin/accounting/sales/orders", label: "سفارش فروش", icon: ClipboardCheck, tone: "emerald", perm: ["ACC_VIEW", "ACC_SALES", "ACC_INVENTORY"] },
   { href: "/admin/accounting/pos", label: "صندوق فروشگاه", icon: ShoppingCart, tone: "emerald", perm: ["ACC_POS", "ACC_POS_MANAGE", "ACC_SALES"], img: "quick-pos" },
   { href: "/admin/accounting/price-check", label: "چک کردن قیمت", icon: ScanSearch, tone: "sky", perm: ["ACC_PRICE_CHECK", "ACC_VIEW", "ACC_INVENTORY", "ACC_SALES", "ACC_POS", "ACC_POS_MANAGE"] },
   { href: "/admin/accounting/gift-cards", label: "بن کارت", icon: Gift, tone: "violet", perm: ["ACC_VIEW", "ACC_TREASURY", "ACC_POS_MANAGE"] },

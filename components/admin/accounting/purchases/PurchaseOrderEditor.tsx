@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * فرم سفارش خرید — docs/plans/webhesab-parity.md بخش ۱۳.
+ * فرم سفارش خرید/فروش — docs/plans/webhesab-parity.md بخش‌های ۱۳ و ۳۱.
  * «پیشنهاد خرید»: کالاهای رو به اتمام (موجودی + در راه ≤ نقطه‌ی سفارش) همین عرضه‌کننده.
  * ردیفی که فاکتور شده کمتر از فاکتورشده نمی‌شود و پاک نمی‌شود (سرور هم جلویش را می‌گیرد).
  */
@@ -15,6 +15,7 @@ import AmountInput from "../AmountInput";
 import PartyPicker, { type PartyOption } from "../PartyPicker";
 import ProductPicker from "../ProductPicker";
 import PackToggle, { packBaseQty, PerUnitHint } from "../PackToggle";
+import { ORDER_KINDS, type OrderKind } from "@/lib/accounting/purchases/order-kind";
 import { api, btn, Card, ErrorText, Field, inputCls, PageHeader, SectionTitle, Sheet } from "../ui";
 
 interface Line {
@@ -49,7 +50,8 @@ let seq = 0;
 const nextKey = () => ++seq;
 const digits = (v: string) => toLatinDigits(v).replace(/[^\d]/g, "");
 
-export default function PurchaseOrderEditor({ id }: { id?: string }) {
+export default function PurchaseOrderEditor({ id, kind = "PURCHASE" }: { id?: string; kind?: OrderKind }) {
+  const K = ORDER_KINDS[kind];
   const router = useRouter();
   const [warehouses, setWarehouses] = useState<{ id: string; name: string; isDefault: boolean }[]>([]);
   const [party, setParty] = useState<PartyOption | null>(null);
@@ -84,7 +86,7 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
             lines: { id: string; productId: string; title: string; code: string; image: string | null; qty: number; unitPrice: string | null; received: number; draft: number; unit: string | null; packSize: number | null; itemUnit: string | null; itemPack: { unit: string; size: number } | null }[];
           };
           state: string;
-        }>(`/api/admin/accounting/purchase-orders/${id}`);
+        }>(`${K.api}/${id}`);
         const o = d.order;
         setNumber(o.number);
         setParty(o.party);
@@ -98,7 +100,7 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
         setError(e instanceof Error ? e.message : "بارگذاری نشد");
       }
     })();
-  }, [id]);
+  }, [id, K.api]);
 
   const patch = (key: number, p: Partial<Line>) => setLines((x) => x.map((l) => (l.key === key ? { ...l, ...p } : l)));
   function add(p: { productId: string; title: string; code: string; image: string | null; qty?: number; unitPrice?: string; unit?: string | null; pack?: { unit: string; size: number } | null }) {
@@ -139,9 +141,9 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
         lines: lines.map((l) => ({ id: l.id ?? null, productId: l.productId, qty: String(packBaseQty(l)), packSize: l.packSize ?? null, unitPrice: l.unitPrice || "0" })),
       };
       const r = id
-        ? await api<{ id: string }>(`/api/admin/accounting/purchase-orders/${id}`, { method: "PUT", json })
-        : await api<{ id: string }>("/api/admin/accounting/purchase-orders", { method: "POST", json });
-      router.push(`/admin/accounting/purchases/orders/${r.id}`);
+        ? await api<{ id: string }>(`${K.api}/${id}`, { method: "PUT", json })
+        : await api<{ id: string }>(K.api, { method: "POST", json });
+      router.push(`${K.page}/${r.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "ذخیره نشد");
       setBusy(false);
@@ -151,13 +153,13 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={id ? `ویرایش سفارش خرید ${number ? faNum(number) : ""}` : "سفارش خرید تازه"}
-        help="accountingPurchaseOrders"
-        back={{ href: id ? `/admin/accounting/purchases/orders/${id}` : "/admin/accounting/purchases/orders", label: id ? "سفارش" : "سفارش خرید" }}
+        title={id ? `ویرایش ${K.title} ${number ? faNum(number) : ""}` : `${K.title} تازه`}
+        help={K.help}
+        back={{ href: id ? `${K.page}/${id}` : K.page, label: id ? "سفارش" : K.title }}
       />
       <Card className="grid gap-3 p-4 md:grid-cols-3">
-        <Field label="عرضه‌کننده" className="md:col-span-3">
-          <PartyPicker value={party} onChange={setParty} canCreate role="supplier" />
+        <Field label={K.party} className="md:col-span-3">
+          <PartyPicker value={party} onChange={setParty} canCreate role={K.partyRole} />
         </Field>
         <Field label="تاریخ سفارش">
           <JalaliDatePicker value={date} onChange={setDate} clearable={false} />
@@ -166,7 +168,7 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
           <JalaliDatePicker value={dueDate} onChange={setDueDate} />
         </Field>
         {warehouses.length > 1 ? (
-          <Field label="تحویل به انبار">
+          <Field label={kind === "SALES" ? "تحویل از انبار" : "تحویل به انبار"}>
             <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className={inputCls}>
               {warehouses.map((w) => (
                 <option key={w.id} value={w.id}>
@@ -178,7 +180,7 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
         ) : (
           <div />
         )}
-        <Field label="کد پیگیری عرضه‌کننده (اختیاری)" hint="شماره‌ی پیش‌فاکتور یا سفارش در سیستم او">
+        <Field label={`${K.ref} (اختیاری)`} hint={K.refHint}>
           <input value={supplierRef} onChange={(e) => setSupplierRef(e.target.value)} className={inputCls} dir="ltr" />
         </Field>
         <Field label="یادداشت" className="md:col-span-2">
@@ -190,16 +192,18 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
         <SectionTitle
           title="کالاها"
           actions={
-            <button type="button" onClick={loadSuggest} className={btn.small}>
-              <Lightbulb className="h-3.5 w-3.5" aria-hidden />
-              پیشنهاد خرید
-            </button>
+            kind === "PURCHASE" && (
+              <button type="button" onClick={loadSuggest} className={btn.small}>
+                <Lightbulb className="h-3.5 w-3.5" aria-hidden />
+                پیشنهاد خرید
+              </button>
+            )
           }
         />
         <ProductPicker
           onPick={(p) => add({ productId: p.id, title: p.title, code: p.sku ?? "", image: p.image, unitPrice: p.price, unit: p.unit, pack: p.packSize && p.packUnit ? { unit: p.packUnit, size: p.packSize } : null })}
           warehouseId={warehouseId || undefined}
-          priceFor="purchase"
+          priceFor={K.priceFor}
           partyId={party?.id}
         />
         <div className="space-y-2">
@@ -250,7 +254,7 @@ export default function PurchaseOrderEditor({ id }: { id?: string }) {
               </div>
             );
           })}
-          {!lines.length && <p className="py-4 text-center text-xs text-gray-400">کالا را جستجو یا اسکن کنید، یا «پیشنهاد خرید» را بزنید.</p>}
+          {!lines.length && <p className="py-4 text-center text-xs text-gray-400">{kind === "PURCHASE" ? "کالا را جستجو یا اسکن کنید، یا «پیشنهاد خرید» را بزنید." : "کالا را جستجو یا اسکن کنید."}</p>}
         </div>
         {lines.length > 0 && (
           <p className="text-left text-sm">

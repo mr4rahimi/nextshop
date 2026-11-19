@@ -20,6 +20,7 @@ export type AttachDocType =
   | "AccTransfer"
   | "AccStockCount"
   | "AccPurchaseOrder"
+  | "AccSalesOrder"
   | "AccCheque"
   | "AccParty";
 

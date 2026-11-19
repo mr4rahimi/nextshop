@@ -28,7 +28,7 @@ export const USE_LABEL = {
   product: "محصول سایت",
   legacy: "کد قبلی",
   relabel: "برچسب‌زنی",
-  orders: "سفارش خرید",
+  orders: "سفارش خرید یا فروش",
 } as const;
 export type UseKey = keyof typeof USE_LABEL;
 

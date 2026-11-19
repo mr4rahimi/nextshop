@@ -103,6 +103,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
     icon: fx("Ledger"), tone: "emerald",
     apps: [
       { href: "/admin/accounting", label: "خانه‌ی حسابداری", icon: fx("Ledger") },
+      { href: "/admin/accounting/sales/orders", label: "سفارش فروش", icon: fx("Delivery truck"), keywords: "سفارش فروش عمده تحویل کالا کسر از انبار مشتری عمده تعهد" },
       { href: "/admin/accounting/purchases", label: "خرید", icon: fx("Shopping cart"), keywords: "فاکتور خرید" },
       { href: "/admin/accounting/purchases/orders", label: "سفارش خرید", icon: fx("Clipboard"), keywords: "سفارش خرید پیشنهاد خرید دریافت کالا" },
       { href: "/admin/accounting/money", label: "دریافت و پرداخت", icon: fx("Currency exchange") },

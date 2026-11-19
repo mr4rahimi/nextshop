@@ -1,5 +1,9 @@
 /**
- * سفارش خرید — docs/plans/webhesab-parity.md بخش ۱۳.
+ * سفارش خرید و سفارش فروش — docs/plans/webhesab-parity.md بخش‌های ۱۳ و ۳۱.
+ * هر دو یک جدول‌اند با `kind` (`order-kind.ts`)؛ سفارش فروش همان چرخه است با «فاکتور فروش از روی
+ * سفارش» = تحویل کالا (تصمیم کاربر ۱۴۰۵/۰۸/۲۸). مانده‌ی سفارش‌های فروش باز «تعهدشده» است، فقط
+ * نمایشی (`committedQty`)؛ صندوق و سایت را نمی‌بندد.
+ *
  *
  * سفارش سند مالی و کاردکس ندارد. دریافت کالا همان «فاکتور خرید از روی سفارش» است
  * (تصمیم کاربر ۱۴۰۵/۰۸/۱۰): ردیف‌های فاکتور `poLineId` دارند و «دریافت‌شده» از
@@ -18,6 +22,7 @@ import { ensureItems, itemCards } from "../inventory/items";
 import { saveInvoice } from "../invoices/service";
 import { divRound, lineGross } from "../invoices/calc";
 import { poLineProgress } from "./progress";
+import { ORDER_KINDS, type OrderKind } from "./order-kind";
 
 export { poLineProgress };
 
@@ -29,6 +34,8 @@ export const PO_MAX_LINES = 500;
 export type PoStatus = "OPEN" | "CLOSED" | "CANCELED";
 /** وضعیت نمایشی */
 export type PoState = "OPEN" | "PARTIAL" | "RECEIVED" | "CLOSED" | "CANCELED";
+
+export const kindOf = (k: string | null | undefined): OrderKind => (k === "SALES" ? "SALES" : "PURCHASE");
 
 export const PO_STATE_LABEL: Record<PoState, string> = {
   OPEN: "باز",
@@ -50,6 +57,8 @@ export interface PoLineInput {
 }
 
 export interface PoInput {
+  /** فقط در ثبت تازه؛ ویرایش نوع را از خود سفارش می‌گیرد */
+  kind?: OrderKind;
   date: Date;
   dueDate?: Date | null;
   partyId: string;
@@ -68,10 +77,10 @@ export function stateOf(status: string, lines: { qty: number; received: number }
   return lines.some((l) => l.received > 0) ? "PARTIAL" : "OPEN";
 }
 
-/** مانده‌ی در راه هر کالا در سفارش‌های باز (کاردکس، پیشنهاد خرید) */
-export async function onOrderQty(db: Db, productIds?: string[]): Promise<Map<string, number>> {
+/** مانده‌ی در راه هر کالا در سفارش‌های خرید باز (کاردکس، پیشنهاد خرید) */
+export async function onOrderQty(db: Db, productIds?: string[], kind: OrderKind = "PURCHASE"): Promise<Map<string, number>> {
   const lines = await db.accPurchaseOrderLine.findMany({
-    where: { order: { status: "OPEN" }, ...(productIds ? { productId: { in: productIds } } : {}) },
+    where: { order: { status: "OPEN", kind }, ...(productIds ? { productId: { in: productIds } } : {}) },
     select: { id: true, productId: true, qty: true },
   });
   const prog = await poLineProgress(db, lines.map((l) => l.id));
@@ -83,18 +92,23 @@ export async function onOrderQty(db: Db, productIds?: string[]): Promise<Map<str
   return out;
 }
 
+/** مانده‌ی تحویل‌نشده‌ی سفارش‌های فروش باز هر کالا — «تعهدشده»، فقط نمایشی */
+export const committedQty = (db: Db, productIds?: string[]) => onOrderQty(db, productIds, "SALES");
+
 // ── ثبت و ویرایش ───────────────────────────────────────────────────────
 
 export async function savePurchaseOrder(tx: Tx, id: string | null, input: PoInput, actor: Actor) {
   const current = id ? await tx.accPurchaseOrder.findUnique({ where: { id }, include: { lines: true } }) : null;
   if (id && !current) throw new AccError("سفارش پیدا نشد", 404);
   if (current && current.status !== "OPEN") throw new AccError("سفارش بسته یا باطل‌شده ویرایش نمی‌شود — اول «بازگشایی» کنید", 409);
+  const kind = current ? kindOf(current.kind) : input.kind ?? "PURCHASE";
+  const K = ORDER_KINDS[kind];
 
   const party = await tx.accParty.findUnique({ where: { id: input.partyId } });
-  if (!party) throw new AccError("عرضه‌کننده را انتخاب کنید");
+  if (!party) throw new AccError(`${K.party} را انتخاب کنید`);
   if (!party.isActive) throw new AccError(`«${party.name}» غیرفعال است`);
   if (current && current.partyId !== input.partyId && (await tx.accInvoice.count({ where: { purchaseOrderId: current.id, status: { not: "VOID" } } }))) {
-    throw new AccError("برای این سفارش فاکتور ثبت شده؛ عرضه‌کننده عوض نمی‌شود", 409);
+    throw new AccError(`برای این سفارش فاکتور ثبت شده؛ ${K.party} عوض نمی‌شود`, 409);
   }
   if (input.warehouseId) {
     const wh = await tx.accWarehouse.findUnique({ where: { id: input.warehouseId } });
@@ -146,7 +160,7 @@ export async function savePurchaseOrder(tx: Tx, id: string | null, input: PoInpu
   const po = current
     ? await tx.accPurchaseOrder.update({ where: { id: current.id }, data })
     : await tx.accPurchaseOrder.create({
-        data: { ...data, number: await nextNumber(tx, GLOBAL_SEQ, "purchase-order"), createdById: actor.id ?? null, createdByName: actor.name },
+        data: { ...data, kind, number: await nextNumber(tx, GLOBAL_SEQ, K.seqKey), createdById: actor.id ?? null, createdByName: actor.name },
       });
 
   // ردیف‌های قبلی با همان شناسه می‌مانند (poLineId فاکتورها به آن‌ها اشاره می‌کند)
@@ -178,7 +192,7 @@ export async function setPoStatus(tx: Tx, id: string, action: "close" | "cancel"
   const drafts = await tx.accInvoice.count({ where: { purchaseOrderId: id, status: "DRAFT" } });
   if (drafts) throw new AccError("پیش‌نویس فاکتور از این سفارش هست؛ اول آن را صادر یا پاک کنید", 409);
   if (action === "cancel" && (await tx.accInvoice.count({ where: { purchaseOrderId: id, status: "ISSUED" } }))) {
-    throw new AccError("بخشی از این سفارش دریافت شده؛ به‌جای باطل «بستن» را بزنید", 409);
+    throw new AccError(`بخشی از این سفارش ${ORDER_KINDS[kindOf(po.kind)].doneNoun} شده؛ به‌جای باطل «بستن» را بزنید`, 409);
   }
   return tx.accPurchaseOrder.update({
     where: { id },
@@ -194,7 +208,8 @@ export async function deletePurchaseOrder(tx: Tx, id: string) {
 }
 
 /**
- * فاکتور خرید از روی سفارش: پیش‌نویسی با مانده‌ی هر ردیف (تعداد را کاربر به آنچه رسیده اصلاح می‌کند).
+ * فاکتور از روی سفارش: پیش‌نویسی با مانده‌ی هر ردیف (تعداد را کاربر به آنچه رسیده/تحویل می‌شود اصلاح می‌کند).
+ * فروش: مالیات هر ردیف مثل فرم فاکتور (نرخ کالا وگرنه نرخ تنظیمات، اگر مالیات روشن است).
  * اگر پیش‌نویس این سفارش از قبل هست، همان برمی‌گردد — دو پیش‌نویس هم‌زمان مانده را دو بار نمی‌گیرند.
  */
 export async function invoiceFromOrder(tx: Tx, id: string, actor: Actor, date: Date = todayKey()) {
@@ -205,22 +220,34 @@ export async function invoiceFromOrder(tx: Tx, id: string, actor: Actor, date: D
   if (draft) return { id: draft.id, existing: true };
   const prog = await poLineProgress(tx, po.lines.map((l) => l.id));
   const left = po.lines.map((l) => ({ l, qty: l.qty - (prog.get(l.id)?.received ?? 0) })).filter((x) => x.qty > 0);
-  if (!left.length) throw new AccError("همه‌ی کالاهای این سفارش دریافت شده است", 409);
+  const K = ORDER_KINDS[kindOf(po.kind)];
+  if (!left.length) throw new AccError(`همه‌ی کالاهای این سفارش ${K.doneNoun} شده است`, 409);
+  // مالیات فروش: مثل پیش‌فرض فرم فاکتور
+  let vat: { incl: boolean; rate: (productId: string) => number } = { incl: false, rate: () => 0 };
+  if (K.invoiceType === "SALES") {
+    const st = await tx.accSettings.findUnique({ where: { id: "singleton" }, select: { vatEnabled: true, vatRateBp: true, pricesIncludeVat: true } });
+    if (st?.vatEnabled) {
+      const rates = new Map((await tx.accProductCost.findMany({ where: { productId: { in: left.map((x) => x.l.productId) } }, select: { productId: true, vatRateBp: true } })).map((c) => [c.productId, c.vatRateBp]));
+      vat = { incl: st.pricesIncludeVat, rate: (id) => rates.get(id) ?? st.vatRateBp };
+    }
+  }
   const inv = await saveInvoice(
     tx,
     null,
     {
-      type: "PURCHASE",
+      type: K.invoiceType,
       date,
       partyId: po.partyId,
       warehouseId: po.warehouseId,
-      note: `سفارش خرید ${faNum(po.number)}${po.supplierRef ? ` — پیگیری عرضه‌کننده ${po.supplierRef}` : ""}`,
+      pricesIncludeVat: vat.incl,
+      note: `${K.title} ${faNum(po.number)}${po.supplierRef ? ` — ${K.ref} ${po.supplierRef}` : ""}`,
       // مانده‌ی ردیف بسته‌ای اگر بسته‌ی کامل نیست، تکی و با فی هر عدد می‌آید
       lines: left.map(({ l, qty }) => {
         const whole = !!l.packSize && qty % l.packSize === 0;
+        const vatRateBp = vat.rate(l.productId);
         return l.packSize && !whole
-          ? { productId: l.productId, title: l.title, qty, unitPrice: divRound(l.unitPrice, BigInt(l.packSize)), poLineId: l.id }
-          : { productId: l.productId, title: l.title, unit: l.unit, packSize: l.packSize, qty, unitPrice: l.unitPrice, poLineId: l.id };
+          ? { productId: l.productId, title: l.title, qty, unitPrice: divRound(l.unitPrice, BigInt(l.packSize)), poLineId: l.id, vatRateBp }
+          : { productId: l.productId, title: l.title, unit: l.unit, packSize: l.packSize, qty, unitPrice: l.unitPrice, poLineId: l.id, vatRateBp };
       }),
     },
     {},
@@ -232,6 +259,7 @@ export async function invoiceFromOrder(tx: Tx, id: string, actor: Actor, date: D
 // ── خواندن ─────────────────────────────────────────────────────────────
 
 export interface PoFilter {
+  kind?: OrderKind;
   state?: "open" | "overdue" | "done" | "all";
   partyId?: string | null;
   productId?: string | null;
@@ -239,7 +267,7 @@ export interface PoFilter {
 }
 
 export async function listPurchaseOrders(db: Db, f: PoFilter) {
-  const where: Prisma.AccPurchaseOrderWhereInput = {};
+  const where: Prisma.AccPurchaseOrderWhereInput = { kind: f.kind ?? "PURCHASE" };
   const state = f.state ?? "open";
   if (state === "open" || state === "overdue") where.status = "OPEN";
   if (f.partyId) where.partyId = f.partyId;
@@ -291,13 +319,14 @@ export async function listPurchaseOrders(db: Db, f: PoFilter) {
   return filtered;
 }
 
-export async function purchaseOrderDetail(db: Db, id: string) {
+export async function purchaseOrderDetail(db: Db, id: string, kind?: OrderKind) {
   const po = await db.accPurchaseOrder.findUnique({
     where: { id },
     include: { lines: { orderBy: { seq: "asc" } }, party: { select: { id: true, code: true, name: true, mobile: true, phone: true, address: true, city: true } } },
   });
-  if (!po) return null;
-  const [prog, cards, invoices, warehouse] = await Promise.all([
+  if (!po || (kind && kindOf(po.kind) !== kind)) return null;
+  const sales = kindOf(po.kind) === "SALES";
+  const [prog, cards, invoices, warehouse, stocks] = await Promise.all([
     poLineProgress(db, po.lines.map((l) => l.id)),
     itemCards(po.lines.map((l) => l.productId), db),
     db.accInvoice.findMany({
@@ -306,7 +335,12 @@ export async function purchaseOrderDetail(db: Db, id: string) {
       select: { id: true, number: true, date: true, status: true, total: true },
     }),
     po.warehouseId ? db.accWarehouse.findUnique({ where: { id: po.warehouseId }, select: { id: true, name: true } }) : null,
+    // سفارش فروش: موجودی فعلی هر کالا در انبار سفارش (همه‌ی انبارها اگر خالی) — چقدر تحویل‌شدنی است
+    sales
+      ? db.accStock.groupBy({ by: ["productId"], where: { productId: { in: po.lines.map((l) => l.productId) }, ...(po.warehouseId ? { warehouseId: po.warehouseId } : {}) }, _sum: { qty: true } })
+      : [],
   ]);
+  const stock = new Map(stocks.map((s) => [s.productId, s._sum.qty ?? 0]));
   const lines = po.lines.map((l) => ({
     ...l,
     code: cards.get(l.productId)?.code ?? "",
@@ -315,6 +349,7 @@ export async function purchaseOrderDetail(db: Db, id: string) {
     itemPack: cards.get(l.productId)?.packSize ? { unit: cards.get(l.productId)!.packUnit!, size: cards.get(l.productId)!.packSize! } : null,
     received: prog.get(l.id)?.received ?? 0,
     draft: prog.get(l.id)?.draft ?? 0,
+    stock: sales ? stock.get(l.productId) ?? 0 : null,
   }));
   const st = stateOf(po.status, lines);
   return {

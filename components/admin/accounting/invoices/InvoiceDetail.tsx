@@ -92,7 +92,7 @@ export interface InvoiceData {
   convertedFrom: Linked | null;
   voucher: { id: string; number: number; status: string } | null;
   order: { id: string; orderNumber: string; status: string } | null;
-  purchaseOrder: { id: string; number: number } | null;
+  purchaseOrder: { id: string; kind: string; number: number } | null;
   profit: { cost: string; gross: string } | null;
   settlement: { allocations: { id: string; kind: "RECEIPT" | "PAYMENT"; number: number; date: string; amount: string }[]; returned: string; fee: string; open: string };
   can: { write: boolean; voucher: boolean; pay: boolean };
@@ -271,8 +271,8 @@ export default function InvoiceDetail({ id }: { id: string }) {
       {(d.order || d.purchaseOrder || d.ref || d.returns.length > 0 || d.convertedTo || d.convertedFrom || d.voucher) && (
         <div className="flex flex-wrap gap-2 text-xs">
           {d.purchaseOrder && (
-            <Link href={`/admin/accounting/purchases/orders/${d.purchaseOrder.id}`} className={btn.small}>
-              📋 سفارش خرید {faNum(d.purchaseOrder.number)}
+            <Link href={`/admin/accounting/${d.purchaseOrder.kind === "SALES" ? "sales" : "purchases"}/orders/${d.purchaseOrder.id}`} className={btn.small}>
+              📋 {d.purchaseOrder.kind === "SALES" ? "سفارش فروش" : "سفارش خرید"} {faNum(d.purchaseOrder.number)}
             </Link>
           )}
           {d.order && (
