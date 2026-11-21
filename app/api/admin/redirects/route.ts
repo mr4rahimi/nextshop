@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
+  changeNeedsPurge,
   normalizePath,
   normalizeDestination,
   validateRule,
@@ -83,10 +84,12 @@ export async function PUT(req: Request) {
     );
   }
 
+  const before = await prisma.redirect.findUnique({ where: { id: body.id } });
   const updated = await prisma.redirect.update({
     where: { id: body.id },
     data: { ...rule, note: body.note?.trim() || null, isActive: body.isActive !== false },
   });
+  if (before && changeNeedsPurge(before, updated)) await markPurge();
   return NextResponse.json(updated);
 }
 
@@ -94,8 +97,25 @@ export async function DELETE(req: Request) {
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id لازم است" }, { status: 400 });
-  await prisma.redirect.delete({ where: { id } });
+  const deleted = await prisma.redirect.delete({ where: { id } });
+  if (changeNeedsPurge(deleted, null)) await markPurge();
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * ریدایرکت دائمی در مرورگر مشتری‌ها کش شده؛ حذف یا تغییرش باید به آن‌ها هم
+ * برسد. زمان تغییر ثبت می‌شود و proxy تا ۳۰ روز به هر مرورگر یک بار
+ * Clear-Site-Data می‌فرستد — docs/features/redirects.md بخش «کش مرورگر»
+ */
+async function markPurge() {
+  const now = new Date();
+  await prisma.storeSettings
+    .upsert({
+      where: { id: "singleton" },
+      update: { redirectCachePurgeAt: now },
+      create: { id: "singleton", redirectCachePurgeAt: now },
+    })
+    .catch(() => {});
 }
 
 function shape(body: {
@@ -130,6 +150,7 @@ async function bulkImport(
 ) {
   const overwrite = mode === "overwrite";
   const report = { created: 0, updated: 0, skipped: 0, failed: 0, errors: [] as string[] };
+  let purge = false;
 
   for (const raw of items) {
     const rule = shape(raw);
@@ -149,10 +170,11 @@ async function bulkImport(
           report.skipped++;
           continue;
         }
-        await prisma.redirect.update({
+        const updated = await prisma.redirect.update({
           where: { id: existing.id },
           data: { ...rule, note: raw.note?.trim() || existing.note },
         });
+        if (changeNeedsPurge(existing, updated)) purge = true;
         report.updated++;
       } else {
         await prisma.redirect.create({
@@ -168,5 +190,6 @@ async function bulkImport(
     }
   }
 
+  if (purge) await markPurge();
   return NextResponse.json(report);
 }

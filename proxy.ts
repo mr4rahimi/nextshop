@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { matchPath, shouldSkip, normalizePath } from "@/lib/redirects";
-import { getRules, internalBase, INTERNAL_HEADER, internalToken } from "@/lib/redirectCache";
+import {
+  matchPath,
+  shouldSkip,
+  normalizePath,
+  isPermanentStatus,
+  PERMANENT_REDIRECT_MAX_AGE,
+  PURGE_COOKIE,
+  PURGE_WINDOW_MS,
+  purgeStampFor,
+} from "@/lib/redirects";
+import { getRules, getPurgeAt, internalBase, INTERNAL_HEADER, internalToken } from "@/lib/redirectCache";
 import { canOpenPath } from "@/lib/admin-sections";
 import { getGateAccess } from "@/lib/admin-gate";
 import { featureForPath, FEATURE_LABELS } from "@/lib/plan/features";
@@ -270,6 +279,7 @@ async function route(request: NextRequest) {
   // بعد از همه‌ی بررسی‌های احراز هویت می‌آید تا هرگز جلوی صفحه‌ی ورود را نگیرد.
   const response = await handleRedirects(request);
   stampAttribution(request, response);
+  await stampRedirectPurge(request, response);
   return response;
 }
 
@@ -356,7 +366,45 @@ async function handleRedirects(request: NextRequest) {
     : new URL(hit.destination + search, origin).toString();
 
   void countHit(hit.rule.id);
-  return NextResponse.redirect(target, hit.rule.statusCode);
+  const res = NextResponse.redirect(target, hit.rule.statusCode);
+  // ۳۰۱/۳۰۸ بدون Cache-Control برای همیشه در مرورگر می‌ماند و حذفش از پنل
+  // دیگر به مشتری‌ها نمی‌رسد. با سقف یک ساعت، اشتباه خودش برطرف می‌شود.
+  if (isPermanentStatus(hit.rule.statusCode)) {
+    res.headers.set("Cache-Control", `public, max-age=${PERMANENT_REDIRECT_MAX_AGE}`);
+  }
+  return res;
+}
+
+/**
+ * مرورگری که ریدایرکت دائمیِ حذف‌شده را هنوز در کش دارد، یک بار کشش را پاک
+ * می‌کند (docs/features/redirects.md بخش «کش مرورگر»). چنین مرورگری خود مسیر قدیمی
+ * را دیگر از سرور نمی‌پرسد و مستقیم به مقصد می‌رود، پس هدر روی هر صفحه‌ی
+ * فروشگاه می‌نشیند؛ کوکی جلوی تکرارش را می‌گیرد.
+ */
+async function stampRedirectPurge(request: NextRequest, response: NextResponse) {
+  try {
+    const { pathname } = request.nextUrl;
+    if (request.method !== "GET") return;
+    if (pathname.startsWith("/api") || pathname.startsWith("/_next")) return;
+    if (/\.[a-z0-9]{2,5}$/i.test(pathname)) return;
+    // روی خود پاسخ ریدایرکت نه — صفحه‌ی مقصد آن را می‌گیرد
+    if (response.status >= 300 && response.status < 400) return;
+
+    await getRules().catch(() => []);
+    const stamp = purgeStampFor(getPurgeAt(), request.cookies.get(PURGE_COOKIE)?.value);
+    if (!stamp) return;
+
+    response.headers.set("Clear-Site-Data", '"cache"');
+    response.cookies.set(PURGE_COOKIE, stamp, {
+      maxAge: Math.round(PURGE_WINDOW_MS / 1000),
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: (request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")) === "https",
+    });
+  } catch {
+    /* هرگز نباید صفحه را بشکند */
+  }
 }
 
 /**

@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const rows = await prisma.redirect.findMany({
+  const [rows, settings] = await Promise.all([prisma.redirect.findMany({
     where: { isActive: true },
     select: {
       id: true,
@@ -35,10 +35,14 @@ export async function GET(req: Request) {
       statusCode: true,
       matchType: true,
     },
-  });
+  }),
+    prisma.storeSettings
+      .findUnique({ where: { id: "singleton" }, select: { redirectCachePurgeAt: true } })
+      .catch(() => null),
+  ]);
 
   return NextResponse.json(
-    { rules: rows },
+    { rules: rows, purgeAt: settings?.redirectCachePurgeAt?.getTime() ?? null },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

@@ -1008,6 +1008,9 @@ model StoreSettings {
   scoreConversionDays Int     @default(7)
   /// رتبه‌ی خودِ کارمند در کارت «امتیاز من» دیده شود؟ نام دیگران هرگز.
   scoreShowRank       Boolean @default(false)
+  /// آخرین باری که ریدایرکت دائمی (۳۰۱/۳۰۸) حذف یا عوض شد. تا ۳۰ روز بعدش
+  /// هر مرورگر یک بار هدر Clear-Site-Data می‌گیرد تا ریدایرکت کش‌شده را فراموش کند.
+  redirectCachePurgeAt DateTime?
 }
 
 model MenuItem {

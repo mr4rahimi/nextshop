@@ -67,9 +67,23 @@ export async function redirectSlugChange(
   // فقط بزرگی و کوچکی حروف عوض شده — مسیرها در proxy کوچک می‌شوند، قاعده حلقه می‌شد
   if (source === normalizePath(newPath)) return;
 
-  await db.redirect.deleteMany({
-    where: { matchType: "EXACT", source: { in: pathForms(newPath) } },
+  const clashWhere = { matchType: "EXACT" as const, source: { in: pathForms(newPath) } };
+  // نامک به شکل قبلی برگشته: ریدایرکت دائمیِ قبلی در مرورگرها کش شده و حالا
+  // حلقه می‌سازد — مرورگرها باید یک بار پاک شوند (docs/features/redirects.md بخش «کش مرورگر»)
+  const cached = await db.redirect.count({
+    where: { ...clashWhere, isActive: true, statusCode: { in: [301, 308] } },
   });
+  await db.redirect.deleteMany({ where: clashWhere });
+  if (cached) {
+    const now = new Date();
+    await db.storeSettings
+      .upsert({
+        where: { id: "singleton" },
+        update: { redirectCachePurgeAt: now },
+        create: { id: "singleton", redirectCachePurgeAt: now },
+      })
+      .catch(() => {});
+  }
 
   await db.redirect.updateMany({
     where: {

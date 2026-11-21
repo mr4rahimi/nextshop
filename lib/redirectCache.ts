@@ -16,6 +16,8 @@ import type { RedirectRule } from "./redirects";
 const TTL_MS = 60_000;
 
 let rules: RedirectRule[] = [];
+/** زمان آخرین حذف/تغییر ریدایرکت دائمی (میلی‌ثانیه) — `getPurgeAt`. */
+let purgeAt: number | null = null;
 let loadedAt = 0;
 let inflight: Promise<RedirectRule[]> | null = null;
 
@@ -64,8 +66,9 @@ export async function getRules(): Promise<RedirectRule[]> {
         cache: "no-store",
       });
       if (!res.ok) throw new Error(`status ${res.status}`);
-      const data = (await res.json()) as { rules: RedirectRule[] };
+      const data = (await res.json()) as { rules: RedirectRule[]; purgeAt?: number | null };
       rules = Array.isArray(data.rules) ? data.rules : [];
+      purgeAt = typeof data.purgeAt === "number" ? data.purgeAt : null;
       loadedAt = Date.now();
     } catch {
       // کش قبلی حفظ می‌شود؛ دفعه‌ی بعد دوباره تلاش می‌کنیم
@@ -89,3 +92,11 @@ export async function getRules(): Promise<RedirectRule[]> {
  * ۶۰ ثانیه اعمال می‌شود. این عدد در پیام ادمین هم به کاربر گفته می‌شود.
  */
 export const TTL_SECONDS = TTL_MS / 1000;
+
+/**
+ * زمان آخرین حذف یا تغییر ریدایرکت دائمی، همراه همان واکشی قواعد. باید بعد از
+ * `getRules()` صدا زده شود تا کش تازه باشد.
+ */
+export function getPurgeAt(): number | null {
+  return purgeAt;
+}

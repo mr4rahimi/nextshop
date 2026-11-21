@@ -113,6 +113,13 @@ export function validateRule(rule: {
     }
   }
 
+  if (source && protectsCritical(source, rule.matchType)) {
+    errors.push({
+      field: "source",
+      message: "سبد خرید، تسویه، ورود و حساب کاربری را نمی‌شود ریدایرکت کرد — مشتری از خرید بیرون می‌افتد",
+    });
+  }
+
   // حلقه‌ی بدیهی: مبدأ و مقصد یکی
   if (source && dest && rule.matchType === "EXACT") {
     if (normalizePath(source) === normalizePath(dest)) {
@@ -121,6 +128,67 @@ export function validateRule(rule: {
   }
 
   return errors;
+}
+
+/**
+ * آیا این مبدأ خودش مسیر حیاتی است؟ regex و PREFIX روی «/» رد نمی‌شوند چون
+ * الگوهای عمومی مهاجرت را هم می‌گیرند؛ در اجرا `shouldSkip` مسیرهای حیاتی را
+ * از هر قاعده‌ای بیرون نگه می‌دارد.
+ */
+function protectsCritical(source: string, matchType: RedirectMatch): boolean {
+  if (matchType === "REGEX") return false;
+  return isProtectedPath(source);
+}
+
+// ── پاک‌سازی ریدایرکت‌های کش‌شده ─────────────────────────────────────
+// docs/features/redirects.md بخش «کش مرورگر»
+
+/** ریدایرکت دائمی در مرورگر می‌ماند؛ موقت‌ها نه. */
+export function isPermanentStatus(code: number): boolean {
+  return code === 301 || code === 308;
+}
+
+/** پاسخ ریدایرکت دائمی بیش از این در مرورگر نمی‌ماند (ثانیه). */
+export const PERMANENT_REDIRECT_MAX_AGE = 3600;
+
+/** تا چند وقت بعد از حذف یا تغییر ریدایرکت دائمی، مرورگرها پاک‌سازی می‌شوند. */
+export const PURGE_WINDOW_MS = 30 * 24 * 3600 * 1000;
+
+/** کوکی‌ای که می‌گوید این مرورگر کدام پاک‌سازی را گرفته است. */
+export const PURGE_COOKIE = "nx_rcp";
+
+type RuleState = {
+  source: string;
+  destination: string;
+  statusCode: number;
+  matchType: string;
+  isActive: boolean;
+};
+
+/**
+ * حذف یا تغییر یک قاعده، پاک‌سازی کش مرورگرها را لازم می‌کند؟ فقط وقتی قاعده‌ی
+ * قبلی فعال و دائمی بوده و رفتارش عوض شده (`after` = null یعنی حذف).
+ */
+export function changeNeedsPurge(before: RuleState, after: RuleState | null): boolean {
+  if (!before.isActive || !isPermanentStatus(before.statusCode)) return false;
+  if (!after) return true;
+  return (
+    !after.isActive ||
+    after.source !== before.source ||
+    after.destination !== before.destination ||
+    after.statusCode !== before.statusCode ||
+    after.matchType !== before.matchType
+  );
+}
+
+/**
+ * مقدار کوکی پاک‌سازی برای این مرورگر، یا null اگر لازم نیست. `purgeAt` زمان
+ * آخرین تغییر (میلی‌ثانیه) است؛ هر مرورگر فقط یک بار برای هر تغییر پاک می‌شود.
+ */
+export function purgeStampFor(purgeAt: number | null, cookie: string | undefined, now = Date.now()): string | null {
+  if (!purgeAt || now - purgeAt > PURGE_WINDOW_MS) return null;
+  const stamp = String(purgeAt);
+  return cookie === stamp ? null : stamp;
 }
 
 /**
@@ -185,8 +253,21 @@ export function matchPath(
   return null;
 }
 
+/**
+ * مسیرهای حیاتی خرید و حساب مشتری. ریدایرکت روی این‌ها مشتری را از سبد یا
+ * پرداخت بیرون می‌اندازد و اگر دائمی (۳۰۱) باشد در مرورگرش می‌ماند، پس نه
+ * ساخته می‌شوند (`validateRule`) و نه اجرا (`shouldSkip`).
+ */
+export const PROTECTED_PREFIXES = ["/cart", "/checkout", "/auth", "/user", "/account"];
+
+export function isProtectedPath(pathname: string): boolean {
+  const p = normalizePath(pathname);
+  return PROTECTED_PREFIXES.some((x) => p === x || p.startsWith(x + "/"));
+}
+
 /** مسیرهایی که هرگز نباید ریدایرکت یا لاگ شوند. */
 export const SKIP_PREFIXES = [
+  ...PROTECTED_PREFIXES,
   "/_next",
   "/api",
   "/admin",
@@ -205,6 +286,7 @@ export const SKIP_EXACT = ["/favicon.ico", "/robots.txt", "/sitemap.xml", "/mani
 
 export function shouldSkip(pathname: string): boolean {
   if (SKIP_EXACT.includes(pathname)) return true;
+  if (isProtectedPath(pathname)) return true; // /Cart هم مثل /cart
   if (SKIP_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))) return true;
   // هر چیزی که پسوند فایل دارد (تصویر، فونت، css) — ریدایرکت محتوایی نیست
   if (/\.[a-z0-9]{2,5}$/i.test(pathname)) return true;
