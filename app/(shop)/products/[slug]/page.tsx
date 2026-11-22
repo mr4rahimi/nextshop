@@ -610,7 +610,10 @@ export default async function ProductDetailPage({
     buildFAQSchema(faqItems);
 
   return (
-    <>
+    // ریشه‌ی div لازم است: Next برای بردن اسکرول به بالای صفحه‌ی تازه اولین عنصر
+    // صفحه را می‌گیرد؛ اگر <meta>/<link> باشد React به head می‌بردش و اسکرول صفحه‌ی
+    // قبل می‌ماند (کلیک روی محصول پایین فهرست = باز شدن پایین صفحه‌ی محصول)
+    <div>
       {/* تصاویر محصول معمولاً روی دامنه‌ی دیگری میزبانی می‌شوند؛ گرم کردن زودهنگام
           اتصال، DNS و TLS را از مسیر بحرانی LCP خارج می‌کند */}
       {externalImageOrigins(images).map((origin) => (
@@ -681,6 +684,6 @@ export default async function ProductDetailPage({
         }
         sitePhone={sitePhone}
       />
-    </>
+    </div>
   );
 }

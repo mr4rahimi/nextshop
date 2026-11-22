@@ -136,7 +136,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   );
 
   return (
-    <>
+    <div>
       {imageOrigins.map(origin => (
         <link key={origin} rel="preconnect" href={origin} crossOrigin="" />
       ))}
@@ -152,6 +152,6 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           landingIntro={null}
         />
       </Suspense>
-    </>
+    </div>
   );
 }
