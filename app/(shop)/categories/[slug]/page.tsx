@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import CategoryPageClient from "@/components/store/categories/CategoryPageClient";
-import { SITE_URL, buildBaseMetadata, buildBreadcrumbSchema, buildItemListSchema, buildFAQSchema, canonicalUrl, externalImageOrigins } from "@/lib/seo";
+import { SITE_URL, buildBaseMetadata, buildBreadcrumbSchema, buildItemListSchema, buildFAQSchema, canonicalUrl, externalImageOrigins, metaDescriptionFromText } from "@/lib/seo";
 import { normalizeFaq } from "@/lib/faq";
 import { parseCatalogQuery, fetchCatalog, RESERVED_PARAMS, listingIndexPolicy } from "@/lib/catalog";
 import { matchLandingByFilters } from "@/lib/landing-pages";
@@ -72,7 +72,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
   return buildBaseMetadata({
     title:       (category.seoTitle || `خرید ${category.title}`) + pageSuffix,
-    description: category.seoDescription || stripTextLinks(category.description) || `بهترین محصولات در دسته ${category.title}`,
+    description: category.seoDescription || metaDescriptionFromText(stripTextLinks(category.description))
+      || `خرید ${category.title}${settings?.storeName ? ` از ${settings.storeName}` : ""}؛ مقایسه‌ی مدل‌ها و برندها، قیمت روز، گارانتی معتبر و ارسال سریع.`,
     image:       category.imageUrl || settings?.storeLogo || null,
     siteName:    settings?.storeName || undefined,
     path:        policy.canonicalPath,

@@ -1,7 +1,9 @@
 import { Metadata } from "next";
 import ProductsPageClient from "@/components/store/products/ProductsPageClient";
 import { buildBaseMetadata } from "@/lib/seo";
-import { listingIndexPolicy } from "@/lib/catalog";
+import { listingIndexPolicy, analyzeListingParams, fetchCatalog } from "@/lib/catalog";
+import { serialize } from "@/lib/serialize";
+import { notFound } from "next/navigation";
 
 type SP = Record<string, string | string[] | undefined>;
 
@@ -36,6 +38,13 @@ export async function generateMetadata({
   });
 }
 
-export default function ProductsPage() {
-  return <ProductsPageClient />;
+export default async function ProductsPage({ searchParams }: { searchParams: Promise<SP> }) {
+  // ── SSR صفحه‌ی جاری — فقط `page` از آدرس؛ فیلترها در کلاینت‌اند (مثل صفحه‌ی برند) ──
+  const { page } = analyzeListingParams(await searchParams);
+  const initialData = serialize(await fetchCatalog({
+    brandSlugs: [], attrFilters: {}, conditions: [], sort: "newest", page, pageSize: 12,
+  }));
+  // صفحه‌ای فراتر از آخرین صفحه محتوا ندارد — ۴۰۴، نه یک لیست خالی ایندکس‌پذیر
+  if (page > 1 && initialData.items.length === 0) notFound();
+  return <ProductsPageClient initialData={initialData} />;
 }

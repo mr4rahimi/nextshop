@@ -60,8 +60,12 @@ export function buildBaseMetadata(opts: {
   const url      = canonicalUrl(opts.path);
   const canon    = canonicalUrl(opts.canonicalPath ?? opts.path);
   const siteName = opts.siteName ?? process.env.NEXT_PUBLIC_STORE_NAME;
+  // تصویر اشتراک‌گذاری پیش‌فرض: لوگوی فروشگاه (app/og-image) — بدون آن صفحه‌های
+  // عمومی مثل «درباره ما» و «مجله» در تلگرام و واتساپ بی‌تصویر پیش‌نمایش می‌شدند
+  const image    = opts.image || canonicalUrl("/og-image");
   return {
-    title:       opts.title,
+    // عنوانی که نام فروشگاه را خودش دارد قالب «… | نام فروشگاه» نمی‌گیرد
+    title:       siteName && opts.title.includes(siteName.trim()) ? { absolute: opts.title } : opts.title,
     description: opts.description,
     keywords:    opts.keywords,
     alternates:  { canonical: canon },
@@ -79,15 +83,28 @@ export function buildBaseMetadata(opts: {
       // می‌کند نه `property=`. پس برای product اینجا چیزی ست نمی‌شود و خودِ
       // صفحه تگ را با JSX می‌سازد (React آن را به head منتقل می‌کند).
       ...(opts.ogType === "product" ? {} : { type: opts.ogType ?? "website" }),
-      images:      opts.image ? [{ url: opts.image, width: 1200, height: 630 }] : [],
+      images:      opts.image ? [{ url: opts.image, width: 1200, height: 630 }] : [{ url: image }],
     },
     twitter: {
       card:        "summary_large_image",
       title:       opts.title,
       description: opts.description,
-      images:      opts.image ? [opts.image] : [],
+      images:      [image],
     },
   };
+}
+
+/**
+ * توضیح متا از متن ساده: حداکثر `max` نویسه و بریده روی مرز کلمه.
+ * برای مطلب بی‌خلاصه و بی‌توضیح سئو که بدون آن گوگل تکه‌ای تصادفی نشان می‌داد.
+ */
+export function metaDescriptionFromText(text?: string | null, max = 155): string | undefined {
+  const t = text?.replace(/\s+/g, " ").trim();
+  if (!t) return undefined;
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const sp = cut.lastIndexOf(" ");
+  return (sp > max * 0.6 ? cut.slice(0, sp) : cut).replace(/[،,؛:.\-–—\s]+$/, "") + "…";
 }
 
 /**

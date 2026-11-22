@@ -188,15 +188,22 @@ function FilterSidebar({
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function ProductsPageClient() {
+/**
+ * `initialData`: صفحه‌ی جاری (`?page=N`) که سرور رندر کرده — بدون آن HTML این صفحه
+ * هیچ لینک محصولی نداشت و `/products?page=N` همان صفحه‌ی اول را نشان می‌داد.
+ */
+export default function ProductsPageClient({ initialData }: { initialData?: { items: ProductCardItem[]; total: number; page: number } } = {}) {
   const gridCls = useProductGridClass();
   const skeletonCls = useProductSkeletonClass();
   const [meta, setMeta] = useState<Meta | null>(null);
-  const [products, setProducts] = useState<ProductCardItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [products, setProducts] = useState<ProductCardItem[]>(initialData?.items ?? []);
+  const [total, setTotal] = useState(initialData?.total ?? 0);
+  const [page, setPage] = useState(initialData?.page ?? 1);
   const [loading, setLoading] = useState(false);
-  const [initialLoaded, setInitialLoaded] = useState(false);
+  const [initialLoaded, setInitialLoaded] = useState(!!initialData);
+  // صفحه‌ای که از آن وارد شده‌ایم؛ صفحه‌های قبلش لینک «قبلی» می‌گیرند
+  const [startPage, setStartPage] = useState(initialData?.page ?? 1);
+  const skipFirstFetch = useRef(!!initialData);
 
   const [sort, setSort] = useState<SortType>("newest");
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
@@ -247,7 +254,10 @@ export default function ProductsPageClient() {
   }, [sort, selectedBrands, selectedCategories, appliedMin, appliedMax, meta]);
 
   useEffect(() => {
+    // بار اول داده‌ی سرور هست؛ فقط تغییر فیلتر دوباره می‌گیرد
+    if (skipFirstFetch.current) { skipFirstFetch.current = false; return; }
     setPage(1);
+    setStartPage(1);
     fetchProducts(1, false);
   }, [sort, selectedBrands, selectedCategories, appliedMin, appliedMax]);
 
@@ -437,13 +447,25 @@ export default function ProductsPageClient() {
                 </div>
               ) : (
                 <>
+                  {startPage > 1 && (
+                    <div className="mb-6 flex justify-center">
+                      <Link href={startPage === 2 ? "/products" : `/products?page=${startPage - 1}`} className="text-sm font-bold text-primary-600 hover:underline">
+                        ← صفحه‌ی قبل
+                      </Link>
+                    </div>
+                  )}
                   <div className={gridCls}>
                     {products.map(p => <ProductCardAuto key={p.id} product={p} />)}
                   </div>
 
-                  {/* Infinite scroll sentinel */}
+                  {/* Infinite scroll sentinel — لینک صفحه‌ی بعد برای خزنده‌ها و بی‌جاوااسکریپت */}
                   {useInfiniteScroll && page < totalPages && (
-                    <div ref={sentinelRef} className="flex justify-center py-10">
+                    <div ref={sentinelRef} className="flex flex-col items-center gap-3 py-10">
+                      {!loading && (
+                        <Link href={`/products?page=${page + 1}`} className="text-xs font-bold text-gray-400 hover:text-primary-600">
+                          صفحه‌ی بعد
+                        </Link>
+                      )}
                       {loading && (
                         <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
                           <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -478,12 +500,14 @@ export default function ProductsPageClient() {
                             );
                           })}
                         </div>
-                        <button onClick={() => page < totalPages && goToPage(page + 1)} disabled={page >= totalPages}
-                          className="w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-primary-500 transition-all disabled:opacity-30">
+                        {/* لینک واقعی تا خزنده از صفحه‌ی ۱۱ به بعد هم برسد؛ کلیک کاربر همان بارگذاری در جاست */}
+                        <a href={page < totalPages ? `/products?page=${page + 1}` : undefined} aria-label="صفحه‌ی بعد" aria-disabled={page >= totalPages}
+                          onClick={e => { e.preventDefault(); if (page < totalPages) goToPage(page + 1); }}
+                          className={`w-11 h-11 rounded-[1.2rem] bg-white/50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-400 hover:text-primary-500 transition-all ${page >= totalPages ? "opacity-30 pointer-events-none" : ""}`}>
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                           </svg>
-                        </button>
+                        </a>
                       </div>
                     </div>
                   )}

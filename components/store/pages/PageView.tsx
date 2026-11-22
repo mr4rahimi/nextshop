@@ -56,7 +56,7 @@ export default function PageView({ page }: { page: PageData }) {
 
   const content = hasContent && (
     <div className={`${CARD} p-6 md:p-9 overflow-x-auto`}>
-      <div className="rich-content" dir="rtl" dangerouslySetInnerHTML={{ __html: enhanceRichHtml(html).html }} />
+      <div className="rich-content" dir="rtl" dangerouslySetInnerHTML={{ __html: enhanceRichHtml(html, { fallbackAlt: page.title }).html }} />
     </div>
   );
 

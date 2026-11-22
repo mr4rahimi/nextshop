@@ -26,7 +26,11 @@ function isInternalHref(href: string, siteHost?: string) {
   try { return new URL(href).host.replace(/^www\./, "") === siteHost.replace(/^www\./, ""); } catch { return false; }
 }
 
-export function enhanceRichHtml(html: string, opts: { siteHost?: string } = {}): { html: string; headings: RichHeading[] } {
+export function enhanceRichHtml(
+  html: string,
+  /** `fallbackAlt`: متن جایگزین تصویرهای بی‌alt — نزدیک‌ترین تیتر قبل از تصویر، وگرنه همین متن (عنوان مطلب) */
+  opts: { siteHost?: string; fallbackAlt?: string } = {},
+): { html: string; headings: RichHeading[] } {
   const headings: RichHeading[] = [];
   let idx = 0;
 
@@ -56,6 +60,18 @@ export function enhanceRichHtml(html: string, opts: { siteHost?: string } = {}):
     return `<a${cleaned}>`;
   });
 
+  // تصویر بی‌alt یا با alt خالی (محتوای منتقل‌شده از وردپرس) برای گوگل‌ایمیج بی‌معناست
+  const fallbackAlt = opts.fallbackAlt?.trim();
+  if (fallbackAlt) {
+    const marks = [...out.matchAll(/<h([2-4])[^>]*>([\s\S]*?)<\/h\1>/gi)].map(h => ({ at: h.index ?? 0, text: stripTags(h[2]) }));
+    out = out.replace(/<img\b[^>]*>/gi, (m, offset: number) => {
+      if (/\balt="[^"]*[^"\s][^"]*"/i.test(m)) return m;
+      const near = marks.filter(h => h.at < offset && h.text).pop()?.text;
+      const alt = escapeAttr(near ? `${fallbackAlt} — ${near}` : fallbackAlt);
+      return /\balt="[^"]*"/i.test(m) ? m.replace(/\balt="[^"]*"/i, `alt="${alt}"`) : m.replace(/^<img\b/i, `<img alt="${alt}"`);
+    });
+  }
+
   let imgIdx = 0;
   out = out.replace(/<img\b([^>]*?)\s*\/?>/gi, (m, attrs: string) => {
     const first = imgIdx++ === 0;
@@ -64,4 +80,8 @@ export function enhanceRichHtml(html: string, opts: { siteHost?: string } = {}):
   });
 
   return { html: out, headings };
+}
+
+function escapeAttr(v: string) {
+  return v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

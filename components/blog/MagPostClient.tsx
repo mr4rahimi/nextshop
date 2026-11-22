@@ -146,7 +146,7 @@ export default function MagPostClient({ post, related, storeName }: { post: Post
   const [active, setActive] = useState("");
   const [tocOpen, setTocOpen] = useState(false);
   const [showTop, setShowTop] = useState(false);
-  const { html, headings } = useMemo(() => enhanceRichHtml(post.content), [post.content]);
+  const { html, headings } = useMemo(() => enhanceRichHtml(post.content, { fallbackAlt: post.title }), [post.content, post.title]);
   const faq = normalizeFaq(post.faq);
   const progress = useReadingProgress("#article-body");
   const updated = post.updatedAt && post.publishedAt && new Date(post.updatedAt).getTime() - new Date(post.publishedAt).getTime() > 86_400_000

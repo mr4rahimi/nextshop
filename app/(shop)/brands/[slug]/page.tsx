@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import BrandPageClient from "@/components/store/brands/BrandPageClient";
-import { SITE_URL, buildBaseMetadata, buildBreadcrumbSchema, buildItemListSchema, canonicalUrl } from "@/lib/seo";
+import { SITE_URL, buildBaseMetadata, buildBreadcrumbSchema, buildItemListSchema, canonicalUrl, metaDescriptionFromText } from "@/lib/seo";
 import { serialize } from "@/lib/serialize";
 import { getBrandData } from "@/lib/brand-data";
 import { fetchCatalog, analyzeListingParams, listingIndexPolicy } from "@/lib/catalog";
@@ -32,7 +32,9 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const pageSuffix = "page" in policy && policy.page > 1 ? ` — صفحه ${policy.page}` : "";
   return buildBaseMetadata({
     title:       (brand.seoTitle       || `محصولات ${brand.title}`) + pageSuffix,
-    description: brand.seoDescription || brand.description || `خرید محصولات اصل ${brand.title}`,
+    // پیش‌فرض قبلی («خرید محصولات اصل X») زیر ۳۰ نویسه بود و گوگل جایش تکه‌ی تصادفی می‌گذاشت
+    description: brand.seoDescription || metaDescriptionFromText(brand.description?.replace(/<[^>]+>/g, " "))
+      || `خرید محصولات اصل ${brand.title}${settings?.storeName ? ` از ${settings.storeName}` : ""}؛ مقایسه‌ی مدل‌ها، قیمت روز، گارانتی معتبر و ارسال سریع.`,
     image:       brand.logoUrl        || settings?.storeLogo || null,
     siteName:    settings?.storeName  || undefined,
     path:        policy.canonicalPath,

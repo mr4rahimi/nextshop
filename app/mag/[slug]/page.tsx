@@ -2,7 +2,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
 import MagPostClient from "@/components/blog/MagPostClient";
-import { SITE_URL, canonicalUrl, encodeSlug, buildBaseMetadata, buildArticleSchema, buildBreadcrumbSchema, buildFAQSchema } from "@/lib/seo";
+import { SITE_URL, canonicalUrl, encodeSlug, buildBaseMetadata, buildArticleSchema, buildBreadcrumbSchema, buildFAQSchema, metaDescriptionFromText } from "@/lib/seo";
 import { normalizeFaq } from "@/lib/faq";
 import { approvedCommentCount, approvedCommentsQuery } from "@/lib/blog-comments";
 import { publicAuthorName } from "@/lib/moderation";
@@ -33,13 +33,13 @@ export async function generateMetadata({ params }: Props) {
   try {
     const post = await prisma.blogPost.findUnique({
       where: { slug },
-      select: { title: true, seoTitle: true, seoDescription: true, seoKeywords: true, coverImage: true, excerpt: true, canonicalUrl: true, noIndex: true },
+      select: { title: true, seoTitle: true, seoDescription: true, seoKeywords: true, coverImage: true, excerpt: true, content: true, canonicalUrl: true, noIndex: true },
     });
     if (!post) return { title: "مطلب یافت نشد" };
     const canon = post.canonicalUrl?.trim();
     const meta = buildBaseMetadata({
       title:       post.seoTitle       || post.title,
-      description: post.seoDescription || post.excerpt || undefined,
+      description: post.seoDescription || post.excerpt || metaDescriptionFromText(htmlToText(post.content ?? "")),
       keywords:    post.seoKeywords    || undefined,
       image:       post.coverImage,
       path:        `/mag/${slug}`,
@@ -111,7 +111,7 @@ export default async function MagPostPage({ params }: Props) {
 
   const articleSchema = buildArticleSchema({
     title:          post.title,
-    description:    post.seoDescription ?? post.excerpt,
+    description:    post.seoDescription || post.excerpt || metaDescriptionFromText(htmlToText(post.content ?? "")),
     image:          post.coverImage,
     url:            canonicalUrl(`/mag/${slug}`),
     publishedAt:    post.publishedAt,

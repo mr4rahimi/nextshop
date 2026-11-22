@@ -26,6 +26,8 @@ interface Props {
   featured: MagPost[];
   categories: Category[];
   initialFilters: Filters;
+  /** صفحه‌ی سرور (`/mag?page=N`) — مطالب اولیه از همین صفحه‌اند */
+  initialPage?: number;
   tagTitle: string | null;
 }
 
@@ -115,11 +117,13 @@ function HotSlider({ posts }: { posts: MagPost[] }) {
 
 // ───────────────────────────── صفحه ─────────────────────────────
 
-export default function MagHomeClient({ initialPosts, initialTotal, featured, categories, initialFilters, tagTitle }: Props) {
+export default function MagHomeClient({ initialPosts, initialTotal, featured, categories, initialFilters, initialPage = 1, tagTitle }: Props) {
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [posts, setPosts] = useState(initialPosts);
   const [total, setTotal] = useState(initialTotal);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialPage);
+  // مطالب قبل از صفحه‌ی شروع (ورود مستقیم به /mag?page=N)
+  const [offset, setOffset] = useState((initialPage - 1) * PAGE);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<"grid" | "list">("grid");
   const [qInput, setQInput] = useState(initialFilters.q);
@@ -154,7 +158,7 @@ export default function MagHomeClient({ initialPosts, initialTotal, featured, ca
     setLoading(true);
     fetch(`/api/mag?${sp}`).then(r => r.json()).then(d => {
       if (id !== reqId.current) return;
-      setPosts(d.posts ?? []); setTotal(d.total ?? 0); setPage(1);
+      setPosts(d.posts ?? []); setTotal(d.total ?? 0); setPage(1); setOffset(0);
     }).catch(() => {}).finally(() => { if (id === reqId.current) setLoading(false); });
   }, [filters]);
 
@@ -178,7 +182,8 @@ export default function MagHomeClient({ initialPosts, initialTotal, featured, ca
     }
   }
 
-  const hasMore = posts.length < total;
+  const hasMore = offset + posts.length < total;
+  const nextHref = `/mag?${query(filters, page + 1)}`;
   const activeCat = categories.find(c => c.slug === filters.cat);
   const filtered = !!(filters.cat || filters.tag || filters.q);
   const pill = "mag-select h-11 rounded-full pr-5 pl-10 text-sm font-bold outline-none focus:ring-2 focus:ring-primary-500/40 cursor-pointer w-full";
@@ -287,13 +292,22 @@ export default function MagHomeClient({ initialPosts, initialTotal, featured, ca
           )}
         </div>
 
+        {offset > 0 && (
+          <div className="flex justify-center mt-10">
+            <a href={`/mag?${query(filters, initialPage - 1)}`} className="text-sm font-bold text-primary-600 hover:underline">
+              ← مطالب جدیدتر (صفحه‌ی {toFa(initialPage - 1)})
+            </a>
+          </div>
+        )}
+
         {hasMore && (
           <div className="flex flex-col items-center gap-2 mt-14">
-            <button type="button" onClick={loadMore} disabled={loading}
-              className="inline-flex items-center gap-2 px-9 py-3 rounded-full bg-primary-600 text-white text-sm font-black shadow-lg shadow-primary-600/30 hover:bg-primary-500 hover:-translate-y-0.5 disabled:opacity-60 transition-all">
+            {/* لینک واقعی برای خزنده‌ها؛ برای کاربر همان «بارگذاری بیشتر» در جا */}
+            <a href={nextHref} onClick={e => { e.preventDefault(); if (!loading) loadMore(); }} aria-disabled={loading}
+              className={`inline-flex items-center gap-2 px-9 py-3 rounded-full bg-primary-600 text-white text-sm font-black shadow-lg shadow-primary-600/30 hover:bg-primary-500 hover:-translate-y-0.5 transition-all ${loading ? "opacity-60 pointer-events-none" : ""}`}>
               {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> در حال بارگذاری...</> : "مشاهده‌ی مطالب بیشتر"}
-            </button>
-            <span className="text-[11px] text-[var(--mag-muted)]">{toFa(posts.length)} از {toFa(total)} مطلب</span>
+            </a>
+            <span className="text-[11px] text-[var(--mag-muted)]">{toFa(offset + posts.length)} از {toFa(total)} مطلب</span>
           </div>
         )}
       </div>
