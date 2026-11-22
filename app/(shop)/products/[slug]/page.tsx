@@ -551,17 +551,24 @@ export default async function ProductDetailPage({
         }),
       ),
 
-      category:
-        product.category?.title,
+      condition: product.condition,
+
+      // آخرین ویرایش محصول (که قیمت هم در آن ثبت می‌شود) = شروع اعتبار قیمت
+      priceValidFrom: product.updatedAt
+        ? new Date(product.updatedAt).toISOString().slice(0, 10)
+        : null,
     });
 
   // تنوع‌دار (فاز ۴): ProductGroup با یک آفر برای هر تنوع؛ محصول ساده همان اسکیمای قبلی
   const v = product.variants;
-  const finalProductSchema = v
+  // بدون اسکیمای پایه (محصول بی‌قیمت و بی‌نظر) گروهی هم ساخته نمی‌شود
+  const finalProductSchema = v && productSchema
     ? buildProductGroupSchema(productSchema, {
         groupId: product.id,
         axes: v.axes,
         axisIds: v.axes.map((a: { attributeId: string }) => a.attributeId),
+        condition: product.condition,
+        priceValidFrom: productSchema.offers?.validFrom ?? null,
         variants: v.items.map((it: { id: string; options: Record<string, string> } & Record<string, any>) => ({
           ...it,
           image: Object.values(it.options).map((val) => v.images[val]?.[0]).find(Boolean) ?? null,

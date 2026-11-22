@@ -201,6 +201,15 @@ React 19 آن را خودکار به `<head>` منتقل می‌کند.
 | اسلاگ فارسی دسته‌بندی encode-نشده در `BreadcrumbList.item` (مثل `/categories/شیرالات-دوم`) که URL نامعتبر است | `lib/seo.ts` + صفحه محصول | تابع `encodeSlug()` — اگر از قبل encode شده باشد دوباره encode نمی‌کند |
 | ستون `seoSchema` روی `Product` وجود داشت، API برمی‌گرداندش، ولی هیچ‌وقت رندر نمی‌شد | صفحه محصول | `parseCustomSchema()` تزریقش می‌کند؛ JSON نامعتبر بی‌صدا رد می‌شود تا صفحه نشکند |
 | meta description بدون قیمت و CTA | صفحه محصول | `buildProductDescription()` قیمت و CTA اضافه می‌کند، **فقط** اگر مجموع زیر ۱۵۵ کاراکتر بماند |
+| (۱۴۰۵/۰۹/۰۱، ۲.۱۴۷.۰) Merchant listings: «Invalid value in field category» — عنوان دسته‌ی فارسی در `Product.category` | `lib/seo.ts` | `category` دیگر منتشر نمی‌شود؛ گوگل فقط طبقه‌بندی محصولات خودش را می‌پذیرد و دسته از BreadcrumbList خوانده می‌شود |
+| (۲.۱۴۷.۰) Merchant listings: «Missing field validFrom» روی Offer | `lib/seo.ts` + صفحه محصول | `offers.validFrom` = تاریخ آخرین ویرایش محصول (`updatedAt`)؛ تنوع‌ها هم همان را می‌گیرند |
+| (۲.۱۴۷.۰) `itemCondition` برای همه NewCondition بود، حتی کالای استوک/دست‌دوم | `lib/seo.ts` | از `Product.condition`: STOCK/USED → UsedCondition، REFURBISHED → RefurbishedCondition |
+| (۲.۱۴۷.۰) اسکیمای صفحه‌ی اصلی فیلد خالی داشت (`"email":""`، `addressLocality:""`، `openingHours:""`) و توضیح با `\n` | `lib/seo.ts` | `cleanText()` خالی‌ها را حذف و فاصله‌ها را یکی می‌کند؛ Organization و Store با `@id` و `parentOrganization` به هم وصل‌اند |
+| (۲.۱۴۷.۰) محصول تنوع‌دار بی‌قیمت و بی‌نظر: `buildProductGroupSchema(null)` صفحه را می‌شکست | صفحه محصول | بدون اسکیمای پایه گروه ساخته نمی‌شود |
+
+**هشدار «Missing field review / aggregateRating» عمداً رفع نمی‌شود:** اختیاری است و فقط وقتی نظر تأییدشده وجود دارد
+منتشر می‌شود (`reviews` و `ratingAvg/ratingCount` از قبل به اسکیما وصل‌اند). ساختن امتیاز بی‌پشتوانه خلاف سیاست گوگل است.
+شهر، استان و کدپستی صفحه‌ی اصلی از تنظیمات سایت می‌آیند؛ اگر خالی باشند در اسکیما نمی‌آیند — باید در پنل پر شوند.
 
 ---
 

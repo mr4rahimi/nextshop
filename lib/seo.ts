@@ -163,18 +163,19 @@ export function buildOrganizationSchema(opts: {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id":       `${opts.url}#organization`,
     name:        opts.name,
     url:         opts.url,
     logo:        opts.logo ? { "@type": "ImageObject", url: opts.logo } : undefined,
-    description: opts.description ?? undefined,
-    email:       opts.email    ?? undefined,
-    telephone:   opts.phone    ?? undefined,
-    address: opts.address ? {
+    description: cleanText(opts.description),
+    email:       cleanText(opts.email),
+    telephone:   cleanText(opts.phone),
+    address: cleanText(opts.address) ? {
       "@type":          "PostalAddress",
-      streetAddress:    opts.address,
-      addressLocality:  opts.city       ?? undefined,
-      addressRegion:    opts.province   ?? undefined,
-      postalCode:       opts.postalCode ?? undefined,
+      streetAddress:    cleanText(opts.address),
+      addressLocality:  cleanText(opts.city),
+      addressRegion:    cleanText(opts.province),
+      postalCode:       cleanText(opts.postalCode),
       addressCountry:   "IR",
     } : undefined,
     sameAs: sameAs.length ? sameAs : undefined,
@@ -221,6 +222,23 @@ function blankToUndefined(v?: string | null): string | undefined {
   return t ? t : undefined;
 }
 
+export type ProductConditionValue = "NEW" | "STOCK" | "USED" | "REFURBISHED";
+
+/**
+ * وضعیت کالا به itemCondition. استوک در بازار ایران یعنی کارکرده، پس Used است؛
+ * اعلام «نو» برای کالای استوک یا دست‌دوم خلاف قوانین Merchant Center است.
+ */
+function schemaItemCondition(c?: ProductConditionValue | null) {
+  if (c === "STOCK" || c === "USED") return "https://schema.org/UsedCondition";
+  if (c === "REFURBISHED") return "https://schema.org/RefurbishedCondition";
+  return "https://schema.org/NewCondition";
+}
+
+/** فاصله‌ها و خط‌های اضافه‌ی متن‌های تنظیمات را یکی می‌کند؛ خالی → undefined */
+function cleanText(v?: string | null): string | undefined {
+  return blankToUndefined(v?.replace(/\s+/g, " "));
+}
+
 /** Product schema */
 export function buildProductSchema(opts: {
   name: string;
@@ -241,9 +259,12 @@ export function buildProductSchema(opts: {
   ratingCount?: number;
   /** نظرهای **تأییدشده** برای بخش review اسکیما */
   reviews?: SchemaReview[];
-  category?: string | null;
   /** ISO 8601 (YYYY-MM-DD). پیش‌فرض: پایان سال میلادی بعدی */
   priceValidUntil?: string;
+  /** ISO 8601 (YYYY-MM-DD) — از کی این قیمت معتبر است؛ آخرین به‌روزرسانی محصول */
+  priceValidFrom?: string | null;
+  /** وضعیت کالا (نو، استوک، دست‌دوم، بازسازی‌شده). پیش‌فرض: نو */
+  condition?: ProductConditionValue | null;
 }) {
   const price     = Number(opts.price);
   const salePrice = opts.salePrice ? Number(opts.salePrice) : null;
@@ -272,7 +293,9 @@ export function buildProductSchema(opts: {
     gtin13:      opts.gtin13 ?? undefined,
     mpn:         opts.mpn    ?? undefined,
     brand:       opts.brand ? { "@type": "Brand", name: opts.brand } : undefined,
-    category:    opts.category ?? undefined,
+    // `category` عمداً منتشر نمی‌شود: گوگل در Merchant listings فقط شناسه یا مسیر
+    // کامل طبقه‌بندی محصولات گوگل را می‌پذیرد و عنوان دسته‌ی فارسی («کارتریج») را
+    // «Invalid value in field category» می‌داند. دسته از BreadcrumbList خوانده می‌شود.
     url:         opts.url,
     offers: hasPrice ? {
       "@type":         "Offer",
@@ -280,11 +303,12 @@ export function buildProductSchema(opts: {
       priceCurrency:   SCHEMA_CURRENCY,
       price:           offerPriceIrr,
       // تاریخ ثابت است تا خروجی JSON-LD در هر ریکوئست تغییر نکند
+      validFrom:       blankToUndefined(opts.priceValidFrom),
       priceValidUntil: opts.priceValidUntil ?? defaultPriceValidUntil(),
       availability:    opts.inStock
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
-      itemCondition:   "https://schema.org/NewCondition",
+      itemCondition:   schemaItemCondition(opts.condition),
      seller: { "@type": "Organization", name: process.env.STORE_NAME ?? process.env.NEXT_PUBLIC_STORE_NAME ?? "فروشگاه" },
       shippingDetails: {
         "@type": "OfferShippingDetails",
@@ -436,6 +460,8 @@ export function buildProductGroupSchema(
     axes: { title: string; values: { id: string; value: string }[] }[];
     variants: { id: string; title: string; sku: string | null; price: string; salePrice: string | null; stock: number; options: Record<string, string>; image?: string | null }[];
     axisIds: string[];
+    condition?: ProductConditionValue | null;
+    priceValidFrom?: string | null;
   },
 ) {
   const prop = (t: string) => (/رنگ|color/i.test(t) ? "color" : /سایز|اندازه|size/i.test(t) ? "size" : /جنس|material/i.test(t) ? "material" : /طرح|pattern/i.test(t) ? "pattern" : null);
@@ -459,6 +485,8 @@ export function buildProductGroupSchema(
         salePrice: v.salePrice,
         inStock: v.stock > 0,
         url: `${base.url}?v=${encodeURIComponent(v.id)}`,
+        condition: opts.condition,
+        priceValidFrom: opts.priceValidFrom,
       });
       delete one["@context"];
       opts.axisIds.forEach((axisId, i) => {
@@ -605,22 +633,24 @@ export function buildLocalBusinessSchema(opts: {
   return {
     "@context": "https://schema.org",
     "@type": "Store",
+    "@id":       `${opts.url}#store`,
+    parentOrganization: { "@id": `${opts.url}#organization` },
     name:        opts.name,
     url:         opts.url,
     logo:        opts.logo ? { "@type": "ImageObject", url: opts.logo } : undefined,
-    image:       opts.logo ?? undefined,
-    description: opts.description ?? undefined,
-    telephone:   opts.phone ?? undefined,
-    email:       opts.email ?? undefined,
-    address: opts.address ? {
+    image:       cleanText(opts.logo),
+    description: cleanText(opts.description),
+    telephone:   cleanText(opts.phone),
+    email:       cleanText(opts.email),
+    address: cleanText(opts.address) ? {
       "@type":         "PostalAddress",
-      streetAddress:   opts.address,
-      addressLocality: opts.city       ?? undefined,
-      addressRegion:   opts.province   ?? undefined,
-      postalCode:      opts.postalCode ?? undefined,
+      streetAddress:   cleanText(opts.address),
+      addressLocality: cleanText(opts.city),
+      addressRegion:   cleanText(opts.province),
+      postalCode:      cleanText(opts.postalCode),
       addressCountry:  "IR",
     } : undefined,
-    openingHours:  opts.openingHours ?? undefined,
+    openingHours:  cleanText(opts.openingHours),
     sameAs:        sameAs.length ? sameAs : undefined,
     hasMap:        opts.address ? `https://maps.google.com/?q=${encodeURIComponent(opts.address + (opts.city ? " " + opts.city : ""))}` : undefined,
   };
