@@ -36,11 +36,13 @@ interface TicketData {
     giftRestored?: string;
     transfer?: string;
     transferRef?: string | null;
+    orgInstallment?: string;
     voidedAt?: string | null;
     voidReason?: string | null;
     voidedByName?: string | null;
   };
   pay?: { reader: string | null; transferTo: string | null };
+  org?: { name: string; number: number; months: number; monthly: string; firstDue: string; commission: string; status: string } | null;
   terminal: ReceiptTerminal;
   store: { name: string | null; phone: string | null; address: string | null; footer: string | null };
   sale: { number: number | null; subtotal: string; discount: string; vat: string; total: string; lines: Line[] } | null;
@@ -233,6 +235,12 @@ export function TicketPrint({ id }: { id: string }) {
         {cash !== 0n && <Kv k={cash < 0n ? "نقد پس داده شد" : "نقد"} v={formatAmount(abs(cash))} />}
         {card !== 0n && <Kv k={`${card < 0n ? "برگشت به کارت" : "کارت"}${d.pay?.reader ? ` (${d.pay.reader})` : ""}`} v={formatAmount(abs(card))} />}
         {B(t.transfer ?? "0") > 0n && <Kv k={`کارت به کارت${d.pay?.transferTo ? ` (${d.pay.transferTo})` : ""}${t.transferRef ? ` — ${t.transferRef}` : ""}`} v={formatAmount(t.transfer!)} />}
+        {B(t.orgInstallment ?? "0") > 0n && <Kv k={`اقساط ${d.org?.name ?? "سازمانی"}`} v={formatAmount(t.orgInstallment!)} />}
+        {d.org && (
+          <p className="text-[10px] leading-4">
+            قرارداد {faNum(d.org.number)}: {faNum(d.org.months)} قسط ماهانه {formatAmount(d.org.monthly)} تومان، اولی {formatJalali(new Date(d.org.firstDue))} — از حقوق کسر و {d.org.name} پرداخت می‌کند
+          </p>
+        )}
         {B(t.credit) !== 0n && <Kv k={B(t.credit) > 0n ? "نسیه" : "روی حساب مشتری"} v={formatAmount(abs(B(t.credit)))} />}
         {d.club && B(d.club.spent) > 0n && <Kv k="کارت اشتراک" v={formatAmount(d.club.spent)} />}
         {d.club && B(d.club.restored) > 0n && <Kv k="برگشت به کارت اشتراک" v={formatAmount(d.club.restored)} />}

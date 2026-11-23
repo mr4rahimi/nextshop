@@ -17,7 +17,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeftRight, ArrowRight, Banknote, FileText, NotebookPen, ClipboardList, CreditCard, IdCard, Lock, Minus, PauseCircle, Percent, Plus, Printer, RotateCcw, ScanLine, ShoppingBag, Trash2, User, UserRound, X,
+  ArrowLeftRight, ArrowRight, Banknote, Building2, FileText, NotebookPen, ClipboardList, CreditCard, IdCard, Lock, Minus, PauseCircle, Percent, Plus, Printer, RotateCcw, ScanLine, ShoppingBag, Trash2, User, UserRound, X,
 } from "lucide-react";
 import { calcInvoice } from "@/lib/accounting/invoices/calc";
 import { parseAmountInput } from "@/lib/accounting/money";
@@ -27,7 +27,7 @@ import type { PartyOption } from "../PartyPicker";
 import CustomerSheet from "./CustomerSheet";
 import { api } from "../ui";
 import ModelPicker from "./ModelPicker";
-import PaySheet, { type PayResult } from "./PaySheet";
+import PaySheet, { type PayOrg, type PayResult } from "./PaySheet";
 import ReturnSheet, { type Returnable } from "./ReturnSheet";
 import { CloseShift, OpenShift } from "./ShiftPanels";
 import { B, Kbd, TICKET_KIND, abs, beep, faNum, formatAmount, local, timeFa, type ModelPick, type PosGift, type PosItem, type PosMember, type ScanResult, type ShiftSummary } from "./shared";
@@ -55,6 +55,7 @@ interface Boot {
   sellers: { id: string; code: number; name: string }[];
   cashBook: string;
   store?: { name: string | null; phone: string | null };
+  orgs?: PayOrg[];
   lastKeptFloat: string | null;
   cashier: string;
   serialRequired: boolean;
@@ -145,7 +146,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   const [gifts, setGifts] = useState<PosGift[]>([]);
   const [sel, setSel] = useState(0);
   const [modal, setModal] = useState<Modal>(null);
-  const [payStart, setPayStart] = useState<"cash" | "card" | "transfer" | "credit">("cash");
+  const [payStart, setPayStart] = useState<"cash" | "card" | "transfer" | "credit" | "org">("cash");
   const [pick, setPick] = useState<ModelPick | null>(null);
   const [list, setList] = useState<PosItem[]>([]);
   const [returnCode, setReturnCode] = useState<string | undefined>();
@@ -496,6 +497,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           transfer: p.transfer.toString(),
           transferTreasuryId: p.transferTreasuryId,
           transferRef: p.transferRef,
+          org: p.org ? { orgId: p.org.orgId, amount: p.org.amount.toString(), employeeCode: p.org.employeeCode, letterNo: p.org.letterNo } : null,
         }, clubSpend: p.club.toString(), tendered: p.tendered?.toString() ?? null, overrideCredit: override },
       });
       const t = r.ticket;
@@ -563,17 +565,24 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   }
 
   /** ثبت بدهکار: بی مشتری اول پنجره‌ی مشتری، بعد پرداخت با «همه نسیه» */
-  const creditAfterParty = useRef(false);
-  function openCredit() {
+  const creditAfterParty = useRef<false | "credit" | "org">(false);
+  function needParty(mode: "credit" | "org") {
     if (ret?.src?.walkIn || (!ret?.src && !party)) {
-      creditAfterParty.current = true;
-      flash("برای ثبت بدهکار اول مشتری را انتخاب یا ثبت کنید");
-      return setModal("party");
+      creditAfterParty.current = mode;
+      flash(mode === "credit" ? "برای ثبت بدهکار اول مشتری را انتخاب یا ثبت کنید" : "برای اقساط سازمانی اول مشتری (کارمند معرفی‌شده) را انتخاب یا ثبت کنید");
+      setModal("party");
+      return true;
     }
-    openPay("credit");
+    return false;
+  }
+  function openCredit() {
+    if (!needParty("credit")) openPay("credit");
+  }
+  function openOrg() {
+    if (!needParty("org")) openPay("org");
   }
 
-  function openPay(start: "cash" | "card" | "transfer" | "credit") {
+  function openPay(start: "cash" | "card" | "transfer" | "credit" | "org") {
     if (!lines.length && !ret?.lines.length) return flash("سبد خالی است", "err");
     if (!sale.valid) return flash("تخفیف یا قیمت یک ردیف درست نیست", "err");
     if (lines.some((l) => B(l.unitPrice) <= 0n)) return flash("یک کالا قیمت ندارد", "err");
@@ -594,8 +603,8 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   // ── کیبورد ──
   const stateRef = useRef({ modal, lines, sel, q, blind });
   stateRef.current = { modal, lines, sel, q, blind };
-  const actions = useRef({ openPay, openCredit, hold, setQty, clearCart });
-  actions.current = { openPay, openCredit, hold, setQty, clearCart };
+  const actions = useRef({ openPay, openCredit, openOrg, hold, setQty, clearCart });
+  actions.current = { openPay, openCredit, openOrg, hold, setQty, clearCart };
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       const s = stateRef.current;
@@ -1060,6 +1069,15 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
               <span className="text-base font-black">کارتخوان</span>
               <span className="opacity-80"><Kbd>F10</Kbd></span>
             </button>
+            {(boot.orgs?.length ?? 0) > 0 && net > 0n && (
+              <button
+                onClick={openOrg}
+                className="col-span-2 flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 py-3 text-white shadow-lg shadow-indigo-600/25 transition active:scale-[0.98]"
+              >
+                <Building2 className="h-5 w-5" aria-hidden />
+                <span className="text-sm font-black">اقساط سازمانی</span>
+              </button>
+            )}
             {(boot.terminal.transfers?.length ?? 0) > 0 && net > 0n && (
               <button
                 onClick={() => openPay("transfer")}
@@ -1142,10 +1160,11 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           }}
           onClose={() => {
             setModal(null);
-            if (creditAfterParty.current) {
+            const mode = creditAfterParty.current;
+            if (mode) {
               creditAfterParty.current = false;
               // party با setParty همین لحظه تازه شده؛ یک دور بعد
-              setTimeout(() => actions.current.openCredit(), 0);
+              setTimeout(() => (mode === "credit" ? actions.current.openCredit() : actions.current.openOrg()), 0);
             }
           }}
         />
@@ -1246,6 +1265,8 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           hasCard={!!boot.terminal.card}
           readers={boot.terminal.readers ?? []}
           transfers={boot.terminal.transfers ?? []}
+          orgs={boot.orgs ?? []}
+          partyId={ticketPartyId}
           terminalId={terminalId}
           canCredit={ret?.src ? !ret.src.walkIn : !!party}
           clubCredit={member && member.partyId === ticketPartyId && B(member.credit) > 0n ? B(member.credit) : null}

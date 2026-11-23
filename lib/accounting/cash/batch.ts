@@ -188,6 +188,7 @@ const FITS: Record<AccMoneyMethod, AccTreasury["kind"][]> = {
   OFFSET: [],
   CLUB_CREDIT: [],
   STORE_GIFT: [],
+  ORG_INSTALLMENT: [],
 };
 
 export async function runMoneyBatch(tx: Tx, input: BatchInput, actor: Actor, commit: boolean): Promise<BatchResult> {

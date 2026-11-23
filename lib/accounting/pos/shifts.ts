@@ -70,6 +70,8 @@ export interface ShiftSummary {
   byReader: { treasuryId: string | null; name: string; cardIn: bigint; cardOut: bigint; tickets: number }[];
   /** کارت به کارت به تفکیک حساب — در «خالص کارتخوان» و نقد نمی‌آید */
   transfer: bigint;
+  /** اقساط سازمانی — طلب از سازمان‌ها، نه پول */
+  org: bigint;
   byTransfer: { treasuryId: string | null; name: string; amount: bigint; tickets: number }[];
   sellers: { sellerId: string | null; name: string; tickets: number; saleTotal: bigint; returnTotal: bigint; net: bigint; qty: number }[];
 }
@@ -151,6 +153,7 @@ export async function shiftSummary(db: Db, shiftId: string): Promise<ShiftSummar
     expectedCard: shift.status === "OPEN" ? cardIn - cardOut : shift.expectedCard ?? cardIn - cardOut,
     byReader: [...readerMap.values()],
     transfer: sum((t) => t.transfer),
+    org: sum((t) => t.orgInstallment),
     byTransfer: [...transferMap.values()],
     sellers: [...bySeller.values()].sort((a, b) => (b.net > a.net ? 1 : b.net < a.net ? -1 : 0)),
   };

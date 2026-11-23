@@ -8,6 +8,7 @@ import { posGuard } from "@/lib/accounting/pos/api";
 import { posMemberForParty } from "@/lib/accounting/pos/club";
 import { updateParty, type PartyInput } from "@/lib/accounting/parties";
 import { balanceOf, PARTY_BALANCE } from "@/lib/accounting/ledger/balances";
+import { partyContracts } from "@/lib/accounting/org-installments";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,6 +69,7 @@ export async function GET(req: Request) {
           onlineOrders: orders,
         },
         recent,
+        orgContracts: (await partyContracts(prisma, party.id)).filter((c) => c.status === "ACTIVE"),
       }),
     );
   } catch (e) {

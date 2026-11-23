@@ -112,6 +112,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/expenses", label: "هزینه‌ها", icon: fx("Money with wings") },
       { href: "/admin/accounting/expenses?kind=INCOME", label: "درآمدها", icon: fx("Money bag") },
       { href: "/admin/accounting/installments", label: "اقساط", icon: fx("Spiral calendar") },
+      { href: "/admin/accounting/installment-orgs", label: "اقساط سازمانی", icon: fx("Office worker"), keywords: "اقساط سازمانی آموزش و پرورش کسر از حقوق کارمند سازمان قرارداد شرکت اقساطی پورسانت" },
       { href: "/admin/accounting/calendar", label: "تقویم سررسید", icon: fx("Tear-off calendar") },
       { href: "/admin/accounting/parties", label: "اشخاص", icon: fx("Busts in silhouette") },
       { href: "/admin/accounting/parties/duplicates", label: "اشخاص تکراری", icon: fx("People hugging"), keywords: "ادغام شخص تکراری مشتری تکراری انتقال تراکنش تفصیل" },

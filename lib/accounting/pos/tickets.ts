@@ -35,6 +35,7 @@ import { addPoints, creditSettings, expiryFrom, ledgerState, lockProfile } from 
 import { earnPoints, pointsToToman, proportional, tomanToPoints } from "@/lib/club/credit-calc";
 import { validatePosCoupon } from "@/lib/club/coupons";
 import { restoreGifts, spendGifts } from "../gift-cards";
+import { createContract, prepareOrgSale } from "../org-installments";
 
 type Tx = Prisma.TransactionClient;
 type Db = Tx | typeof prisma;
@@ -64,6 +65,8 @@ export interface TicketInput {
     transferTreasuryId?: string | null;
     /** شماره‌ی پیگیری یا چهار رقم آخر کارت */
     transferRef?: string | null;
+    /** اقساط سازمانی (docs/plans/org-installments.md): سهم اقساطی و سازمان */
+    org?: { orgId: string; amount: bigint; employeeCode?: string | null; letterNo?: string | null } | null;
   };
   tendered?: bigint | null;
   overrideCredit?: boolean;
@@ -238,6 +241,10 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   // ── مرجوعی رسیدی که با کارت پرداخت/شارژ شده بود: سهم کارت به کارت برمی‌گردد (نه نقد)
   //    و شارژ همان سهم پس گرفته می‌شود. تجمعی، تا برگشت کامل دقیقاً همه را برگرداند.
   const orig = ref ? await tx.accPosTicket.findFirst({ where: { saleInvoiceId: ref.id } }) : null;
+  if (R > 0n && ref) {
+    const oc = await tx.accOrgContract.findFirst({ where: { invoiceId: ref.id, status: { not: "VOID" } }, select: { number: true } });
+    if (oc) throw new AccError(`این خرید با اقساط سازمانی (قرارداد ${faNum(oc.number)}) بوده؛ مرجوعی‌اش از صندوق نمی‌شود — اگر قسطی دریافت نشده رسید را باطل کنید، وگرنه با مدیر حسابداری`, 409);
+  }
   let restore = 0n;
   let reversePts = 0;
   if (orig?.clubProfileId && R > 0n && (orig.clubSpent > 0n || orig.clubEarned > 0)) {
@@ -266,6 +273,11 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   const k = input.pay.card;
   const x = input.pay.transfer ?? 0n;
   if (x < 0n) throw new AccError("مبلغ کارت به کارت منفی نمی‌شود");
+  const o = input.pay.org?.amount ?? 0n;
+  if (o < 0n) throw new AccError("مبلغ اقساطی منفی نمی‌شود");
+  if (o > 0n && (net <= 0n || !saleLines.length)) throw new AccError("اقساط سازمانی فقط برای خرید است");
+  if (o > 0n && walkIn) throw new AccError("برای خرید اقساطی مشتری (کارمند معرفی‌شده) را انتخاب کنید");
+  const orgPrep = o > 0n ? await prepareOrgSale(tx, party.id, { orgId: input.pay.org!.orgId, amount: o, employeeCode: input.pay.org!.employeeCode, letterNo: input.pay.org!.letterNo }, date) : null;
   if (x > 0n && net <= 0n) throw new AccError("کارت به کارت فقط برای دریافت از مشتری است؛ پس دادن را نقد یا به کارت بزنید");
   const u = net > 0n ? clubSpend : 0n;
   if (clubSpend > 0n && net <= 0n) throw new AccError("با کارت اشتراک فقط مبلغ قابل پرداخت را می‌شود داد");
@@ -282,11 +294,11 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   if (gifts.some((x) => x.amount < 0n)) throw new AccError("مبلغ بن منفی نمی‌شود");
   const gSum = gifts.reduce((s, x) => s + x.amount, 0n);
   if (gSum > 0n && net <= 0n) throw new AccError("با بن کارت فقط مبلغ قابل پرداخت را می‌شود داد");
-  if (gSum + u + x > due) {
-    const what = [x > 0n && "کارت به کارت", gSum > 0n && "بن", u > 0n && "کارت اشتراک"].filter(Boolean).join(" و ");
+  if (gSum + u + x + o > due) {
+    const what = [o > 0n && "اقساط", x > 0n && "کارت به کارت", gSum > 0n && "بن", u > 0n && "کارت اشتراک"].filter(Boolean).join(" و ");
     throw new AccError(`مبلغ ${what} از مبلغ قابل پرداخت (${formatAmount(due)}) بیشتر است`);
   }
-  const c = input.pay.cash === "rest" ? (due > k + u + gSum + x ? due - k - u - gSum - x : 0n) : input.pay.cash;
+  const c = input.pay.cash === "rest" ? (due > k + u + gSum + x + o ? due - k - u - gSum - x - o : 0n) : input.pay.cash;
   if (c < 0n || k < 0n) throw new AccError("مبلغ منفی نمی‌شود");
   if (k > 0n && !terminal.cardTreasuryId) throw new AccError("این صندوق کارتخوان ندارد");
   // کارتخوان: پیش‌فرض یا یکی از کارتخوان‌های دیگر همین صندوق
@@ -299,7 +311,7 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
     if (!transferTr || !terminal.transferTreasuryIds.includes(transferTr)) throw new AccError("برای این صندوق حساب «کارت به کارت» تعریف نشده؛ در تعریف صندوق انتخابش کنید");
   }
   const transferRef = x > 0n ? (input.pay.transferRef ?? "").replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).trim().slice(0, 40) || null : null;
-  const moved = c + k + u + gSum + x;
+  const moved = c + k + u + gSum + x + o;
   if (moved > due) {
     throw new AccError(
       net >= 0n
@@ -339,6 +351,8 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
       transfer: x,
       transferTreasuryId: transferTr,
       transferRef,
+      orgInstallment: o,
+      orgId: orgPrep?.org.id ?? null,
       credit: net >= 0n ? unsettled : -unsettled,
       tendered: net > 0n && c > 0n && input.tendered && input.tendered > c ? input.tendered : null,
       change: net > 0n && c > 0n && input.tendered && input.tendered > c ? input.tendered - c : 0n,
@@ -397,11 +411,13 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   const clubIn = saleInv ? u : 0n;
   const giftIn = saleInv ? gSum : 0n;
   const transferIn = saleInv ? x : 0n;
-  if (saleInv && cashIn + cardIn + clubIn + giftIn + transferIn > 0n) {
+  const orgIn = saleInv ? o : 0n;
+  if (saleInv && cashIn + cardIn + clubIn + giftIn + transferIn + orgIn > 0n) {
     const items: MoneyItemInput[] = [];
     if (cashIn > 0n) items.push({ method: "CASH", treasuryId: terminal.cashTreasuryId, amount: cashIn });
     if (cardIn > 0n) items.push({ method: "POS", treasuryId: cardTr, amount: cardIn });
     if (transferIn > 0n) items.push({ method: "CARD_TRANSFER", treasuryId: transferTr, amount: transferIn, trackingCode: transferRef });
+    if (orgIn > 0n && orgPrep) items.push(orgPrep.item);
     if (clubIn > 0n) items.push({ method: "CLUB_CREDIT", amount: clubIn });
     if (giftIn > 0n) items.push({ method: "STORE_GIFT", amount: giftIn, trackingCode: gifts.map((x) => x.number.toUpperCase()).join("، ").slice(0, 190) });
     const doc = await createMoneyDoc(
@@ -412,11 +428,12 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
         partyId: party.id,
         description: `${note} — فاکتور فروش ${faNum(saleInv.number ?? 0)}`,
         items,
-        allocations: [{ invoiceId: saleInv.id, amount: cashIn + cardIn + clubIn + giftIn + transferIn }],
+        allocations: [{ invoiceId: saleInv.id, amount: cashIn + cardIn + clubIn + giftIn + transferIn + orgIn }],
       },
       actor,
     );
     receiptDocId = doc.id;
+    if (orgIn > 0n && orgPrep) await createContract(tx, orgPrep, { partyId: party.id, moneyDocId: doc.id, invoiceId: saleInv.id, posTicketId: ticket.id }, actor);
   }
   const cashOut = retInv ? internal + (net < 0n ? c : 0n) : 0n;
   const cardOut = retInv && net < 0n ? k : 0n;
@@ -544,6 +561,14 @@ export async function ticketView(id: string, db: Db = prisma) {
       const nm = (id: string | null) => trs.find((x) => x.id === id)?.name ?? null;
       return { reader: nm(t.cardTreasuryId), transferTo: nm(t.transferTreasuryId) };
     })(),
+    // اقساط سازمانی: نام سازمان، تعداد و مبلغ قسط، سررسید اول
+    org:
+      t.orgInstallment > 0n
+        ? await (async () => {
+            const c = await db.accOrgContract.findFirst({ where: { posTicketId: t.id }, include: { org: { select: { name: true } }, items: { orderBy: { seq: "asc" }, take: 1 } } });
+            return c ? { name: c.org.name, number: c.number, months: c.months, monthly: c.items[0]?.amount ?? 0n, firstDue: c.firstDue, commission: c.commission, status: c.status } : null;
+          })()
+        : null,
   };
 }
 

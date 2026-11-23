@@ -58,6 +58,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           return { name: st?.storeName ?? acc?.sellerName ?? null, phone: acc?.sellerPhone ?? st?.sitePhone ?? null };
         })(),
         lastKeptFloat: lastShift?.keptFloat ?? null,
+        // اقساط سازمانی: سازمان‌های فعال برای پنجره‌ی پرداخت (docs/plans/org-installments.md)
+        orgs: await prisma.accInstallmentOrg.findMany({
+          where: { isActive: true },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true, months: true, commissionBp: true, requireRef: true, color: true, capPerCustomer: true },
+        }),
         cashier: g.access.name,
         serialRequired: !!settings?.serialRequired,
         ...(await (async () => {

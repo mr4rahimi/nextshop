@@ -34,7 +34,15 @@ interface Body {
   sale?: { productId?: string; qty?: unknown; unitPrice?: unknown; discount?: unknown; serials?: unknown }[];
   ret?: { invoiceId?: string | null; lines?: { refLineId?: string | null; productId?: string | null; qty?: unknown; serials?: unknown }[] } | null;
   /** `cash: "rest"` = باقیِ بعد از کارت */
-  pay?: { cash?: unknown; card?: unknown; cardTreasuryId?: unknown; transfer?: unknown; transferTreasuryId?: unknown; transferRef?: unknown };
+  pay?: {
+    cash?: unknown;
+    card?: unknown;
+    cardTreasuryId?: unknown;
+    transfer?: unknown;
+    transferTreasuryId?: unknown;
+    transferRef?: unknown;
+    org?: { orgId?: unknown; amount?: unknown; employeeCode?: unknown; letterNo?: unknown } | null;
+  };
   tendered?: unknown;
   overrideCredit?: boolean;
   clubSpend?: unknown;
@@ -75,6 +83,15 @@ export async function POST(req: Request) {
         transfer: b.pay?.transfer ? toAmount(b.pay.transfer, "کارت به کارت") : 0n,
         transferTreasuryId: typeof b.pay?.transferTreasuryId === "string" ? b.pay.transferTreasuryId : null,
         transferRef: typeof b.pay?.transferRef === "string" ? b.pay.transferRef : null,
+        org:
+          b.pay?.org && typeof b.pay.org.orgId === "string" && b.pay.org.amount
+            ? {
+                orgId: b.pay.org.orgId,
+                amount: toAmount(b.pay.org.amount, "اقساط"),
+                employeeCode: typeof b.pay.org.employeeCode === "string" ? b.pay.org.employeeCode : null,
+                letterNo: typeof b.pay.org.letterNo === "string" ? b.pay.org.letterNo : null,
+              }
+            : null,
       },
       tendered: b.tendered ? toAmount(b.tendered, "پول دریافتی") : null,
       overrideCredit: !!b.overrideCredit,

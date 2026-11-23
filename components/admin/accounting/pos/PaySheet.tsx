@@ -8,7 +8,8 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeftRight, Banknote, CreditCard, Printer, X } from "lucide-react";
+import { ArrowLeftRight, Banknote, Building2, CreditCard, Printer, X } from "lucide-react";
+import { api } from "../ui";
 import { amountToWords } from "@/lib/accounting/money";
 import { B, BigAmount, Kbd, abs, formatAmount, local } from "./shared";
 
@@ -20,6 +21,8 @@ export interface PayResult {
   transfer: bigint;
   transferTreasuryId: string | null;
   transferRef: string | null;
+  /** اقساط سازمانی (docs/plans/org-installments.md) */
+  org: { orgId: string; amount: bigint; employeeCode: string | null; letterNo: string | null } | null;
   /** null = باقی نقد (`"rest"`) */
   cash: bigint | null;
   /** از اعتبار کارت اشتراک */
@@ -31,6 +34,24 @@ export interface PayReader {
   id: string;
   name: string;
 }
+export interface PayOrg {
+  id: string;
+  name: string;
+  months: number;
+  commissionBp: number;
+  requireRef: boolean;
+  color: string | null;
+  capPerCustomer: string | null;
+}
+interface OrgQuote {
+  commission: string;
+  net: string;
+  monthly: string;
+  schedule: { seq: number; dueDate: string; amount: string }[];
+  cap: { limit: string | null; used: string; available: string | null };
+  problems: string[];
+}
+
 export interface PayTransfer {
   id: string;
   name: string;
@@ -48,6 +69,8 @@ export default function PaySheet({
   hasCard,
   readers = [],
   transfers = [],
+  orgs = [],
+  partyId = null,
   terminalId = "",
   canCredit,
   clubCredit = null,
@@ -67,6 +90,10 @@ export default function PaySheet({
   readers?: PayReader[];
   /** حساب‌های کارت به کارت */
   transfers?: PayTransfer[];
+  /** سازمان‌های اقساط فعال */
+  orgs?: PayOrg[];
+  /** مشتری رسید (اقساط سازمانی بی مشتری نمی‌شود) */
+  partyId?: string | null;
   /** برای به یاد سپردن آخرین کارتخوان روی همین دستگاه */
   terminalId?: string;
   /** مشتری انتخاب شده — بخشی نسیه ممکن است */
@@ -76,7 +103,7 @@ export default function PaySheet({
   /** بخشی که با بن کارت اسکن‌شده پرداخت می‌شود (از `net` کم شده) */
   giftPaid?: bigint;
   /** `credit` = ثبت بدهکار: همه روی حساب مشتری */
-  start: "cash" | "card" | "transfer" | "credit";
+  start: "cash" | "card" | "transfer" | "credit" | "org";
   busy: boolean;
   error: string | null;
   onSubmit: (r: PayResult) => void;
@@ -100,10 +127,43 @@ export default function PaySheet({
   const [tendered, setTendered] = useState("");
   const [credit, setCredit] = useState(start === "credit" && canCredit && !refund);
   const [cashManual, setCashManual] = useState(start === "credit" ? "0" : "");
+  // اقساط سازمانی
+  const canOrg = !refund && orgs.length > 0;
+  const [orgId, setOrgId] = useState<string | null>(start === "org" && orgs.length === 1 ? orgs[0].id : null);
+  const [orgAmt, setOrgAmt] = useState(start === "org" ? afterClub.toString() : "");
+  const [empCode, setEmpCode] = useState("");
+  const [letterNo, setLetterNo] = useState("");
+  const [quote, setQuote] = useState<{ key: string; q: OrgQuote | null; error?: string } | null>(null);
+  const org = orgs.find((o) => o.id === orgId) ?? null;
+  const orgB = canOrg && org ? B(orgAmt) : 0n;
+  const quoteKey = `${orgId}:${partyId}:${orgB}`;
+  useEffect(() => {
+    if (!orgId || orgB <= 0n) return;
+    let live = true;
+    const t = setTimeout(() => {
+      api<{ quote: OrgQuote }>(`/api/admin/accounting/installment-orgs/quote?orgId=${orgId}&partyId=${partyId ?? ""}&amount=${orgB}`)
+        .then((r) => live && setQuote({ key: `${orgId}:${partyId}:${orgB}`, q: r.quote }))
+        .catch((e) => live && setQuote({ key: `${orgId}:${partyId}:${orgB}`, q: null, error: e instanceof Error ? e.message : "برآورد نشد" }));
+    }, 250);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [orgId, partyId, orgB]);
+  const oq = quote?.key === quoteKey ? quote : null;
+  const orgProblem = org && orgB > 0n
+    ? !partyId
+      ? "برای اقساط اول مشتری (کارمند معرفی‌شده) را انتخاب کنید"
+      : org.requireRef && !empCode.trim() && !letterNo.trim()
+        ? "کد پرسنلی یا شماره‌ی معرفی‌نامه را بنویسید"
+        : oq?.error ?? oq?.q?.problems[0] ?? null
+    : null;
+  const orgPending = !!org && orgB > 0n && !oq;
+
   const cardB = B(card);
   const transferB = canTransfer ? B(transfer) : 0n;
   const clubB = refund ? 0n : B(club);
-  const paidOther = cardB + clubB + transferB;
+  const paidOther = cardB + clubB + transferB + orgB;
   const cash = credit ? B(cashManual) : due > paidOther ? due - paidOther : 0n;
   const tenderedB = B(tendered);
   const change = !refund && tenderedB > cash ? tenderedB - cash : 0n;
@@ -128,7 +188,7 @@ export default function PaySheet({
   }, [cash, refund]);
 
   function submit() {
-    if (busy || over || short || (credit && left < 0n)) return;
+    if (busy || over || short || (credit && left < 0n) || orgProblem || orgPending) return;
     if (cardB > 0n && reader) local.set(`pos:reader:${terminalId}`, reader);
     onSubmit({
       card: cardB,
@@ -136,6 +196,7 @@ export default function PaySheet({
       transfer: transferB,
       transferTreasuryId: transferB > 0n ? account : null,
       transferRef: transferB > 0n && ref.trim() ? ref.trim() : null,
+      org: orgB > 0n && org ? { orgId: org.id, amount: orgB, employeeCode: empCode.trim() || null, letterNo: letterNo.trim() || null } : null,
       cash: credit ? cash : null,
       club: clubB,
       tendered: tenderedB > 0n ? tenderedB : null,
@@ -205,6 +266,20 @@ export default function PaySheet({
                 >
                   <CreditCard className="h-5 w-5" aria-hidden /> {refund ? "برگشت به کارت" : "کارتخوان"} <Kbd>F10</Kbd>
                 </button>
+                {canOrg && (
+                  <button
+                    onClick={() => {
+                      setCard("");
+                      setTransfer("");
+                      setClub("");
+                      setOrgAmt(due.toString());
+                      if (!orgId && orgs.length === 1) setOrgId(orgs[0].id);
+                    }}
+                    className={`col-span-full flex items-center justify-center gap-2 rounded-2xl border-2 py-3 text-sm font-black transition ${orgB > 0n ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300" : "border-gray-200 text-gray-600 dark:border-white/10 dark:text-gray-300"}`}
+                  >
+                    <Building2 className="h-5 w-5" aria-hidden /> اقساط سازمانی
+                  </button>
+                )}
                 {canTransfer && (
                   <button
                     onClick={() => {
@@ -217,6 +292,61 @@ export default function PaySheet({
                   </button>
                 )}
               </div>
+
+              {canOrg && (orgB > 0n || start === "org" || orgAmt !== "") && (
+                <div className="space-y-2 rounded-2xl border-2 border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-500/20 dark:bg-indigo-500/10">
+                  <div className="flex flex-wrap gap-1.5">
+                    {orgs.map((o) => (
+                      <button
+                        key={o.id}
+                        onClick={() => setOrgId(o.id)}
+                        className={`rounded-xl border-2 px-3 py-1.5 text-xs font-black transition ${orgId === o.id ? "bg-white dark:bg-white/10" : "border-transparent bg-white/50 dark:bg-white/[0.03]"}`}
+                        style={orgId === o.id ? { borderColor: o.color ?? "#4f46e5", color: o.color ?? "#4f46e5" } : undefined}
+                      >
+                        {o.name}
+                        <span className="mr-1 text-[10px] font-bold opacity-70">
+                          {o.months} قسط{o.commissionBp ? ` · ${o.commissionBp / 100}٪` : ""}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {org && (
+                    <>
+                      <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+                        <div>
+                          <p className="mb-1 text-xs font-bold text-indigo-900 dark:text-indigo-200">مبلغ اقساطی — باقی نقد یا کارت</p>
+                          <BigAmount value={orgAmt} onChange={setOrgAmt} onEnter={submit} autoFocus={start === "org"} />
+                        </div>
+                        <button onClick={() => (setOrgAmt(""), setOrgId(null))} className="mb-1 rounded-lg px-2 py-1 text-xs font-bold text-gray-500">
+                          برداشتن
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input value={empCode} onChange={(e) => setEmpCode(e.target.value)} placeholder={`کد پرسنلی${org.requireRef ? "" : " (اختیاری)"}`} className="rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-indigo-500 dark:border-white/10 dark:bg-white/5" />
+                        <input value={letterNo} onChange={(e) => setLetterNo(e.target.value)} placeholder="شماره‌ی معرفی‌نامه" className="rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-indigo-500 dark:border-white/10 dark:bg-white/5" />
+                      </div>
+                      {oq?.q && orgB > 0n && (
+                        <div className="grid grid-cols-3 gap-2 rounded-xl bg-white p-2 text-center dark:bg-white/5">
+                          <div>
+                            <p className="text-[10px] font-bold text-gray-500">{org.months} قسط ماهانه</p>
+                            <p className="text-base font-black tabular-nums text-indigo-700 dark:text-indigo-300">{formatAmount(B(oq.q.monthly))}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-gray-500">پورسانت سازمان</p>
+                            <p className="text-sm font-black tabular-nums text-amber-600">{formatAmount(B(oq.q.commission))}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-gray-500">باقی سقف مشتری</p>
+                            <p className="text-sm font-black tabular-nums">{oq.q.cap.available === null ? "بی‌سقف" : formatAmount(B(oq.q.cap.available))}</p>
+                          </div>
+                        </div>
+                      )}
+                      {orgProblem && <p className="text-xs font-bold text-red-600">{orgProblem}</p>}
+                    </>
+                  )}
+                  {!org && <p className="text-xs font-bold text-indigo-800 dark:text-indigo-200">سازمان طرف قرارداد مشتری را انتخاب کنید.</p>}
+                </div>
+              )}
 
               {clubMax > 0n && (
                 <div className="rounded-2xl border border-amber-300/60 bg-amber-50 p-3 dark:border-amber-500/20 dark:bg-amber-500/10">
@@ -353,7 +483,7 @@ export default function PaySheet({
 
           <button
             onClick={submit}
-            disabled={busy || over || short || (credit && left < 0n)}
+            disabled={busy || over || short || (credit && left < 0n) || !!orgProblem || orgPending}
             className={`flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-lg font-black text-white shadow-lg transition active:scale-[0.99] disabled:opacity-50 ${refund ? "bg-rose-600 shadow-rose-600/25" : allCredit ? "bg-orange-600 shadow-orange-600/25" : "bg-emerald-600 shadow-emerald-600/25"}`}
           >
             <Printer className="h-5 w-5" aria-hidden />

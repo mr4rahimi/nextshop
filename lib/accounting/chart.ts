@@ -90,6 +90,7 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["8103", "تبلیغات و بازاریابی", S, "EXPENSE", "DEBIT", "NONE", null],
   ["8104", "ارسال و بسته‌بندی", S, "EXPENSE", "DEBIT", "NONE", null],
   ["8105", "هدیه و جبران به مشتری", S, "EXPENSE", "DEBIT", "NONE", "CUSTOMER_REWARD"],
+  ["8106", "کارمزد فروش اقساطی سازمانی", S, "EXPENSE", "DEBIT", "NONE", "ORG_INSTALLMENT_FEE"],
   ["82", "هزینه‌های اداری", L, "EXPENSE", "DEBIT", "NONE", null],
   ["8201", "اجاره", S, "EXPENSE", "DEBIT", "NONE", null],
   ["8202", "حقوق و دستمزد", S, "EXPENSE", "DEBIT", "PARTY", null],

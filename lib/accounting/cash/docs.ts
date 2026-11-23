@@ -35,6 +35,7 @@ import { formatJalali } from "@/lib/club/jalali";
 import { TREASURY_ACCOUNT_KEY } from "../treasury";
 import { autoAllocate, invoiceOpenAmounts, openInvoicesOf, recalcPaid } from "./allocation";
 import { chequeStatusLabel, createCheque, endorseCheque, type NewChequeInput } from "./cheques";
+import { ensureOrgFeeAccount, onMoneyDocVoid } from "../org-installments-hooks";
 
 type Tx = Prisma.TransactionClient;
 
@@ -58,10 +59,11 @@ export const METHOD_LABELS: Record<AccMoneyMethod, string> = {
   OFFSET: "تهاتر",
   CLUB_CREDIT: "کارت اشتراک",
   STORE_GIFT: "بن کارت فروشگاه",
+  ORG_INSTALLMENT: "اقساط سازمانی",
 };
 
 /** هر روش روی کدام نوع خزانه می‌نشیند */
-const METHOD_TREASURY: Record<Exclude<AccMoneyMethod, "CHEQUE" | "WALLET" | "OFFSET" | "CLUB_CREDIT" | "STORE_GIFT">, AccTreasuryKind[]> = {
+const METHOD_TREASURY: Record<Exclude<AccMoneyMethod, "CHEQUE" | "WALLET" | "OFFSET" | "CLUB_CREDIT" | "STORE_GIFT" | "ORG_INSTALLMENT">, AccTreasuryKind[]> = {
   CASH: ["CASH"],
   CARD_TRANSFER: ["BANK"],
   BANK_TRANSFER: ["BANK"],
@@ -81,6 +83,8 @@ export interface MoneyItemInput {
   /** انتقال: کارمزد بانکی از مبدأ. دریافت از بازارگاه: کارمزد کسرشده از واریزی */
   fee?: bigint;
   trackingCode?: string | null;
+  /** اقساط سازمانی: شخص سازمان که طلب به او منتقل می‌شود (`fee` = پورسانت سازمان) */
+  counterPartyId?: string | null;
   /** چک تازه — دریافت: چک مشتری؛ پرداخت: چک ما (`treasuryId` = حساب چک) */
   cheque?: NewChequeInput | null;
   /** پرداخت: خرج یک چک دریافتیِ نزد ما */
@@ -164,6 +168,13 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
       const from = tr(it.treasuryId, at);
       const to = tr(it.toTreasuryId, at);
       if (from.id === to.id) throw new AccError("مبدأ و مقصد یکی‌اند");
+      return;
+    }
+    if (it.method === "ORG_INSTALLMENT") {
+      // فقط از lib/accounting/org-installments.ts (قرارداد و جدول اقساط همان‌جا ساخته می‌شود)
+      if (kind !== "RECEIPT" || !party) throw new AccError(`${at}: اقساط سازمانی فقط در دریافت از مشتری است`);
+      if (!it.counterPartyId || it.counterPartyId === party.id) throw new AccError(`${at}: سازمان اقساط مشخص نیست`);
+      if ((it.fee ?? 0n) < 0n || (it.fee ?? 0n) >= it.amount) throw new AccError(`${at}: پورسانت سازمان باید کمتر از مبلغ باشد`);
       return;
     }
     if (it.fee) {
@@ -290,6 +301,15 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
     } else if (it.method === "CLUB_CREDIT") {
       // مثل وب حساب: خرج اعتبار کارت = تخفیف فروش در لحظه‌ی استفاده (شارژ سند نمی‌خورد)
       lines.push({ accountKey: "SALES_DISCOUNT", debit: it.amount, description: "پرداخت با کارت اشتراک" });
+    } else if (it.method === "ORG_INSTALLMENT") {
+      // طلب از مشتری ← طلب از سازمان (منهای پورسانت سازمان که هزینه‌ی ما است)
+      const fee = it.fee ?? 0n;
+      const org = await tx.accParty.findUnique({ where: { id: it.counterPartyId! }, select: { name: true } });
+      lines.push({ accountKey: "AR", partyId: it.counterPartyId!, debit: it.amount - fee, description: [`اقساط سازمانی — ${pName}`, it.trackingCode].filter(Boolean).join(" — ") });
+      if (fee > 0n) {
+        await ensureOrgFeeAccount(tx);
+        lines.push({ accountKey: "ORG_INSTALLMENT_FEE", debit: fee, description: `پورسانت ${org?.name ?? "سازمان"} — ${pName}` });
+      }
     } else if (it.method === "STORE_GIFT") {
       lines.push({ accountKey: "GIFT_LIABILITY", debit: it.amount, description: [`پرداخت با بن کارت فروشگاه`, it.trackingCode].filter(Boolean).join(" — ") });
     } else if (it.method === "WALLET") {
@@ -306,7 +326,11 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
         moneyDocId: doc.id,
         seq: i + 1,
         method: kind === "TRANSFER" ? "BANK_TRANSFER" : it.method,
-        treasuryId: (it.method === "CHEQUE" && inbound) || it.method === "WALLET" || it.method === "OFFSET" || it.method === "CLUB_CREDIT" || it.method === "STORE_GIFT" ? null : it.treasuryId ?? null,
+        treasuryId:
+          (it.method === "CHEQUE" && inbound) || it.method === "WALLET" || it.method === "OFFSET" || it.method === "CLUB_CREDIT" || it.method === "STORE_GIFT" || it.method === "ORG_INSTALLMENT"
+            ? null
+            : it.treasuryId ?? null,
+        counterPartyId: it.method === "ORG_INSTALLMENT" ? it.counterPartyId ?? null : null,
         toTreasuryId: it.toTreasuryId ?? null,
         chequeId,
         amount: it.amount,
@@ -389,6 +413,8 @@ export async function voidMoneyDoc(tx: Tx, id: string, reason: string, actor: Ac
       await tx.accCheque.update({ where: { id: c.id }, data: { status: "IN_HAND", holderPartyId: null } });
     }
   }
+  // اقساط سازمانی: قرارداد بی قسط دریافت‌شده باطل می‌شود؛ دریافت ماهانه‌ی سازمان قسط‌ها را باز می‌کند
+  await onMoneyDocVoid(tx, doc.id, reason.trim(), actor);
   if (doc.voucherId) await voidVoucher(tx, doc.voucherId, `ابطال ${MONEY_KIND_LABELS[doc.kind]}: ${reason.trim()}`, actor, { fromSource: true });
   const invoiceIds = doc.allocations.map((a) => a.invoiceId);
   await tx.accAllocation.deleteMany({ where: { moneyDocId: doc.id } });

@@ -554,6 +554,7 @@ interface Agg {
   cash: string;
   card: string;
   transfer?: string;
+  org?: string;
   credit: string;
 }
 interface Report {
@@ -642,7 +643,7 @@ function ReportPanel({ terminals, sellers }: { terminals: Terminal[]; sellers: S
             <Stat label="فروش خالص" value={formatAmount(r.total.net)} sub={`فروش ${formatAmount(r.total.saleTotal)} − مرجوعی ${formatAmount(r.total.returnTotal)}`} tone="blue" />
             <Stat label="رسیدها" value={faNum(r.total.tickets)} sub={`${faNum(r.total.saleQty)} کالا فروخته، ${faNum(r.total.returnQty)} برگشت`} />
             <Stat label="میانگین هر خرید" value={formatAmount(r.total.avgBasket)} />
-            <Stat label="نقد / کارت" value={formatAmount(r.total.cash)} sub={`کارت ${formatAmount(r.total.card)}${B(r.total.transfer ?? "0") ? ` · کارت به کارت ${formatAmount(r.total.transfer!)}` : ""}${B(r.total.credit) ? ` · نسیه ${formatAmount(r.total.credit)}` : ""}`} tone="green" />
+            <Stat label="نقد / کارت" value={formatAmount(r.total.cash)} sub={`کارت ${formatAmount(r.total.card)}${B(r.total.transfer ?? "0") ? ` · کارت به کارت ${formatAmount(r.total.transfer!)}` : ""}${B(r.total.org ?? "0") ? ` · اقساط ${formatAmount(r.total.org!)}` : ""}${B(r.total.credit) ? ` · نسیه ${formatAmount(r.total.credit)}` : ""}`} tone="green" />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <AggTable title="فروشنده‌ها" rows={r.sellers.map((s) => ({ key: s.id ?? "-", name: s.name, a: s, extra: s.commissionBp ? `${formatAmount(s.commission)} (${faNum(s.commissionBp / 100)}٪)` : "—" }))} extraLabel="پورسانت (برآورد)" icon />

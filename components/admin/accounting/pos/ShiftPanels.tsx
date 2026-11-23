@@ -128,6 +128,7 @@ export function ShiftReport({ s, names }: { s: ShiftSummary; names?: Record<stri
         )}
         {B(s.credit) !== 0n && <Row label="نسیه / روی حساب مشتری" value={s.credit} />}
         {!!s.club && B(s.club) !== 0n && <Row label="پرداخت با کارت اشتراک" value={s.club} />}
+        {!!s.org && B(s.org) !== 0n && <Row label="اقساط سازمانی (طلب از سازمان‌ها)" value={s.org} />}
         {!!s.gift && B(s.gift) !== 0n && <Row label="پرداخت با بن کارت" value={s.gift} />}
       </div>
     </div>

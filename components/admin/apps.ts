@@ -9,7 +9,7 @@
  */
 
 import {
-  Activity, ArrowLeftRight, Banknote, Gift, Paperclip, ScanSearch, HandCoins, CalendarClock, ChartColumn, ChartPie, ClipboardList, ClipboardCheck,
+  Activity, ArrowLeftRight, Banknote, Building2, Gift, Paperclip, ScanSearch, HandCoins, CalendarClock, ChartColumn, ChartPie, ClipboardList, ClipboardCheck,
   ClockCheck, Coins, FileSpreadsheet, FileUp, FolderTree, House, Landmark, Link2, ListTodo, NotebookPen,
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
@@ -119,6 +119,7 @@ export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting/expenses", label: "هزینه‌ها", icon: Wallet, tone: "rose", perm: ["ACC_VIEW", "ACC_EXPENSE"], img: "acc-expenses" },
   { href: "/admin/accounting/expenses?kind=INCOME", label: "درآمدها", icon: Coins, tone: "emerald", perm: ["ACC_VIEW", "ACC_TREASURY"], img: "acc-income" },
   { href: "/admin/accounting/installments", label: "اقساط", icon: CalendarClock, tone: "blue", perm: ["ACC_VIEW", "ACC_SALES", "ACC_PURCHASE"], img: "acc-installments" },
+  { href: "/admin/accounting/installment-orgs", label: "اقساط سازمانی", icon: Building2, tone: "indigo", perm: ["ACC_VIEW", "ACC_SALES", "ACC_POS", "ACC_POS_MANAGE", "ACC_TREASURY", "ACC_SETTINGS"] },
   { href: "/admin/accounting/calendar", label: "تقویم سررسیدها", icon: CalendarDays, tone: "teal", perm: ["ACC_VIEW", "ACC_CHEQUE", "ACC_SALES", "ACC_PURCHASE"], img: "acc-calendar" },
   { href: "/admin/accounting/reports", label: "گزارش‌ها", icon: ChartPie, tone: "violet", perm: ["ACC_REPORTS"], img: "acc-reports" },
   { href: "/admin/accounting/reports/budget", label: "بودجه", icon: PiggyBank, tone: "lime", perm: ["ACC_REPORTS"] },

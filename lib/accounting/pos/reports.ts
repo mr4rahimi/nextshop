@@ -22,10 +22,11 @@ interface Agg {
   cash: bigint;
   card: bigint;
   transfer: bigint;
+  org: bigint;
   credit: bigint;
 }
 
-const zero = (): Agg => ({ tickets: 0, saleTotal: 0n, returnTotal: 0n, net: 0n, saleQty: 0, returnQty: 0, discount: 0n, cash: 0n, card: 0n, transfer: 0n, credit: 0n });
+const zero = (): Agg => ({ tickets: 0, saleTotal: 0n, returnTotal: 0n, net: 0n, saleQty: 0, returnQty: 0, discount: 0n, cash: 0n, card: 0n, transfer: 0n, org: 0n, credit: 0n });
 
 export async function posReport(opts: { from: Date; to: Date; terminalId?: string | null; sellerId?: string | null }, db: Prisma.TransactionClient | typeof prisma = prisma) {
   // روز تهران ← بازه‌ی لحظه‌ها
@@ -41,7 +42,7 @@ export async function posReport(opts: { from: Date; to: Date; terminalId?: strin
       },
       select: {
         terminalId: true, sellerId: true, sellerName: true, createdAt: true, kind: true,
-        saleTotal: true, returnTotal: true, saleQty: true, returnQty: true, discount: true, cash: true, card: true, transfer: true, credit: true,
+        saleTotal: true, returnTotal: true, saleQty: true, returnQty: true, discount: true, cash: true, card: true, transfer: true, orgInstallment: true, credit: true,
       },
     }),
     db.accPosTerminal.findMany({ select: { id: true, name: true }, orderBy: { code: "asc" } }),
@@ -64,6 +65,7 @@ export async function posReport(opts: { from: Date; to: Date; terminalId?: strin
     a.cash += t.cash;
     a.card += t.card;
     a.transfer += t.transfer;
+    a.org += t.orgInstallment;
     a.credit += t.credit;
   };
   const bump = (m: Map<string, Agg>, k: string, t: (typeof tickets)[number]) => {

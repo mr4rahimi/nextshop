@@ -5516,6 +5516,9 @@ model AccPosTicket {
   transferTreasuryId String?
   /// شماره‌ی پیگیری یا چهار رقم آخر کارت مشتری
   transferRef     String?
+  /// اقساط سازمانی: سهم این رسید و سازمان (قرارداد در `AccOrgContract.posTicketId`)
+  orgInstallment  BigInt           @default(0)
+  orgId           String?
   /// ابطال رسید (همه‌ی فاکتورها، دریافت/پس دادن، کارت اشتراک، بن و کد تخفیف با هم) — فقط مدیر صندوق
   voidedAt        DateTime?
   voidedByName    String?
@@ -5588,6 +5591,7 @@ enum AccMoneyMethod {
   OFFSET // تهاتر — طلب و بدهی همان شخص هم را صاف می‌کنند، بی‌خزانه (فاز ۱۰)
   CLUB_CREDIT // اعتبار کارت اشتراک — بی‌خزانه، بدهکار «تخفیفات فروش» (webhesab-parity.md بخش ۲۳)
   STORE_GIFT // بن کارت خود فروشگاه — بی‌خزانه، بدهکار «بن کارت فروخته‌شده» (webhesab-parity.md بخش ۲۷)
+  ORG_INSTALLMENT // اقساط سازمانی — بی‌خزانه: بدهکار طلب از سازمان (مبلغ − پورسانت) و «کارمزد فروش اقساطی سازمانی» (docs/plans/org-installments.md)
 }
 
 /// دریافت از شخص، پرداخت به شخص، یا انتقال بین صندوق و بانک.
@@ -5647,6 +5651,8 @@ model AccMoneyItem {
   /// کارمزد بانکی (انتقال) — از مبدأ کم می‌شود
   fee          BigInt         @default(0)
   trackingCode String?
+  /// اقساط سازمانی: شخص سازمان که طلب به او منتقل می‌شود (`fee` = پورسانت سازمان)
+  counterPartyId String?
 
   moneyDoc AccMoneyDoc @relation(fields: [moneyDocId], references: [id], onDelete: Cascade)
 
@@ -6428,4 +6434,140 @@ model AccGiftTx {
 
   @@index([cardId, createdAt])
   @@index([ticketId])
+}
+
+// ───────────────────────── اقساط سازمانی (docs/plans/org-installments.md) ─────────────────────────
+
+/// سازمان یا شرکت طرف قرارداد اقساط (آموزش و پرورش، …). کارمندِ معرفی‌شده می‌خرد، سازمان ماه‌به‌ماه
+/// قسط همه را یک‌جا می‌پردازد. طلب روی شخص حسابداری سازمان (`partyId`) است.
+model AccInstallmentOrg {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  /// شخص حسابداری سازمان — طلب از سازمان (AR) و دریافت‌های ماهانه به نام او
+  partyId        String   @unique
+  /// تعداد قسط (ماه)
+  months         Int      @default(6)
+  /// پورسانت سازمان، صدم درصد (۶٪ = 600) — از مبلغ خرید کم و بقیه قسط می‌شود
+  commissionBp   Int      @default(0)
+  /// سقف خرید هر نفر: جمع خریدهای اقساطی باز (تسویه‌نشده) همین سازمان؛ خالی = بی‌سقف
+  capPerCustomer BigInt?
+  /// سقف کل طلب از سازمان (مانده‌ی اقساط باز همه)؛ خالی = بی‌سقف
+  capTotal       BigInt?
+  /// حداقل مبلغ خرید اقساطی
+  minPurchase    BigInt?
+  /// قسط اول چند ماه بعد از خرید (۱ = ماه بعد)
+  firstDueMonths Int      @default(1)
+  /// روز سررسید در هر ماه شمسی (۱ تا ۲۹)
+  dueDay         Int      @default(1)
+  /// گرد کردن قسط ماهانه (تومان) — اختلاف در قسط آخر
+  roundTo        Int      @default(1000)
+  /// کد پرسنلی یا شماره‌ی معرفی‌نامه هنگام فروش لازم است
+  requireRef     Boolean  @default(true)
+  contractNo     String?
+  contactName    String?
+  contactPhone   String?
+  note           String?
+  color          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  contracts   AccOrgContract[]
+  settlements AccOrgSettlement[]
+}
+
+enum AccOrgContractStatus {
+  ACTIVE
+  DONE
+  VOID
+}
+
+/// خرید اقساطی یک مشتری از طریق سازمان — اسنپ‌شات شرایط سازمان در لحظه‌ی خرید
+model AccOrgContract {
+  id            String               @id @default(cuid())
+  number        Int                  @unique
+  orgId         String
+  /// شخص مشتری (کارمند)
+  partyId       String
+  customerName  String
+  mobile        String?
+  nationalId    String?
+  /// کد پرسنلی
+  employeeCode  String?
+  /// شماره‌ی معرفی‌نامه
+  letterNo      String?
+  invoiceId     String?
+  posTicketId   String?
+  /// دریافتی که طلب مشتری را به سازمان منتقل کرد (روش ORG_INSTALLMENT)
+  moneyDocId    String               @unique
+  /// مبلغ خرید (سهم اقساطی فاکتور مشتری)
+  total         BigInt
+  commissionBp  Int
+  /// پورسانت سازمان (هزینه‌ی ما)
+  commission    BigInt
+  /// مبلغ قسطی = total − commission
+  net           BigInt
+  months        Int
+  firstDue      DateTime             @db.Date
+  status        AccOrgContractStatus @default(ACTIVE)
+  voidReason    String?
+  note          String?
+  createdByName String
+  createdAt     DateTime             @default(now())
+
+  org   AccInstallmentOrg   @relation(fields: [orgId], references: [id])
+  items AccOrgInstallment[]
+
+  @@index([orgId, status])
+  @@index([partyId])
+}
+
+model AccOrgInstallment {
+  id         String   @id @default(cuid())
+  contractId String
+  seq        Int
+  dueDate    DateTime @db.Date
+  amount     BigInt
+  /// جمع دریافت‌شده از سازمان برای این قسط (Σ ردیف‌های تسویه‌ی زنده) — فقط org-installments.ts می‌نویسد
+  paid       BigInt   @default(0)
+
+  contract AccOrgContract         @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  lines    AccOrgSettlementLine[]
+
+  @@unique([contractId, seq])
+  @@index([dueDate])
+}
+
+/// دریافت ماهانه از سازمان (یک واریز برای قسط همه‌ی کارمندها) — با فایل اکسل سازمان سنجیده می‌شود
+model AccOrgSettlement {
+  id            String    @id @default(cuid())
+  number        Int       @unique
+  orgId         String
+  /// ماه شمسی «1405-09»
+  period        String
+  amount        BigInt
+  moneyDocId    String    @unique
+  note          String?
+  fileName      String?
+  createdByName String
+  createdAt     DateTime  @default(now())
+  voidedAt      DateTime?
+  voidReason    String?
+
+  org   AccInstallmentOrg      @relation(fields: [orgId], references: [id])
+  lines AccOrgSettlementLine[]
+
+  @@index([orgId, period])
+}
+
+model AccOrgSettlementLine {
+  id            String @id @default(cuid())
+  settlementId  String
+  installmentId String
+  amount        BigInt
+
+  settlement  AccOrgSettlement  @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  installment AccOrgInstallment @relation(fields: [installmentId], references: [id])
+
+  @@index([installmentId])
 }

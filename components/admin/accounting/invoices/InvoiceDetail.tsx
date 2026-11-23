@@ -13,6 +13,7 @@ import { amountToWords, faNum, formatAmount } from "@/lib/accounting/money";
 import { CHANNEL_LABELS, INVOICE_TYPE_LABELS, packQty, type InvoiceTypeKey } from "@/lib/accounting/invoices/calc";
 import { api, Badge, btn, Card, ErrorText, Money, PageHeader, SectionTitle } from "../ui";
 import InstallmentsPanel from "../installments/InstallmentsPanel";
+import OrgInvoicePanel from "../org-installments/OrgInvoicePanel";
 import { invoiceTitle, isExpired, StatusBadge } from "./InvoicesList";
 import Attachments from "../Attachments";
 
@@ -491,6 +492,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
       )}
 
       {inv.status === "ISSUED" && (inv.type === "SALES" || inv.type === "PURCHASE") && <InstallmentsPanel invoiceId={inv.id} onChange={load} />}
+      {inv.status === "ISSUED" && inv.type === "SALES" && <OrgInvoicePanel invoiceId={inv.id} partyId={inv.party.id} open={BigInt(d.settlement.open)} canSell={d.can.write} onChange={load} />}
 
       {d.profit && (
         <Card className="p-4">

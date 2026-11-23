@@ -38,6 +38,8 @@ interface Detail {
   member: PosMember | null;
   stats: { tickets: number; sales: string; returns: string; qty: number; lastAt: string | null; onlineOrders: number };
   recent: { id: string; number: number; kind: string; createdAt: string; saleTotal: string; returnTotal: string; terminal: { name: string } }[];
+  /** خریدهای اقساطی سازمانی باز (docs/plans/org-installments.md) */
+  orgContracts?: { id: string; number: number; org: { name: string; color: string | null }; total: string; remaining: string; monthly: string; nextDue: string | null }[];
 }
 
 type Form = { name: string; firstName: string; lastName: string; mobile: string; phone: string; nationalId: string; city: string; address: string; postalCode: string; note: string };
@@ -476,6 +478,24 @@ function DetailPane({
           <button onClick={onIssueCard} className="rounded-xl bg-amber-500 px-3 py-2 text-xs font-black text-white">
             {m?.card ? "تعویض کارت" : "صدور کارت"}
           </button>
+        </div>
+      )}
+
+      {/* اقساط سازمانی */}
+      {!!d.orgContracts?.length && (
+        <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3 dark:border-indigo-500/20 dark:bg-indigo-500/10">
+          <p className="mb-1.5 text-xs font-black text-indigo-900 dark:text-indigo-200">اقساط سازمانی باز</p>
+          {d.orgContracts.map((c) => (
+            <p key={c.id} className="flex justify-between gap-2 py-0.5 text-sm">
+              <span className="font-bold" style={{ color: c.org.color ?? undefined }}>
+                {c.org.name} · قرارداد {faNum(c.number)}
+              </span>
+              <span className="tabular-nums">
+                ماهانه {formatAmount(B(c.monthly))} · مانده {formatAmount(B(c.remaining))}
+                {c.nextDue && <span className="mr-1 text-[11px] text-gray-500">({dateFa(c.nextDue)})</span>}
+              </span>
+            </p>
+          ))}
         </div>
       )}
 
