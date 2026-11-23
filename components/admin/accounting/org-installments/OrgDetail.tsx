@@ -53,6 +53,7 @@ interface ContractRow {
   createdAt: string;
   paid: string;
   voidReason: string | null;
+  legacyRef: string | null;
 }
 interface SettlementRow {
   id: string;
@@ -147,10 +148,10 @@ export default function OrgDetail({ id }: { id: string }) {
           <>
             {d.can.settle && (
               <button onClick={() => setSettle(firstOpen)} className={btn.primary}>
-                <Wallet className="h-4 w-4" aria-hidden /> ثبت دریافت از سازمان
+                <Wallet className="h-4 w-4" aria-hidden /> {o.selfPay ? "دریافت قسط از مشتری" : "ثبت دریافت از سازمان"}
               </button>
             )}
-            {d.can.manage && (
+            {d.can.manage && !o.selfPay && (
               <button onClick={() => setEdit(true)} className={btn.soft}>
                 <Pencil className="h-4 w-4" aria-hidden /> شرایط
               </button>
@@ -158,6 +159,11 @@ export default function OrgDetail({ id }: { id: string }) {
           </>
         }
       />
+      {o.selfPay && (
+        <p className="rounded-xl bg-indigo-50 px-3 py-2 text-xs font-bold leading-6 text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-200">
+          اقساط شخصی منتقل‌شده از وب حساب: سازمانی در کار نیست و هر مشتری قسطش را خودش می‌پردازد (طلب روی حساب خود مشتری است). دریافت هر نفر را جدا ثبت کنید. این گروه در صندوق انتخاب نمی‌شود؛ فروش قسطی شخصی تازه با «اقساط» صفحه‌ی فاکتور فروش است.
+        </p>
+      )}
       {!o.isActive && <p className="rounded-xl bg-gray-100 px-3 py-2 text-xs font-bold text-gray-600 dark:bg-white/5">این سازمان غیرفعال است و در صندوق دیده نمی‌شود؛ اقساط قبلی سر جایشان هستند.</p>}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
@@ -292,6 +298,7 @@ export default function OrgDetail({ id }: { id: string }) {
                     {formatJalali(new Date(x.createdAt))} · {faNum(x.months)} قسط
                     {x.employeeCode && ` · پرسنلی ${faNum(x.employeeCode)}`}
                     {x.letterNo && ` · معرفی‌نامه ${x.letterNo}`}
+                    {x.legacyRef && ` · وب حساب ${faNum(Number(x.legacyRef.split(":")[1] ?? 0))}`}
                   </span>
                 </span>
                 <span className="text-left">

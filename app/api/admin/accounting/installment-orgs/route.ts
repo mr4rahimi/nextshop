@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   if (!g.ok) return g.res;
   try {
     let orgs = await orgSummaries(prisma);
-    if (new URL(req.url).searchParams.get("active") === "1") orgs = orgs.filter((o) => o.isActive);
+    if (new URL(req.url).searchParams.get("active") === "1") orgs = orgs.filter((o) => o.isActive && !o.selfPay);
     const treasuries = g.can.settle ? await prisma.accTreasury.findMany({ where: { isActive: true, kind: { in: ["BANK", "CASH"] } }, orderBy: [{ kind: "asc" }, { code: "asc" }], select: { id: true, name: true, kind: true } }) : [];
     return NextResponse.json(serialize({ orgs, treasuries, can: g.can }));
   } catch (e) {

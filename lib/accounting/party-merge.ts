@@ -35,6 +35,17 @@ const REFS = [
   { key: "serialMoves", label: "گردش سریال", count: (db: Db, id: string) => db.accSerialMove.count({ where: { partyId: id } }), move: (tx: Tx, a: string, b: string) => tx.accSerialMove.updateMany({ where: { partyId: a }, data: { partyId: b } }) },
   { key: "items", label: "کالا با این عرضه‌کننده", count: (db: Db, id: string) => db.accItem.count({ where: { supplierId: id } }), move: (tx: Tx, a: string, b: string) => tx.accItem.updateMany({ where: { supplierId: a }, data: { supplierId: b } }) },
   { key: "legacy", label: "پرونده‌ی نرم‌افزار قبلی", count: (db: Db, id: string) => db.legacyCustomer.count({ where: { partyId: id } }), move: (tx: Tx, a: string, b: string) => tx.legacyCustomer.updateMany({ where: { partyId: a }, data: { partyId: b } }) },
+  { key: "orgContracts", label: "خرید اقساط سازمانی", count: (db: Db, id: string) => db.accOrgContract.count({ where: { partyId: id } }), move: (tx: Tx, a: string, b: string) => tx.accOrgContract.updateMany({ where: { partyId: a }, data: { partyId: b } }) },
+  {
+    key: "installmentOrg",
+    label: "سازمان اقساط",
+    count: (db: Db, id: string) => db.accInstallmentOrg.count({ where: { partyId: id } }),
+    move: async (tx: Tx, a: string, b: string) => {
+      if (!(await tx.accInstallmentOrg.count({ where: { partyId: a } }))) return { count: 0 };
+      if (await tx.accInstallmentOrg.count({ where: { partyId: b } })) throw new AccError("هر دو شخص سازمان اقساط‌اند؛ ادغام نمی‌شوند", 409);
+      return tx.accInstallmentOrg.updateMany({ where: { partyId: a }, data: { partyId: b } });
+    },
+  },
   { key: "templateLines", label: "ردیف ورودی سریع", count: (db: Db, id: string) => db.accVoucherTemplateLine.count({ where: { partyId: id } }), move: (tx: Tx, a: string, b: string) => tx.accVoucherTemplateLine.updateMany({ where: { partyId: a }, data: { partyId: b } }) },
   {
     key: "attachments",

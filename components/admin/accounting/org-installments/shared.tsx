@@ -47,6 +47,8 @@ export interface Org {
   note: string | null;
   color: string | null;
   isActive: boolean;
+  /** اقساط شخصی وب حساب — خود مشتری می‌پردازد */
+  selfPay?: boolean;
 }
 
 export function Progress({ value, total, color }: { value: bigint; total: bigint; color?: string }) {
@@ -237,7 +239,9 @@ interface ContractD {
   org: { id: string; name: string; color: string | null };
   invoice: { id: string; number: number | null } | null;
   ticket: { id: string; number: number } | null;
-  items: { id: string; seq: number; dueDate: string; amount: string; paid: string; lines: { amount: string; settlement: { number: number; period: string; createdAt: string; voidedAt: string | null } }[] }[];
+  legacyRef: string | null;
+  note: string | null;
+  items: { id: string; seq: number; dueDate: string; amount: string; paid: string; legacyPaid: string; legacyPaidAt: string | null; lines: { amount: string; settlement: { number: number; period: string; createdAt: string; voidedAt: string | null } }[] }[];
 }
 
 export const STATUS_LABEL = { ACTIVE: "در جریان", DONE: "تسویه", VOID: "باطل" } as const;
@@ -252,7 +256,11 @@ export function ContractSheet({ id, onClose, onChanged }: { id: string; onClose:
       .catch((e) => setError(e.message));
   }, [id]);
   async function voidIt() {
-    const reason = window.prompt("ابطال قرارداد: دریافت اقساطی باطل و فاکتور مشتری دوباره باز (بدهکار) می‌شود. دلیل؟");
+    const reason = window.prompt(
+      d?.legacyRef
+        ? "ابطال قرارداد وب حساب: مانده‌ی اقساط باز از حساب سازمان به حساب خود مشتری برمی‌گردد. دلیل؟"
+        : "ابطال قرارداد: دریافت اقساطی باطل و فاکتور مشتری دوباره باز (بدهکار) می‌شود. دلیل؟",
+    );
     if (!reason) return;
     setBusy(true);
     try {
@@ -265,6 +273,8 @@ export function ContractSheet({ id, onClose, onChanged }: { id: string; onClose:
     }
   }
   const paid = d ? d.items.reduce((s, i) => s + B(i.paid), 0n) : 0n;
+  // دریافت ثبت‌شده در خود پنل (نه وب حساب) — ابطال را می‌بندد
+  const panelPaid = d ? d.items.reduce((s, i) => s + B(i.paid) - B(i.legacyPaid), 0n) : 0n;
   return (
     <Sheet open onClose={onClose} title={d ? `قرارداد اقساط ${faNum(d.number)} — ${d.customerName}` : "قرارداد"} wide>
       {!d ? (
@@ -289,7 +299,9 @@ export function ContractSheet({ id, onClose, onChanged }: { id: string; onClose:
                 فاکتور فروش {faNum(d.invoice.number ?? 0)}
               </a>
             )}
+            {d.legacyRef && <Badge tone="amber">منتقل‌شده از وب حساب</Badge>}
           </div>
+          {d.note && <p className="text-xs leading-6 text-gray-500">{d.note}</p>}
           {d.voidReason && <p className="text-xs text-red-600">دلیل ابطال: {d.voidReason}</p>}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Mini label="مبلغ خرید" value={formatAmount(B(d.total))} />
@@ -325,9 +337,11 @@ export function ContractSheet({ id, onClose, onChanged }: { id: string; onClose:
                       <td className="px-3 py-2 text-left tabular-nums">{formatAmount(B(i.amount))}</td>
                       <td className={`px-3 py-2 text-left tabular-nums ${done ? "text-emerald-600" : ""}`}>{B(i.paid) > 0n ? formatAmount(B(i.paid)) : "—"}</td>
                       <td className="px-3 py-2 text-[11px] text-gray-500">
-                        {i.lines
-                          .filter((l) => !l.settlement.voidedAt)
-                          .map((l) => `دریافت ${faNum(l.settlement.number)} (${periodFa(l.settlement.period)})`)
+                        {[
+                          B(i.legacyPaid) > 0n ? `وب حساب${i.legacyPaidAt ? ` ${formatJalali(new Date(i.legacyPaidAt))}` : ""}` : null,
+                          ...i.lines.filter((l) => !l.settlement.voidedAt).map((l) => `دریافت ${faNum(l.settlement.number)} (${periodFa(l.settlement.period)})`),
+                        ]
+                          .filter(Boolean)
                           .join("، ") || "—"}
                       </td>
                     </tr>
@@ -340,7 +354,7 @@ export function ContractSheet({ id, onClose, onChanged }: { id: string; onClose:
             <a href={`/admin/accounting/installment-orgs/contracts/${d.id}/print?auto=1`} target="_blank" rel="noreferrer" className={btn.soft}>
               <Printer className="h-4 w-4" aria-hidden /> چاپ قرارداد برای امضا
             </a>
-            {d.status === "ACTIVE" && !d.ticket && paid === 0n && (
+            {d.status === "ACTIVE" && !d.ticket && (d.legacyRef ? panelPaid === 0n : paid === 0n) && (
               <button onClick={voidIt} disabled={busy} className={`${btn.danger} mr-auto`}>
                 ابطال قرارداد
               </button>

@@ -6469,6 +6469,10 @@ model AccInstallmentOrg {
   note           String?
   color          String?
   isActive       Boolean  @default(true)
+  /// اقساط شخصی: خود مشتری قسط را می‌پردازد (طلب روی مشتری می‌ماند)؛ در صندوق و فاکتور انتخاب نمی‌شود — فقط سابقه‌ی وب حساب
+  selfPay        Boolean  @default(false)
+  /// سند انتقال مانده‌ی اقساط باز وب حساب از مشتری‌ها به این سازمان (با هر ورود دوباره بازسازی می‌شود)
+  legacyVoucherId String? @unique
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -6498,8 +6502,13 @@ model AccOrgContract {
   letterNo      String?
   invoiceId     String?
   posTicketId   String?
-  /// دریافتی که طلب مشتری را به سازمان منتقل کرد (روش ORG_INSTALLMENT)
-  moneyDocId    String               @unique
+  /// دریافتی که طلب مشتری را به سازمان منتقل کرد (روش ORG_INSTALLMENT) — قرارداد وب حساب ندارد
+  moneyDocId    String?              @unique
+  /// قرارداد منتقل‌شده از نرم‌افزار قبلی: «webhesab:23» (کد پرداخت اقساطی وب حساب)
+  legacyRef     String?              @unique
+  /// مانده‌ی ناخالص (طلب مشتری) که هنگام انتقال از مشتری به سازمان رفت؛ و سهم سازمان بعد از پورسانت
+  legacyOpen    BigInt               @default(0)
+  legacyOpenNet BigInt               @default(0)
   /// مبلغ خرید (سهم اقساطی فاکتور مشتری)
   total         BigInt
   commissionBp  Int
@@ -6528,8 +6537,11 @@ model AccOrgInstallment {
   seq        Int
   dueDate    DateTime @db.Date
   amount     BigInt
-  /// جمع دریافت‌شده از سازمان برای این قسط (Σ ردیف‌های تسویه‌ی زنده) — فقط org-installments.ts می‌نویسد
+  /// جمع دریافت‌شده از سازمان برای این قسط (legacyPaid + Σ ردیف‌های تسویه‌ی زنده) — فقط org-installments*.ts می‌نویسد
   paid       BigInt   @default(0)
+  /// دریافت‌شده در نرم‌افزار قبلی (پیش از انتقال)
+  legacyPaid   BigInt    @default(0)
+  legacyPaidAt DateTime? @db.Date
 
   contract AccOrgContract         @relation(fields: [contractId], references: [id], onDelete: Cascade)
   lines    AccOrgSettlementLine[]

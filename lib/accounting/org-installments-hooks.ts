@@ -25,13 +25,13 @@ export async function ensureOrgFeeAccount(tx: Tx) {
   return tx.accAccount.update({ where: { id: acc.id }, data: { systemKey: ORG_FEE_KEY, nature: "DEBIT", detailKind: "NONE" } });
 }
 
-/** «پرداخت‌شده» هر قسط = Σ ردیف‌های تسویه‌ی زنده؛ وضعیت قرارداد از روی آن */
+/** «پرداخت‌شده» هر قسط = دریافتیِ وب حساب (legacyPaid) + Σ ردیف‌های تسویه‌ی زنده؛ وضعیت قرارداد از روی آن */
 export async function recalcOrgInstallments(tx: Tx, installmentIds: string[]) {
   if (!installmentIds.length) return;
   const sums = await tx.accOrgSettlementLine.groupBy({ by: ["installmentId"], where: { installmentId: { in: installmentIds }, settlement: { voidedAt: null } }, _sum: { amount: true } });
   const by = new Map(sums.map((x) => [x.installmentId, x._sum.amount ?? 0n]));
-  const items = await tx.accOrgInstallment.findMany({ where: { id: { in: installmentIds } }, select: { id: true, contractId: true } });
-  for (const i of items) await tx.accOrgInstallment.update({ where: { id: i.id }, data: { paid: by.get(i.id) ?? 0n } });
+  const items = await tx.accOrgInstallment.findMany({ where: { id: { in: installmentIds } }, select: { id: true, contractId: true, legacyPaid: true } });
+  for (const i of items) await tx.accOrgInstallment.update({ where: { id: i.id }, data: { paid: i.legacyPaid + (by.get(i.id) ?? 0n) } });
   const contractIds = [...new Set(items.map((i) => i.contractId))];
   for (const cid of contractIds) {
     const c = await tx.accOrgContract.findUnique({ where: { id: cid }, include: { items: true } });
@@ -45,7 +45,7 @@ export async function recalcOrgInstallments(tx: Tx, installmentIds: string[]) {
 export async function onMoneyDocVoid(tx: Tx, moneyDocId: string, reason: string, actor: Actor) {
   const c = await tx.accOrgContract.findUnique({ where: { moneyDocId }, include: { items: true } });
   if (c && c.status !== "VOID") {
-    const paid = c.items.reduce((s, x) => s + x.paid, 0n);
+    const paid = c.items.reduce((s, x) => s + x.paid - x.legacyPaid, 0n);
     if (paid > 0n) throw new AccError(`از قرارداد اقساط ${faNum(c.number)} قسط دریافت شده؛ اول دریافت‌های سازمان را اصلاح کنید`, 409);
     await tx.accOrgContract.update({ where: { id: c.id }, data: { status: "VOID", voidReason: `${reason} — ${actor.name}` } });
   }

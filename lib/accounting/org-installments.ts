@@ -169,6 +169,7 @@ export async function orgQuote(db: Db, orgId: string, partyId: string | null, am
   if (!org) throw new AccError("سازمان اقساط پیدا نشد", 404);
   const problems: string[] = [];
   if (!org.isActive) problems.push(`قرارداد «${org.name}» غیرفعال است`);
+  if (org.selfPay) problems.push(`«${org.name}» فقط سابقه‌ی اقساط شخصی وب حساب است؛ برای فروش قسطی تازه سازمان را انتخاب کنید یا اقساط فاکتور را بزنید`);
   if (!partyId) problems.push("برای خرید اقساطی مشتری (کارمند معرفی‌شده) را انتخاب کنید");
   if (amount <= 0n) problems.push("مبلغ اقساطی باید بیشتر از صفر باشد");
   if (org.minPurchase && amount < org.minPurchase) problems.push(`حداقل خرید اقساطی «${org.name}» ${formatAmount(org.minPurchase)} تومان است`);
@@ -300,6 +301,17 @@ export async function voidContract(tx: Tx, id: string, reason: string, actor: Ac
   const c = await tx.accOrgContract.findUnique({ where: { id } });
   if (!c) throw new AccError("قرارداد پیدا نشد", 404);
   if (c.status === "VOID") return c;
+  if (!c.moneyDocId) {
+    // قرارداد منتقل‌شده از وب حساب: بی دریافت پنل ← باطل و سند انتقال سازمان بازسازی (مانده به مشتری برمی‌گردد)
+    if (!reason.trim()) throw new AccError("دلیل ابطال را بنویسید");
+    const lines = await tx.accOrgSettlementLine.count({ where: { installment: { contractId: c.id }, settlement: { voidedAt: null } } });
+    if (lines) throw new AccError("برای این قرارداد در پنل قسط دریافت شده؛ اول آن دریافت‌ها را باطل کنید", 409);
+    await tx.accOrgContract.update({ where: { id: c.id }, data: { status: "VOID", voidReason: `${reason.trim()} — ${actor.name}` } });
+    const org = await tx.accInstallmentOrg.findUniqueOrThrow({ where: { id: c.orgId } });
+    const { rebuildLegacyVoucher } = await import("./org-legacy");
+    await rebuildLegacyVoucher(tx, org, todayKey(), actor);
+    return tx.accOrgContract.findUniqueOrThrow({ where: { id } });
+  }
   if (c.posTicketId) throw new AccError("این خرید از صندوق است؛ رسید صندوقش را باطل کنید (همه‌چیز با هم برمی‌گردد)", 409);
   if (!reason.trim()) throw new AccError("دلیل ابطال را بنویسید");
   await voidMoneyDoc(tx, c.moneyDocId, `ابطال قرارداد اقساط سازمانی ${faNum(c.number)}: ${reason.trim()}`, actor);
@@ -356,13 +368,18 @@ export async function createSettlement(tx: Tx, input: SettlementInput, actor: Ac
   const method = tr.kind === "CASH" ? "CASH" : "BANK_TRANSFER";
   if (tr.kind !== "CASH" && tr.kind !== "BANK") throw new AccError("دریافت سازمان به بانک یا صندوق می‌نشیند");
   const day = input.date ?? todayKey();
+  // اقساط شخصی: طلب روی خود مشتری است؛ دریافت از همان مشتری
+  if (org.selfPay && rows.length !== 1) throw new AccError("اقساط شخصی: دریافت هر مشتری جدا ثبت می‌شود");
+  const payer = org.selfPay ? rows[0].partyId : org.partyId;
   const doc = await createMoneyDoc(
     tx,
     {
       kind: "RECEIPT",
       date: day,
-      partyId: org.partyId,
-      description: `اقساط ${periodLabel(input.period)} ${org.name} — ${faNum(rows.length)} نفر`,
+      partyId: payer,
+      description: org.selfPay
+        ? `قسط ${items.find((i) => i.contract.partyId === payer)?.contract.customerName ?? ""} — ${org.name}`
+        : `اقساط ${periodLabel(input.period)} ${org.name} — ${faNum(rows.length)} نفر`,
       items: [{ method, treasuryId: tr.id, amount: total, trackingCode: input.trackingCode ?? null }],
     },
     actor,
@@ -535,7 +552,8 @@ export async function orgDetail(db: Db, orgId: string) {
       thisMonthPaid: thisMonth?.paid ?? 0n,
       customers: [...customers.values()].filter((c) => c.remaining > 0n).length,
       allCustomers: customers.size,
-      ledgerBalance: (ledger._sum.debit ?? 0n) - (ledger._sum.credit ?? 0n),
+      // اقساط شخصی: طلب روی مشتری‌هاست، نه شخص سازمان — سنجش ندارد
+      ledgerBalance: org.selfPay ? debt : (ledger._sum.debit ?? 0n) - (ledger._sum.credit ?? 0n),
       period: thisPeriod,
     },
     months: monthRows,
@@ -557,6 +575,8 @@ export async function orgDetail(db: Db, orgId: string) {
       posTicketId: c.posTicketId,
       paid: c.items.reduce((s, i) => s + i.paid, 0n),
       voidReason: c.voidReason,
+      legacyRef: c.legacyRef,
+      note: c.note,
     })),
     settlements,
   };

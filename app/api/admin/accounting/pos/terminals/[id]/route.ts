@@ -60,7 +60,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         lastKeptFloat: lastShift?.keptFloat ?? null,
         // اقساط سازمانی: سازمان‌های فعال برای پنجره‌ی پرداخت (docs/plans/org-installments.md)
         orgs: await prisma.accInstallmentOrg.findMany({
-          where: { isActive: true },
+          where: { isActive: true, selfPay: false },
           orderBy: { name: "asc" },
           select: { id: true, name: true, months: true, commissionBp: true, requireRef: true, color: true, capPerCustomer: true },
         }),

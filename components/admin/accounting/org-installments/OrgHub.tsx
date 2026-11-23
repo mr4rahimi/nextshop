@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Building2, ChevronLeft, Plus, Users } from "lucide-react";
+import { AlertTriangle, Building2, ChevronLeft, History, Plus, Users } from "lucide-react";
 import { faNum, formatAmount } from "@/lib/accounting/money";
 import { api, btn, Card, ErrorText, PageHeader, Stat } from "../ui";
 import { B, OrgForm, Progress, Terms, orgColor, periodFa, type Org } from "./shared";
@@ -43,9 +43,14 @@ export default function OrgHub() {
         desc="فروش قسطی به کارمندان سازمان‌های طرف قرارداد؛ سازمان ماه‌به‌ماه قسط همه را یک‌جا می‌پردازد."
         actions={
           d?.can.manage && (
-            <button onClick={() => setForm(true)} className={btn.primary}>
-              <Plus className="h-4 w-4" aria-hidden /> سازمان تازه
-            </button>
+            <>
+              <Link href="/admin/accounting/installment-orgs/legacy" className={btn.soft}>
+                <History className="h-4 w-4" aria-hidden /> انتقال از وب حساب
+              </Link>
+              <button onClick={() => setForm(true)} className={btn.primary}>
+                <Plus className="h-4 w-4" aria-hidden /> سازمان تازه
+              </button>
+            </>
           )
         }
       />
