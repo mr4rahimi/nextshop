@@ -539,7 +539,7 @@ async function invoiceSerials(tx: Tx, invoiceId: string): Promise<SerialEntry[]>
 }
 
 /** حرکت‌های کاردکس یک فاکتور صادرشده از روی ردیف‌های ذخیره‌شده */
-async function invoiceMoves(tx: Tx, invoiceId: string): Promise<MoveInput[]> {
+export async function invoiceMoves(tx: Tx, invoiceId: string): Promise<MoveInput[]> {
   const inv = await tx.accInvoice.findUniqueOrThrow({ where: { id: invoiceId }, include: { lines: { orderBy: { seq: "asc" } } } });
   const moveType = MOVE_TYPE[inv.type];
   if (!moveType) return [];

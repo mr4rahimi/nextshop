@@ -534,7 +534,7 @@ function Worksheet({
   );
 }
 
-const cellKey = (vals: string[]) => vals.join("\u0001");
+export const cellKey = (vals: string[]) => vals.join("\u0001");
 
 /**
  * اصلاح ثبت‌شده‌های یک کد قبلی: تعداد هر رنگ/سایز را درست کنید، یا رنگ/سایزی را که اشتباه
@@ -656,7 +656,7 @@ function Mini({ label, value, tone = "" }: { label: string; value: string; tone?
 }
 
 /** انتخاب چند مقدار: چیپ‌های انتخاب‌شده، پیشنهاد مدل، و کادر با فهرست همه‌ی مقدارها (Enter = افزودن) */
-function ValuePicker({ axis, picked, suggestions, onChange }: { axis: Axis; picked: string[]; suggestions: string[]; onChange: (v: string[]) => void }) {
+export function ValuePicker({ axis, picked, suggestions, onChange }: { axis: Axis; picked: string[]; suggestions: string[]; onChange: (v: string[]) => void }) {
   const [text, setText] = useState("");
   const add = (v: string) => {
     const t = v.replace(/\s+/g, " ").trim();

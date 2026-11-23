@@ -74,6 +74,7 @@ const TOPIC_PAGES: Record<string, string> = {
   blogPost: "/admin/blog",
   accountingItemCoding: "/admin/accounting/inventory/coding",
   accountingRelabel: "/admin/accounting/inventory/relabel",
+  accountingSplit: "/admin/accounting/inventory/split",
   accountingPosHub: "/admin/accounting/pos",
   accountingOnlinePrice: "/admin/accounting/inventory/online-prices",
   accountingStorePrices: "/admin/accounting/inventory/prices",

@@ -156,6 +156,33 @@ export async function commitRelabel(tx: Tx, input: RelabelInput) {
   if (!rows.length) throw new AccError("دست‌کم یک ردیف با رنگ/سایز و تعداد بنویسید");
   if (rows.length > RELABEL_MAX_ROWS) throw new AccError(`حداکثر ${RELABEL_MAX_ROWS} ردیف در یک بار`);
 
+  const out = await variantItemsFor(tx, model, rows, { salePrice: legacy?.salePrice ?? null });
+  if (legacy) {
+    const logs = out.filter((o) => o.qty > 0).map((o) => ({ legacyCode: legacy.code, itemId: o.itemId, qty: o.qty, byName: input.byName ?? null }));
+    if (logs.length) await tx.accRelabelLog.createMany({ data: logs });
+  }
+  return out;
+}
+
+export interface VariantDefaults {
+  salePrice?: bigint | null;
+  supplierId?: string | null;
+  taxCode?: string | null;
+  unit?: string | null;
+  /** هر ردیف باید دست‌کم یک مقدار ویژگی داشته باشد (تفکیک خرید) */
+  requireValue?: boolean;
+}
+
+/**
+ * ردیف‌های «نام مقدار هر محور + تعداد» ← کالای هر ترکیب در مدل (نبود = ساخته با کد الگو).
+ * ردیف هم‌ترکیب جمع می‌شود. مشترک بین برچسب‌گذاری دوباره و تفکیک خرید (`split.ts`).
+ */
+export async function variantItemsFor(
+  tx: Tx,
+  model: { id: string; title: string; specs: unknown; groupId: string | null; items: { id: string; attrKey: string | null; isActive: boolean }[] },
+  rows: { values: Record<string, string>; qty: number }[],
+  defaults: VariantDefaults = {},
+) {
   const sp = specsOf(model.specs);
   const base = baseTitleOf(model);
   const axes = await tx.accAxis.findMany({ select: { id: true, sortOrder: true, name: true } });
@@ -174,6 +201,7 @@ export async function commitRelabel(tx: Tx, input: RelabelInput) {
       const { values } = await ensureAxisValues(tx, axisId, [name]);
       attrs.push({ axisId, valueId: values[0].id, value: values[0].value });
     }
+    if (defaults.requireValue && !attrs.length) throw new AccError("رنگ یا سایز هر ردیف را مشخص کنید");
     const key = attrKeyOf(attrs);
     let hit = byKey.get(key);
     if (hit && !hit.isActive) await tx.accItem.update({ where: { id: hit.id }, data: { isActive: true } });
@@ -184,8 +212,10 @@ export async function commitRelabel(tx: Tx, input: RelabelInput) {
         {
           title: [base, ...values].join(" "),
           groupId: model.groupId,
-          unit: sp.unit,
-          salePrice: legacy?.salePrice ?? null,
+          unit: defaults.unit ?? sp.unit,
+          salePrice: defaults.salePrice ?? null,
+          supplierId: defaults.supplierId ?? undefined,
+          taxCode: defaults.taxCode ?? undefined,
           sellOnline: true,
         },
         { modelId: model.id, attrs },
@@ -197,13 +227,7 @@ export async function commitRelabel(tx: Tx, input: RelabelInput) {
     m.qty += qty;
     merged.set(hit.id, m);
   }
-
-  const out = [...merged.values()];
-  if (legacy) {
-    const logs = out.filter((o) => o.qty > 0).map((o) => ({ legacyCode: legacy.code, itemId: o.itemId, qty: o.qty, byName: input.byName ?? null }));
-    if (logs.length) await tx.accRelabelLog.createMany({ data: logs });
-  }
-  return out;
+  return [...merged.values()];
 }
 
 /** کالا جای دیگری به کار نرفته؟ (فقط کالای ساخته‌شده‌ی اشتباه پاک می‌شود) */

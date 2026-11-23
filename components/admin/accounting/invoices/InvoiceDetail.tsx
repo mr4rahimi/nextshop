@@ -226,6 +226,11 @@ export default function InvoiceDetail({ id }: { id: string }) {
                 )}
               </div>
             )}
+            {d.can.write && inv.type === "PURCHASE" && inv.status === "ISSUED" && inv.lines.some((l) => l.productId && !l.packSize && !l.serials?.length) && (
+              <Link href={`/admin/accounting/inventory/split?invoice=${id}`} className={btn.soft}>
+                ✂️ تفکیک رنگ و سایز
+              </Link>
+            )}
             {d.can.write && inv.status !== "VOID" && inv.proformaState !== "CONVERTED" && (
               <Link href={`/admin/accounting/invoices/${id}/edit`} className={btn.soft}>
                 ✏️ ویرایش
