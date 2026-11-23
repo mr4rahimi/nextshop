@@ -1,3 +1,4 @@
+import { gunzipSync } from "zlib";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/serialize";
@@ -32,11 +33,18 @@ export async function POST(req: Request) {
     } catch {
       throw new AccError("تنظیمات نامعتبر است");
     }
-    const sheets = readSheetFile(file.name, Buffer.from(await file.arrayBuffer()));
+    // صفحه فایل را در مرورگر gzip می‌کند (۱٫۹ ← ۰٫۳ مگابایت) — آپلود بزرگ پشت CDN گاهی وسط راه قطع می‌شد
+    let buf = Buffer.from(await file.arrayBuffer());
+    let name = file.name;
+    if (buf[0] === 0x1f && buf[1] === 0x8b) {
+      buf = gunzipSync(buf, { maxOutputLength: 50_000_000 });
+      name = name.replace(/\.gz$/i, "");
+    }
+    const sheets = readSheetFile(name, buf);
     const sheet = sheets.find((s) => s.rows.length > 1) ?? sheets[0];
     if (!sheet) throw new AccError("فایل خالی است");
     const contracts = parseLegacySheet(sheet.rows);
-    if (mode !== "apply") return NextResponse.json(serialize({ fileName: file.name, ...(await legacyPreview(prisma, contracts, options)) }));
+    if (mode !== "apply") return NextResponse.json(serialize({ fileName: name, ...(await legacyPreview(prisma, contracts, options)) }));
     const r = await prisma.$transaction((tx) => legacyApply(tx, contracts, options, actorOf(g.access)), { timeout: 600_000, maxWait: 20_000 });
     const amount = r.vouchers.reduce((s, v) => s + v.amount, 0n);
     await logActivity({

@@ -69,24 +69,50 @@ export default function LegacyImport() {
     ),
   });
 
+  /** فشرده‌سازی در مرورگر — ۱٫۹ مگابایت CSV ← حدود ۳۰۰ کیلوبایت */
+  async function packFile(f: File): Promise<Blob> {
+    if (typeof CompressionStream === "undefined" || /\.(xlsx|xls|gz)$/i.test(f.name)) return f;
+    try {
+      return await new Response(f.stream().pipeThrough(new CompressionStream("gzip"))).blob();
+    } catch {
+      return f;
+    }
+  }
+
   async function send(mode: "preview" | "apply", f = file) {
     if (!f) return;
     setBusy(mode);
     setError(null);
-    const fd = new FormData();
-    fd.set("file", f);
-    fd.set("mode", mode);
-    fd.set("options", JSON.stringify(options()));
     try {
-      const r = await fetch("/api/admin/accounting/installment-orgs/legacy", { method: "POST", body: fd });
-      const j = await r.json();
+      const body = await packFile(f);
+      const post = () => {
+        const fd = new FormData();
+        fd.set("file", body, body === f ? f.name : `${f.name}.gz`);
+        fd.set("mode", mode);
+        fd.set("options", JSON.stringify(options()));
+        return fetch("/api/admin/accounting/installment-orgs/legacy", { method: "POST", body: fd });
+      };
+      let r: Response;
+      try {
+        r = await post();
+      } catch (e) {
+        // قطع شبکه: پیش‌نمایش را یک بار دیگر می‌فرستیم؛ ثبت را نه (ممکن است روی سرور انجام شده باشد)
+        if (mode === "apply")
+          throw new Error("ارتباط با سرور وسط ثبت قطع شد. ثبت تکرارپذیر است: «پیش‌نمایش با تغییرها» را بزنید؛ اگر قراردادها «بی‌تغییر» بود ثبت انجام شده، وگرنه دوباره «ثبت انتقال».");
+        r = await post().catch(() => {
+          throw e;
+        });
+      }
+      const j = await r.json().catch(() => {
+        throw new Error(`پاسخ نامعتبر از سرور (${r.status})`);
+      });
       if (!r.ok) throw new Error(j.error ?? "انجام نشد");
       if (mode === "apply") {
         setResult(j);
         setP(null);
       } else setP(j);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "انجام نشد");
+      setError(e instanceof TypeError ? "ارتباط با سرور برقرار نشد (اینترنت یا سرور). چند لحظه بعد دوباره بزنید." : e instanceof Error ? e.message : "انجام نشد");
     } finally {
       setBusy(null);
     }

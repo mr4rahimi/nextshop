@@ -19,6 +19,15 @@ export interface ReleaseNote {
 
 export const VERSIONS: ReleaseNote[] = [
   {
+    version: "2.155.1",
+    date: "1405/09/03",
+    tag: "patch",
+    title: "بارگذاری سریع‌تر فایل اقساط",
+    changes: [
+      { type: "improvement", text: "«اقساط سازمانی ← انتقال از وب حساب»: فایل پیش از ارسال در مرورگر فشرده می‌شود (حدود یک‌ششم حجم) و بارگذاری سریع‌تر و مطمئن‌تر است؛ پیش‌نمایش در قطعی کوتاه شبکه خودش دوباره فرستاده می‌شود." },
+    ],
+  },
+  {
     version: "2.155.0",
     date: "1405/09/03",
     tag: "minor",
