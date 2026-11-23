@@ -19,6 +19,15 @@ export interface ReleaseNote {
 
 export const VERSIONS: ReleaseNote[] = [
   {
+    version: "2.148.1",
+    date: "1405/09/02",
+    tag: "patch",
+    title: "اسکن بارکد با دوربین گوشی در انبارگردانی",
+    changes: [
+      { type: "improvement", text: "دکمه‌ی 📷 در زبانه‌ی «شمارش» انبارگردانی، با اجازه‌ی کاربر دوربین گوشی را برای اسکن برچسب‌ها باز می‌کند." },
+    ],
+  },
+  {
     version: "2.148.0",
     date: "1405/09/01",
     tag: "minor",

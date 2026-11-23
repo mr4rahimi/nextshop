@@ -46,7 +46,9 @@ const SECURITY_HEADERS = [
   { key: "X-Frame-Options",           value: "SAMEORIGIN" },
   { key: "Referrer-Policy",           value: "strict-origin-when-cross-origin" },
   { key: "X-DNS-Prefetch-Control",    value: "on" },
-  { key: "Permissions-Policy",        value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+  // camera=(self): دوربین فقط برای خود سایت (اسکن بارکد در انبارگردانی با گوشی). با camera=() مرورگر
+  // بی‌آنکه بپرسد درخواست دوربین را رد می‌کند (NotAllowedError) — docs/plans/inventory-items.md ۱۵.۱.
+  { key: "Permissions-Policy",        value: "camera=(self), microphone=(), geolocation=(), interest-cohort=()" },
 ];
 
 const nextConfig: NextConfig = {
