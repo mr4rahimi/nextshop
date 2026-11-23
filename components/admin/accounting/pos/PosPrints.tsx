@@ -3,10 +3,11 @@
 /**
  * چاپ رسید صندوق (حرارتی ۸۰ یا ۵۸ میلی‌متر، با بارکد رسید برای مرجوعی) و برگه‌ی بستن صندوق.
  * `?auto=1` ← بلافاصله پنجره‌ی چاپ، و بعد از چاپ زبانه بسته می‌شود.
+ * پیش‌فاکتور (پیش از پرداخت): سبد صندوق از `localStorage` (`pos:prebill:<terminalId>`)، بی ثبت در دفتر.
  * ⚠️ از تگ `<header>` استفاده نشود — CSS چاپی سراسری آن را پنهان می‌کند.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatJalali } from "@/lib/club/jalali";
 import { code128Bars } from "@/lib/barcode/code128";
@@ -188,6 +189,12 @@ export function TicketPrint({ id }: { id: string }) {
         {B(d.ticket.giftRestored ?? "0") > 0n && <Kv k="برگشت به بن کارت" v={formatAmount(d.ticket.giftRestored!)} />}
         {t.tendered && <Kv k="دریافتی" v={formatAmount(t.tendered)} />}
         {B(t.change) > 0n && <Kv k="باقی پول" v={formatAmount(t.change)} bold />}
+        {B(t.credit) > 0n && (
+          <>
+            <p className="mt-1 text-center text-[11px] font-black">مبلغ {formatAmount(t.credit)} تومان بدهی مشتری است</p>
+            <p className="mt-5 border-t border-dashed border-black pt-1 text-center text-[10px]">امضای مشتری</p>
+          </>
+        )}
         {d.club && (
           <>
             <Dash />
@@ -203,6 +210,106 @@ export function TicketPrint({ id }: { id: string }) {
         {d.terminal.footer && <p className="mt-1 whitespace-pre-line text-center text-[10px]">{d.terminal.footer}</p>}
         {!d.terminal.footer && d.store.footer && <p className="mt-1 whitespace-pre-line text-center text-[10px]">{d.store.footer}</p>}
         <p className="mt-1 text-center text-[10px]">برای تعویض یا مرجوعی همین رسید را همراه داشته باشید</p>
+      </div>
+    </div>
+  );
+}
+
+/** سبد صندوق برای پیش‌فاکتور — `PosRegister` می‌نویسد */
+export interface PreBill {
+  at: string;
+  terminal: { name: string; header: string | null; footer: string | null; paperMm: number };
+  store: { name: string | null; phone: string | null };
+  seller: string | null;
+  cashier: string;
+  party: string | null;
+  lines: Line[];
+  ret: Line[];
+  subtotal: string;
+  discounts: { label: string; amount: string }[];
+  retTotal: string;
+  net: string;
+  club: { credit: string; use: string; charge: string } | null;
+}
+
+export function PreBillPrint({ terminalId }: { terminalId: string }) {
+  // فقط در مرورگر (سرور localStorage ندارد) — بی ناهمخوانی hydration
+  const raw = useSyncExternalStore(
+    () => () => {},
+    () => {
+      try {
+        return localStorage.getItem(`pos:prebill:${terminalId}`);
+      } catch {
+        return null;
+      }
+    },
+    () => undefined,
+  );
+  const d = useMemo<PreBill | null>(() => {
+    try {
+      return raw ? (JSON.parse(raw) as PreBill) : null;
+    } catch {
+      return null;
+    }
+  }, [raw]);
+  useAutoPrint(!!d);
+  if (raw === undefined) return <p className="p-6 text-sm text-gray-500">…</p>;
+  if (!d) return <p className="p-6 text-sm text-gray-500">سبدی برای چاپ نیست؛ از صفحه‌ی صندوق «چاپ پیش‌فاکتور» را بزنید.</p>;
+  const mm = d.terminal.paperMm === 58 ? 58 : 80;
+  const net = B(d.net);
+  const due = d.club ? net - B(d.club.use) : net;
+  return (
+    <div className="min-h-screen bg-gray-100 text-black [color-scheme:light] print:bg-white" dir="rtl">
+      <style>{`@page { size: ${mm}mm auto; margin: 2mm; } @media print { body { background: #fff !important; } .sheet { box-shadow: none !important; margin: 0 !important; } }`}</style>
+      <div className="no-print flex gap-2 border-b border-gray-200 bg-white px-4 py-2.5 print:hidden">
+        <button onClick={() => window.print()} className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-bold text-white">
+          🖨️ چاپ
+        </button>
+      </div>
+      <div className="sheet mx-auto my-4 bg-white p-2 text-[11px] leading-5 shadow" style={{ width: `${mm - 4}mm` }}>
+        <div className="text-center">
+          {d.store.name && <p className="text-[15px] font-black">{d.store.name}</p>}
+          {d.terminal.header && <p className="whitespace-pre-line">{d.terminal.header}</p>}
+          {d.store.phone && <p>{faNum(d.store.phone)}</p>}
+          <p className="mt-1 border-y-2 border-black py-0.5 text-[13px] font-black">پیش‌فاکتور — پرداخت نشده</p>
+          <p>
+            {formatJalali(new Date(d.at))} · {timeFa(d.at)} · {d.terminal.name}
+          </p>
+          <p>
+            {d.seller ? `فروشنده: ${d.seller} · ` : ""}صندوقدار: {d.cashier}
+          </p>
+          {d.party && <p>مشتری: {d.party}</p>}
+        </div>
+        {d.lines.length > 0 && (
+          <>
+            <Dash />
+            <Lines lines={d.lines} />
+          </>
+        )}
+        {d.ret.length > 0 && (
+          <>
+            <Dash />
+            <p className="font-black">مرجوعی</p>
+            <Lines lines={d.ret} sign="−" />
+          </>
+        )}
+        <Dash />
+        {d.lines.length > 0 && <Kv k="جمع کالاها" v={formatAmount(d.subtotal)} />}
+        {d.discounts.map((x) => (
+          <Kv key={x.label} k={x.label} v={`−${formatAmount(x.amount)}`} />
+        ))}
+        {B(d.retTotal) > 0n && <Kv k="مرجوعی (تقریبی)" v={`−${formatAmount(d.retTotal)}`} />}
+        <Kv k={net < 0n ? "پس دادنی" : "جمع"} v={`${formatAmount(abs(net))} تومان`} bold />
+        {d.club && B(d.club.use) > 0n && (
+          <>
+            <Kv k="از اعتبار کارت اشتراک" v={`−${formatAmount(d.club.use)}`} />
+            <Kv k="قابل پرداخت" v={`${formatAmount(due)} تومان`} bold />
+          </>
+        )}
+        {d.club && B(d.club.charge) > 0n && <Kv k="شارژ کارت با این خرید" v={`+${formatAmount(d.club.charge)}`} />}
+        <Dash />
+        <p className="text-center text-[10px] font-bold">این برگه رسید پرداخت نیست؛ رسید بعد از پرداخت چاپ می‌شود.</p>
+        <p className="text-center text-[10px]">قیمت‌ها و تخفیف‌ها تا لحظه‌ی پرداخت معتبر است.</p>
       </div>
     </div>
   );

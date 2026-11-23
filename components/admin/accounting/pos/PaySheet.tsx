@@ -75,7 +75,8 @@ export default function PaySheet({
   clubCredit?: bigint | null;
   /** بخشی که با بن کارت اسکن‌شده پرداخت می‌شود (از `net` کم شده) */
   giftPaid?: bigint;
-  start: "cash" | "card" | "transfer";
+  /** `credit` = ثبت بدهکار: همه روی حساب مشتری */
+  start: "cash" | "card" | "transfer" | "credit";
   busy: boolean;
   error: string | null;
   onSubmit: (r: PayResult) => void;
@@ -85,7 +86,7 @@ export default function PaySheet({
   const due = abs(net);
   const clubMax = clubCredit && !refund ? (clubCredit < due ? clubCredit : due) : 0n;
   // اعتبار کارت اشتراک خودکار کم می‌شود؛ بقیه‌ی روش‌ها روی «باقی»
-  const [club, setClub] = useState(clubMax > 0n ? clubMax.toString() : "");
+  const [club, setClub] = useState(clubMax > 0n && start !== "credit" ? clubMax.toString() : "");
   const afterClub = due - (clubMax > 0n ? clubMax : 0n);
   const canTransfer = !refund && transfers.length > 0;
   const [card, setCard] = useState(start === "card" && hasCard ? afterClub.toString() : "");
@@ -97,8 +98,8 @@ export default function PaySheet({
   const [account, setAccount] = useState(transfers[0]?.id ?? null);
   const [ref, setRef] = useState("");
   const [tendered, setTendered] = useState("");
-  const [credit, setCredit] = useState(false);
-  const [cashManual, setCashManual] = useState("");
+  const [credit, setCredit] = useState(start === "credit" && canCredit && !refund);
+  const [cashManual, setCashManual] = useState(start === "credit" ? "0" : "");
   const cardB = B(card);
   const transferB = canTransfer ? B(transfer) : 0n;
   const clubB = refund ? 0n : B(club);
@@ -109,6 +110,15 @@ export default function PaySheet({
   const short = !refund && tenderedB > 0n && tenderedB < cash;
   const over = paidOther > due || clubB > clubMax;
   const left = credit ? due - paidOther - cash : 0n;
+  const allCredit = credit && left === due;
+  function setAllCredit() {
+    setCard("");
+    setTransfer("");
+    setClub("");
+    setTendered("");
+    setCashManual("0");
+    setCredit(true);
+  }
   const rest = (without: bigint) => (due - clubB - without > 0n ? due - clubB - without : 0n);
 
   const quick = useMemo(() => {
@@ -156,9 +166,9 @@ export default function PaySheet({
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-3" role="dialog" aria-modal="true">
       <div className="adm-fade-in absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={onClose} />
       <div className="adm-sheet-in relative w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-gray-900">
-        <div className={`px-6 pb-5 pt-5 text-white ${refund ? "bg-gradient-to-br from-rose-500 to-rose-700" : "bg-gradient-to-br from-emerald-500 to-emerald-700"}`}>
+        <div className={`px-6 pb-5 pt-5 text-white ${refund ? "bg-gradient-to-br from-rose-500 to-rose-700" : allCredit ? "bg-gradient-to-br from-orange-500 to-orange-700" : "bg-gradient-to-br from-emerald-500 to-emerald-700"}`}>
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold opacity-90">{refund ? "پس دادن به مشتری" : "مبلغ قابل پرداخت"}</p>
+            <p className="text-sm font-bold opacity-90">{refund ? "پس دادن به مشتری" : allCredit ? "ثبت بدهکار — همه روی حساب مشتری" : "مبلغ قابل پرداخت"}</p>
             <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15" aria-label="بستن">
               <X className="h-5 w-5" aria-hidden />
             </button>
@@ -319,11 +329,22 @@ export default function PaySheet({
               )}
 
               {canCredit && (
-                <label className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-300">
-                  <input type="checkbox" checked={credit} onChange={(e) => setCredit(e.target.checked)} className="h-4 w-4 accent-emerald-600" />
-                  {refund ? "بخشی پس داده نشود و روی حساب مشتری بماند" : "بخشی نسیه روی حساب مشتری"}
-                  {credit && <span className="mr-auto tabular-nums">{refund ? "روی حساب" : "نسیه"}: {formatAmount(left > 0n ? left : 0n)}</span>}
-                </label>
+                <div className="space-y-2">
+                  {!refund && (
+                    <button
+                      onClick={() => (allCredit ? (setCredit(false), setCashManual("")) : setAllCredit())}
+                      className={`flex w-full items-center justify-center gap-2 rounded-2xl border-2 py-2.5 text-sm font-black transition ${allCredit ? "border-orange-500 bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300" : "border-dashed border-orange-300 text-orange-700 dark:border-orange-500/30 dark:text-orange-300"}`}
+                    >
+                      {allCredit ? "✓ همه‌ی مبلغ بدهی مشتری می‌شود (برداشتن)" : "ثبت بدهکار — همه نسیه، پرداخت بعداً"}
+                    </button>
+                  )}
+                  <label className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-300">
+                    <input type="checkbox" checked={credit} onChange={(e) => setCredit(e.target.checked)} className="h-4 w-4 accent-emerald-600" />
+                    {refund ? "بخشی پس داده نشود و روی حساب مشتری بماند" : "بخشی نسیه روی حساب مشتری"}
+                    {credit && <span className="mr-auto tabular-nums">{refund ? "روی حساب" : "نسیه"}: {formatAmount(left > 0n ? left : 0n)}</span>}
+                  </label>
+                  {credit && !refund && left > 0n && <p className="text-[11px] font-bold text-orange-700 dark:text-orange-300">رسید با امضای مشتری چاپ می‌شود؛ پرداخت بعدی در «دریافت» حسابداری به نام همین مشتری ثبت شود.</p>}
+                </div>
               )}
             </>
           )}
@@ -333,10 +354,10 @@ export default function PaySheet({
           <button
             onClick={submit}
             disabled={busy || over || short || (credit && left < 0n)}
-            className={`flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-lg font-black text-white shadow-lg transition active:scale-[0.99] disabled:opacity-50 ${refund ? "bg-rose-600 shadow-rose-600/25" : "bg-emerald-600 shadow-emerald-600/25"}`}
+            className={`flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-lg font-black text-white shadow-lg transition active:scale-[0.99] disabled:opacity-50 ${refund ? "bg-rose-600 shadow-rose-600/25" : allCredit ? "bg-orange-600 shadow-orange-600/25" : "bg-emerald-600 shadow-emerald-600/25"}`}
           >
             <Printer className="h-5 w-5" aria-hidden />
-            {busy ? "در حال ثبت…" : due === 0n ? "ثبت تعویض" : refund ? "پس دادن و چاپ رسید" : "ثبت و چاپ رسید"}
+            {busy ? "در حال ثبت…" : due === 0n ? "ثبت تعویض" : refund ? "پس دادن و چاپ رسید" : allCredit ? "ثبت بدهکار و چاپ رسید" : "ثبت و چاپ رسید"}
             <Kbd>Enter</Kbd>
           </button>
         </div>

@@ -17,7 +17,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeftRight, ArrowRight, Banknote, ClipboardList, CreditCard, IdCard, Lock, Minus, PauseCircle, Percent, Plus, Printer, RotateCcw, ScanLine, ShoppingBag, Trash2, User, UserRound, X,
+  ArrowLeftRight, ArrowRight, Banknote, FileText, NotebookPen, ClipboardList, CreditCard, IdCard, Lock, Minus, PauseCircle, Percent, Plus, Printer, RotateCcw, ScanLine, ShoppingBag, Trash2, User, UserRound, X,
 } from "lucide-react";
 import { calcInvoice } from "@/lib/accounting/invoices/calc";
 import { parseAmountInput } from "@/lib/accounting/money";
@@ -37,6 +37,9 @@ interface Boot {
     id: string;
     name: string;
     roundTo: number;
+    receiptHeader?: string | null;
+    receiptFooter?: string | null;
+    paperMm?: number;
     isActive: boolean;
     warehouseName: string;
     cash: { id: string; name: string } | null;
@@ -47,6 +50,7 @@ interface Boot {
   shift: ShiftSummary | null;
   sellers: { id: string; code: number; name: string }[];
   cashBook: string;
+  store?: { name: string | null; phone: string | null };
   lastKeptFloat: string | null;
   cashier: string;
   serialRequired: boolean;
@@ -137,7 +141,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   const [gifts, setGifts] = useState<PosGift[]>([]);
   const [sel, setSel] = useState(0);
   const [modal, setModal] = useState<Modal>(null);
-  const [payStart, setPayStart] = useState<"cash" | "card" | "transfer">("cash");
+  const [payStart, setPayStart] = useState<"cash" | "card" | "transfer" | "credit">("cash");
   const [pick, setPick] = useState<ModelPick | null>(null);
   const [list, setList] = useState<PosItem[]>([]);
   const [returnCode, setReturnCode] = useState<string | undefined>();
@@ -510,7 +514,53 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     }
   }
 
-  function openPay(start: "cash" | "card" | "transfer") {
+  /** پیش‌فاکتور: سبد فعلی بی ثبت چاپ می‌شود تا مشتری پیش از پرداخت ببیند */
+  function printPreBill() {
+    if (!boot) return;
+    if (!lines.length && !ret?.lines.length) return flash("سبد خالی است", "err");
+    const mine = member && member.partyId === ticketPartyId && member.card && !hasRet ? member : null;
+    const payable = net - giftTotal;
+    const use = mine && payable > 0n ? (B(mine.credit) < payable ? B(mine.credit) : payable) : 0n;
+    const discounts = [
+      { label: "تخفیف ردیف‌ها", amount: sale.lineDisc },
+      { label: "تخفیف فاکتور", amount: sale.invDisc },
+      { label: coupon ? `کد ${coupon.code}` : "کد تخفیف", amount: sale.coupon },
+      { label: "تخفیف کارت اشتراک", amount: sale.member },
+      { label: "گرد کردن", amount: sale.rounding },
+      { label: "بن کارت", amount: giftTotal },
+    ]
+      .filter((x) => x.amount > 0n)
+      .map((x) => ({ label: x.label, amount: x.amount.toString() }));
+    local.set(`pos:prebill:${terminalId}`, {
+      at: new Date().toISOString(),
+      terminal: { name: boot.terminal.name, header: boot.terminal.receiptHeader ?? null, footer: boot.terminal.receiptFooter ?? null, paperMm: boot.terminal.paperMm ?? 80 },
+      store: boot.store ?? { name: null, phone: null },
+      seller: seller?.name ?? null,
+      cashier: boot.cashier,
+      party: ret?.src ? (ret.src.walkIn ? null : ret.src.partyName) : party?.name ?? null,
+      lines: lines.map((l) => ({ title: l.title, qty: l.qty, unitPrice: l.unitPrice, discount: l.discount || "0", lineTotal: (B(l.unitPrice) * BigInt(l.qty) - B(l.discount)).toString(), serials: l.serials })),
+      ret: (ret?.lines ?? []).map((l) => ({ title: l.title, qty: l.qty, unitPrice: l.each, discount: "0", lineTotal: (B(l.each) * BigInt(l.qty)).toString() })),
+      subtotal: sale.subtotal.toString(),
+      discounts,
+      retTotal: retTotal.toString(),
+      net: payable.toString(),
+      club: mine ? { credit: mine.credit, use: use.toString(), charge: ((saleTotal * BigInt(mine.tier?.chargeBp ?? 0)) / 10_000n).toString() } : null,
+    });
+    window.open(`/admin/accounting/pos/prebill/${terminalId}/print?auto=1`, "_blank");
+  }
+
+  /** ثبت بدهکار: بی مشتری اول پنجره‌ی مشتری، بعد پرداخت با «همه نسیه» */
+  const creditAfterParty = useRef(false);
+  function openCredit() {
+    if (ret?.src?.walkIn || (!ret?.src && !party)) {
+      creditAfterParty.current = true;
+      flash("برای ثبت بدهکار اول مشتری را انتخاب یا ثبت کنید");
+      return setModal("party");
+    }
+    openPay("credit");
+  }
+
+  function openPay(start: "cash" | "card" | "transfer" | "credit") {
     if (!lines.length && !ret?.lines.length) return flash("سبد خالی است", "err");
     if (!sale.valid) return flash("تخفیف یا قیمت یک ردیف درست نیست", "err");
     if (lines.some((l) => B(l.unitPrice) <= 0n)) return flash("یک کالا قیمت ندارد", "err");
@@ -531,8 +581,8 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   // ── کیبورد ──
   const stateRef = useRef({ modal, lines, sel, q, blind });
   stateRef.current = { modal, lines, sel, q, blind };
-  const actions = useRef({ openPay, hold, setQty, clearCart });
-  actions.current = { openPay, hold, setQty, clearCart };
+  const actions = useRef({ openPay, openCredit, hold, setQty, clearCart });
+  actions.current = { openPay, openCredit, hold, setQty, clearCart };
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       const s = stateRef.current;
@@ -1008,6 +1058,23 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
             )}
           </div>
 
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={printPreBill}
+              disabled={!lines.length && !hasRet}
+              className="flex items-center justify-center gap-1.5 rounded-2xl border-2 border-gray-200 py-2.5 text-xs font-black text-gray-700 transition hover:bg-gray-50 disabled:opacity-40 dark:border-white/10 dark:text-gray-200 dark:hover:bg-white/5"
+            >
+              <FileText className="h-4 w-4" aria-hidden /> چاپ پیش‌فاکتور
+            </button>
+            <button
+              onClick={openCredit}
+              disabled={(!lines.length && !hasRet) || net <= 0n}
+              className="flex items-center justify-center gap-1.5 rounded-2xl border-2 border-orange-300 py-2.5 text-xs font-black text-orange-700 transition hover:bg-orange-50 disabled:opacity-40 dark:border-orange-500/30 dark:text-orange-300 dark:hover:bg-orange-500/10"
+            >
+              <NotebookPen className="h-4 w-4" aria-hidden /> ثبت بدهکار (نسیه)
+            </button>
+          </div>
+
           <label className="flex items-center gap-2 px-1 text-xs font-bold text-gray-500">
             <input
               type="checkbox"
@@ -1056,10 +1123,18 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           }}
           onMember={(m) => setMember(m)}
           onIssueCard={() => {
+            creditAfterParty.current = false;
             setCardDraft("");
             setModal("card");
           }}
-          onClose={() => setModal(null)}
+          onClose={() => {
+            setModal(null);
+            if (creditAfterParty.current) {
+              creditAfterParty.current = false;
+              // party با setParty همین لحظه تازه شده؛ یک دور بعد
+              setTimeout(() => actions.current.openCredit(), 0);
+            }
+          }}
         />
       )}
       {modal === "swipe" && (

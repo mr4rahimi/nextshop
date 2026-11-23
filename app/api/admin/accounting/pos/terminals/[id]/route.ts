@@ -49,6 +49,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         sellers,
         vat: { enabled: !!settings?.vatEnabled, rateBp: settings?.vatRateBp ?? 0 },
         cashBook,
+        // سربرگ پیش‌فاکتور چاپی (همان منبع رسید: ticketView)
+        store: await (async () => {
+          const [st, acc] = await Promise.all([
+            prisma.storeSettings.findUnique({ where: { id: "singleton" }, select: { storeName: true, sitePhone: true } }),
+            prisma.accSettings.findUnique({ where: { id: "singleton" }, select: { sellerName: true, sellerPhone: true } }),
+          ]);
+          return { name: st?.storeName ?? acc?.sellerName ?? null, phone: acc?.sellerPhone ?? st?.sitePhone ?? null };
+        })(),
         lastKeptFloat: lastShift?.keptFloat ?? null,
         cashier: g.access.name,
         serialRequired: !!settings?.serialRequired,
