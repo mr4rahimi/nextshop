@@ -7,7 +7,7 @@
  * تعداد هر اسکن («۱۲*کد» فقط همان اسکن)؛ کد قبلی چندرنگ/سایز پنجره‌ی رنگ × سایز باز می‌کند.
  * بی‌اینترنت: اسکن با شناسه‌ی `ref` در localStorage صف می‌شود و دوباره فرستادنش دو بار
  * نمی‌شمارد. بارکدخوان لپ‌تاپ: تایپ بیرون از کادرها به کادر اسکن برمی‌گردد. دوربین گوشی
- * با BarcodeDetector مرورگر (کروم اندروید).
+ * با BarcodeDetector مرورگر یا خواننده‌ی داخلی Code 128 (lib/barcode/code128-decode.ts).
  * «بازبینی»: فیلتر اختلاف/شمرده‌نشده/بخش، اصلاح عدد، خروجی CSV.
  * «ورود از فایل»: چسباندن ستون کد و تعداد از اکسل.
  * شمارنده‌ی کور (فقط ACC_STOCK_COUNT) عدد دفتری و اختلاف را نمی‌بیند.
@@ -18,6 +18,7 @@ import { Camera, ClipboardList, Download, ListChecks, RotateCcw, ScanBarcode, Un
 import { formatJalali } from "@/lib/club/jalali";
 import { faNum, formatAmount, toLatinDigits } from "@/lib/accounting/money";
 import ModelPicker from "../pos/ModelPicker";
+import { decodeImage } from "@/lib/barcode/code128-decode";
 import { beep, local, type ModelPick, type PosItem } from "../pos/shared";
 import { api, Badge, btn, Card, Chips, ErrorText, Field, inputCls, PageHeader, Segmented, Sheet, Stat } from "../ui";
 import Attachments from "../Attachments";
@@ -358,7 +359,7 @@ function CountTab({
     local.set(`count:${id}:queue`, queue);
   }, [id, queue]);
   useEffect(() => local.set(`count:${id}:attention`, attention), [id, attention]);
-  useEffect(() => setCanCamera(typeof window !== "undefined" && "BarcodeDetector" in window && !!navigator.mediaDevices?.getUserMedia), []);
+  useEffect(() => setCanCamera(typeof window !== "undefined" && !!navigator.mediaDevices?.getUserMedia), []);
 
   const remember = (productId: string, title: string, n: number, z: string) =>
     setMine((m) => [{ id: `local-${Date.now()}-${Math.random()}`, productId, title, qty: n, zone: z || null, createdAt: new Date().toISOString() }, ...m].slice(0, 25));
@@ -651,16 +652,22 @@ function CountTab({
   );
 }
 
-// ── اسکن با دوربین گوشی (BarcodeDetector مرورگر — کروم اندروید) ─────────────
+// ── اسکن با دوربین گوشی ─────────────────────────────────────────────────────
+// BarcodeDetector مرورگر اگر code_128 را بشناسد؛ وگرنه (و هر فریمی که او چیزی نیافت) خواننده‌ی
+// داخلی lib/barcode/code128-decode.ts — بسیاری از گوشی‌ها BarcodeDetector دارند ولی بی code_128.
 
 interface Detector {
   detect(src: HTMLVideoElement): Promise<{ rawValue: string }[]>;
 }
+type DetectorCtor = { new (o: { formats: string[] }): Detector; getSupportedFormats?: () => Promise<string[]> };
 
 function CameraScanner({ onCode, onClose }: { onCode: (code: string) => void; onClose: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [last, setLast] = useState<string | null>(null);
+  const [hit, setHit] = useState(false);
+  const [engine, setEngine] = useState("");
+  const [torch, setTorch] = useState<{ on: boolean; track: MediaStreamTrack } | null>(null);
   const seen = useRef<{ code: string; at: number }>({ code: "", at: 0 });
   const onCodeRef = useRef(onCode);
   useEffect(() => {
@@ -671,30 +678,70 @@ function CameraScanner({ onCode, onClose }: { onCode: (code: string) => void; on
     let stream: MediaStream | null = null;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let stopped = false;
+    let pending = ""; // خواننده‌ی داخلی: یک کد باید دو فریم پشت‌سرهم یکسان خوانده شود
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     (async () => {
       try {
-        const Ctor = (window as unknown as { BarcodeDetector: new (o: { formats: string[] }) => Detector }).BarcodeDetector;
-        const det = new Ctor({ formats: ["code_128", "ean_13", "ean_8", "code_39", "upc_a", "itf", "qr_code"] });
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        let det: Detector | null = null;
+        const Ctor = (window as unknown as { BarcodeDetector?: DetectorCtor }).BarcodeDetector;
+        if (Ctor) {
+          try {
+            const have = (await Ctor.getSupportedFormats?.()) ?? [];
+            const want = ["code_128", "ean_13", "ean_8", "code_39", "upc_a", "itf", "qr_code"].filter((f) => have.includes(f));
+            if (want.includes("code_128")) det = new Ctor({ formats: want });
+          } catch {
+            det = null;
+          }
+        }
+        setEngine(det ? "مرورگر" : "داخلی");
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
         if (stopped || !video.current) return;
+        const track = stream.getVideoTracks()[0];
+        try {
+          const caps = (track.getCapabilities?.() ?? {}) as { focusMode?: string[]; torch?: boolean };
+          if (caps.focusMode?.includes("continuous"))
+            await track.applyConstraints({ advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet] });
+          if (caps.torch) setTorch({ on: false, track });
+        } catch {
+          /* فوکوس خودکار در دسترس نیست */
+        }
         video.current.srcObject = stream;
         await video.current.play();
+        const accept = (v: string) => {
+          const now = Date.now();
+          // یک برچسب جلوی دوربین بماند، فقط یک بار شمرده شود (۲ ثانیه)
+          if (v !== seen.current.code || now - seen.current.at > 2000) {
+            onCodeRef.current(v);
+            setLast(v);
+            setHit(true);
+            setTimeout(() => setHit(false), 350);
+          }
+          seen.current = { code: v, at: now };
+        };
         const tick = async () => {
-          if (stopped || !video.current) return;
+          const el = video.current;
+          if (stopped || !el) return;
           try {
-            const found = await det.detect(video.current);
-            const v = found[0]?.rawValue?.trim();
-            const now = Date.now();
-            // یک برچسب جلوی دوربین بماند، فقط یک بار شمرده شود (۲ ثانیه)
-            if (v && (v !== seen.current.code || now - seen.current.at > 2000)) {
-              onCodeRef.current(v);
-              setLast(v);
+            let v: string | undefined;
+            if (det) v = (await det.detect(el))[0]?.rawValue?.trim();
+            if (v) accept(v);
+            else if (ctx && el.videoWidth) {
+              canvas.width = el.videoWidth;
+              canvas.height = el.videoHeight;
+              ctx.drawImage(el, 0, 0);
+              const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const t = decodeImage(img.data, img.width, img.height);
+              if (t && t === pending) accept(t);
+              pending = t ?? "";
             }
-            if (v) seen.current = { code: v, at: now };
           } catch {
             /* فریم خراب */
           }
-          timer = setTimeout(tick, 180);
+          timer = setTimeout(tick, 120);
         };
         tick();
       } catch (e) {
@@ -708,12 +755,33 @@ function CameraScanner({ onCode, onClose }: { onCode: (code: string) => void; on
     };
   }, []);
 
+  const toggleTorch = async () => {
+    if (!torch) return;
+    try {
+      await torch.track.applyConstraints({ advanced: [{ torch: !torch.on } as MediaTrackConstraintSet] });
+      setTorch({ ...torch, on: !torch.on });
+    } catch {
+      setTorch(null);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       <video ref={video} playsInline muted className="flex-1 min-h-0 w-full object-cover" />
-      <div className="pointer-events-none absolute inset-x-8 top-1/3 h-1/4 rounded-2xl border-4 border-emerald-400/80" aria-hidden />
-      <div className="p-3 flex items-center gap-3 bg-black/80 text-white">
-        <span className="flex-1 min-w-0 text-xs font-bold truncate">{error ?? (last ? `آخرین: ${last}` : "برچسب را جلوی دوربین بگیرید")}</span>
+      <div
+        className={`pointer-events-none absolute inset-x-6 top-1/3 h-1/5 rounded-2xl border-4 transition-colors ${hit ? "border-emerald-300 bg-emerald-400/30" : "border-emerald-400/80"}`}
+        aria-hidden
+      />
+      <div className="p-3 flex items-center gap-2 bg-black/80 text-white">
+        <span className="flex-1 min-w-0">
+          <span className="block text-xs font-bold truncate">{error ?? (last ? `آخرین: ${last}` : "برچسب را افقی، داخل کادر، با ۱۰ تا ۲۰ سانت فاصله بگیرید")}</span>
+          {engine && !error && <span className="block text-[10px] text-white/50">خواننده: {engine}</span>}
+        </span>
+        {torch && (
+          <button onClick={toggleTorch} className={btn.soft}>
+            {torch.on ? "خاموش چراغ" : "چراغ"}
+          </button>
+        )}
         <button onClick={onClose} className={btn.primary}>
           بستن
         </button>
