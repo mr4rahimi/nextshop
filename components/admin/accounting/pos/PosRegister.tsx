@@ -37,8 +37,12 @@ interface Boot {
     id: string;
     name: string;
     roundTo: number;
+    receiptTitle?: string | null;
     receiptHeader?: string | null;
     receiptFooter?: string | null;
+    receiptQr?: string | null;
+    receiptQrCaption?: string | null;
+    receiptShowStaff?: boolean;
     paperMm?: number;
     isActive: boolean;
     warehouseName: string;
@@ -533,7 +537,16 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
       .map((x) => ({ label: x.label, amount: x.amount.toString() }));
     local.set(`pos:prebill:${terminalId}`, {
       at: new Date().toISOString(),
-      terminal: { name: boot.terminal.name, header: boot.terminal.receiptHeader ?? null, footer: boot.terminal.receiptFooter ?? null, paperMm: boot.terminal.paperMm ?? 80 },
+      terminal: {
+        name: boot.terminal.name,
+        title: boot.terminal.receiptTitle ?? null,
+        header: boot.terminal.receiptHeader ?? null,
+        footer: boot.terminal.receiptFooter ?? null,
+        qr: boot.terminal.receiptQr ?? null,
+        qrCaption: boot.terminal.receiptQrCaption ?? null,
+        showStaff: !!boot.terminal.receiptShowStaff,
+        paperMm: boot.terminal.paperMm ?? 80,
+      },
       store: boot.store ?? { name: null, phone: null },
       seller: seller?.name ?? null,
       cashier: boot.cashier,

@@ -517,7 +517,16 @@ export async function ticketView(id: string, db: Db = prisma) {
   });
   return {
     ticket: t,
-    terminal: { name: t.terminal.name, header: t.terminal.receiptHeader, footer: t.terminal.receiptFooter, paperMm: t.terminal.paperMm },
+    terminal: {
+      name: t.terminal.name,
+      title: t.terminal.receiptTitle,
+      header: t.terminal.receiptHeader,
+      footer: t.terminal.receiptFooter,
+      qr: t.terminal.receiptQr,
+      qrCaption: t.terminal.receiptQrCaption,
+      showStaff: t.terminal.receiptShowStaff,
+      paperMm: t.terminal.paperMm,
+    },
     store: {
       name: store?.storeName ?? acc?.sellerName ?? null,
       phone: acc?.sellerPhone ?? store?.sitePhone ?? null,

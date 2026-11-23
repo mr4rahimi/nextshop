@@ -31,7 +31,11 @@ export interface TerminalInput {
   /** حساب کارت به کارت تازه: نام، بانک، شماره کارت ← خزانه‌ی `BANK` */
   newTransferAccounts?: unknown;
   roundTo?: unknown;
+  receiptTitle?: unknown;
   receiptHeader?: unknown;
+  receiptQr?: unknown;
+  receiptQrCaption?: unknown;
+  receiptShowStaff?: unknown;
   receiptFooter?: unknown;
   paperMm?: unknown;
   isActive?: unknown;
@@ -108,7 +112,11 @@ export async function saveTerminal(tx: Tx, id: string | null, input: TerminalInp
     transferTreasuryIds,
     roundTo,
     paperMm,
+    receiptTitle: input.receiptTitle !== undefined ? str(input.receiptTitle)?.slice(0, 80) ?? null : current?.receiptTitle ?? null,
     receiptHeader: input.receiptHeader !== undefined ? str(input.receiptHeader) : current?.receiptHeader ?? null,
+    receiptQr: input.receiptQr !== undefined ? str(input.receiptQr)?.slice(0, 500) ?? null : current?.receiptQr ?? null,
+    receiptQrCaption: input.receiptQrCaption !== undefined ? str(input.receiptQrCaption)?.slice(0, 120) ?? null : current?.receiptQrCaption ?? null,
+    receiptShowStaff: typeof input.receiptShowStaff === "boolean" ? input.receiptShowStaff : current?.receiptShowStaff ?? false,
     receiptFooter: input.receiptFooter !== undefined ? str(input.receiptFooter) : current?.receiptFooter ?? null,
     isActive: typeof input.isActive === "boolean" ? input.isActive : current?.isActive ?? true,
   };

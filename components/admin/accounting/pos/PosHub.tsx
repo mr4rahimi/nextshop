@@ -26,8 +26,12 @@ interface Terminal {
   moreCardTreasuryIds?: string[];
   transferTreasuryIds?: string[];
   roundTo: number;
+  receiptTitle?: string | null;
   receiptHeader: string | null;
   receiptFooter: string | null;
+  receiptQr?: string | null;
+  receiptQrCaption?: string | null;
+  receiptShowStaff?: boolean;
   paperMm: number;
   isActive: boolean;
   openShift: { id: string; number: number; openedAt: string; openedByName: string } | null;
@@ -203,8 +207,12 @@ function TerminalForm({ d, t, onClose, onSaved }: { d: HubData; t: Terminal | nu
     cashTreasuryId: t?.cashTreasuryId ?? "new",
     roundTo: String(t?.roundTo ?? 0),
     paperMm: String(t?.paperMm ?? 80),
+    receiptTitle: t?.receiptTitle ?? "",
     receiptHeader: t?.receiptHeader ?? "",
     receiptFooter: t?.receiptFooter ?? "",
+    receiptQr: t?.receiptQr ?? "",
+    receiptQrCaption: t?.receiptQrCaption ?? "",
+    receiptShowStaff: t?.receiptShowStaff ?? false,
     isActive: t?.isActive ?? true,
   });
   const [busy, setBusy] = useState(false);
@@ -352,12 +360,28 @@ function TerminalForm({ d, t, onClose, onSaved }: { d: HubData; t: Terminal | nu
             </select>
           </Field>
         </div>
+        <p className="pt-2 text-xs font-black text-gray-500">رسید چاپی</p>
+        <Field label="عنوان بالای رسید" hint="نامی که درشت بالای رسید و پیش‌فاکتور می‌آید. خالی = نام فروشگاه در تنظیمات سایت.">
+          <input value={f.receiptTitle} onChange={set("receiptTitle")} className={inputCls} placeholder="مثلاً فروشگاه الیاس" />
+        </Field>
         <Field label="متن بالای رسید (اختیاری)">
           <textarea value={f.receiptHeader} onChange={set("receiptHeader")} rows={2} className={inputCls} placeholder="نشانی شعبه، اینستاگرام…" />
         </Field>
-        <Field label="متن پایین رسید (اختیاری)">
-          <textarea value={f.receiptFooter} onChange={set("receiptFooter")} rows={2} className={inputCls} placeholder="مثلاً: تعویض تا ۷ روز با رسید و برچسب" />
+        <Field label="متن پایین رسید (اختیاری)" hint="هر خط جدا چاپ می‌شود؛ مثلاً نشانی سایت، شرط تعویض، ساعت کاری.">
+          <textarea value={f.receiptFooter} onChange={set("receiptFooter")} rows={3} className={inputCls} placeholder={"www.example.ir\nتعویض تا ۷ روز با رسید و برچسب"} />
         </Field>
+        <div className="grid grid-cols-[1fr_10rem] gap-3">
+          <Field label="QR پایین رسید (اختیاری)" hint="نشانی سایت، صفحه‌ی اینستاگرام، لینک نظرسنجی یا هر متنی؛ مشتری با دوربین گوشی باز می‌کند.">
+            <input value={f.receiptQr} onChange={set("receiptQr")} className={inputCls} dir="ltr" placeholder="https://…" />
+          </Field>
+          <Field label="نوشته‌ی زیر QR">
+            <input value={f.receiptQrCaption} onChange={set("receiptQrCaption")} className={inputCls} placeholder="ما را دنبال کنید" />
+          </Field>
+        </div>
+        <label className="flex items-center gap-2 text-sm font-bold">
+          <input type="checkbox" checked={f.receiptShowStaff} onChange={(e) => setF((x) => ({ ...x, receiptShowStaff: e.target.checked }))} className="h-4 w-4" />
+          نام فروشنده و صندوقدار روی رسید چاپ شود
+        </label>
         {t && (
           <label className="flex items-center gap-2 text-sm font-bold">
             <input type="checkbox" checked={f.isActive} onChange={(e) => setF((x) => ({ ...x, isActive: e.target.checked }))} className="h-4 w-4" /> فعال

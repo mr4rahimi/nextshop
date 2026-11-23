@@ -5395,8 +5395,15 @@ model AccPosTerminal {
   transferTreasuryIds String[] @default([])
   /// گرد کردن جمع به پایین (تومان، مثلاً ۱۰۰۰) — اختلاف تخفیف می‌شود
   roundTo        Int      @default(0)
+  /// عنوان بالای رسید؛ خالی = نام فروشگاه (تنظیمات سایت)
+  receiptTitle   String?
   receiptHeader  String?
   receiptFooter  String?
+  /// متن/نشانی QR پایین رسید (مثلاً نشانی سایت یا اینستاگرام) و نوشته‌ی زیرش
+  receiptQr      String?
+  receiptQrCaption String?
+  /// نام فروشنده و صندوقدار روی رسید چاپی
+  receiptShowStaff Boolean @default(false)
   /// عرض کاغذ رسید: 80 یا 58 میلی‌متر
   paperMm        Int      @default(80)
   isActive       Boolean  @default(true)

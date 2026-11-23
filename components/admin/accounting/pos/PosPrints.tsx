@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatJalali } from "@/lib/club/jalali";
 import { code128Bars } from "@/lib/barcode/code128";
+import QRCode from "qrcode";
 import { api } from "../ui";
 import { ShiftReport } from "./ShiftPanels";
 import { B, TICKET_KIND, abs, faNum, formatAmount, timeFa, type ShiftSummary } from "./shared";
@@ -40,7 +41,7 @@ interface TicketData {
     voidedByName?: string | null;
   };
   pay?: { reader: string | null; transferTo: string | null };
-  terminal: { name: string; header: string | null; footer: string | null; paperMm: number };
+  terminal: ReceiptTerminal;
   store: { name: string | null; phone: string | null; address: string | null; footer: string | null };
   sale: { number: number | null; subtotal: string; discount: string; vat: string; total: string; lines: Line[] } | null;
   ret: { number: number | null; total: string; lines: Line[] } | null;
@@ -88,6 +89,43 @@ function Bar({ value }: { value: string }) {
         <rect key={i} x={b.x} y={0} width={b.w} height={40} fill="#000" />
       ))}
     </svg>
+  );
+}
+
+/** تنظیمات رسید هر صندوق (فرم «ویرایش صندوق») */
+export interface ReceiptTerminal {
+  name: string;
+  /** عنوان بالای رسید؛ خالی = نام فروشگاه */
+  title?: string | null;
+  header: string | null;
+  footer: string | null;
+  qr?: string | null;
+  qrCaption?: string | null;
+  showStaff?: boolean;
+  paperMm: number;
+}
+
+/** QR پایین رسید — بی شبکه، از کتابخانه‌ی qrcode */
+function Qr({ value, caption }: { value: string; caption?: string | null }) {
+  let size = 0;
+  let cells: boolean[] = [];
+  try {
+    const q = QRCode.create(value, { errorCorrectionLevel: "M" });
+    size = q.modules.size;
+    cells = Array.from(q.modules.data as unknown as ArrayLike<number>, (v) => !!v);
+  } catch {
+    return null;
+  }
+  const pad = 2;
+  const n = size + pad * 2;
+  return (
+    <div className="mt-1.5 text-center">
+      <svg viewBox={`0 0 ${n} ${n}`} style={{ width: "26mm", height: "26mm", display: "block", margin: "0 auto" }} shapeRendering="crispEdges" aria-label={value}>
+        <rect width={n} height={n} fill="#fff" />
+        {cells.map((on, i) => (on ? <rect key={i} x={(i % size) + pad} y={Math.floor(i / size) + pad} width={1} height={1} fill="#000" /> : null))}
+      </svg>
+      {caption && <p className="text-[10px] font-bold">{caption}</p>}
+    </div>
   );
 }
 
@@ -148,7 +186,7 @@ export function TicketPrint({ id }: { id: string }) {
       </div>
       <div className="sheet mx-auto my-4 bg-white p-2 text-[11px] leading-5 shadow" style={{ width: `${mm - 4}mm` }}>
         <div className="text-center">
-          <p className="text-[15px] font-black">{d.store.name}</p>
+          <p className="text-[15px] font-black">{d.terminal.title || d.store.name}</p>
           {d.terminal.header && <p className="whitespace-pre-line">{d.terminal.header}</p>}
           {d.store.phone && <p>{faNum(d.store.phone)}</p>}
           <p className="mt-1 text-[12px] font-black">
@@ -157,9 +195,11 @@ export function TicketPrint({ id }: { id: string }) {
           <p>
             {formatJalali(new Date(t.createdAt))} · {timeFa(t.createdAt)} · {d.terminal.name}
           </p>
-          <p>
-            {t.sellerName ? `فروشنده: ${t.sellerName} · ` : ""}صندوقدار: {t.cashierName}
-          </p>
+          {d.terminal.showStaff && (
+            <p>
+              {t.sellerName ? `فروشنده: ${t.sellerName} · ` : ""}صندوقدار: {t.cashierName}
+            </p>
+          )}
           {t.partyName !== "مشتری حضوری" && <p>مشتری: {t.partyName}</p>}
           {t.voidedAt && (
             <p className="mt-1 border-2 border-black py-0.5 text-[13px] font-black">
@@ -220,6 +260,7 @@ export function TicketPrint({ id }: { id: string }) {
         <p className="text-center text-[9px] tracking-widest">{d.barcode}</p>
         {d.terminal.footer && <p className="mt-1 whitespace-pre-line text-center text-[10px]">{d.terminal.footer}</p>}
         {!d.terminal.footer && d.store.footer && <p className="mt-1 whitespace-pre-line text-center text-[10px]">{d.store.footer}</p>}
+        {d.terminal.qr && <Qr value={d.terminal.qr} caption={d.terminal.qrCaption} />}
         <p className="mt-1 text-center text-[10px]">برای تعویض یا مرجوعی همین رسید را همراه داشته باشید</p>
       </div>
     </div>
@@ -229,7 +270,7 @@ export function TicketPrint({ id }: { id: string }) {
 /** سبد صندوق برای پیش‌فاکتور — `PosRegister` می‌نویسد */
 export interface PreBill {
   at: string;
-  terminal: { name: string; header: string | null; footer: string | null; paperMm: number };
+  terminal: ReceiptTerminal;
   store: { name: string | null; phone: string | null };
   seller: string | null;
   cashier: string;
@@ -279,16 +320,18 @@ export function PreBillPrint({ terminalId }: { terminalId: string }) {
       </div>
       <div className="sheet mx-auto my-4 bg-white p-2 text-[11px] leading-5 shadow" style={{ width: `${mm - 4}mm` }}>
         <div className="text-center">
-          {d.store.name && <p className="text-[15px] font-black">{d.store.name}</p>}
+          {(d.terminal.title || d.store.name) && <p className="text-[15px] font-black">{d.terminal.title || d.store.name}</p>}
           {d.terminal.header && <p className="whitespace-pre-line">{d.terminal.header}</p>}
           {d.store.phone && <p>{faNum(d.store.phone)}</p>}
           <p className="mt-1 border-y-2 border-black py-0.5 text-[13px] font-black">پیش‌فاکتور — پرداخت نشده</p>
           <p>
             {formatJalali(new Date(d.at))} · {timeFa(d.at)} · {d.terminal.name}
           </p>
-          <p>
-            {d.seller ? `فروشنده: ${d.seller} · ` : ""}صندوقدار: {d.cashier}
-          </p>
+          {d.terminal.showStaff && (
+            <p>
+              {d.seller ? `فروشنده: ${d.seller} · ` : ""}صندوقدار: {d.cashier}
+            </p>
+          )}
           {d.party && <p>مشتری: {d.party}</p>}
         </div>
         {d.lines.length > 0 && (
@@ -321,6 +364,8 @@ export function PreBillPrint({ terminalId }: { terminalId: string }) {
         <Dash />
         <p className="text-center text-[10px] font-bold">این برگه رسید پرداخت نیست؛ رسید بعد از پرداخت چاپ می‌شود.</p>
         <p className="text-center text-[10px]">قیمت‌ها و تخفیف‌ها تا لحظه‌ی پرداخت معتبر است.</p>
+        {d.terminal.footer && <p className="mt-1 whitespace-pre-line text-center text-[10px]">{d.terminal.footer}</p>}
+        {d.terminal.qr && <Qr value={d.terminal.qr} caption={d.terminal.qrCaption} />}
       </div>
     </div>
   );
