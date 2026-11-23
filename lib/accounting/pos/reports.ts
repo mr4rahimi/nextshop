@@ -35,6 +35,7 @@ export async function posReport(opts: { from: Date; to: Date; terminalId?: strin
     db.accPosTicket.findMany({
       where: {
         createdAt: { gte: start, lt: end },
+        voidedAt: null,
         ...(opts.terminalId ? { terminalId: opts.terminalId } : {}),
         ...(opts.sellerId ? { sellerId: opts.sellerId } : {}),
       },

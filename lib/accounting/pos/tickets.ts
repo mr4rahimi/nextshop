@@ -241,7 +241,7 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   let restore = 0n;
   let reversePts = 0;
   if (orig?.clubProfileId && R > 0n && (orig.clubSpent > 0n || orig.clubEarned > 0)) {
-    const prior = await tx.accPosTicket.aggregate({ where: { refTicketId: orig.id }, _sum: { returnTotal: true, clubRestored: true, clubReversed: true } });
+    const prior = await tx.accPosTicket.aggregate({ where: { refTicketId: orig.id, voidedAt: null }, _sum: { returnTotal: true, clubRestored: true, clubReversed: true } });
     const cum = (prior._sum.returnTotal ?? 0n) + R;
     const r = proportional(orig.clubSpent, cum, orig.saleTotal) - (prior._sum.clubRestored ?? 0n);
     restore = r > R ? R : r > 0n ? r : 0n;
@@ -254,7 +254,7 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   // ── بن کارت: سهم پرداخت‌شده با بن به همان بن‌ها برمی‌گردد (نه نقد) — مثل کارت اشتراک، تجمعی ──
   let giftBack = 0n;
   if (orig && orig.giftSpent > 0n && R > 0n) {
-    const prior = await tx.accPosTicket.aggregate({ where: { refTicketId: orig.id }, _sum: { returnTotal: true, giftRestored: true } });
+    const prior = await tx.accPosTicket.aggregate({ where: { refTicketId: orig.id, voidedAt: null }, _sum: { returnTotal: true, giftRestored: true } });
     const cum = (prior._sum.returnTotal ?? 0n) + R;
     const g = proportional(orig.giftSpent, cum, orig.saleTotal) - (prior._sum.giftRestored ?? 0n);
     const room = R - restore;

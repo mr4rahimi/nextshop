@@ -35,6 +35,9 @@ interface TicketData {
     giftRestored?: string;
     transfer?: string;
     transferRef?: string | null;
+    voidedAt?: string | null;
+    voidReason?: string | null;
+    voidedByName?: string | null;
   };
   pay?: { reader: string | null; transferTo: string | null };
   terminal: { name: string; header: string | null; footer: string | null; paperMm: number };
@@ -158,6 +161,14 @@ export function TicketPrint({ id }: { id: string }) {
             {t.sellerName ? `فروشنده: ${t.sellerName} · ` : ""}صندوقدار: {t.cashierName}
           </p>
           {t.partyName !== "مشتری حضوری" && <p>مشتری: {t.partyName}</p>}
+          {t.voidedAt && (
+            <p className="mt-1 border-2 border-black py-0.5 text-[13px] font-black">
+              باطل شده — {formatJalali(new Date(t.voidedAt))}
+              <span className="block text-[10px] font-bold">
+                {t.voidReason} ({t.voidedByName})
+              </span>
+            </p>
+          )}
         </div>
         {d.sale && (
           <>

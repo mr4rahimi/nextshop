@@ -81,7 +81,7 @@ export interface ShiftSummary {
     note: string | null;
     terminal: { id: string; name: string; cashTreasuryId: string; cardTreasuryId: string | null };
   };
-  counts: { sale: number; ret: number; exchange: number; tickets: number };
+  counts: { sale: number; ret: number; exchange: number; tickets: number; voided?: number };
   saleTotal: string;
   returnTotal: string;
   net: string;

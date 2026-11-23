@@ -16,7 +16,7 @@
 import type { AccGiftCard, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AccError } from "./errors";
-import { postVoucher, type Actor, type LineInput } from "./ledger/post";
+import { postVoucher, voidVoucher, type Actor, type LineInput } from "./ledger/post";
 import { createAccount } from "./ledger/accounts";
 import { createMoneyDoc } from "./cash/docs";
 import { walkInParty } from "./parties";
@@ -229,7 +229,7 @@ export async function spendGifts(tx: Tx, uses: { number: string; amount: bigint 
 export async function restoreGifts(tx: Tx, origTicketId: string, amount: bigint, ticketId: string, note: string, actor: Actor) {
   if (amount <= 0n) return 0n;
   const txs = await tx.accGiftTx.findMany({ where: { ticketId: origTicketId, kind: "SPEND" }, orderBy: { createdAt: "desc" } });
-  const returns = await tx.accPosTicket.findMany({ where: { refTicketId: origTicketId }, select: { id: true } });
+  const returns = await tx.accPosTicket.findMany({ where: { refTicketId: origTicketId, voidedAt: null }, select: { id: true } });
   const restoredBefore = await tx.accGiftTx.groupBy({ by: ["cardId"], where: { kind: "RESTORE", ticketId: { in: returns.map((r) => r.id) } }, _sum: { amount: true } });
   const back = new Map(restoredBefore.map((r) => [r.cardId, r._sum.amount ?? 0n]));
   let left = amount;
@@ -244,6 +244,25 @@ export async function restoreGifts(tx: Tx, origTicketId: string, amount: bigint,
     left -= put;
   }
   return amount - left;
+}
+
+/**
+ * ابطال رسید صندوق: هر گردش بن همین رسید (خرج، برگشت، سوخت باقی یک‌بارمصرف) معکوس می‌شود؛
+ * سند سوخت باطل می‌شود. بن بسته‌ای که پول به آن برگشت دوباره فعال است.
+ */
+export async function undoTicketGifts(tx: Tx, ticketId: string, reason: string, actor: Actor) {
+  const txs = await tx.accGiftTx.findMany({ where: { ticketId }, orderBy: { createdAt: "desc" } });
+  const vouchers = new Set<string>();
+  for (const g of txs) {
+    if (g.amount === 0n) continue;
+    const card = await lockCard(tx, g.cardId);
+    const note = `ابطال رسید — ${reason}`;
+    if (g.amount < 0n) await addTx(tx, { ...card, status: "ACTIVE" }, { kind: "RESTORE", amount: -g.amount, ticketId, note }, actor);
+    else await addTx(tx, card, { kind: "SPEND", amount: -g.amount, ticketId, note }, actor);
+    if (g.kind === "FORFEIT" && g.voucherId) vouchers.add(g.voucherId);
+  }
+  for (const v of vouchers) await voidVoucher(tx, v, `ابطال رسید صندوق: ${reason}`, actor, { fromSource: true });
+  return txs.length;
 }
 
 async function forfeit(tx: Tx, items: { card: AccGiftCard; amount: bigint }[], title: string, actor: Actor, ticketId?: string) {

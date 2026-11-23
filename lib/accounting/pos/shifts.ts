@@ -47,7 +47,7 @@ export async function openShift(tx: Tx, terminalId: string, openingFloat: bigint
 
 export interface ShiftSummary {
   shift: AccPosShift & { terminal: { id: string; name: string; cashTreasuryId: string; cardTreasuryId: string | null } };
-  counts: { sale: number; ret: number; exchange: number; tickets: number };
+  counts: { sale: number; ret: number; exchange: number; tickets: number; voided: number };
   saleTotal: bigint;
   returnTotal: bigint;
   net: bigint;
@@ -80,7 +80,10 @@ export async function shiftSummary(db: Db, shiftId: string): Promise<ShiftSummar
     include: { terminal: { select: { id: true, name: true, cashTreasuryId: true, cardTreasuryId: true } } },
   });
   if (!shift) throw new AccError("شیفت پیدا نشد", 404);
-  const tickets = await db.accPosTicket.findMany({ where: { shiftId } });
+  // رسید باطل‌شده در جمع‌ها نیست (پولش هم از دفتر برگشته) — فقط شمارش
+  const all = await db.accPosTicket.findMany({ where: { shiftId } });
+  const tickets = all.filter((t) => !t.voidedAt);
+  const voided = all.length - tickets.length;
   const sum = (f: (t: (typeof tickets)[number]) => bigint) => tickets.reduce((s, t) => s + f(t), 0n);
   const cashIn = sum((t) => (t.cash > 0n ? t.cash : 0n));
   const cashOut = sum((t) => (t.cash < 0n ? -t.cash : 0n));
@@ -128,6 +131,7 @@ export async function shiftSummary(db: Db, shiftId: string): Promise<ShiftSummar
       ret: tickets.filter((t) => t.kind === "RETURN").length,
       exchange: tickets.filter((t) => t.kind === "EXCHANGE").length,
       tickets: tickets.length,
+      voided,
     },
     saleTotal,
     returnTotal,

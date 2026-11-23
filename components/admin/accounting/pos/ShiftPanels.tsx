@@ -80,6 +80,7 @@ export function ShiftReport({ s, names }: { s: ShiftSummary; names?: Record<stri
         <Row label={`مرجوعی (${faNum(s.counts.ret + s.counts.exchange)} رسید، ${faNum(s.returnQty)} عدد)`} value={s.returnTotal} tone="red" />
         <Row label="تخفیف‌ها (داخل فروش)" value={s.discount} tone="gray" />
         <Row label="فروش خالص" value={s.net} strong />
+        {!!s.counts.voided && <p className="py-1 text-[11px] font-bold text-gray-400">{faNum(s.counts.voided)} رسید باطل‌شده در این جمع‌ها نیست</p>}
         {s.sellers.length > 0 && (
           <div className="mt-3">
             <p className="mb-1 text-[11px] font-black text-gray-400">فروشنده‌ها</p>

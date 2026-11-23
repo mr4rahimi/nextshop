@@ -1272,7 +1272,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           )}
         </Overlay>
       )}
-      {modal === "tickets" && <TicketsSheet shiftId={boot.shift.shift.id} onClose={() => setModal(null)} />}
+      {modal === "tickets" && <TicketsSheet shiftId={boot.shift.shift.id} manage={boot.can.manage} onClose={() => setModal(null)} onChanged={load} />}
       {modal === "close" && (
         <Overlay title="بستن صندوق" wide onClose={() => setModal(null)}>
           <CloseShift
@@ -1565,13 +1565,62 @@ function SwipeSheet({ onCode, onIssue, canIssue, onClose }: { onCode: (code: str
   );
 }
 
-function TicketsSheet({ shiftId, onClose }: { shiftId: string; onClose: () => void }) {
-  const [rows, setRows] = useState<{ id: string; number: number; kind: string; createdAt: string; sellerName: string | null; partyName: string; saleTotal: string; returnTotal: string }[] | null>(null);
-  useEffect(() => {
-    api<{ tickets: NonNullable<typeof rows> }>(`/api/admin/accounting/pos/tickets?shiftId=${shiftId}`).then((d) => setRows(d.tickets)).catch(() => setRows([]));
+interface TicketRow {
+  id: string;
+  number: number;
+  kind: string;
+  createdAt: string;
+  sellerName: string | null;
+  partyName: string;
+  saleTotal: string;
+  returnTotal: string;
+  voidedAt: string | null;
+  voidReason: string | null;
+  voidRequestedAt: string | null;
+  voidRequestReason: string | null;
+  voidRejectNote: string | null;
+}
+
+/** رسیدهای شیفت + ابطال: مدیر مستقیم، صندوقدار با درخواست (docs/plans/inventory-items.md بخش ۱۳.۳) */
+function TicketsSheet({ shiftId, manage, onClose, onChanged }: { shiftId: string; manage: boolean; onClose: () => void; onChanged: () => void }) {
+  const [rows, setRows] = useState<TicketRow[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
+  const load = useCallback(() => {
+    api<{ tickets: TicketRow[] }>(`/api/admin/accounting/pos/tickets?shiftId=${shiftId}`)
+      .then((d) => setRows(d.tickets))
+      .catch(() => setRows([]));
   }, [shiftId]);
+  useEffect(() => {
+    load();
+  }, [load]);
+  async function act(t: TicketRow, action: "void" | "request" | "reject") {
+    const reason =
+      action === "reject"
+        ? window.prompt(`چرا درخواست ابطال رسید ${faNum(t.number)} رد می‌شود؟ (اختیاری)`, "") ?? null
+        : window.prompt(
+            action === "void"
+              ? `ابطال کامل رسید ${faNum(t.number)}: فاکتور، دریافت/پس دادن، موجودی، کارت اشتراک، بن و کد تخفیف برمی‌گردد. پول نقد یا کارت را به مشتری پس بدهید.\n\nدلیل ابطال؟`
+              : `ابطال رسید ${faNum(t.number)} با تأیید مدیر صندوق است.\n\nدلیل درخواست؟`,
+            t.voidRequestReason ?? "",
+          );
+    if (reason === null || (action !== "reject" && !reason.trim())) return;
+    setBusy(t.id);
+    setMsg(null);
+    try {
+      await api(`/api/admin/accounting/pos/tickets/${t.id}`, { method: "POST", json: { action, reason } });
+      setMsg({ tone: "ok", text: action === "void" ? `رسید ${faNum(t.number)} باطل شد` : action === "request" ? `درخواست ابطال رسید ${faNum(t.number)} برای مدیر فرستاده شد` : "درخواست رد شد" });
+      load();
+      onChanged();
+    } catch (e) {
+      setMsg({ tone: "err", text: e instanceof Error ? e.message : "انجام نشد" });
+    } finally {
+      setBusy(null);
+    }
+  }
   return (
-    <Overlay title="رسیدهای این شیفت" onClose={onClose}>
+    <Overlay title="رسیدهای این شیفت" onClose={onClose} wide>
+      {msg && <p className={`mb-3 rounded-xl px-3 py-2 text-xs font-bold ${msg.tone === "ok" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10" : "bg-red-50 text-red-600 dark:bg-red-500/10"}`}>{msg.text}</p>}
       {!rows ? (
         <p className="text-sm text-gray-400">…</p>
       ) : !rows.length ? (
@@ -1581,13 +1630,35 @@ function TicketsSheet({ shiftId, onClose }: { shiftId: string; onClose: () => vo
           {rows.map((t) => {
             const n = B(t.saleTotal) - B(t.returnTotal);
             return (
-              <div key={t.id} className="flex items-center gap-3 py-2.5">
+              <div key={t.id} className={`flex flex-wrap items-center gap-3 py-2.5 ${t.voidedAt ? "opacity-60" : ""}`}>
                 <span className="w-12 text-sm font-black tabular-nums">{faNum(t.number)}</span>
                 <span className="min-w-0 flex-1 text-xs">
                   <span className="font-black">{TICKET_KIND[t.kind]}</span>
                   <span className="text-gray-400"> · {timeFa(t.createdAt)} · {t.sellerName ?? "—"} · {t.partyName}</span>
+                  {t.voidedAt && <span className="block font-bold text-red-600">باطل شده — {t.voidReason}</span>}
+                  {!t.voidedAt && t.voidRequestedAt && <span className="block font-bold text-amber-600">منتظر تأیید ابطال — {t.voidRequestReason}</span>}
+                  {!t.voidedAt && !t.voidRequestedAt && t.voidRejectNote && <span className="block text-gray-400">درخواست ابطال رد شد: {t.voidRejectNote}</span>}
                 </span>
-                <span className={`text-sm font-black tabular-nums ${n < 0n ? "text-rose-600" : ""}`}>{formatAmount(n)}</span>
+                <span className={`text-sm font-black tabular-nums ${t.voidedAt ? "line-through" : n < 0n ? "text-rose-600" : ""}`}>{formatAmount(n)}</span>
+                {!t.voidedAt &&
+                  (manage ? (
+                    <span className="flex gap-1">
+                      <button disabled={busy === t.id} onClick={() => act(t, "void")} className="rounded-lg bg-red-50 px-2 py-1 text-[11px] font-black text-red-600 disabled:opacity-40 dark:bg-red-500/10">
+                        {t.voidRequestedAt ? "تأیید ابطال" : "ابطال"}
+                      </button>
+                      {t.voidRequestedAt && (
+                        <button disabled={busy === t.id} onClick={() => act(t, "reject")} className="rounded-lg bg-gray-100 px-2 py-1 text-[11px] font-bold text-gray-600 disabled:opacity-40 dark:bg-white/5 dark:text-gray-300">
+                          رد
+                        </button>
+                      )}
+                    </span>
+                  ) : (
+                    !t.voidRequestedAt && (
+                      <button disabled={busy === t.id} onClick={() => act(t, "request")} className="rounded-lg bg-red-50 px-2 py-1 text-[11px] font-bold text-red-600 disabled:opacity-40 dark:bg-red-500/10">
+                        درخواست ابطال
+                      </button>
+                    )
+                  ))}
                 <a href={`/admin/accounting/pos/tickets/${t.id}/print?auto=1`} target="_blank" rel="noreferrer" className="rounded-lg p-1.5 text-gray-400 hover:text-gray-900 dark:hover:text-white" aria-label="چاپ">
                   <Printer className="h-4 w-4" aria-hidden />
                 </a>

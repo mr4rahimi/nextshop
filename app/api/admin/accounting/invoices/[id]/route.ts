@@ -10,6 +10,7 @@ import { AccError, accErrorResponse } from "@/lib/accounting/errors";
 import { actorOf, readJson } from "@/lib/accounting/api";
 import { parseDay, todayKey } from "@/lib/accounting/dates";
 import { faNum } from "@/lib/accounting/money";
+import { requestVoid, ticketOfInvoice, voidTicket } from "@/lib/accounting/pos/void";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,7 +55,16 @@ export async function GET(req: Request, { params }: Params) {
         officialReady: !!(acc?.sellerName && acc?.sellerNationalId && acc?.sellerAddress && acc?.sellerPostalCode),
       };
     }
-    return NextResponse.json(serialize({ ...d, print, can: { write, voucher: can(guard.access, "ACC_VOUCHER"), pay: can(guard.access, "ACC_TREASURY") } }));
+    // فاکتورِ رسید صندوق: ابطالش از مسیر رسید (با دریافت و کارت اشتراک و بن) و با تأیید مدیر صندوق
+    const posTicket = await ticketOfInvoice(prisma, d.invoice.id);
+    return NextResponse.json(
+      serialize({
+        ...d,
+        print,
+        posTicket,
+        can: { write, voucher: can(guard.access, "ACC_VOUCHER"), pay: can(guard.access, "ACC_TREASURY"), posVoid: can(guard.access, "ACC_POS_MANAGE") },
+      }),
+    );
   } catch (e) {
     return accErrorResponse(e, "[acc-invoice]");
   }
@@ -133,6 +143,18 @@ export async function POST(req: Request, { params }: Params) {
 
     if (b.action === "void") {
       const reason = String(b.reason ?? "");
+      const pt = await ticketOfInvoice(prisma, id);
+      if (pt && !pt.voidedAt) {
+        // رسید صندوق: مدیر صندوق مستقیم همه را باطل می‌کند؛ بقیه درخواست می‌فرستند
+        if (can(guard.access, "ACC_POS_MANAGE")) {
+          await prisma.$transaction((tx) => voidTicket(tx, pt.id, reason, actor), { timeout: 120_000 });
+          await logActivity({ action: "UPDATE", entity: "OTHER", entityId: pt.id, entityTitle: `رسید صندوق ${pt.number}`, summary: `ابطال رسید صندوق ${faNum(pt.number)} از ${label} ${faNum(cur.number ?? 0)} — ${cur.partyName}: ${reason}` });
+          return NextResponse.json({ ok: true, posVoided: true });
+        }
+        await prisma.$transaction((tx) => requestVoid(tx, pt.id, reason, actor));
+        await logActivity({ action: "UPDATE", entity: "OTHER", entityId: pt.id, entityTitle: `رسید صندوق ${pt.number}`, summary: `درخواست ابطال رسید صندوق ${faNum(pt.number)} از ${label} ${faNum(cur.number ?? 0)}: ${reason}` });
+        return NextResponse.json({ ok: true, posRequested: true });
+      }
       await prisma.$transaction((tx) => voidInvoice(tx, id, reason, actor), { timeout: 60_000 });
       await logActivity({ action: "UPDATE", entity: "OTHER", entityId: id, entityTitle: `${label} ${cur.number ?? ""}`, summary: `ابطال ${label} ${faNum(cur.number ?? 0)} — ${cur.partyName}: ${reason}` });
       return NextResponse.json({ ok: true });

@@ -95,7 +95,18 @@ export interface InvoiceData {
   purchaseOrder: { id: string; kind: string; number: number } | null;
   profit: { cost: string; gross: string } | null;
   settlement: { allocations: { id: string; kind: "RECEIPT" | "PAYMENT"; number: number; date: string; amount: string }[]; returned: string; fee: string; open: string };
-  can: { write: boolean; voucher: boolean; pay: boolean };
+  can: { write: boolean; voucher: boolean; pay: boolean; posVoid?: boolean };
+  /** رسید صندوقی که این فاکتور را ساخت — ابطال از مسیر رسید */
+  posTicket?: {
+    id: string;
+    number: number;
+    voidedAt: string | null;
+    voidRequestedAt: string | null;
+    voidRequestedByName: string | null;
+    voidRequestReason: string | null;
+    voidRejectNote: string | null;
+    shift: { status: string };
+  } | null;
 }
 
 const RETURN_TYPE: Partial<Record<InvoiceTypeKey, InvoiceTypeKey>> = { SALES: "SALES_RETURN", PURCHASE: "PURCHASE_RETURN" };
@@ -117,11 +128,15 @@ export default function InvoiceDetail({ id }: { id: string }) {
   }, [id]);
   useEffect(load, [load]);
 
+  const [notice, setNotice] = useState<string | null>(null);
   async function act(action: string, extra: Record<string, unknown> = {}) {
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
-      const r = await api<{ id?: string }>(`/api/admin/accounting/invoices/${id}`, { method: "POST", json: { action, ...extra } });
+      const r = await api<{ id?: string; posRequested?: boolean; posVoided?: boolean }>(`/api/admin/accounting/invoices/${id}`, { method: "POST", json: { action, ...extra } });
+      if (r.posRequested) setNotice("درخواست ابطال برای مدیر صندوق فرستاده شد؛ بعد از تأیید، فاکتور و دریافت و موجودی با هم برمی‌گردند.");
+      if (r.posVoided) setNotice("رسید صندوق باطل شد: فاکتور، دریافت/پس دادن، موجودی و کارت اشتراک برگشت.");
       if (action === "convert" && r.id) router.push(`/admin/accounting/invoices/${r.id}`);
       else load();
     } catch (e) {
@@ -258,6 +273,21 @@ export default function InvoiceDetail({ id }: { id: string }) {
             ثبت: {inv.createdByName}، {formatJalali(new Date(inv.createdAt))}
           </p>
           {inv.voidReason && <p className="text-xs text-red-600">دلیل ابطال: {inv.voidReason}</p>}
+          {d.posTicket && (
+            <p className="text-xs text-gray-500">
+              از{" "}
+              <a href={`/admin/accounting/pos/tickets/${d.posTicket.id}/print`} target="_blank" rel="noreferrer" className="font-bold text-blue-600">
+                رسید صندوق {faNum(d.posTicket.number)}
+              </a>
+              {d.posTicket.voidRequestedAt && !d.posTicket.voidedAt && (
+                <span className="mr-1 font-bold text-amber-600">
+                  — درخواست ابطال از {d.posTicket.voidRequestedByName}: {d.posTicket.voidRequestReason}
+                </span>
+              )}
+              {d.posTicket.voidRejectNote && !d.posTicket.voidRequestedAt && <span className="mr-1 text-red-600">— درخواست قبلی رد شد: {d.posTicket.voidRejectNote}</span>}
+            </p>
+          )}
+          {notice && <p className="rounded-lg bg-emerald-50 px-2 py-1.5 text-xs font-bold text-emerald-700 dark:bg-emerald-500/10">{notice}</p>}
           {inv.note && <p className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-white/5 rounded-lg px-2 py-1.5 whitespace-pre-line">{inv.note}</p>}
         </div>
         <div className="md:text-left border-t md:border-t-0 md:border-r border-gray-100 dark:border-white/5 pt-3 md:pt-0 md:pr-5 space-y-1">
@@ -502,7 +532,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
               ↩ {INVOICE_TYPE_LABELS[returnType]}
             </Link>
           )}
-          {inv.proformaState !== "CONVERTED" && (
+          {inv.proformaState !== "CONVERTED" && !d.posTicket && (
             <button
               onClick={() => {
                 const reason = window.prompt(`دلیل ابطال ${INVOICE_TYPE_LABELS[inv.type]}؟ ${inv.type === "PROFORMA" ? "" : "کالا به انبار برمی‌گردد و حساب‌ها خنثی می‌شوند."}`);
@@ -513,6 +543,29 @@ export default function InvoiceDetail({ id }: { id: string }) {
             >
               ابطال
             </button>
+          )}
+          {d.posTicket && !d.posTicket.voidedAt && (
+            d.posTicket.voidRequestedAt && !d.can.posVoid ? (
+              <span className="mr-auto rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 dark:bg-amber-500/10">
+                درخواست ابطال رسید صندوق {faNum(d.posTicket.number)} منتظر تأیید مدیر است
+              </span>
+            ) : (
+              <button
+                onClick={() => {
+                  const pt = d.posTicket!;
+                  const closed = pt.shift.status === "CLOSED" ? "\n\n⚠️ شیفت این رسید بسته شده؛ نقد دریافتی از مانده‌ی صندوق کم می‌شود (پول را به مشتری پس دهید یا جابه‌جا کنید)." : "";
+                  const msg = d.can.posVoid
+                    ? `این فاکتور از رسید صندوق ${faNum(pt.number)} است. ابطال، رسید را کامل برمی‌گرداند: فاکتور، دریافت (نقد، کارت، کارت به کارت)، موجودی کالا، اعتبار و شارژ کارت اشتراک، بن و کد تخفیف.${closed}\n\nدلیل ابطال؟`
+                    : `این فاکتور از رسید صندوق ${faNum(pt.number)} است؛ ابطال با تأیید مدیر صندوق انجام می‌شود.\n\nدلیل درخواست ابطال؟`;
+                  const reason = window.prompt(msg, pt.voidRequestReason ?? "");
+                  if (reason) act("void", { reason });
+                }}
+                disabled={busy}
+                className={`${btn.danger} mr-auto`}
+              >
+                {d.can.posVoid ? (d.posTicket.voidRequestedAt ? `تأیید ابطال رسید صندوق ${faNum(d.posTicket.number)}` : `ابطال رسید صندوق ${faNum(d.posTicket.number)}`) : "درخواست ابطال (تأیید مدیر)"}
+              </button>
+            )
           )}
         </Card>
       )}

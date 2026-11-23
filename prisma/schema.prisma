@@ -5509,6 +5509,16 @@ model AccPosTicket {
   transferTreasuryId String?
   /// شماره‌ی پیگیری یا چهار رقم آخر کارت مشتری
   transferRef     String?
+  /// ابطال رسید (همه‌ی فاکتورها، دریافت/پس دادن، کارت اشتراک، بن و کد تخفیف با هم) — فقط مدیر صندوق
+  voidedAt        DateTime?
+  voidedByName    String?
+  voidReason      String?
+  /// درخواست ابطال صندوقدار، منتظر تأیید مدیر
+  voidRequestedAt DateTime?
+  voidRequestedByName String?
+  voidRequestReason String?
+  /// یادداشت رد آخرین درخواست
+  voidRejectNote  String?
   /// مانده‌ی نسیه روی حساب مشتری
   credit          BigInt           @default(0)
   /// پولی که مشتری داد و باقی‌اش (فقط برای چاپ رسید)
@@ -5546,6 +5556,7 @@ model AccPosTicket {
   @@index([createdAt])
   @@index([refTicketId])
   @@index([clubProfileId])
+  @@index([voidRequestedAt])
 }
 
 // ── حسابداری — دریافت، پرداخت، انتقال و چک (فاز ۵، docs/plans/accounting.md بخش ۶.۷، ۶.۸ و ۹) ──

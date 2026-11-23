@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     take: 100,
     include: { terminal: { select: { name: true } }, _count: { select: { tickets: true } } },
   });
-  const sums = await prisma.accPosTicket.groupBy({ by: ["shiftId"], where: { shiftId: { in: shifts.map((s) => s.id) } }, _sum: { saleTotal: true, returnTotal: true } });
+  const sums = await prisma.accPosTicket.groupBy({ by: ["shiftId"], where: { shiftId: { in: shifts.map((s) => s.id) }, voidedAt: null }, _sum: { saleTotal: true, returnTotal: true } });
   const byShift = new Map(sums.map((s) => [s.shiftId, (s._sum.saleTotal ?? 0n) - (s._sum.returnTotal ?? 0n)]));
   return NextResponse.json(serialize({ shifts: shifts.map((s) => ({ ...s, net: byShift.get(s.id) ?? 0n })) }));
 }

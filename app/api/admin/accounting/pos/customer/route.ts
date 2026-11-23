@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     const id = new URL(req.url).searchParams.get("partyId") ?? "";
     const party = await prisma.accParty.findUnique({ where: { id } });
     if (!party) throw new AccError("مشتری پیدا نشد", 404);
-    const where = { partyId: party.id };
+    const where = { partyId: party.id, voidedAt: null };
     const [bal, member, agg, last, recent, orders] = await Promise.all([
       balanceOf(prisma, { partyId: party.id, ...PARTY_BALANCE }),
       posMemberForParty(party.id),

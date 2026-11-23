@@ -85,6 +85,7 @@ export default function PosHub() {
         }
       />
       {error && <ErrorText>{error}</ErrorText>}
+      {manage && <VoidRequests />}
       {d && (manage || canReport) && (
         <Chips
           value={tab}
@@ -684,6 +685,102 @@ function AggTable({ title, rows, extraLabel, icon }: { title: string; rows: { ke
           </table>
         </div>
       )}
+    </Card>
+  );
+}
+
+interface VoidReq {
+  id: string;
+  number: number;
+  kind: string;
+  createdAt: string;
+  partyName: string;
+  saleTotal: string;
+  returnTotal: string;
+  cash: string;
+  card: string;
+  transfer: string;
+  credit: string;
+  voidRequestedAt: string;
+  voidRequestedByName: string | null;
+  voidRequestReason: string | null;
+  terminal: { name: string };
+  shift: { status: string; number: number };
+}
+
+/** درخواست‌های ابطال رسید صندوق — مدیر تأیید یا رد می‌کند (docs/plans/inventory-items.md بخش ۱۳.۳) */
+function VoidRequests() {
+  const [rows, setRows] = useState<VoidReq[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const load = useCallback(() => {
+    api<{ requests: VoidReq[] }>("/api/admin/accounting/pos/voids")
+      .then((r) => setRows(r.requests))
+      .catch(() => setRows([]));
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+  if (!rows.length) return null;
+  async function act(r: VoidReq, action: "void" | "reject") {
+    let reason = r.voidRequestReason ?? "";
+    if (action === "void") {
+      const closed = r.shift.status === "CLOSED" ? "\n\n⚠️ شیفت این رسید بسته شده؛ نقد دریافتی از مانده‌ی دفتری صندوق کم می‌شود." : "";
+      if (!window.confirm(`رسید ${faNum(r.number)} (${r.partyName}) کامل باطل شود؟ فاکتور، دریافت/پس دادن، موجودی، کارت اشتراک، بن و کد تخفیف برمی‌گردد.${closed}`)) return;
+    } else {
+      const note = window.prompt("دلیل رد درخواست (اختیاری)", "");
+      if (note === null) return;
+      reason = note;
+    }
+    setBusy(r.id);
+    setError(null);
+    try {
+      await api(`/api/admin/accounting/pos/tickets/${r.id}`, { method: "POST", json: { action, reason } });
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "انجام نشد");
+    } finally {
+      setBusy(null);
+    }
+  }
+  return (
+    <Card className="border-2 border-amber-300 p-4 dark:border-amber-500/30">
+      <p className="mb-2 text-sm font-black text-amber-800 dark:text-amber-200">درخواست ابطال رسید ({faNum(rows.length)}) — منتظر تأیید شما</p>
+      <ErrorText>{error}</ErrorText>
+      <div className="divide-y divide-gray-100 dark:divide-white/5">
+        {rows.map((r) => {
+          const net = B(r.saleTotal) - B(r.returnTotal);
+          const pay = [
+            B(r.cash) !== 0n && `نقد ${formatAmount(abs(B(r.cash)))}`,
+            B(r.card) !== 0n && `کارت ${formatAmount(abs(B(r.card)))}`,
+            B(r.transfer) !== 0n && `کارت به کارت ${formatAmount(B(r.transfer))}`,
+            B(r.credit) !== 0n && `نسیه ${formatAmount(abs(B(r.credit)))}`,
+          ].filter(Boolean);
+          return (
+            <div key={r.id} className="flex flex-wrap items-center gap-3 py-2.5">
+              <a href={`/admin/accounting/pos/tickets/${r.id}/print`} target="_blank" rel="noreferrer" className="w-20 text-sm font-black text-blue-600">
+                رسید {faNum(r.number)}
+              </a>
+              <span className="min-w-0 flex-1 text-xs">
+                <span className="font-bold">
+                  {r.terminal.name} · شیفت {faNum(r.shift.number)}
+                  {r.shift.status === "CLOSED" ? " (بسته)" : ""} · {r.partyName} · {formatAmount(net)} تومان
+                </span>
+                {pay.length > 0 && <span className="block text-gray-500">{pay.join(" · ")}</span>}
+                <span className="block font-bold text-amber-700 dark:text-amber-300">
+                  {r.voidRequestedByName}: {r.voidRequestReason}
+                </span>
+              </span>
+              <button disabled={busy === r.id} onClick={() => act(r, "void")} className={`${btn.danger} text-xs`}>
+                تأیید ابطال
+              </button>
+              <button disabled={busy === r.id} onClick={() => act(r, "reject")} className={`${btn.soft} text-xs`}>
+                رد
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </Card>
   );
 }
