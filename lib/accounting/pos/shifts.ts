@@ -66,6 +66,11 @@ export interface ShiftSummary {
   otherCash: bigint;
   expectedCash: bigint;
   expectedCard: bigint;
+  /** به تفکیک کارتخوان (+ دریافت، − برگشت) — برای سنجیدن با رسید پایان روز هر دستگاه */
+  byReader: { treasuryId: string | null; name: string; cardIn: bigint; cardOut: bigint; tickets: number }[];
+  /** کارت به کارت به تفکیک حساب — در «خالص کارتخوان» و نقد نمی‌آید */
+  transfer: bigint;
+  byTransfer: { treasuryId: string | null; name: string; amount: bigint; tickets: number }[];
   sellers: { sellerId: string | null; name: string; tickets: number; saleTotal: bigint; returnTotal: bigint; net: bigint; qty: number }[];
 }
 
@@ -81,6 +86,27 @@ export async function shiftSummary(db: Db, shiftId: string): Promise<ShiftSummar
   const cashOut = sum((t) => (t.cash < 0n ? -t.cash : 0n));
   const cardIn = sum((t) => (t.card > 0n ? t.card : 0n));
   const cardOut = sum((t) => (t.card < 0n ? -t.card : 0n));
+  const readerMap = new Map<string, ShiftSummary["byReader"][number]>();
+  const transferMap = new Map<string, ShiftSummary["byTransfer"][number]>();
+  for (const t of tickets) {
+    if (t.card !== 0n) {
+      const id = t.cardTreasuryId ?? shift.terminal.cardTreasuryId;
+      const r = readerMap.get(id ?? "") ?? { treasuryId: id, name: "", cardIn: 0n, cardOut: 0n, tickets: 0 };
+      if (t.card > 0n) r.cardIn += t.card;
+      else r.cardOut -= t.card;
+      r.tickets++;
+      readerMap.set(id ?? "", r);
+    }
+    if (t.transfer > 0n) {
+      const r = transferMap.get(t.transferTreasuryId ?? "") ?? { treasuryId: t.transferTreasuryId, name: "", amount: 0n, tickets: 0 };
+      r.amount += t.transfer;
+      r.tickets++;
+      transferMap.set(t.transferTreasuryId ?? "", r);
+    }
+  }
+  const trIds = [...readerMap.keys(), ...transferMap.keys()].filter(Boolean);
+  const trNames = trIds.length ? new Map((await db.accTreasury.findMany({ where: { id: { in: trIds } }, select: { id: true, name: true } })).map((t) => [t.id, t.name])) : new Map<string, string>();
+  for (const r of [...readerMap.values(), ...transferMap.values()]) r.name = (r.treasuryId && trNames.get(r.treasuryId)) || "—";
   const book = shift.status === "OPEN" ? await treasuryBook(db, shift.terminal.cashTreasuryId) : shift.expectedCash ?? 0n;
   const bySeller = new Map<string, ShiftSummary["sellers"][number]>();
   for (const t of tickets) {
@@ -119,6 +145,9 @@ export async function shiftSummary(db: Db, shiftId: string): Promise<ShiftSummar
     otherCash: book - shift.openingBook - (cashIn - cashOut),
     expectedCash: book,
     expectedCard: shift.status === "OPEN" ? cardIn - cardOut : shift.expectedCard ?? cardIn - cardOut,
+    byReader: [...readerMap.values()],
+    transfer: sum((t) => t.transfer),
+    byTransfer: [...transferMap.values()],
     sellers: [...bySeller.values()].sort((a, b) => (b.net > a.net ? 1 : b.net < a.net ? -1 : 0)),
   };
 }

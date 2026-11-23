@@ -32,7 +32,10 @@ interface TicketData {
     couponDiscount?: string;
     giftSpent?: string;
     giftRestored?: string;
+    transfer?: string;
+    transferRef?: string | null;
   };
+  pay?: { reader: string | null; transferTo: string | null };
   terminal: { name: string; header: string | null; footer: string | null; paperMm: number };
   store: { name: string | null; phone: string | null; address: string | null; footer: string | null };
   sale: { number: number | null; subtotal: string; discount: string; vat: string; total: string; lines: Line[] } | null;
@@ -176,7 +179,8 @@ export function TicketPrint({ id }: { id: string }) {
         {d.sale && B(d.sale.vat) > 0n && <Kv k="مالیات (داخل قیمت)" v={formatAmount(d.sale.vat)} />}
         <Kv k={net < 0n ? "پس داده شد" : "جمع"} v={`${formatAmount(abs(net))} تومان`} bold />
         {cash !== 0n && <Kv k={cash < 0n ? "نقد پس داده شد" : "نقد"} v={formatAmount(abs(cash))} />}
-        {card !== 0n && <Kv k={card < 0n ? "برگشت به کارت" : "کارت"} v={formatAmount(abs(card))} />}
+        {card !== 0n && <Kv k={`${card < 0n ? "برگشت به کارت" : "کارت"}${d.pay?.reader ? ` (${d.pay.reader})` : ""}`} v={formatAmount(abs(card))} />}
+        {B(t.transfer ?? "0") > 0n && <Kv k={`کارت به کارت${d.pay?.transferTo ? ` (${d.pay.transferTo})` : ""}${t.transferRef ? ` — ${t.transferRef}` : ""}`} v={formatAmount(t.transfer!)} />}
         {B(t.credit) !== 0n && <Kv k={B(t.credit) > 0n ? "نسیه" : "روی حساب مشتری"} v={formatAmount(abs(B(t.credit)))} />}
         {d.club && B(d.club.spent) > 0n && <Kv k="کارت اشتراک" v={formatAmount(d.club.spent)} />}
         {d.club && B(d.club.restored) > 0n && <Kv k="برگشت به کارت اشتراک" v={formatAmount(d.club.restored)} />}

@@ -21,7 +21,7 @@ export async function GET() {
   });
   const [warehouses, treasuries, sellers] = await Promise.all([
     prisma.accWarehouse.findMany({ where: { isActive: true }, orderBy: { code: "asc" }, select: { id: true, name: true } }),
-    prisma.accTreasury.findMany({ where: { isActive: true, kind: { in: ["CASH", "BANK", "POS"] } }, orderBy: [{ kind: "asc" }, { code: "asc" }], select: { id: true, name: true, kind: true } }),
+    prisma.accTreasury.findMany({ where: { isActive: true, kind: { in: ["CASH", "BANK", "POS"] } }, orderBy: [{ kind: "asc" }, { code: "asc" }], select: { id: true, name: true, kind: true, bankName: true, cardNo: true } }),
     prisma.accPosSeller.findMany({ orderBy: { code: "asc" } }),
   ]);
   const books = g.manage ? await Promise.all(terminals.map((t) => treasuryBook(prisma, t.cashTreasuryId))) : [];

@@ -1,18 +1,25 @@
 "use client";
 
 /**
- * پنجره‌ی پرداخت صندوق — نقد، کارت یا ترکیبی؛ باقی پول مشتری درشت.
- * مبلغ کارت را می‌نویسید، نقد «باقی» است (سرور حساب می‌کند). Enter = ثبت و چاپ.
+ * پنجره‌ی پرداخت صندوق — نقد، کارتخوان (با انتخاب دستگاه)، کارت به کارت یا ترکیبی؛ باقی پول مشتری درشت.
+ * مبلغ کارت و کارت به کارت را می‌نویسید، نقد «باقی» است (سرور حساب می‌کند). Enter = ثبت و چاپ.
+ * اعتبار کارت اشتراک خودکار کم می‌شود (تا سقف مبلغ)؛ «استفاده نشود» برش می‌دارد.
  * مرجوعی بیشتر از خرید ← همین پنجره برای «پس دادن» (نقد یا برگشت به کارت).
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, CreditCard, Printer, X } from "lucide-react";
+import { ArrowLeftRight, Banknote, CreditCard, Printer, X } from "lucide-react";
 import { amountToWords } from "@/lib/accounting/money";
-import { B, BigAmount, Kbd, abs, formatAmount } from "./shared";
+import { B, BigAmount, Kbd, abs, formatAmount, local } from "./shared";
 
 export interface PayResult {
   card: bigint;
+  /** کارتخوانی که کشیده شد */
+  cardTreasuryId: string | null;
+  /** کارت به کارت */
+  transfer: bigint;
+  transferTreasuryId: string | null;
+  transferRef: string | null;
   /** null = باقی نقد (`"rest"`) */
   cash: bigint | null;
   /** از اعتبار کارت اشتراک */
@@ -20,12 +27,28 @@ export interface PayResult {
   tendered: bigint | null;
 }
 
+export interface PayReader {
+  id: string;
+  name: string;
+}
+export interface PayTransfer {
+  id: string;
+  name: string;
+  bankName: string | null;
+  cardNo: string | null;
+}
+
+const cardFmt = (c: string) => c.replace(/(\d{4})(?=\d)/g, "$1 - ");
+
 const QUICK = [50_000n, 100_000n, 200_000n, 500_000n, 1_000_000n];
 
 export default function PaySheet({
   net,
   exact,
   hasCard,
+  readers = [],
+  transfers = [],
+  terminalId = "",
   canCredit,
   clubCredit = null,
   giftPaid = 0n,
@@ -40,13 +63,19 @@ export default function PaySheet({
   /** جمع دقیق است (برای مرجوعی از پیش‌نمایش سرور) */
   exact: boolean;
   hasCard: boolean;
+  /** کارتخوان‌های صندوق (اولی پیش‌فرض) */
+  readers?: PayReader[];
+  /** حساب‌های کارت به کارت */
+  transfers?: PayTransfer[];
+  /** برای به یاد سپردن آخرین کارتخوان روی همین دستگاه */
+  terminalId?: string;
   /** مشتری انتخاب شده — بخشی نسیه ممکن است */
   canCredit: boolean;
   /** اعتبار قابل خرج کارت اشتراک مشتری؛ null = ندارد */
   clubCredit?: bigint | null;
   /** بخشی که با بن کارت اسکن‌شده پرداخت می‌شود (از `net` کم شده) */
   giftPaid?: bigint;
-  start: "cash" | "card";
+  start: "cash" | "card" | "transfer";
   busy: boolean;
   error: string | null;
   onSubmit: (r: PayResult) => void;
@@ -54,20 +83,33 @@ export default function PaySheet({
 }) {
   const refund = net < 0n;
   const due = abs(net);
-  const [card, setCard] = useState(start === "card" && hasCard ? due.toString() : "");
+  const clubMax = clubCredit && !refund ? (clubCredit < due ? clubCredit : due) : 0n;
+  // اعتبار کارت اشتراک خودکار کم می‌شود؛ بقیه‌ی روش‌ها روی «باقی»
+  const [club, setClub] = useState(clubMax > 0n ? clubMax.toString() : "");
+  const afterClub = due - (clubMax > 0n ? clubMax : 0n);
+  const canTransfer = !refund && transfers.length > 0;
+  const [card, setCard] = useState(start === "card" && hasCard ? afterClub.toString() : "");
+  const [transfer, setTransfer] = useState(start === "transfer" && canTransfer ? afterClub.toString() : "");
+  const [reader, setReader] = useState(() => {
+    const saved = local.get<string>(`pos:reader:${terminalId}`, "");
+    return readers.some((r) => r.id === saved) ? saved : readers[0]?.id ?? null;
+  });
+  const [account, setAccount] = useState(transfers[0]?.id ?? null);
+  const [ref, setRef] = useState("");
   const [tendered, setTendered] = useState("");
   const [credit, setCredit] = useState(false);
   const [cashManual, setCashManual] = useState("");
-  const [club, setClub] = useState("");
   const cardB = B(card);
+  const transferB = canTransfer ? B(transfer) : 0n;
   const clubB = refund ? 0n : B(club);
-  const clubMax = clubCredit && !refund ? (clubCredit < due ? clubCredit : due) : 0n;
-  const cash = credit ? B(cashManual) : due > cardB + clubB ? due - cardB - clubB : 0n;
+  const paidOther = cardB + clubB + transferB;
+  const cash = credit ? B(cashManual) : due > paidOther ? due - paidOther : 0n;
   const tenderedB = B(tendered);
   const change = !refund && tenderedB > cash ? tenderedB - cash : 0n;
   const short = !refund && tenderedB > 0n && tenderedB < cash;
-  const over = cardB + clubB > due || clubB > clubMax;
-  const left = credit ? due - cardB - clubB - cash : 0n;
+  const over = paidOther > due || clubB > clubMax;
+  const left = credit ? due - paidOther - cash : 0n;
+  const rest = (without: bigint) => (due - clubB - without > 0n ? due - clubB - without : 0n);
 
   const quick = useMemo(() => {
     if (refund || cash <= 0n) return [];
@@ -77,7 +119,17 @@ export default function PaySheet({
 
   function submit() {
     if (busy || over || short || (credit && left < 0n)) return;
-    onSubmit({ card: cardB, cash: credit ? cash : null, club: clubB, tendered: tenderedB > 0n ? tenderedB : null });
+    if (cardB > 0n && reader) local.set(`pos:reader:${terminalId}`, reader);
+    onSubmit({
+      card: cardB,
+      cardTreasuryId: cardB > 0n ? reader : null,
+      transfer: transferB,
+      transferTreasuryId: transferB > 0n ? account : null,
+      transferRef: transferB > 0n && ref.trim() ? ref.trim() : null,
+      cash: credit ? cash : null,
+      club: clubB,
+      tendered: tenderedB > 0n ? tenderedB : null,
+    });
   }
 
   useEffect(() => {
@@ -88,10 +140,12 @@ export default function PaySheet({
         submit();
       } else if (e.key === "F10" && hasCard) {
         e.preventDefault();
-        setCard(due.toString());
+        setTransfer("");
+        setCard(rest(0n).toString());
       } else if (e.key === "F9") {
         e.preventDefault();
         setCard("");
+        setTransfer("");
       }
     };
     window.addEventListener("keydown", h);
@@ -121,31 +175,56 @@ export default function PaySheet({
         <div className="space-y-4 p-5">
           {due > 0n && (
             <>
-              <div className="grid grid-cols-2 gap-2">
+              <div className={`grid gap-2 ${canTransfer ? "grid-cols-3" : "grid-cols-2"}`}>
                 <button
-                  onClick={() => setCard("")}
-                  className={`flex items-center justify-center gap-2 rounded-2xl border-2 py-3 text-sm font-black transition ${cardB === 0n ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300" : "border-gray-200 text-gray-600 dark:border-white/10 dark:text-gray-300"}`}
+                  onClick={() => {
+                    setCard("");
+                    setTransfer("");
+                  }}
+                  className={`flex items-center justify-center gap-2 rounded-2xl border-2 py-3 text-sm font-black transition ${cardB === 0n && transferB === 0n ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300" : "border-gray-200 text-gray-600 dark:border-white/10 dark:text-gray-300"}`}
                 >
                   <Banknote className="h-5 w-5" aria-hidden /> همه نقد <Kbd>F9</Kbd>
                 </button>
                 <button
                   disabled={!hasCard}
-                  onClick={() => setCard(due.toString())}
-                  className={`flex items-center justify-center gap-2 rounded-2xl border-2 py-3 text-sm font-black transition disabled:opacity-40 ${cardB === due ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300" : "border-gray-200 text-gray-600 dark:border-white/10 dark:text-gray-300"}`}
+                  onClick={() => {
+                    setTransfer("");
+                    setCard(rest(0n).toString());
+                  }}
+                  className={`flex items-center justify-center gap-2 rounded-2xl border-2 py-3 text-sm font-black transition disabled:opacity-40 ${cardB > 0n && cardB === rest(transferB) ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300" : "border-gray-200 text-gray-600 dark:border-white/10 dark:text-gray-300"}`}
                 >
-                  <CreditCard className="h-5 w-5" aria-hidden /> {refund ? "برگشت به کارت" : "همه کارت"} <Kbd>F10</Kbd>
+                  <CreditCard className="h-5 w-5" aria-hidden /> {refund ? "برگشت به کارت" : "کارتخوان"} <Kbd>F10</Kbd>
                 </button>
+                {canTransfer && (
+                  <button
+                    onClick={() => {
+                      setCard("");
+                      setTransfer(rest(0n).toString());
+                    }}
+                    className={`flex items-center justify-center gap-2 rounded-2xl border-2 py-3 text-sm font-black transition ${transferB > 0n && transferB === rest(cardB) ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300" : "border-gray-200 text-gray-600 dark:border-white/10 dark:text-gray-300"}`}
+                  >
+                    <ArrowLeftRight className="h-5 w-5" aria-hidden /> کارت به کارت
+                  </button>
+                )}
               </div>
 
               {clubMax > 0n && (
-                <div className="rounded-2xl bg-amber-50 p-3 dark:bg-amber-500/10">
-                  <div className="mb-1.5 flex items-center justify-between text-xs font-bold text-amber-800 dark:text-amber-200">
-                    <span>کارت اشتراک — اعتبار {formatAmount(clubCredit ?? 0n)} تومان</span>
-                    <button onClick={() => setClub(clubB === clubMax ? "" : clubMax.toString())} className="rounded-lg bg-amber-500/20 px-2 py-1 font-black">
-                      {clubB === clubMax ? "برداشتن" : "پرداخت از کارت"}
+                <div className="rounded-2xl border border-amber-300/60 bg-amber-50 p-3 dark:border-amber-500/20 dark:bg-amber-500/10">
+                  <div className="flex items-center justify-between gap-2 text-xs font-bold text-amber-800 dark:text-amber-200">
+                    <span>
+                      کارت اشتراک — اعتبار {formatAmount(clubCredit ?? 0n)} تومان
+                      {clubB > 0n && <span className="block text-[11px] font-bold opacity-80">مانده‌ی کارت بعد از این خرید: {formatAmount((clubCredit ?? 0n) - clubB)} تومان (شارژ همین خرید جدا اضافه می‌شود)</span>}
+                    </span>
+                    <button onClick={() => setClub(clubB > 0n ? "" : clubMax.toString())} className="shrink-0 rounded-lg bg-amber-500/20 px-2 py-1 font-black">
+                      {clubB > 0n ? "استفاده نشود" : "کم کردن از کارت"}
                     </button>
                   </div>
-                  <BigAmount value={club} onChange={setClub} onEnter={submit} />
+                  {clubB > 0n && (
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <span className="text-xs font-black text-amber-800 dark:text-amber-200">از کارت کم می‌شود</span>
+                      <BigAmount value={club} onChange={setClub} onEnter={submit} className="w-48" />
+                    </div>
+                  )}
                   {clubB > clubMax && <p className="mt-1 text-xs font-bold text-red-600">بیشتر از اعتبار یا مبلغ قابل پرداخت است</p>}
                 </div>
               )}
@@ -154,7 +233,55 @@ export default function PaySheet({
                 <div>
                   <p className="mb-1.5 text-xs font-bold text-gray-500">{refund ? "مبلغ برگشت به کارت" : "مبلغ کارتخوان"} — باقی نقد</p>
                   <BigAmount value={card} onChange={setCard} onEnter={submit} autoFocus={start === "card"} />
+                  {readers.length > 1 && cardB > 0n && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <span className="self-center text-[11px] font-bold text-gray-500">با کدام دستگاه؟</span>
+                      {readers.map((r) => (
+                        <button
+                          key={r.id}
+                          onClick={() => setReader(r.id)}
+                          className={`rounded-xl border-2 px-3 py-1.5 text-xs font-black transition ${reader === r.id ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300" : "border-gray-200 text-gray-600 dark:border-white/10 dark:text-gray-300"}`}
+                        >
+                          {r.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   {over && <p className="mt-1 text-xs font-bold text-red-600">از مبلغ کل بیشتر است</p>}
+                </div>
+              )}
+
+              {canTransfer && (transferB > 0n || start === "transfer") && (
+                <div className="rounded-2xl bg-violet-50 p-3 dark:bg-violet-500/10">
+                  <p className="mb-1.5 text-xs font-bold text-violet-800 dark:text-violet-200">مبلغ کارت به کارت</p>
+                  <BigAmount value={transfer} onChange={setTransfer} onEnter={submit} autoFocus={start === "transfer"} />
+                  <div className="mt-2 space-y-1.5">
+                    {transfers.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setAccount(t.id)}
+                        className={`flex w-full items-center justify-between gap-2 rounded-xl border-2 px-3 py-2 text-right transition ${account === t.id ? "border-violet-500 bg-white dark:bg-white/5" : "border-transparent bg-white/60 dark:bg-white/[0.03]"}`}
+                      >
+                        <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
+                          {t.name}
+                          {t.bankName ? ` · ${t.bankName}` : ""}
+                        </span>
+                        {t.cardNo && (
+                          <span className="text-lg font-black tabular-nums tracking-wider text-gray-900 dark:text-white" dir="ltr">
+                            {cardFmt(t.cardNo)}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    value={ref}
+                    onChange={(e) => setRef(e.target.value)}
+                    placeholder="شماره پیگیری یا ۴ رقم آخر کارت مشتری (اختیاری)"
+                    inputMode="numeric"
+                    className="mt-2 w-full rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-violet-500 dark:border-white/10 dark:bg-white/5"
+                  />
+                  <p className="mt-1 text-[11px] text-violet-700/80 dark:text-violet-300/80">پیش از ثبت، پیامک واریز یا رسید انتقال را روی گوشی مشتری ببینید.</p>
                 </div>
               )}
 

@@ -112,8 +112,19 @@ export function ShiftReport({ s, names }: { s: ShiftSummary; names?: Record<stri
         <p className="mb-1 mt-3 text-[11px] font-black uppercase tracking-wide text-gray-400">کارتخوان</p>
         <Row label="دریافت کارتی" value={s.cardIn} tone="green" />
         {B(s.cardOut) > 0n && <Row label="برگشت به کارت" value={s.cardOut} tone="red" />}
+        {(s.byReader?.length ?? 0) > 1 &&
+          s.byReader!.map((r) => (
+            <Row key={r.treasuryId ?? "-"} label={`${r.name} (${faNum(r.tickets)} رسید)`} value={B(r.cardIn) - B(r.cardOut)} />
+          ))}
         <Row label="خالص کارتخوان" value={s.expectedCard} strong />
         {cardDiff !== null && <Row label={`رسید پایان روز دستگاه${cardDiff !== 0n ? " — اختلاف " + formatAmount(abs(cardDiff)) : ""}`} value={s.shift.countedCard ?? "0"} tone={cardDiff === 0n ? "gray" : "red"} />}
+        {!!s.transfer && B(s.transfer) > 0n && (
+          <>
+            <p className="mb-1 mt-3 text-[11px] font-black uppercase tracking-wide text-gray-400">کارت به کارت</p>
+            {s.byTransfer?.map((r) => <Row key={r.treasuryId ?? "-"} label={`${r.name} (${faNum(r.tickets)} رسید)`} value={r.amount} />)}
+            <Row label="جمع کارت به کارت — با پیامک یا صورت‌حساب بانک بسنجید" value={s.transfer} strong />
+          </>
+        )}
         {B(s.credit) !== 0n && <Row label="نسیه / روی حساب مشتری" value={s.credit} />}
         {!!s.club && B(s.club) !== 0n && <Row label="پرداخت با کارت اشتراک" value={s.club} />}
         {!!s.gift && B(s.gift) !== 0n && <Row label="پرداخت با بن کارت" value={s.gift} />}
@@ -186,7 +197,7 @@ export function CloseShift({ shiftId, onClosed, onCancel }: { shiftId: string; o
         <div className="space-y-3">
           {s.shift.terminal.cardTreasuryId && (
             <label className="block">
-              <span className="mb-1 block text-xs font-black text-gray-700 dark:text-gray-200">جمع رسید پایان روز کارتخوان (اختیاری)</span>
+              <span className="mb-1 block text-xs font-black text-gray-700 dark:text-gray-200">جمع رسید پایان روز کارتخوان‌ها (اختیاری — اگر چند دستگاه دارید، جمع همه)</span>
               <BigAmount value={card} onChange={setCard} />
             </label>
           )}

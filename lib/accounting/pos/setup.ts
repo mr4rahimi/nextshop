@@ -22,6 +22,14 @@ export interface TerminalInput {
   /** `"new"` = صندوق نقد تازه با نام «صندوق <نام پیشخوان>» */
   cashTreasuryId?: unknown;
   cardTreasuryId?: unknown;
+  /** کارتخوان‌های دیگر (به‌جز پیش‌فرض) */
+  moreCardTreasuryIds?: unknown;
+  /** حساب‌های کارت به کارت */
+  transferTreasuryIds?: unknown;
+  /** کارتخوان تازه همین‌جا: نام دستگاه و بانک ← خزانه‌ی `POS` (به‌آخر کارتخوان‌ها اضافه) */
+  newCardReaders?: unknown;
+  /** حساب کارت به کارت تازه: نام، بانک، شماره کارت ← خزانه‌ی `BANK` */
+  newTransferAccounts?: unknown;
   roundTo?: unknown;
   receiptHeader?: unknown;
   receiptFooter?: unknown;
@@ -58,6 +66,35 @@ export async function saveTerminal(tx: Tx, id: string | null, input: TerminalInp
     if (!card || !["POS", "BANK"].includes(card.kind) || !card.isActive) throw new AccError("کارتخوان باید یک «کارتخوان» یا حساب بانکی فعال باشد");
   }
 
+  const rows = (v: unknown) => (Array.isArray(v) ? (v.filter((x) => x && typeof x === "object") as Record<string, unknown>[]).slice(0, 6) : []);
+  const ids = (v: unknown) => (Array.isArray(v) ? [...new Set(v.map((x) => String(x).trim()).filter(Boolean))].slice(0, 12) : []);
+  let moreCardTreasuryIds = input.moreCardTreasuryIds !== undefined ? ids(input.moreCardTreasuryIds) : current?.moreCardTreasuryIds ?? [];
+  let defaultCard = cardTreasuryId;
+  for (const r of rows(input.newCardReaders)) {
+    const nm = str(r.name);
+    if (!nm) throw new AccError("نام کارتخوان تازه را بنویسید؛ مثلاً «کارتخوان ملت»");
+    const t = await createTreasury(tx, { kind: "POS", name: nm, bankName: str(r.bankName) });
+    if (!defaultCard) defaultCard = t.id;
+    else moreCardTreasuryIds.push(t.id);
+  }
+  moreCardTreasuryIds = moreCardTreasuryIds.filter((x) => x !== defaultCard);
+  if (moreCardTreasuryIds.length && !defaultCard) throw new AccError("اول کارتخوان پیش‌فرض را انتخاب کنید");
+  if (moreCardTreasuryIds.length) {
+    const ok = await tx.accTreasury.count({ where: { id: { in: moreCardTreasuryIds }, kind: { in: ["POS", "BANK"] }, isActive: true } });
+    if (ok !== moreCardTreasuryIds.length) throw new AccError("کارتخوان‌های دیگر باید «کارتخوان» یا حساب بانکی فعال باشند");
+  }
+  const transferTreasuryIds = input.transferTreasuryIds !== undefined ? ids(input.transferTreasuryIds) : current?.transferTreasuryIds ?? [];
+  for (const r of rows(input.newTransferAccounts)) {
+    const nm = str(r.name);
+    if (!nm) throw new AccError("نام حساب کارت به کارت را بنویسید؛ مثلاً «ملت — آقای …»");
+    const t = await createTreasury(tx, { kind: "BANK", name: nm, bankName: str(r.bankName), cardNo: str(r.cardNo) });
+    transferTreasuryIds.push(t.id);
+  }
+  if (transferTreasuryIds.length) {
+    const ok = await tx.accTreasury.count({ where: { id: { in: transferTreasuryIds }, kind: "BANK", isActive: true } });
+    if (ok !== transferTreasuryIds.length) throw new AccError("حساب کارت به کارت باید یک حساب بانکی فعال باشد");
+  }
+
   const roundTo = input.roundTo !== undefined ? Math.max(0, Math.floor(Number(input.roundTo) || 0)) : current?.roundTo ?? 0;
   if (roundTo > 100_000) throw new AccError("گرد کردن حداکثر ۱۰۰٬۰۰۰ تومان");
   const paperMm = input.paperMm !== undefined ? (Number(input.paperMm) === 58 ? 58 : 80) : current?.paperMm ?? 80;
@@ -66,7 +103,9 @@ export async function saveTerminal(tx: Tx, id: string | null, input: TerminalInp
     name,
     warehouseId,
     cashTreasuryId,
-    cardTreasuryId,
+    cardTreasuryId: defaultCard,
+    moreCardTreasuryIds,
+    transferTreasuryIds,
     roundTo,
     paperMm,
     receiptHeader: input.receiptHeader !== undefined ? str(input.receiptHeader) : current?.receiptHeader ?? null,

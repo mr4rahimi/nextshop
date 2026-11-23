@@ -54,7 +54,17 @@ export interface TicketInput {
    * `cash: "rest"` = باقیِ بعد از کارت — صندوق مبلغ دقیق مرجوعی را پیش از ثبت نمی‌داند
    * (سهم تخفیف هر ردیف گرد می‌شود)، پس رابط همیشه همین را می‌فرستد مگر نسیه باشد.
    */
-  pay: { cash: bigint | "rest"; card: bigint };
+  pay: {
+    cash: bigint | "rest";
+    card: bigint;
+    /** کارتخوانی که کشیده شد؛ خالی = پیش‌فرض صندوق */
+    cardTreasuryId?: string | null;
+    /** کارت به کارت مشتری (فقط دریافت) */
+    transfer?: bigint;
+    transferTreasuryId?: string | null;
+    /** شماره‌ی پیگیری یا چهار رقم آخر کارت */
+    transferRef?: string | null;
+  };
   tendered?: bigint | null;
   overrideCredit?: boolean;
   /** تومانی که از اعتبار کارت اشتراک خرج می‌شود (فقط وقتی مشتری چیزی می‌دهد) */
@@ -254,6 +264,9 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   const net = S - (R - restore - giftBack);
   const due = net >= 0n ? net : -net;
   const k = input.pay.card;
+  const x = input.pay.transfer ?? 0n;
+  if (x < 0n) throw new AccError("مبلغ کارت به کارت منفی نمی‌شود");
+  if (x > 0n && net <= 0n) throw new AccError("کارت به کارت فقط برای دریافت از مشتری است؛ پس دادن را نقد یا به کارت بزنید");
   const u = net > 0n ? clubSpend : 0n;
   if (clubSpend > 0n && net <= 0n) throw new AccError("با کارت اشتراک فقط مبلغ قابل پرداخت را می‌شود داد");
   let spendPts = 0;
@@ -269,11 +282,24 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   if (gifts.some((x) => x.amount < 0n)) throw new AccError("مبلغ بن منفی نمی‌شود");
   const gSum = gifts.reduce((s, x) => s + x.amount, 0n);
   if (gSum > 0n && net <= 0n) throw new AccError("با بن کارت فقط مبلغ قابل پرداخت را می‌شود داد");
-  if (gSum + u > due) throw new AccError(`مبلغ بن و کارت اشتراک از مبلغ قابل پرداخت (${formatAmount(due)}) بیشتر است`);
-  const c = input.pay.cash === "rest" ? (due > k + u + gSum ? due - k - u - gSum : 0n) : input.pay.cash;
+  if (gSum + u + x > due) {
+    const what = [x > 0n && "کارت به کارت", gSum > 0n && "بن", u > 0n && "کارت اشتراک"].filter(Boolean).join(" و ");
+    throw new AccError(`مبلغ ${what} از مبلغ قابل پرداخت (${formatAmount(due)}) بیشتر است`);
+  }
+  const c = input.pay.cash === "rest" ? (due > k + u + gSum + x ? due - k - u - gSum - x : 0n) : input.pay.cash;
   if (c < 0n || k < 0n) throw new AccError("مبلغ منفی نمی‌شود");
   if (k > 0n && !terminal.cardTreasuryId) throw new AccError("این صندوق کارتخوان ندارد");
-  const moved = c + k + u + gSum;
+  // کارتخوان: پیش‌فرض یا یکی از کارتخوان‌های دیگر همین صندوق
+  const readers = [terminal.cardTreasuryId, ...terminal.moreCardTreasuryIds].filter((id): id is string => !!id);
+  const cardTr = k > 0n ? (input.pay.cardTreasuryId || terminal.cardTreasuryId) : null;
+  if (cardTr && !readers.includes(cardTr)) throw new AccError("این کارتخوان برای این صندوق تعریف نشده");
+  let transferTr: string | null = null;
+  if (x > 0n) {
+    transferTr = input.pay.transferTreasuryId || terminal.transferTreasuryIds[0] || null;
+    if (!transferTr || !terminal.transferTreasuryIds.includes(transferTr)) throw new AccError("برای این صندوق حساب «کارت به کارت» تعریف نشده؛ در تعریف صندوق انتخابش کنید");
+  }
+  const transferRef = x > 0n ? (input.pay.transferRef ?? "").replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).trim().slice(0, 40) || null : null;
+  const moved = c + k + u + gSum + x;
   if (moved > due) {
     throw new AccError(
       net >= 0n
@@ -309,6 +335,10 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
       discount: (saleInv ? saleInv.lineDiscount + saleInv.invoiceDiscount : 0n),
       cash: net >= 0n ? c : -c,
       card: net >= 0n ? k : -k,
+      cardTreasuryId: cardTr,
+      transfer: x,
+      transferTreasuryId: transferTr,
+      transferRef,
       credit: net >= 0n ? unsettled : -unsettled,
       tendered: net > 0n && c > 0n && input.tendered && input.tendered > c ? input.tendered : null,
       change: net > 0n && c > 0n && input.tendered && input.tendered > c ? input.tendered - c : 0n,
@@ -366,10 +396,12 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   const cardIn = saleInv && net >= 0n ? k : 0n;
   const clubIn = saleInv ? u : 0n;
   const giftIn = saleInv ? gSum : 0n;
-  if (saleInv && cashIn + cardIn + clubIn + giftIn > 0n) {
+  const transferIn = saleInv ? x : 0n;
+  if (saleInv && cashIn + cardIn + clubIn + giftIn + transferIn > 0n) {
     const items: MoneyItemInput[] = [];
     if (cashIn > 0n) items.push({ method: "CASH", treasuryId: terminal.cashTreasuryId, amount: cashIn });
-    if (cardIn > 0n) items.push({ method: "POS", treasuryId: terminal.cardTreasuryId, amount: cardIn });
+    if (cardIn > 0n) items.push({ method: "POS", treasuryId: cardTr, amount: cardIn });
+    if (transferIn > 0n) items.push({ method: "CARD_TRANSFER", treasuryId: transferTr, amount: transferIn, trackingCode: transferRef });
     if (clubIn > 0n) items.push({ method: "CLUB_CREDIT", amount: clubIn });
     if (giftIn > 0n) items.push({ method: "STORE_GIFT", amount: giftIn, trackingCode: gifts.map((x) => x.number.toUpperCase()).join("، ").slice(0, 190) });
     const doc = await createMoneyDoc(
@@ -380,7 +412,7 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
         partyId: party.id,
         description: `${note} — فاکتور فروش ${faNum(saleInv.number ?? 0)}`,
         items,
-        allocations: [{ invoiceId: saleInv.id, amount: cashIn + cardIn + clubIn + giftIn }],
+        allocations: [{ invoiceId: saleInv.id, amount: cashIn + cardIn + clubIn + giftIn + transferIn }],
       },
       actor,
     );
@@ -389,13 +421,13 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   const cashOut = retInv ? internal + (net < 0n ? c : 0n) : 0n;
   const cardOut = retInv && net < 0n ? k : 0n;
   if (retInv && cashOut + cardOut + restore + giftBack > 0n) {
-    const trs = await tx.accTreasury.findMany({ where: { id: { in: [terminal.cashTreasuryId, terminal.cardTreasuryId].filter((x): x is string => !!x) } } });
+    const trs = await tx.accTreasury.findMany({ where: { id: { in: [terminal.cashTreasuryId, cardTr].filter((v): v is string => !!v) } } });
     const keyOf = (id: string) => TREASURY_ACCOUNT_KEY[trs.find((t) => t.id === id)!.kind];
     const lines: LineInput[] = [{ accountKey: "AR", partyId: party.id, debit: cashOut + cardOut + restore + giftBack, description: "پس دادن مرجوعی" }];
     if (restore > 0n) lines.push({ accountKey: "SALES_DISCOUNT", credit: restore, description: "برگشت به کارت اشتراک" });
     if (giftBack > 0n) lines.push({ accountKey: "GIFT_LIABILITY", credit: giftBack, description: "برگشت به بن کارت" });
     if (cashOut > 0n) lines.push({ accountKey: keyOf(terminal.cashTreasuryId), treasuryId: terminal.cashTreasuryId, credit: cashOut, description: internal > 0n && saleInv ? "تعویض و پس دادن نقد" : "پس دادن نقد" });
-    if (cardOut > 0n) lines.push({ accountKey: keyOf(terminal.cardTreasuryId!), treasuryId: terminal.cardTreasuryId, credit: cardOut, description: "برگشت به کارت" });
+    if (cardOut > 0n) lines.push({ accountKey: keyOf(cardTr!), treasuryId: cardTr, credit: cardOut, description: "برگشت به کارت" });
     const v = await postVoucher(tx, {
       date,
       description: `${note} — برگشت از فروش ${faNum(retInv.number ?? 0)}`,
@@ -496,6 +528,13 @@ export async function ticketView(id: string, db: Db = prisma) {
     ret: ret ? { number: ret.number, total: ret.total, lines: ret.lines.map(line) } : null,
     barcode: `${TICKET_BARCODE_PREFIX}${t.number}`,
     club: t.clubProfileId ? await ticketClub(db, t) : null,
+    // نام کارتخوان و حساب کارت به کارت — روی رسید
+    pay: await (async () => {
+      const ids = [t.cardTreasuryId, t.transferTreasuryId].filter((x): x is string => !!x);
+      const trs = ids.length ? await db.accTreasury.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }) : [];
+      const nm = (id: string | null) => trs.find((x) => x.id === id)?.name ?? null;
+      return { reader: nm(t.cardTreasuryId), transferTo: nm(t.transferTreasuryId) };
+    })(),
   };
 }
 

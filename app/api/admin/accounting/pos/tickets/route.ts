@@ -34,7 +34,7 @@ interface Body {
   sale?: { productId?: string; qty?: unknown; unitPrice?: unknown; discount?: unknown; serials?: unknown }[];
   ret?: { invoiceId?: string | null; lines?: { refLineId?: string | null; productId?: string | null; qty?: unknown; serials?: unknown }[] } | null;
   /** `cash: "rest"` = باقیِ بعد از کارت */
-  pay?: { cash?: unknown; card?: unknown };
+  pay?: { cash?: unknown; card?: unknown; cardTreasuryId?: unknown; transfer?: unknown; transferTreasuryId?: unknown; transferRef?: unknown };
   tendered?: unknown;
   overrideCredit?: boolean;
   clubSpend?: unknown;
@@ -68,7 +68,14 @@ export async function POST(req: Request) {
       ret: b.ret?.lines?.length
         ? { invoiceId: b.ret.invoiceId || null, lines: b.ret.lines.map((l, i) => ({ refLineId: l.refLineId || null, productId: l.productId || null, qty: qty(l.qty, `مرجوعی ردیف ${faNum(i + 1)}`), serials: strList(l.serials) })) }
         : null,
-      pay: { cash: b.pay?.cash === "rest" ? "rest" : toAmount(b.pay?.cash, "نقد"), card: toAmount(b.pay?.card, "کارت") },
+      pay: {
+        cash: b.pay?.cash === "rest" ? "rest" : toAmount(b.pay?.cash, "نقد"),
+        card: toAmount(b.pay?.card, "کارت"),
+        cardTreasuryId: typeof b.pay?.cardTreasuryId === "string" ? b.pay.cardTreasuryId : null,
+        transfer: b.pay?.transfer ? toAmount(b.pay.transfer, "کارت به کارت") : 0n,
+        transferTreasuryId: typeof b.pay?.transferTreasuryId === "string" ? b.pay.transferTreasuryId : null,
+        transferRef: typeof b.pay?.transferRef === "string" ? b.pay.transferRef : null,
+      },
       tendered: b.tendered ? toAmount(b.tendered, "پول دریافتی") : null,
       overrideCredit: !!b.overrideCredit,
       clubSpend: b.clubSpend ? toAmount(b.clubSpend, "کارت اشتراک") : 0n,

@@ -5387,8 +5387,12 @@ model AccPosTerminal {
   warehouseId    String
   /// صندوق نقد همین پیشخوان (`AccTreasury.kind = CASH`)
   cashTreasuryId String
-  /// کارتخوان (`POS`) یا حساب بانکی؛ خالی = پرداخت کارتی ندارد
+  /// کارتخوان (`POS`) یا حساب بانکی؛ خالی = پرداخت کارتی ندارد. کارتخوان پیش‌فرض
   cardTreasuryId String?
+  /// کارتخوان‌های دیگر همین پیشخوان — صندوقدار هنگام پرداخت دستگاه را انتخاب می‌کند
+  moreCardTreasuryIds String[] @default([])
+  /// حساب‌های بانکی «کارت به کارت» (`BANK` با شماره کارت)؛ خالی = کارت به کارت ندارد
+  transferTreasuryIds String[] @default([])
   /// گرد کردن جمع به پایین (تومان، مثلاً ۱۰۰۰) — اختلاف تخفیف می‌شود
   roundTo        Int      @default(0)
   receiptHeader  String?
@@ -5498,6 +5502,13 @@ model AccPosTicket {
   /// آنچه مشتری داد (+) یا گرفت (−)، به تفکیک روش
   cash            BigInt           @default(0)
   card            BigInt           @default(0)
+  /// کارتخوانی که مبلغ `card` با آن کشیده/برگشت شد
+  cardTreasuryId  String?
+  /// کارت به کارت (همیشه دریافت از مشتری، + )
+  transfer        BigInt           @default(0)
+  transferTreasuryId String?
+  /// شماره‌ی پیگیری یا چهار رقم آخر کارت مشتری
+  transferRef     String?
   /// مانده‌ی نسیه روی حساب مشتری
   credit          BigInt           @default(0)
   /// پولی که مشتری داد و باقی‌اش (فقط برای چاپ رسید)

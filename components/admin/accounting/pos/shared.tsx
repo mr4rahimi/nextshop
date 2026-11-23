@@ -98,6 +98,9 @@ export interface ShiftSummary {
   otherCash: string;
   expectedCash: string;
   expectedCard: string;
+  byReader?: { treasuryId: string | null; name: string; cardIn: string; cardOut: string; tickets: number }[];
+  transfer?: string;
+  byTransfer?: { treasuryId: string | null; name: string; amount: string; tickets: number }[];
   sellers: { sellerId: string | null; name: string; tickets: number; saleTotal: string; returnTotal: string; net: string; qty: number }[];
 }
 

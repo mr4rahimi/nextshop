@@ -23,6 +23,8 @@ interface Terminal {
   warehouseId: string;
   cashTreasuryId: string;
   cardTreasuryId: string | null;
+  moreCardTreasuryIds?: string[];
+  transferTreasuryIds?: string[];
   roundTo: number;
   receiptHeader: string | null;
   receiptFooter: string | null;
@@ -41,7 +43,7 @@ interface Seller {
 interface HubData {
   terminals: Terminal[];
   warehouses: { id: string; name: string }[];
-  treasuries: { id: string; name: string; kind: string }[];
+  treasuries: { id: string; name: string; kind: string; bankName?: string | null; cardNo?: string | null }[];
   sellers: Seller[];
   can: { manage: boolean };
 }
@@ -186,11 +188,18 @@ function TerminalForm({ d, t, onClose, onSaved }: { d: HubData; t: Terminal | nu
   const used = new Set(d.terminals.filter((x) => x.id !== t?.id).map((x) => x.cashTreasuryId));
   const cashes = d.treasuries.filter((x) => x.kind === "CASH" && !used.has(x.id));
   const cards = d.treasuries.filter((x) => x.kind === "POS" || x.kind === "BANK");
+  const banks = d.treasuries.filter((x) => x.kind === "BANK");
+  const [readers, setReaders] = useState<string[]>(() =>
+    t ? [t.cardTreasuryId, ...(t.moreCardTreasuryIds ?? [])].filter((x): x is string => !!x) : cards.filter((c) => c.kind === "POS").slice(0, 1).map((c) => c.id),
+  );
+  const [transfers, setTransfers] = useState<string[]>(t?.transferTreasuryIds ?? []);
+  const [newReaders, setNewReaders] = useState<{ name: string; bankName: string }[]>([]);
+  const [newTransfers, setNewTransfers] = useState<{ name: string; bankName: string; cardNo: string }[]>([]);
+  const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   const [f, setF] = useState({
     name: t?.name ?? "",
     warehouseId: t?.warehouseId ?? d.warehouses[0]?.id ?? "",
     cashTreasuryId: t?.cashTreasuryId ?? "new",
-    cardTreasuryId: t?.cardTreasuryId ?? cards.find((c) => c.kind === "POS")?.id ?? "",
     roundTo: String(t?.roundTo ?? 0),
     paperMm: String(t?.paperMm ?? 80),
     receiptHeader: t?.receiptHeader ?? "",
@@ -206,7 +215,16 @@ function TerminalForm({ d, t, onClose, onSaved }: { d: HubData; t: Terminal | nu
     try {
       await api(t ? `/api/admin/accounting/pos/terminals/${t.id}` : "/api/admin/accounting/pos/terminals", {
         method: t ? "PATCH" : "POST",
-        json: { ...f, cardTreasuryId: f.cardTreasuryId || null, roundTo: Number(f.roundTo) || 0, paperMm: Number(f.paperMm) },
+        json: {
+          ...f,
+          cardTreasuryId: readers[0] ?? null,
+          moreCardTreasuryIds: readers.slice(1),
+          transferTreasuryIds: transfers,
+          newCardReaders: newReaders.filter((r) => r.name.trim()),
+          newTransferAccounts: newTransfers.filter((r) => r.name.trim() || r.cardNo.trim()),
+          roundTo: Number(f.roundTo) || 0,
+          paperMm: Number(f.paperMm),
+        },
       });
       onSaved();
     } catch (e) {
@@ -249,16 +267,72 @@ function TerminalForm({ d, t, onClose, onSaved }: { d: HubData; t: Terminal | nu
             ))}
           </select>
         </Field>
-        <Field label="کارتخوان">
-          <select value={f.cardTreasuryId} onChange={set("cardTreasuryId")} className={inputCls}>
-            <option value="">ندارد</option>
-            {cards.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.kind === "BANK" ? " (حساب بانکی)" : ""}
-              </option>
+        <Field label="کارتخوان‌ها (پوز)" hint="هر دستگاهی که پشت این صندوق هست را تیک بزنید؛ صندوقدار هنگام پرداخت کارتی دستگاه را انتخاب می‌کند و بستن صندوق جمع هر دستگاه را جدا نشان می‌دهد. اولی پیش‌فرض است.">
+          <div className="space-y-1.5">
+            {cards.map((c) => {
+              const i = readers.indexOf(c.id);
+              return (
+                <div key={c.id} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-sm dark:bg-white/5">
+                  <input type="checkbox" checked={i >= 0} onChange={() => setReaders((r) => toggle(r, c.id))} className="h-4 w-4" />
+                  <span className="flex-1 font-bold">
+                    {c.name}
+                    <span className="mr-1 text-[11px] font-normal text-gray-400">{c.kind === "BANK" ? "حساب بانکی" : "کارتخوان"}{c.bankName ? ` · ${c.bankName}` : ""}</span>
+                  </span>
+                  {i === 0 ? (
+                    <span className="rounded-lg bg-emerald-500/10 px-2 py-0.5 text-[11px] font-black text-emerald-700">پیش‌فرض</span>
+                  ) : i > 0 ? (
+                    <button type="button" onClick={() => setReaders((r) => [c.id, ...r.filter((x) => x !== c.id)])} className="text-[11px] font-bold text-blue-600">
+                      پیش‌فرض شود
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
+            {newReaders.map((r, i) => (
+              <div key={i} className="grid grid-cols-[1fr_8rem_auto] gap-2">
+                <input value={r.name} onChange={(e) => setNewReaders((x) => x.map((y, j) => (j === i ? { ...y, name: e.target.value } : y)))} placeholder="نام دستگاه، مثلاً «پوز ملت»" className={inputCls} />
+                <input value={r.bankName} onChange={(e) => setNewReaders((x) => x.map((y, j) => (j === i ? { ...y, bankName: e.target.value } : y)))} placeholder="بانک" className={inputCls} />
+                <button type="button" onClick={() => setNewReaders((x) => x.filter((_, j) => j !== i))} className="px-2 text-xs font-bold text-red-600">
+                  حذف
+                </button>
+              </div>
             ))}
-          </select>
+            <button type="button" onClick={() => setNewReaders((x) => [...x, { name: "", bankName: "" }])} className="text-xs font-bold text-blue-600">
+              + کارتخوان تازه
+            </button>
+          </div>
+        </Field>
+        <Field label="کارت به کارت" hint="حساب‌هایی که مشتری می‌تواند به کارتشان پول بزند. شماره کارت در پنجره‌ی پرداخت درشت نشان داده می‌شود. خالی = کارت به کارت ندارد.">
+          <div className="space-y-1.5">
+            {banks.map((c) => (
+              <label key={c.id} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-sm dark:bg-white/5">
+                <input type="checkbox" checked={transfers.includes(c.id)} onChange={() => setTransfers((r) => toggle(r, c.id))} className="h-4 w-4" />
+                <span className="flex-1 font-bold">
+                  {c.name}
+                  {c.cardNo ? (
+                    <span className="mr-1 text-[11px] font-normal text-gray-400" dir="ltr">
+                      {c.cardNo.replace(/(\d{4})(?=\d)/g, "$1-")}
+                    </span>
+                  ) : (
+                    <span className="mr-1 text-[11px] font-normal text-amber-600">شماره کارت ندارد</span>
+                  )}
+                </span>
+              </label>
+            ))}
+            {newTransfers.map((r, i) => (
+              <div key={i} className="grid grid-cols-2 gap-2 rounded-xl border border-dashed border-gray-200 p-2 dark:border-white/10">
+                <input value={r.name} onChange={(e) => setNewTransfers((x) => x.map((y, j) => (j === i ? { ...y, name: e.target.value } : y)))} placeholder="نام، مثلاً «ملت — فروشگاه»" className={inputCls} />
+                <input value={r.bankName} onChange={(e) => setNewTransfers((x) => x.map((y, j) => (j === i ? { ...y, bankName: e.target.value } : y)))} placeholder="بانک" className={inputCls} />
+                <input value={r.cardNo} onChange={(e) => setNewTransfers((x) => x.map((y, j) => (j === i ? { ...y, cardNo: e.target.value } : y)))} placeholder="شماره کارت ۱۶ رقمی" inputMode="numeric" dir="ltr" className={inputCls} />
+                <button type="button" onClick={() => setNewTransfers((x) => x.filter((_, j) => j !== i))} className="text-xs font-bold text-red-600">
+                  حذف
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={() => setNewTransfers((x) => [...x, { name: "", bankName: "", cardNo: "" }])} className="text-xs font-bold text-blue-600">
+              + حساب کارت به کارت تازه
+            </button>
+          </div>
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="گرد کردن جمع به پایین" hint="مثلاً ۱۰۰۰: ۳۲۵٬۵۰۰ ← ۳۲۵٬۰۰۰">
@@ -454,6 +528,7 @@ interface Agg {
   discount: string;
   cash: string;
   card: string;
+  transfer?: string;
   credit: string;
 }
 interface Report {
@@ -542,7 +617,7 @@ function ReportPanel({ terminals, sellers }: { terminals: Terminal[]; sellers: S
             <Stat label="فروش خالص" value={formatAmount(r.total.net)} sub={`فروش ${formatAmount(r.total.saleTotal)} − مرجوعی ${formatAmount(r.total.returnTotal)}`} tone="blue" />
             <Stat label="رسیدها" value={faNum(r.total.tickets)} sub={`${faNum(r.total.saleQty)} کالا فروخته، ${faNum(r.total.returnQty)} برگشت`} />
             <Stat label="میانگین هر خرید" value={formatAmount(r.total.avgBasket)} />
-            <Stat label="نقد / کارت" value={formatAmount(r.total.cash)} sub={`کارت ${formatAmount(r.total.card)}${B(r.total.credit) ? ` · نسیه ${formatAmount(r.total.credit)}` : ""}`} tone="green" />
+            <Stat label="نقد / کارت" value={formatAmount(r.total.cash)} sub={`کارت ${formatAmount(r.total.card)}${B(r.total.transfer ?? "0") ? ` · کارت به کارت ${formatAmount(r.total.transfer!)}` : ""}${B(r.total.credit) ? ` · نسیه ${formatAmount(r.total.credit)}` : ""}`} tone="green" />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <AggTable title="فروشنده‌ها" rows={r.sellers.map((s) => ({ key: s.id ?? "-", name: s.name, a: s, extra: s.commissionBp ? `${formatAmount(s.commission)} (${faNum(s.commissionBp / 100)}٪)` : "—" }))} extraLabel="پورسانت (برآورد)" icon />

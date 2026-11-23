@@ -24,14 +24,27 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       prisma.accPosShift.findFirst({ where: { terminalId: id, status: "OPEN" }, select: { id: true } }),
       prisma.accPosSeller.findMany({ where: { isActive: true }, orderBy: { code: "asc" }, select: { id: true, code: true, name: true } }),
       prisma.accSettings.findUnique({ where: { id: "singleton" }, select: { vatEnabled: true, vatRateBp: true, serialRequired: true } }),
-      prisma.accTreasury.findMany({ where: { id: { in: [terminal.cashTreasuryId, terminal.cardTreasuryId].filter((x): x is string => !!x) } }, select: { id: true, name: true, kind: true } }),
+      prisma.accTreasury.findMany({
+        where: { id: { in: [terminal.cashTreasuryId, terminal.cardTreasuryId, ...terminal.moreCardTreasuryIds, ...terminal.transferTreasuryIds].filter((x): x is string => !!x) } },
+        select: { id: true, name: true, kind: true, bankName: true, cardNo: true, isActive: true },
+      }),
       treasuryBook(prisma, terminal.cashTreasuryId),
       prisma.accPosShift.findFirst({ where: { terminalId: id, status: "CLOSED" }, orderBy: { number: "desc" }, select: { keptFloat: true } }),
     ]);
     const warehouse = await prisma.accWarehouse.findUnique({ where: { id: terminal.warehouseId }, select: { name: true } });
     return NextResponse.json(
       serialize({
-        terminal: { ...terminal, warehouseName: warehouse?.name ?? "", cash: treasuries.find((t) => t.id === terminal.cashTreasuryId) ?? null, card: treasuries.find((t) => t.id === terminal.cardTreasuryId) ?? null },
+        terminal: { ...terminal, warehouseName: warehouse?.name ?? "", cash: treasuries.find((t) => t.id === terminal.cashTreasuryId) ?? null, card: treasuries.find((t) => t.id === terminal.cardTreasuryId) ?? null,
+          // کارتخوان‌ها (اولی پیش‌فرض) و حساب‌های کارت به کارت — برای انتخاب در پنجره‌ی پرداخت
+          readers: [terminal.cardTreasuryId, ...terminal.moreCardTreasuryIds]
+            .map((tid) => treasuries.find((t) => t.id === tid && t.isActive))
+            .filter((t): t is NonNullable<typeof t> => !!t)
+            .map((t) => ({ id: t.id, name: t.name })),
+          transfers: terminal.transferTreasuryIds
+            .map((tid) => treasuries.find((t) => t.id === tid && t.isActive))
+            .filter((t): t is NonNullable<typeof t> => !!t)
+            .map((t) => ({ id: t.id, name: t.name, bankName: t.bankName, cardNo: t.cardNo })),
+        },
         shift: open ? await shiftSummary(prisma, open.id) : null,
         sellers,
         vat: { enabled: !!settings?.vatEnabled, rateBp: settings?.vatRateBp ?? 0 },

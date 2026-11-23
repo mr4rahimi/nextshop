@@ -17,13 +17,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, Banknote, ClipboardList, CreditCard, IdCard, Lock, Minus, PauseCircle, Percent, Plus, Printer, RotateCcw, ScanLine, ShoppingBag, Trash2, User, UserRound, X,
+  ArrowLeftRight, ArrowRight, Banknote, ClipboardList, CreditCard, IdCard, Lock, Minus, PauseCircle, Percent, Plus, Printer, RotateCcw, ScanLine, ShoppingBag, Trash2, User, UserRound, X,
 } from "lucide-react";
 import { calcInvoice } from "@/lib/accounting/invoices/calc";
 import { parseAmountInput } from "@/lib/accounting/money";
 import { couponAmount } from "@/lib/club/coupon-calc";
 import HelpButton from "@/components/admin/worklist/HelpButton";
-import PartyPicker, { type PartyOption } from "../PartyPicker";
+import type { PartyOption } from "../PartyPicker";
+import CustomerSheet from "./CustomerSheet";
 import { api } from "../ui";
 import ModelPicker from "./ModelPicker";
 import PaySheet, { type PayResult } from "./PaySheet";
@@ -40,6 +41,8 @@ interface Boot {
     warehouseName: string;
     cash: { id: string; name: string } | null;
     card: { id: string; name: string } | null;
+    readers?: { id: string; name: string }[];
+    transfers?: { id: string; name: string; bankName: string | null; cardNo: string | null }[];
   };
   shift: ShiftSummary | null;
   sellers: { id: string; code: number; name: string }[];
@@ -111,7 +114,7 @@ interface PosCoupon {
   maxDiscount: string;
   minOrderTotal: string;
 }
-type Modal = null | "seller" | "party" | "card" | "pay" | "return" | "model" | "list" | "discount" | "held" | "close" | "tickets" | "serial";
+type Modal = null | "seller" | "party" | "card" | "swipe" | "pay" | "return" | "model" | "list" | "discount" | "held" | "close" | "tickets" | "serial";
 
 let keySeq = 0;
 const newKey = () => `k${++keySeq}`;
@@ -134,7 +137,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
   const [gifts, setGifts] = useState<PosGift[]>([]);
   const [sel, setSel] = useState(0);
   const [modal, setModal] = useState<Modal>(null);
-  const [payStart, setPayStart] = useState<"cash" | "card">("cash");
+  const [payStart, setPayStart] = useState<"cash" | "card" | "transfer">("cash");
   const [pick, setPick] = useState<ModelPick | null>(null);
   const [list, setList] = useState<PosItem[]>([]);
   const [returnCode, setReturnCode] = useState<string | undefined>();
@@ -211,7 +214,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
 
   // ── جمع‌ها ──
   const sale = useMemo(() => {
-    if (!lines.length) return { subtotal: 0n, discount: 0n, total: 0n, rounding: 0n, member: 0n, coupon: 0n, belowMin: false, pre: 0n, valid: true };
+    if (!lines.length) return { subtotal: 0n, discount: 0n, lineDisc: 0n, invDisc: 0n, total: 0n, rounding: 0n, member: 0n, coupon: 0n, belowMin: false, pre: 0n, valid: true };
     try {
       const c = calcInvoice({
         lines: lines.map((l) => ({ qty: l.qty, unitPrice: B(l.unitPrice), discount: B(l.discount), vatRateBp: 0 })),
@@ -227,6 +230,8 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
       return {
         subtotal: c.subtotal,
         discount: c.lineDiscount + c.invoiceDiscount + cd + md + rounding,
+        lineDisc: c.lineDiscount,
+        invDisc: c.invoiceDiscount,
         total: c.total - cd - md - rounding,
         rounding,
         member: md,
@@ -236,7 +241,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
         valid: true,
       };
     } catch {
-      return { subtotal: 0n, discount: 0n, total: 0n, rounding: 0n, member: 0n, coupon: 0n, belowMin: false, pre: 0n, valid: false };
+      return { subtotal: 0n, discount: 0n, lineDisc: 0n, invDisc: 0n, total: 0n, rounding: 0n, member: 0n, coupon: 0n, belowMin: false, pre: 0n, valid: false };
     }
   }, [lines, discount, roundTo, memberBp, coupon]);
   const retApprox = useMemo(() => (ret?.lines ?? []).reduce((s, l) => s + B(l.each) * BigInt(l.qty), 0n), [ret]);
@@ -476,7 +481,14 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     try {
       const r = await api<{ ticket: { id: string; number: number; saleTotal: string; returnTotal: string; change: string; kind: string } }>("/api/admin/accounting/pos/tickets", {
         method: "POST",
-        json: { ...ticketBody(), gifts: giftUses.filter((g) => g.use > 0n).map((g) => ({ number: g.number, amount: g.use.toString() })), pay: { cash: p.cash === null ? "rest" : p.cash.toString(), card: p.card.toString() }, clubSpend: p.club.toString(), tendered: p.tendered?.toString() ?? null, overrideCredit: override },
+        json: { ...ticketBody(), gifts: giftUses.filter((g) => g.use > 0n).map((g) => ({ number: g.number, amount: g.use.toString() })), pay: {
+          cash: p.cash === null ? "rest" : p.cash.toString(),
+          card: p.card.toString(),
+          cardTreasuryId: p.cardTreasuryId,
+          transfer: p.transfer.toString(),
+          transferTreasuryId: p.transferTreasuryId,
+          transferRef: p.transferRef,
+        }, clubSpend: p.club.toString(), tendered: p.tendered?.toString() ?? null, overrideCredit: override },
       });
       const t = r.ticket;
       if (win) win.location.href = `/admin/accounting/pos/tickets/${t.id}/print?auto=1`;
@@ -498,7 +510,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
     }
   }
 
-  function openPay(start: "cash" | "card") {
+  function openPay(start: "cash" | "card" | "transfer") {
     if (!lines.length && !ret?.lines.length) return flash("سبد خالی است", "err");
     if (!sale.valid) return flash("تخفیف یا قیمت یک ردیف درست نیست", "err");
     if (lines.some((l) => B(l.unitPrice) <= 0n)) return flash("یک کالا قیمت ندارد", "err");
@@ -612,7 +624,14 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           )}
           <button onClick={() => !ret?.src && setModal("party")} className="flex h-10 items-center gap-2 rounded-xl bg-gray-100 px-3 text-sm font-bold text-gray-700 dark:bg-white/5 dark:text-gray-200">
             <User className="h-4 w-4" aria-hidden />
-            <span className="max-w-[9rem] truncate">{ret?.src ? ret.src.partyName : party?.name ?? "مشتری حضوری"}</span>
+            <span className="min-w-0 text-right leading-tight">
+              <span className="block max-w-[11rem] truncate">{ret?.src ? ret.src.partyName : party?.name ?? "مشتری حضوری"}</span>
+              {!ret?.src && party?.mobile && (
+                <span className="block text-[10px] font-bold text-gray-400" dir="ltr">
+                  {faNum(party.mobile)}
+                </span>
+              )}
+            </span>
             <Kbd>F6</Kbd>
           </button>
           {member && member.partyId === ticketPartyId && (
@@ -627,14 +646,11 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           )}
           {boot.clubCards && !ret?.src && !(member && member.partyId === ticketPartyId && member.card) && (
             <button
-              onClick={() => {
-                setCardDraft("");
-                setModal("card");
-              }}
+              onClick={() => setModal("swipe")}
               className="flex h-10 items-center gap-1.5 rounded-xl border border-dashed border-amber-500/50 px-3 text-xs font-black text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
             >
               <IdCard className="h-4 w-4" aria-hidden />
-              صدور کارت
+              کارت اشتراک
             </button>
           )}
           <div className="mr-auto flex items-center gap-1">
@@ -840,10 +856,38 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
               <span>{faNum(itemCount)} کالا</span>
               <span className="tabular-nums">{formatAmount(sale.subtotal)}</span>
             </div>
-            {sale.discount > 0n && (
+            {sale.lineDisc > 0n && (
               <div className="mt-1 flex justify-between text-sm font-bold text-rose-600">
-                <span>تخفیف{sale.member > 0n ? " (با کارت)" : ""}{sale.rounding > 0n ? " و گرد کردن" : ""}</span>
-                <span className="tabular-nums">−{formatAmount(sale.discount)}</span>
+                <span>تخفیف ردیف‌ها</span>
+                <span className="tabular-nums">−{formatAmount(sale.lineDisc)}</span>
+              </div>
+            )}
+            {sale.invDisc > 0n && (
+              <div className="mt-1 flex items-center justify-between gap-2 text-sm font-bold text-rose-600">
+                <span>
+                  تخفیف فاکتور
+                  {sale.subtotal - sale.lineDisc > 0n && (
+                    <span className="mr-1 text-xs opacity-80">({faNum(Math.round(Number((sale.invDisc * 1000n) / (sale.subtotal - sale.lineDisc)) / 10))}٪)</span>
+                  )}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="tabular-nums">−{formatAmount(sale.invDisc)}</span>
+                  <button onClick={() => setDiscount("")} className="rounded-full p-0.5 hover:bg-rose-100 dark:hover:bg-rose-500/10" aria-label="برداشتن تخفیف فاکتور" title="برداشتن تخفیف فاکتور">
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </span>
+              </div>
+            )}
+            {sale.member > 0n && (
+              <div className="mt-1 flex justify-between text-sm font-bold text-amber-700 dark:text-amber-300">
+                <span>تخفیف کارت اشتراک</span>
+                <span className="tabular-nums">−{formatAmount(sale.member)}</span>
+              </div>
+            )}
+            {sale.rounding > 0n && (
+              <div className="mt-1 flex justify-between text-xs font-bold text-gray-500">
+                <span>گرد کردن</span>
+                <span className="tabular-nums">−{formatAmount(sale.rounding)}</span>
               </div>
             )}
             {coupon && (
@@ -895,8 +939,12 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
                 </span>
               </div>
             ))}
-            <button onClick={() => setModal("discount")} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-blue-600">
-              <Percent className="h-3.5 w-3.5" aria-hidden /> تخفیف <Kbd>F4</Kbd>
+            <button
+              onClick={() => setModal("discount")}
+              disabled={!lines.length}
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-rose-300 py-2.5 text-sm font-black text-rose-600 transition hover:bg-rose-50 disabled:opacity-40 dark:border-rose-500/30 dark:hover:bg-rose-500/10"
+            >
+              <Percent className="h-4 w-4" aria-hidden /> تخفیف فاکتور / کد تخفیف <Kbd>F4</Kbd>
             </button>
             <div className="mt-3 border-t border-[var(--adm-border)] pt-3">
               <p className="text-xs font-bold text-gray-500">{net < 0n ? "پس دادن به مشتری" : "قابل پرداخت"}</p>
@@ -906,6 +954,30 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
               </p>
             </div>
           </div>
+
+          {member && member.partyId === ticketPartyId && member.card && !hasRet && saleTotal > 0n && (
+            <div className="rounded-3xl border border-amber-300/60 bg-gradient-to-l from-amber-50 to-yellow-50 p-4 dark:border-amber-500/20 dark:from-amber-500/10 dark:to-amber-500/5">
+              <p className="flex items-center gap-1.5 text-xs font-black text-amber-800 dark:text-amber-200">
+                <IdCard className="h-4 w-4" aria-hidden /> کارت اشتراک {member.name}
+                {member.tier && <span className="opacity-70">· {member.tier.title}</span>}
+              </p>
+              <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-[10px] font-bold text-amber-800/70 dark:text-amber-200/70">اعتبار فعلی</p>
+                  <p className="text-sm font-black tabular-nums text-amber-900 dark:text-amber-100">{formatAmount(B(member.credit))}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-amber-800/70 dark:text-amber-200/70">کم می‌شود</p>
+                  <p className="text-sm font-black tabular-nums text-rose-600">−{formatAmount(B(member.credit) < net - giftTotal ? B(member.credit) : net - giftTotal > 0n ? net - giftTotal : 0n)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-amber-800/70 dark:text-amber-200/70">شارژ این خرید</p>
+                  <p className="text-sm font-black tabular-nums text-emerald-600">+{formatAmount(((saleTotal * BigInt(member.tier?.chargeBp ?? 0)) / 10_000n))}</p>
+                </div>
+              </div>
+              <p className="mt-1.5 text-[10px] font-bold text-amber-800/70 dark:text-amber-200/70">اعتبار خودکار از مبلغ کم می‌شود؛ در پنجره‌ی پرداخت می‌شود برش داشت. شارژ از خرید بعدی قابل استفاده است.</p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -925,6 +997,15 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
               <span className="text-base font-black">کارتخوان</span>
               <span className="opacity-80"><Kbd>F10</Kbd></span>
             </button>
+            {(boot.terminal.transfers?.length ?? 0) > 0 && net > 0n && (
+              <button
+                onClick={() => openPay("transfer")}
+                className="col-span-2 flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-700 py-3 text-white shadow-lg shadow-violet-600/25 transition active:scale-[0.98]"
+              >
+                <ArrowLeftRight className="h-5 w-5" aria-hidden />
+                <span className="text-sm font-black">کارت به کارت</span>
+              </button>
+            )}
           </div>
 
           <label className="flex items-center gap-2 px-1 text-xs font-bold text-gray-500">
@@ -966,24 +1047,34 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
         />
       )}
       {modal === "party" && (
-        <Overlay title="مشتری" onClose={() => setModal(null)}>
-          <PartyPicker
-            value={party}
-            onChange={(p) => {
-              setParty(p);
-              if (p) setModal(null);
-            }}
-            canCreate
-            role="customer"
-            placeholder="نام یا موبایل مشتری"
-          />
-          <p className="mt-3 text-[11px] leading-6 text-gray-400">بی‌مشتری روی «مشتری حضوری» ثبت می‌شود؛ نسیه و برگشت روی حساب فقط با انتخاب مشتری.</p>
-          {party && (
-            <button onClick={() => { setParty(null); setModal(null); }} className="mt-2 text-xs font-bold text-red-600">
-              برداشتن مشتری
-            </button>
-          )}
-        </Overlay>
+        <CustomerSheet
+          party={party}
+          clubCards={!!boot.clubIssue}
+          onPick={(p) => {
+            setParty(p);
+            if (!p) setMember(null);
+          }}
+          onMember={(m) => setMember(m)}
+          onIssueCard={() => {
+            setCardDraft("");
+            setModal("card");
+          }}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === "swipe" && (
+        <SwipeSheet
+          onCode={(c) => {
+            setModal(null);
+            void scan(c);
+          }}
+          onIssue={() => {
+            setCardDraft("");
+            setModal("card");
+          }}
+          canIssue={!!boot.clubIssue}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal === "card" && boot.clubIssue && (
         <IssueCardSheet
@@ -1065,6 +1156,9 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
           giftPaid={giftTotal}
           exact={exact}
           hasCard={!!boot.terminal.card}
+          readers={boot.terminal.readers ?? []}
+          transfers={boot.terminal.transfers ?? []}
+          terminalId={terminalId}
           canCredit={ret?.src ? !ret.src.walkIn : !!party}
           clubCredit={member && member.partyId === ticketPartyId && B(member.credit) > 0n ? B(member.credit) : null}
           start={payStart}
@@ -1077,7 +1171,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
       {modal === "discount" && (
         <DiscountSheet
           line={lines[sel] ?? null}
-          subtotal={sale.subtotal}
+          subtotal={sale.subtotal - sale.lineDisc}
           invoiceDiscount={discount}
           onLine={(v) => setLines((x) => x.map((l, k) => (k === sel ? { ...l, discount: v } : l)))}
           onInvoice={setDiscount}
@@ -1263,7 +1357,8 @@ function DiscountSheet({
   onCoupon: (code: string) => Promise<boolean>;
   onClose: () => void;
 }) {
-  const [target, setTarget] = useState<"line" | "invoice" | "coupon">(line ? "line" : "invoice");
+  // پیش‌فرض «کل فاکتور»؛ تخفیف یک ردیف با انتخاب دکمه‌ی ردیف
+  const [target, setTarget] = useState<"line" | "invoice" | "coupon">("invoice");
   const [code, setCode] = useState(coupon ?? "");
   const [mode, setMode] = useState<"pct" | "amount">("pct");
   const [v, setV] = useState("");
@@ -1283,7 +1378,7 @@ function DiscountSheet({
             {line ? `ردیف: ${line.title}` : "ردیفی انتخاب نشده"}
           </button>
           <button onClick={() => setTarget("invoice")} className={`rounded-2xl border-2 px-3 py-3 text-sm font-black ${target === "invoice" ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "border-gray-200 dark:border-white/10"}`}>
-            کل خرید
+            کل فاکتور
           </button>
           <button onClick={() => setTarget("coupon")} className={`rounded-2xl border-2 px-3 py-3 text-sm font-black ${target === "coupon" ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "border-gray-200 dark:border-white/10"}`}>
             کد تخفیف
@@ -1352,6 +1447,45 @@ function DiscountSheet({
           </>
         )}
       </div>
+    </Overlay>
+  );
+}
+
+/** کشیدن کارت اشتراک: کارتخوان مغناطیسی/بارکد شماره را می‌نویسد و Enter می‌زند */
+function SwipeSheet({ onCode, onIssue, canIssue, onClose }: { onCode: (code: string) => void; onIssue: () => void; canIssue: boolean; onClose: () => void }) {
+  const [v, setV] = useState("");
+  return (
+    <Overlay title="کارت اشتراک" onClose={onClose}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (v.trim()) onCode(v.trim());
+        }}
+      >
+        <div className="flex flex-col items-center gap-2 py-2 text-center">
+          <IdCard className="h-12 w-12 text-amber-500" aria-hidden />
+          <p className="text-base font-black text-gray-800 dark:text-gray-100">کارت مشتری را بکشید</p>
+          <p className="text-xs text-gray-500">مشتری، اعتبار و تخفیف کارت خودکار روی همین فاکتور می‌نشیند.</p>
+        </div>
+        <input
+          autoFocus
+          value={v}
+          onChange={(e) => setV(e.target.value)}
+          placeholder="یا شماره‌ی کارت را بنویسید و Enter بزنید"
+          className="w-full rounded-2xl border-2 border-amber-300 bg-white px-4 py-3 text-center text-xl font-black tracking-wider outline-none focus:border-amber-500 dark:border-amber-500/30 dark:bg-white/5"
+          dir="ltr"
+          autoComplete="off"
+        />
+        <button type="submit" disabled={!v.trim()} className="w-full rounded-2xl bg-amber-500 py-3 text-sm font-black text-white disabled:opacity-40">
+          خواندن کارت
+        </button>
+        {canIssue && (
+          <button type="button" onClick={onIssue} className="w-full text-xs font-bold text-amber-700 dark:text-amber-300">
+            مشتری کارت ندارد؟ صدور کارت تازه
+          </button>
+        )}
+      </form>
     </Overlay>
   );
 }
