@@ -92,7 +92,7 @@ export default async function IntegrationHomePage() {
     todos.push({ tone: "amber", icon: MessageCircle, text: `${fa(unseenCount)} پیام خوانده‌نشده از مشتریان بازارگاه`, href: "/admin/integration/messages", cta: "پاسخ" });
   }
   if (suggestionCount > 0) {
-    todos.push({ tone: "amber", icon: Sparkles, text: `${fa(suggestionCount)} پیشنهاد نگاشت منتظر تأیید شماست`, href: "/admin/integration/mapping/suggestions", cta: "تأیید" });
+    todos.push({ tone: "amber", icon: Sparkles, text: `${fa(suggestionCount)} پیشنهاد نگاشت منتظر تأیید شماست`, href: "/admin/integration/mapping?tab=suggestions", cta: "تأیید" });
   }
   for (const p of marketplacesConnected) {
     const notMapped = (fetched.get(p.code) ?? 0) - (linked.get(p.code) ?? 0);

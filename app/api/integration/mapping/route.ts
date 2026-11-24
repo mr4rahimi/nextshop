@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { serialize } from "@/lib/serialize";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -12,10 +13,37 @@ export async function GET(req: NextRequest) {
   const perPage  = Math.min(100, Math.max(10, Number(sp.get("perPage") ?? 20)));
   const platform = sp.get("platform");
 
+  const q        = sp.get("q")?.trim() ?? "";
+  const missing  = sp.get("missing"); // کد سرویسی که این نگاشت هنوز ندارد
+
   // فیلتر بر اساس پلتفرم: فقط mapping‌هایی که لینک این پلتفرم دارند
-  const where = platform
-    ? { isActive: true, links: { some: { platformCode: platform, isActive: true } } }
-    : { isActive: true };
+  const and: Prisma.IntegMappingWhereInput[] = [{ isActive: true }];
+  const id = sp.get("id");
+  if (id) and.push({ id });
+  if (platform) and.push({ links: { some: { platformCode: platform, isActive: true } } });
+  if (missing) and.push({ links: { none: { platformCode: missing, isActive: true } } });
+  if (q) {
+    const shopIds = (
+      await prisma.product.findMany({
+        where: { OR: [{ title: { contains: q, mode: "insensitive" } }, { sku: q }, { gtin13: q }] },
+        select: { id: true },
+        take: 500,
+      })
+    ).map((p) => p.id);
+    and.push({
+      links: {
+        some: {
+          isActive: true,
+          OR: [
+            { externalTitle: { contains: q, mode: "insensitive" } },
+            { externalId: q },
+            ...(shopIds.length ? [{ platformCode: "shop", externalId: { in: shopIds } }] : []),
+          ],
+        },
+      },
+    });
+  }
+  const where: Prisma.IntegMappingWhereInput = { AND: and };
 
   const [total, mappings] = await Promise.all([
     prisma.integMapping.count({ where }),
@@ -39,7 +67,7 @@ export async function GET(req: NextRequest) {
   const shopProducts = shopIds.length
     ? await prisma.product.findMany({
         where:  { id: { in: shopIds } },
-        select: { id: true, title: true, price: true, stock: true, mainImage: true },
+        select: { id: true, title: true, price: true, stock: true, mainImage: true, sku: true },
       })
     : [];
   const shopMap = new Map(shopProducts.map((p) => [p.id, p]));
@@ -70,26 +98,60 @@ export async function POST(req: NextRequest) {
     notes?: string;
   };
 
-  if (!body.links || body.links.length < 2) {
-    return NextResponse.json({ error: "حداقل دو لینک برای نگاشت نیاز است" }, { status: 400 });
+  const links = (body.links ?? []).filter((l) => l?.platformCode && l?.externalId);
+  if (new Set(links.map((l) => l.platformCode)).size !== links.length) {
+    return NextResponse.json({ error: "از هر سرویس فقط یک محصول" }, { status: 400 });
   }
 
-  // بررسی تکراری — هیچ externalId نباید قبلاً لینک شده باشد
-  for (const link of body.links) {
+  // محصولی که همین حالا در نگاشتی است: اگر محصول سایت است، بقیه به همان نگاشت اضافه می‌شوند
+  // (محصول سایت با باسلام نگاشت دارد و حالا اسنپ‌شاپ هم اضافه می‌شود)؛ غیر از آن تکراری است
+  let attachTo: string | null = null;
+  const fresh: typeof links = [];
+  for (const link of links) {
     const existing = await prisma.integMappingLink.findUnique({
       where: { platformCode_externalId: { platformCode: link.platformCode, externalId: link.externalId } },
+      include: { mapping: { select: { isActive: true } } },
     });
-    if (existing) {
+    if (existing && existing.isActive && existing.mapping.isActive) {
+      if (link.platformCode === "shop") {
+        attachTo = existing.mappingId;
+        continue;
+      }
       return NextResponse.json(
-        { error: `محصول "${link.externalId}" در پلتفرم "${link.platformCode}" قبلاً نگاشت دارد` },
+        { error: `«${link.externalTitle ?? link.externalId}» همین حالا در نگاشت دیگری است` },
         { status: 409 },
       );
     }
+    if (existing) await prisma.integMappingLink.delete({ where: { id: existing.id } }); // لینک خاموش/یتیم
+    fresh.push(link);
+  }
+
+  if (attachTo) {
+    if (!fresh.length) return NextResponse.json({ error: "چیز تازه‌ای برای افزودن نیست" }, { status: 400 });
+    const have = await prisma.integMappingLink.findMany({
+      where: { mappingId: attachTo, platformCode: { in: fresh.map((l) => l.platformCode) }, isActive: true },
+      select: { platformCode: true },
+    });
+    if (have.length) {
+      return NextResponse.json(
+        { error: "این محصول سایت در همین سرویس محصول نگاشت‌شده‌ی دیگری دارد؛ از «همه‌ی نگاشت‌ها» ویرایشش کنید" },
+        { status: 409 },
+      );
+    }
+    await prisma.integMappingLink.deleteMany({ where: { mappingId: attachTo, platformCode: { in: fresh.map((l) => l.platformCode) } } });
+    await prisma.integMappingLink.createMany({
+      data: fresh.map((l) => ({ mappingId: attachTo!, platformCode: l.platformCode, externalId: l.externalId, externalTitle: l.externalTitle ?? null })),
+    });
+    return NextResponse.json({ id: attachTo, attached: true }, { status: 200 });
+  }
+
+  if (fresh.length < 2) {
+    return NextResponse.json({ error: "حداقل دو محصول برای نگاشت لازم است" }, { status: 400 });
   }
 
   // موجودی اولیه‌ی نگاشت = موجودی محصول سایت؛ نگاشت با موجودی ۰ با اولین سفارش
   // بازارگاه همه‌جا را صفر می‌کرد (docs/integrations/settings-and-guide.md)
-  const shopId = body.links.find((l) => l.platformCode === "shop")?.externalId;
+  const shopId = fresh.find((l) => l.platformCode === "shop")?.externalId;
   const shopProduct = shopId ? await prisma.product.findUnique({ where: { id: shopId }, select: { stock: true } }) : null;
 
   const mapping = await prisma.integMapping.create({
@@ -97,7 +159,7 @@ export async function POST(req: NextRequest) {
       stock: Math.max(0, shopProduct?.stock ?? 0),
       notes: body.notes ?? null,
       links: {
-        create: body.links.map((l) => ({
+        create: fresh.map((l) => ({
           platformCode:  l.platformCode,
           externalId:    l.externalId,
           externalTitle: l.externalTitle ?? null,

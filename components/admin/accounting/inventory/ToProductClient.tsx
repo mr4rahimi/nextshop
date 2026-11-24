@@ -128,9 +128,18 @@ export default function ToProductClient() {
           <p className="text-sm font-bold">
             ✅ «{done.title}» {done.note}
           </p>
-          <Link href={`/admin/products/${done.id}`} className={btn.primary}>
-            تکمیل محصول (عکس، توضیح، فعال‌سازی)
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/admin/products/${done.id}`} className={btn.primary}>
+              تکمیل محصول (عکس، توضیح، فعال‌سازی)
+            </Link>
+            {/* محصول خودش به کالا وصل است؛ بعد از فعال‌سازی برای بازارگاه‌ها پیشنهاد می‌شود */}
+            <Link href={`/admin/integration/product-suggestions?q=${encodeURIComponent(done.title)}`} className={btn.soft}>
+              قرار دادن در بازارگاه‌ها
+            </Link>
+          </div>
+          <p className="w-full text-[11px] leading-5 text-gray-500">
+            محصول ساخته‌شده خودکار به همین کالا وصل است (موجودی و بهای خرید از حسابداری). بعد از فعال کردنش، در «یکپارچه‌سازی ← قرار دادن محصول» برای باسلام خودکار و برای بقیه‌ی بازارگاه‌ها دستی پیشنهاد می‌شود.
+          </p>
         </Card>
       )}
 

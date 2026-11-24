@@ -350,6 +350,20 @@ export async function removeMoves(tx: Tx, sourceType: string, sourceId: string, 
 }
 
 /**
+ * بازسازی کامل کاردکس یک کالا از اول، کش انبار و سند منابعی که بهایشان عوض شد —
+ * برای ادغام دو کالا (`link-product.ts`). سند منبعِ سال بسته یا قفل‌شده خطا می‌دهد و تراکنش برمی‌گردد.
+ */
+export async function rebuildItemFully(tx: Tx, productId: string, actor: Actor): Promise<void> {
+  await lockProducts(tx, [productId]);
+  const affected = await recalcProduct(tx, productId, null);
+  await syncStockRows(tx, productId);
+  for (const a of affected) {
+    const fn = REBUILDERS.get(a.sourceType);
+    if (fn) await fn(tx, a.sourceId, actor);
+  }
+}
+
+/**
  * کش موجودی هر انبار (`AccStock`) از جمع کاردکس — اصلاح «سلامت دفتر». کاردکس، بها و موجودی
  * سایت دست نمی‌خورند.
  */

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Copy, Download, ExternalLink, Search, Sparkles, Store, Wand2 } from "lucide-react";
 import { Card, PageHeader, api, btn, inputCls } from "@/components/admin/accounting/ui";
 
@@ -32,6 +33,8 @@ interface Product {
   stock: number;
   mainImage: string | null;
   shortDescription: string | null;
+  /** ساخته‌شده در ۷ روز اخیر */
+  isNew?: boolean;
 }
 
 interface Resp {
@@ -61,9 +64,18 @@ function specText(p: Product): string {
 }
 
 export default function ListingPage() {
+  return (
+    <Suspense>
+      <Listing />
+    </Suspense>
+  );
+}
+
+function Listing() {
+  const params = useSearchParams();
   const [data, setData] = useState<Resp | null>(null);
-  const [platform, setPlatform] = useState<string | null>(null);
-  const [q, setQ] = useState("");
+  const [platform, setPlatform] = useState<string | null>(params.get("platform"));
+  const [q, setQ] = useState(params.get("q") ?? "");
   const [inStock, setInStock] = useState(true);
   const [page, setPage] = useState(1);
   const [msg, setMsg] = useState<string | null>(null);
@@ -201,7 +213,7 @@ export default function ListingPage() {
               <ol className="mt-4 grid gap-2 text-xs leading-6 text-gray-600 sm:grid-cols-3 dark:text-gray-300">
                 <li className="rounded-xl bg-gray-50 p-3 dark:bg-white/5"><b>۱.</b> روی «کپی مشخصات» هر محصول بزنید و در پنل {market.name} محصول را بسازید. <b>کد کالا یا بارکد را همان کد سایت بگذارید</b> تا نگاشت خودکار شود.</li>
                 <li className="rounded-xl bg-gray-50 p-3 dark:bg-white/5"><b>۲.</b> بعد از تأیید محصول در {market.name}، «دریافت محصولات» را بزنید.</li>
-                <li className="rounded-xl bg-gray-50 p-3 dark:bg-white/5"><b>۳.</b> محصول با کد یا بارکد یکسان خودکار نگاشت می‌شود؛ بقیه در <Link href="/admin/integration/mapping/suggestions" className="font-bold text-teal-600">پیشنهادهای نگاشت</Link> منتظر تأیید شما می‌مانند.</li>
+                <li className="rounded-xl bg-gray-50 p-3 dark:bg-white/5"><b>۳.</b> محصول با کد یا بارکد یکسان خودکار نگاشت می‌شود؛ بقیه در <Link href="/admin/integration/mapping?tab=suggestions" className="font-bold text-teal-600">پیشنهادهای نگاشت</Link> منتظر تأیید شما می‌مانند.</li>
               </ol>
               {!market.panelUrl && (
                 <p className="mt-2 text-[11px] text-gray-400">آدرس پنل فروشندگی را در <Link href="/admin/integration/settings" className="font-bold text-teal-600">تنظیمات</Link> وارد کنید تا دکمه‌ی «پنل فروشندگی» اینجا بیاید.</p>
@@ -265,7 +277,10 @@ export default function ListingPage() {
                     <span className="h-11 w-11 flex-shrink-0 rounded-xl bg-gray-100 dark:bg-white/5" />
                   )}
                   <div className="min-w-48 flex-1">
-                    <Link href={`/admin/products/${p.id}`} className="block truncate text-sm font-bold text-gray-900 hover:text-teal-600 dark:text-white">{p.title}</Link>
+                    <Link href={`/admin/products/${p.id}`} className="block truncate text-sm font-bold text-gray-900 hover:text-teal-600 dark:text-white">
+                      {p.isNew && <span className="ml-1.5 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-black text-emerald-600">تازه</span>}
+                      {p.title}
+                    </Link>
                     <p className="mt-0.5 text-[11px] text-gray-400">
                       {fa(price)} تومان · موجودی {fa(p.stock)}
                       {p.sku ? ` · کد ${p.sku}` : ""}

@@ -58,14 +58,15 @@ export async function GET(req: NextRequest) {
     prisma.product.count({ where }),
     prisma.product.findMany({
       where,
-      orderBy: [{ stock: "desc" }, { createdAt: "desc" }],
+      orderBy: [{ createdAt: "desc" }],
       skip: (page - 1) * perPage,
       take: perPage,
-      select: { id: true, title: true, slug: true, sku: true, gtin13: true, price: true, salePrice: true, stock: true, mainImage: true, shortDescription: true },
+      select: { id: true, title: true, slug: true, sku: true, gtin13: true, price: true, salePrice: true, stock: true, mainImage: true, shortDescription: true, createdAt: true },
     }),
     prisma.product.count({ where: base }),
   ]);
 
+  const weekAgo = Date.now() - 7 * 24 * 3600_000;
   return NextResponse.json({
     platforms: markets,
     platform: code,
@@ -73,8 +74,9 @@ export async function GET(req: NextRequest) {
     total,
     page,
     perPage,
-    items: products.map((p) => ({
+    items: products.map(({ createdAt, ...p }) => ({
       ...p,
+      isNew: createdAt.getTime() > weekAgo,
       price: Number(p.price),
       salePrice: p.salePrice != null ? Number(p.salePrice) : null,
     })),
