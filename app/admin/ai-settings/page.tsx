@@ -155,7 +155,7 @@ export default function AiSettingsPage() {
             {SOURCE_LABEL[s.keySource]}
           </span>
         </div>
-        <Field label="کلید تازه" hint="از پنل gapgpt.app بگیرید. خالی بگذارید تا کلید فعلی عوض نشود. کلید فقط روی سرور استفاده می‌شود و دوباره نمایش داده نمی‌شود.">
+        <Field label="کلید تازه" hint="از پنل gapgpt.ir بگیرید. خالی بگذارید تا کلید فعلی عوض نشود. کلید فقط روی سرور استفاده می‌شود و دوباره نمایش داده نمی‌شود.">
           <div className="flex gap-2">
             <input type={showKey ? "text" : "password"} value={newKey} onChange={e => setNewKey(e.target.value)}
               className={inputClass + " flex-1 font-mono text-xs"} dir="ltr" placeholder="sk-..." autoComplete="new-password" />

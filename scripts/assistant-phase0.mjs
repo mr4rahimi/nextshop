@@ -20,7 +20,7 @@ if (!apiKey) {
   console.error("GAPGPT_API_KEY تنظیم نشده");
   process.exit(1);
 }
-const client = new OpenAI({ apiKey, baseURL: "https://api.gapgpt.app/v1", timeout: 120_000 });
+const client = new OpenAI({ apiKey, baseURL: "https://api.gapgpt.ir/v1", timeout: 120_000 });
 
 const MODELS = process.argv.slice(2).length
   ? process.argv.slice(2)

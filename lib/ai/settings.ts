@@ -18,7 +18,7 @@ import {
   type AiTextTone, type AiTitleTemplate,
 } from "@/lib/ai/text-presets";
 
-export const GAPGPT_BASE_URL = "https://api.gapgpt.app/v1";
+export const GAPGPT_BASE_URL = "https://api.gapgpt.ir/v1";
 
 export interface AiSettings {
   apiKey: string;

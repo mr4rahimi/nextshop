@@ -19,6 +19,15 @@ export interface ReleaseNote {
 
 export const VERSIONS: ReleaseNote[] = [
   {
+    version: "2.159.1",
+    date: "1405/09/05",
+    tag: "patch",
+    title: "اتصال هوش مصنوعی به دامنه‌ی تازه‌ی گپ‌جی‌پی‌تی",
+    changes: [
+      { type: "improvement", text: "همه‌ی بخش‌های هوش مصنوعی (متن و عکس محصول، دستیار مدیر، چت مشتری) به آدرس تازه‌ی وب‌سرویس گپ‌جی‌پی‌تی (api.gapgpt.ir) وصل می‌شوند؛ کلید و اعتبار حساب همان قبلی است." },
+    ],
+  },
+  {
     version: "2.159.0",
     date: "1405/09/05",
     tag: "minor",
