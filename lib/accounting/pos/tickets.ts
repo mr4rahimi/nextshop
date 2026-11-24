@@ -482,19 +482,33 @@ export async function findReturnable(raw: string, db: Db = prisma) {
       : await db.accInvoice.findFirst({ where: { type: "SALES", number: n, status: "ISSUED" }, orderBy: { date: "desc" }, include: { lines: { orderBy: { seq: "asc" } } } });
   if (!inv) throw new AccError(isTicket ? `رسید ${faNum(n)} پیدا نشد` : `رسید یا فاکتور فروش ${faNum(n)} پیدا نشد`, 404);
   if (inv.status !== "ISSUED") throw new AccError("این فاکتور باطل شده است", 409);
-  const back = await returnedQty(db as Tx, inv.lines.map((l) => l.id));
+  return (await returnableOf(db, [inv], new Map(ticket ? [[inv.id, ticket.number]] : [])))[0];
+}
+
+type InvWithLines = AccInvoice & { lines: Prisma.AccInvoiceLineGetPayload<object>[] };
+
+/**
+ * فاکتورهای فروش ← شکل «قابل برگشت» صندوق (تعداد مانده و سریال‌های برنگشته‌ی هر ردیف،
+ * مبلغ هر عدد = سهم فروش). `tickets`: شماره‌ی رسید صندوق هر فاکتور.
+ */
+export async function returnableOf(db: Db, invs: InvWithLines[], tickets: Map<string, number>) {
+  const lineIds = invs.flatMap((i) => i.lines.map((l) => l.id));
+  const back = await returnedQty(db as Tx, lineIds);
   // سریال‌هایی که هنوز برنگشته‌اند — صندوق از همین‌ها انتخاب می‌کند
   const backSerials = new Set(
-    (await db.accInvoiceLine.findMany({ where: { refLineId: { in: inv.lines.map((l) => l.id) }, invoice: { status: { not: "VOID" } } }, select: { serials: true } })).flatMap((l) => l.serials),
+    (await db.accInvoiceLine.findMany({ where: { refLineId: { in: lineIds }, invoice: { status: { not: "VOID" } } }, select: { serials: true } })).flatMap((l) => l.serials),
   );
-  return {
+  const walk = new Set(
+    (await db.accParty.findMany({ where: { id: { in: [...new Set(invs.map((i) => i.partyId))] }, platformCode: "walk-in" }, select: { id: true } })).map((p) => p.id),
+  );
+  return invs.map((inv) => ({
     invoiceId: inv.id,
     invoiceNumber: inv.number,
-    ticketNumber: ticket?.number ?? null,
+    ticketNumber: tickets.get(inv.id) ?? null,
     date: inv.date,
     partyId: inv.partyId,
     partyName: inv.partyName,
-    walkIn: (await db.accParty.findUnique({ where: { id: inv.partyId }, select: { platformCode: true } }))?.platformCode === "walk-in",
+    walkIn: walk.has(inv.partyId),
     lines: inv.lines
       .filter((l) => l.productId)
       .map((l) => ({
@@ -507,7 +521,7 @@ export async function findReturnable(raw: string, db: Db = prisma) {
         /** مبلغ برگشت هر عدد — همان سهم فروش (تخفیف ردیف و فاکتور کم شده) */
         each: divRound(l.lineTotal, BigInt(l.qty)),
       })),
-  };
+  }));
 }
 
 /** رسید برای چاپ و نمایش */

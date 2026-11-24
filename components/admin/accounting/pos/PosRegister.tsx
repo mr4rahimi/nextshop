@@ -1233,6 +1233,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
       {modal === "return" && (
         <ReturnSheet
           initialCode={returnCode}
+          party={party && !returnCode ? { id: party.id, name: party.name } : null}
           canBlind={boot.can.manage}
           onClose={() => setModal(null)}
           onBlind={() => {
