@@ -150,7 +150,7 @@ export default function BaleBotClient() {
     setCatalog({ ...catalog, platforms: { ...catalog.platforms, [code]: { ...catalog.platforms[code], ...patch } } });
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6" dir="rtl">
+    <div className="max-w-5xl mx-auto space-y-6" dir="rtl">
       <header className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-black text-gray-900 dark:text-white">ربات بله</h1>

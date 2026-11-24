@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PlatformOff from "@/components/admin/integration/PlatformOff";
 import { prisma } from "@/lib/prisma";
 import BasalamForm from "./BasalamForm";
 import HelpButton from "@/components/admin/worklist/HelpButton";
@@ -23,7 +24,8 @@ export default async function BasalamConnectionPage() {
     : null;
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6" dir="rtl">
+    <div className="max-w-2xl mx-auto space-y-6" dir="rtl">
+      <PlatformOff code="basalam" />
       {/* هدر */}
       <div className="flex items-center gap-3">
         <Link href="/admin/integration"

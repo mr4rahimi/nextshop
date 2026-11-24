@@ -27,7 +27,7 @@ export default async function SuggestionsPage() {
   );
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6" dir="rtl">
+    <div className="max-w-4xl mx-auto space-y-6" dir="rtl">
       <div className="flex items-center gap-3">
         <Link href="/admin/integration/mapping"
           className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-sm">

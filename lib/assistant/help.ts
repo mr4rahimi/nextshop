@@ -71,6 +71,8 @@ const TOPIC_PAGES: Record<string, string> = {
   integrationInventory: "/admin/integration/inventory",
   integrationQueue: "/admin/integration/queue",
   integrationLogs: "/admin/integration/logs",
+  integrationSettings: "/admin/integration/settings",
+  integrationGuide: "/admin/integration/guide",
   blogPost: "/admin/blog",
   accountingItemCoding: "/admin/accounting/inventory/coding",
   accountingRelabel: "/admin/accounting/inventory/relabel",

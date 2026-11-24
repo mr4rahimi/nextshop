@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getStockSource } from "@/lib/integration/core/config";
+import { syncPurchasePricesFromInternal } from "@/lib/integration/core/pricing";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({})) as { platformCode?: string };
+
+  // حسابداری داخلی: آخرین بهای خرید کالا همین حالا خوانده و قیمت‌ها ارسال می‌شوند
+  if (!body.platformCode && (await getStockSource()) === "internal") {
+    const r = await syncPurchasePricesFromInternal();
+    return NextResponse.json({ internal: true, ...r });
+  }
 
   const platformCode = body.platformCode ?? (
     await prisma.integPlatform.findFirst({ where: { type: "ACCOUNTING", isActive: true } })
@@ -15,7 +23,7 @@ export async function POST(req: NextRequest) {
   }
 
   const connection = await prisma.integConnection.findFirst({
-    where: { platformCode, status: { in: ["CONNECTED", "SYNCING"] } },
+    where: { platformCode, status: { in: ["CONNECTED", "SYNCING"] }, platform: { isActive: true } },
   });
   if (!connection) {
     return NextResponse.json({ error: "ابتدا اتصال حسابداری را برقرار کنید" }, { status: 400 });

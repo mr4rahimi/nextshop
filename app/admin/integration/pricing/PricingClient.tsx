@@ -154,7 +154,17 @@ function PricePreviewModal({ item, title, onClose }: {
   );
 }
 
-export default function PricingClient({ initialItems, initialTotal }: { initialItems: Item[]; initialTotal: number }) {
+export default function PricingClient({
+  initialItems,
+  initialTotal,
+  source = "hesaban",
+}: {
+  initialItems: Item[];
+  initialTotal: number;
+  /** منبع موجودی/قیمت — docs/integrations/settings-and-guide.md */
+  source?: "internal" | "hesaban" | "site";
+}) {
+  const fromAccLabel = source === "internal" ? "آخرین بهای خرید (حسابداری)" : "از حسابان";
   const [items, setItems] = useState<Item[]>(initialItems);
   const [saving, setSaving] = useState<string | null>(null);
   const [resyncing, setResyncing] = useState(false);
@@ -212,8 +222,14 @@ export default function PricingClient({ initialItems, initialTotal }: { initialI
     setMsg(null);
     try {
       const res = await fetch("/api/integration/pricing/resync", { method: "POST" });
-      const data = await res.json() as { error?: string; alreadyRunning?: boolean };
-      setMsg(res.ok ? (data.alreadyRunning ? "یک بروزرسانی در حال اجراست" : "بروزرسانی قیمت در صف قرار گرفت") : data.error ?? "خطا");
+      const data = await res.json() as { error?: string; alreadyRunning?: boolean; internal?: boolean; updated?: number; pushed?: number; failed?: number };
+      setMsg(
+        !res.ok
+          ? data.error ?? "خطا"
+          : data.internal
+            ? `${(data.updated ?? 0).toLocaleString("fa-IR")} قیمت خرید از حسابداری به‌روز شد · ${(data.pushed ?? 0).toLocaleString("fa-IR")} ارسال${data.failed ? ` · ${data.failed.toLocaleString("fa-IR")} ناموفق` : ""}`
+            : data.alreadyRunning ? "یک بروزرسانی در حال اجراست" : "دریافت قیمت از حسابان در صف قرار گرفت",
+      );
     } finally {
       setResyncing(false);
     }
@@ -222,10 +238,12 @@ export default function PricingClient({ initialItems, initialTotal }: { initialI
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={handleResync} disabled={resyncing}
-          className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
-          {resyncing ? "در حال ارسال..." : "بروزرسانی قیمت از حسابداری"}
-        </button>
+        {source !== "site" && (
+          <button onClick={handleResync} disabled={resyncing}
+            className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
+            {resyncing ? "در حال انجام..." : source === "internal" ? "خواندن بهای خرید از حسابداری" : "دریافت قیمت خرید از حسابان"}
+          </button>
+        )}
         {msg && <p className="text-xs text-gray-500">{msg}</p>}
         <p className="text-xs text-gray-400 mr-auto">{initialTotal} محصول نگاشت‌شده</p>
       </div>
@@ -248,7 +266,8 @@ export default function PricingClient({ initialItems, initialTotal }: { initialI
                   disabled={saving === m.id}
                   className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] text-xs text-gray-900 dark:text-white"
                 >
-                  <option value="HESABAN">از حسابداری</option>
+                  {source !== "site" && <option value="HESABAN">{fromAccLabel}</option>}
+                  {source === "site" && m.purchasePriceSource === "HESABAN" && <option value="HESABAN" disabled>انتخاب کنید</option>}
                   <option value="MANUAL">دستی</option>
                 </select>
 

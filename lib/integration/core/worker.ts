@@ -17,6 +17,7 @@ import { dispatchAccEvents } from "@/lib/accounting/dispatcher";
 import { recordPushedPrice, recordPushedStock } from "./snapshot";
 import { runCreateProduct } from "./create-product";
 import { normalizeCreateSettings } from "./variant-links";
+import { getHiddenSections, getStockSource } from "./config";
 import type { BasalamAdapter } from "@/lib/integration/adapters/marketplace/basalam.adapter";
 
 /** آیا این پلتفرم محصول تنوع‌دار نگاشت‌شده دارد؟ (meta.variants روی لینک) */
@@ -36,6 +37,9 @@ async function hasVariantLinks(platformCode: string): Promise<boolean> {
 // و تخفیف لینک‌های «آزاد» همچنان از همین‌جا می‌آیند.
 const PRODUCT_REFRESH_MS = 6 * 60 * 60_000;
 
+/** فاصله‌ی دو دور ارسال «موجودی‌های تغییرکرده» وقتی موجودی سایت مرجع است */
+const CHANGED_STOCK_MS = 10 * 60_000;
+
 /** فاصله دو دور کشیدن گفت‌وگوها. */
 const CHAT_POLL_MS = 5 * 60_000;
 
@@ -43,10 +47,15 @@ const CHAT_POLL_MS = 5 * 60_000;
 const ORDERS_POLL_MAX_MIN = 30;
 
 async function ensureScheduledJobs(): Promise<void> {
+  // سرویسی که در «یکپارچه‌سازی ← تنظیمات» خاموش شده کار زمان‌بندی‌شده نمی‌گیرد
   const connections = await prisma.integConnection.findMany({
-    where:   { status: { in: ["CONNECTED", "SYNCING"] } },
+    where:   { status: { in: ["CONNECTED", "SYNCING"] }, platform: { isActive: true } },
     include: { platform: { select: { type: true } } },
   });
+  const chatsOff = (await getHiddenSections().catch(() => new Set<string>())).has("messages");
+  // حسابداری داخلی یا بی‌حسابداری: موجودی سایت مرجع است و هیچ دور خودکاری آن را
+  // به بازارگاه نمی‌برد (فاکتور خرید، انبارگردانی، ویرایش محصول) — دور «فقط تغییرها»
+  const siteIsSource = (await getStockSource().catch(() => "hesaban" as const)) !== "hesaban";
 
   for (const conn of connections) {
     if (conn.platform.type === "MARKETPLACE") {
@@ -75,7 +84,7 @@ async function ensureScheduledJobs(): Promise<void> {
 
       // حلقه گفت‌وگوها مستقل از حلقه سفارش‌هاست — پیام باید خیلی زودتر از
       // سفارش برسد، پس بازه‌اش جدا و ثابت است نه syncIntervalMin اتصال.
-      if (adapter?.fetchChats) {
+      if (adapter?.fetchChats && !chatsOff) {
         const pendingChat = await prisma.integJob.findFirst({
           where:  { platformCode: conn.platformCode, type: "FETCH_CHATS", status: { in: ["PENDING", "PROCESSING"] } },
           select: { id: true },
@@ -102,6 +111,21 @@ async function ensureScheduledJobs(): Promise<void> {
           if (due && (await hasVariantLinks(conn.platformCode))) {
             await enqueue({ type: "SYNC_ALL_STOCK", platformCode: conn.platformCode, payload: { variantsOnly: true }, priority: 5 });
           }
+        }
+      }
+
+      if (siteIsSource && conn.syncStockEnabled) {
+        const pending = await prisma.integJob.findFirst({
+          where:  { platformCode: conn.platformCode, type: "SYNC_ALL_STOCK", status: { in: ["PENDING", "PROCESSING"] } },
+          select: { id: true },
+        });
+        const last = pending ? null : await prisma.integJob.findFirst({
+          where:   { platformCode: conn.platformCode, type: "SYNC_ALL_STOCK", status: "DONE", payload: { path: ["changedOnly"], equals: true } },
+          orderBy: { completedAt: "desc" },
+          select:  { completedAt: true },
+        });
+        if (!pending && Date.now() - (last?.completedAt?.getTime() ?? 0) >= CHANGED_STOCK_MS) {
+          await enqueue({ type: "SYNC_ALL_STOCK", platformCode: conn.platformCode, payload: { changedOnly: true }, priority: 5 });
         }
       }
 
@@ -222,6 +246,7 @@ export async function runWorkerCycle(maxJobs = 5): Promise<void> {
     const rows = await tx.$queryRaw<IntegJob[]>`
       SELECT * FROM "IntegJob"
       WHERE status = 'PENDING' AND "scheduledAt" <= NOW()
+        AND "platformCode" IN (SELECT code FROM "IntegPlatform" WHERE "isActive" = true)
       ORDER BY priority ASC, "scheduledAt" ASC
       LIMIT ${concurrent}
       FOR UPDATE SKIP LOCKED
@@ -367,7 +392,7 @@ async function dispatchJob(job: IntegJob): Promise<void> {
         await syncVariantsJob(job.id, job.platformCode, adapter, credentials, connection);
         break;
       }
-      await syncAllStock(job.id, job.platformCode, adapter, credentials);
+      await syncAllStock(job.id, job.platformCode, adapter, credentials, !!payload.changedOnly);
       break;
     }
 
@@ -430,6 +455,7 @@ async function syncAllStock(
   platformCode: string,
   adapter: BaseAdapter,
   credentials: Record<string, string>,
+  changedOnly = false,
 ): Promise<void> {
   const platform = await prisma.integPlatform.findUnique({
     where: { code: platformCode },
@@ -445,9 +471,12 @@ async function syncAllStock(
     });
 
     const pairs = platformLinks
+      // نگاشتی که «مدیریت موجودی»اش خاموش است دست نمی‌خورد
+      .filter((l) => l.mapping.isActive && l.mapping.syncStockEnabled)
       .map((l) => ({ platformProductId: l.externalId, shopProductId: l.mapping.links[0]?.externalId }))
       .filter((p): p is { platformProductId: string; shopProductId: string } => Boolean(p.shopProductId));
 
+    if (!pairs.length && changedOnly) return; // دور خودکار؛ نبودِ نگاشت خطا نیست
     if (!pairs.length) {
       await writeLog({
         jobId,
@@ -466,6 +495,27 @@ async function syncAllStock(
       select: { id: true, stock: true },
     });
     const stockMap = new Map(shopProducts.map((p) => [p.id, p.stock]));
+
+    // دور «فقط تغییرها»: آنچه با آخرین عدد ارسال‌شده/دریافت‌شده‌ی بازارگاه فرق دارد.
+    // لینک تنوع‌دار (meta.variants) را دور تنوع‌ها می‌فرستد.
+    if (changedOnly) {
+      const variantLinked = new Set(
+        platformLinks.filter((l) => (l.meta as Record<string, unknown> | null)?.variants).map((l) => l.externalId),
+      );
+      const snaps = await prisma.integPlatformProduct.findMany({
+        where:  { platformCode, platformProductId: { in: pairs.map((p) => p.platformProductId) } },
+        select: { platformProductId: true, stock: true },
+      });
+      const snap = new Map(snaps.map((x) => [x.platformProductId, x.stock]));
+      const changed = pairs.filter((p) => {
+        if (variantLinked.has(p.platformProductId)) return false;
+        const want = Math.max(0, Math.floor(stockMap.get(p.shopProductId) ?? 0));
+        const had = snap.get(p.platformProductId);
+        return had == null || Math.floor(had) !== want;
+      });
+      if (!changed.length) return;
+      pairs.splice(0, pairs.length, ...changed);
+    }
 
     const result = await adapter.updateStock(
       credentials,

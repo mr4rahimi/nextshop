@@ -135,9 +135,9 @@ export async function processPendingInvoices(
   }
 
   const connection = await prisma.integConnection.findFirst({
-    where: { platformCode: ACCOUNTING_CODE, status: { in: ["CONNECTED", "SYNCING"] } },
+    where: { platformCode: ACCOUNTING_CODE, status: { in: ["CONNECTED", "SYNCING"] }, platform: { isActive: true } },
   });
-  if (!connection) return { invoiced: 0, skipped: "اتصال حسابان برقرار نیست" };
+  if (!connection) return { invoiced: 0, skipped: "اتصال حسابان برقرار نیست یا در تنظیمات خاموش است" };
 
   const config = (connection.config ?? {}) as InvoiceConfig;
   if (!config.autoInvoiceEnabled) return { invoiced: 0, skipped: "ثبت فاکتور فروش غیرفعال است" };

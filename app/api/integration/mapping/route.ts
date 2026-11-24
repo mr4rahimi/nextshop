@@ -87,8 +87,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // موجودی اولیه‌ی نگاشت = موجودی محصول سایت؛ نگاشت با موجودی ۰ با اولین سفارش
+  // بازارگاه همه‌جا را صفر می‌کرد (docs/integrations/settings-and-guide.md)
+  const shopId = body.links.find((l) => l.platformCode === "shop")?.externalId;
+  const shopProduct = shopId ? await prisma.product.findUnique({ where: { id: shopId }, select: { stock: true } }) : null;
+
   const mapping = await prisma.integMapping.create({
     data: {
+      stock: Math.max(0, shopProduct?.stock ?? 0),
       notes: body.notes ?? null,
       links: {
         create: body.links.map((l) => ({

@@ -50,9 +50,10 @@ export async function adjustVariantStockForOrder(
   }).catch(() => {});
 }
 
+/** نوع پلتفرم — سرویسی که در تنظیمات خاموش شده null برمی‌گرداند و چیزی برایش ارسال نمی‌شود */
 async function getPlatformType(platformCode: string): Promise<"ACCOUNTING" | "MARKETPLACE" | null> {
-  const p = await prisma.integPlatform.findUnique({ where: { code: platformCode }, select: { type: true } });
-  return p?.type ?? null;
+  const p = await prisma.integPlatform.findUnique({ where: { code: platformCode }, select: { type: true, isActive: true } });
+  return p?.isActive ? p.type : null;
 }
 
 
@@ -80,7 +81,7 @@ async function pushMappingStock(
     }
 
     const platformType = await getPlatformType(link.platformCode);
-    if (platformType === "ACCOUNTING") continue;
+    if (platformType !== "MARKETPLACE") continue; // حسابداری یا سرویس خاموش
 
     const adapter = getAdapter(link.platformCode);
     if (!adapter) {
@@ -259,6 +260,27 @@ export async function resyncStockFromAccounting(
 
 
 
+/**
+ * موجودی پایه‌ی نگاشت: اگر محصول سایت (بی‌تنوع) در نگاشت هست، موجودی واقعی
+ * همان محصول، وگرنه عدد ذخیره‌شده‌ی نگاشت.
+ *
+ * چرا: نگاشتی که دستی ساخته می‌شد موجودی ۰ داشت و در حالت بی‌حسابداری یا
+ * حسابداری داخلی کسی آن را پر نمی‌کرد؛ اولین سفارش بازارگاه «۰ − ۱» را به سایت و
+ * همه‌ی بازارگاه‌ها می‌فرستاد. موجودی سایت در این دو حالت مرجع است
+ * (docs/integrations/settings-and-guide.md بخش «منبع موجودی»).
+ */
+async function baseStock(mappingId: string, fallback: number): Promise<{ stock: number; fromShop: boolean; tracked: boolean }> {
+  const shop = await prisma.integMappingLink.findFirst({
+    where: { mappingId, platformCode: "shop", isActive: true },
+    select: { externalId: true },
+  });
+  if (!shop || (await productHasVariants(shop.externalId))) return { stock: fallback, fromShop: false, tracked: false };
+  const p = await prisma.product.findUnique({ where: { id: shop.externalId }, select: { stock: true, trackStock: true } });
+  if (!p) return { stock: fallback, fromShop: false, tracked: false };
+  // tracked: سفارش سایت موجودی همین محصول را خودش کم/زیاد کرده است (deductStockForOrderItems)
+  return { stock: Math.max(0, p.stock), fromShop: true, tracked: p.trackStock };
+}
+
 // برگرداندن موجودی نگاشت هنگام لغو سفارش (معکوس decrement) + push به پلتفرم‌ها
 export async function restoreMappingStockForCancel(
   sourcePlatformCode: string,
@@ -272,7 +294,9 @@ export async function restoreMappingStockForCancel(
 
   if (!link?.isActive || !link.mapping.isActive || !link.mapping.syncStockEnabled) return;
 
-  const newStock = link.mapping.stock + qty;
+  // لغو سفارش سایت: موجودی سایت را مسیر لغو خودش برمی‌گرداند؛ اینجا فقط هم‌تراز می‌شود
+  const base = await baseStock(link.mappingId, link.mapping.stock);
+  const newStock = sourcePlatformCode === "shop" && base.tracked ? base.stock : base.stock + qty;
 
   await prisma.integMapping.update({
     where: { id: link.mappingId },
@@ -286,7 +310,7 @@ export async function restoreMappingStockForCancel(
     entityType:    "STOCK",
     entityId:      externalId,
     status:        "SUCCESS",
-    responseData:  { action: "برگشت موجودی (لغو سفارش)", qty, from: link.mapping.stock, to: newStock },
+    responseData:  { action: "برگشت موجودی (لغو سفارش)", qty, from: base.stock, to: newStock },
   }).catch(() => {});
 
   await pushMappingStock(link.mappingId, newStock, sourcePlatformCode);
@@ -320,7 +344,10 @@ export async function decrementMappingStockForOrder(
     return;
   }
 
-  const newStock = Math.max(0, link.mapping.stock - qty);
+  // سفارش سایت: موجودی محصول همین حالا کم شده (deductStockForOrderItems) — همان عدد مرجع است.
+  // سفارش بازارگاه: از موجودی واقعی سایت کم می‌شود، نه از عدد کهنه‌ی نگاشت.
+  const base = await baseStock(link.mappingId, link.mapping.stock);
+  const newStock = sourcePlatformCode === "shop" && base.tracked ? base.stock : Math.max(0, base.stock - qty);
 
   await prisma.integMapping.update({
     where: { id: link.mappingId },
@@ -334,8 +361,27 @@ export async function decrementMappingStockForOrder(
     entityType:    "STOCK",
     entityId:      externalId,
     status:        "SUCCESS",
-    responseData:  { action: "کسر موجودی سفارش", qty, from: link.mapping.stock, to: newStock },
+    responseData:  { action: "کسر موجودی سفارش", qty, from: base.stock, to: newStock },
   }).catch(() => {});
 
   await pushMappingStock(link.mappingId, newStock, sourcePlatformCode);
+}
+
+/**
+ * موجودی دستی یک نگاشت — فقط برای کسب‌وکار بی‌حسابداری (منبع `site`).
+ * موجودی محصول سایت (بی‌تنوع) و نگاشت هر دو همین عدد می‌شوند و به همه‌ی
+ * بازارگاه‌های نگاشت ارسال می‌شود. docs/integrations/settings-and-guide.md
+ */
+export async function setManualMappingStock(mappingId: string, stock: number): Promise<void> {
+  const value = Math.max(0, Math.floor(stock));
+  const shop = await prisma.integMappingLink.findFirst({
+    where: { mappingId, platformCode: "shop", isActive: true },
+    select: { externalId: true },
+  });
+  if (shop && (await productHasVariants(shop.externalId))) {
+    throw new Error("این محصول تنوع دارد؛ موجودی هر تنوع را در صفحه‌ی محصول وارد کنید");
+  }
+  await prisma.integMapping.update({ where: { id: mappingId }, data: { stock: value, lastStockSyncAt: new Date() } });
+  // ارسال به سایت (پایین در pushMappingStock) و همه‌ی بازارگاه‌ها
+  await pushMappingStock(mappingId, value);
 }

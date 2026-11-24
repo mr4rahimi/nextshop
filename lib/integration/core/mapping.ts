@@ -189,7 +189,8 @@ export async function runAutoMatch(
         where: { platformCode_externalId: { platformCode: "shop", externalId: best.shopProductId } },
       });
       if (!existingShopLink) {
-        const mapping = await prisma.integMapping.create({ data: {} });
+        const shopRow = await prisma.product.findUnique({ where: { id: best.shopProductId }, select: { stock: true } });
+        const mapping = await prisma.integMapping.create({ data: { stock: Math.max(0, shopRow?.stock ?? 0) } });
         await prisma.integMappingLink.createMany({
           data: [
             {
@@ -273,8 +274,9 @@ export async function approveSuggestion(suggestionId: string): Promise<void> {
         },
       });
     } else {
-      // ایجاد mapping جدید با دو لینک
-      const mapping = await tx.integMapping.create({ data: {} });
+      // ایجاد mapping جدید با دو لینک — موجودی اولیه از محصول سایت
+      const shop = await tx.product.findUnique({ where: { id: sug.shopProductId }, select: { stock: true } });
+      const mapping = await tx.integMapping.create({ data: { stock: Math.max(0, shop?.stock ?? 0) } });
       await tx.integMappingLink.createMany({
         data: [
           {

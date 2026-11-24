@@ -14,8 +14,9 @@ import {
   Package, PenLine, PhoneCall, PhoneForwarded, Receipt, SearchCheck, Settings,
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
-  CalendarDays, Lock, QrCode, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop, Scale, Megaphone, Funnel, BadgePercent, PackageSearch, PiggyBank, HeartHandshake, UserRound, GitCompareArrows, Trophy,
+  CalendarDays, Lock, QrCode, Blocks, MessagesSquare, PackagePlus, Map as MapIcon, Boxes, Tags, Percent, Plug, Bot, ListRestart, ScrollText, SlidersHorizontal, Compass, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop, Scale, Megaphone, Funnel, BadgePercent, PackageSearch, PiggyBank, HeartHandshake, UserRound, GitCompareArrows, Trophy,
 } from "lucide-react";
+import { INTEG_SECTIONS, type IntegSectionKey } from "@/lib/integration/core/sections";
 
 /** رنگ کاشی — کلاس‌ها کامل نوشته شده‌اند تا Tailwind پیدایشان کند */
 export type AppTone =
@@ -135,6 +136,38 @@ export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting/import", label: "ورود از اکسل", icon: FileSpreadsheet, tone: "emerald", perm: ["ACC_INVENTORY", "ACC_PARTY_MANAGE", "ACC_SETTINGS"] },
   { href: "/admin/accounting/settings?tab=years", label: "بستن سال مالی", icon: Lock, tone: "slate", perm: ["ACC_SETTINGS"], img: "acc-closing" },
 ];
+
+// ── یکپارچه‌سازی — docs/integrations/settings-and-guide.md ─────────────────
+// ترتیب و دسته از lib/integration/core/sections.ts؛ آیکن سه‌بعدی از پیشخوان
+// (desktop/registry.ts) با همان مسیر.
+
+const INTEG_ICONS: Record<IntegSectionKey, { icon: LucideIcon; tone: AppTone }> = {
+  home: { icon: Blocks, tone: "teal" },
+  orders: { icon: ShoppingBag, tone: "blue" },
+  messages: { icon: MessagesSquare, tone: "rose" },
+  listing: { icon: PackagePlus, tone: "orange" },
+  mapping: { icon: MapIcon, tone: "emerald" },
+  inventory: { icon: Boxes, tone: "amber" },
+  pricing: { icon: Tags, tone: "lime" },
+  priceRules: { icon: Calculator, tone: "violet" },
+  discounts: { icon: Percent, tone: "red" },
+  connections: { icon: Plug, tone: "cyan" },
+  baleBot: { icon: Bot, tone: "sky" },
+  queue: { icon: ListRestart, tone: "slate" },
+  logs: { icon: ScrollText, tone: "slate" },
+  settings: { icon: SlidersHorizontal, tone: "slate" },
+  guide: { icon: Compass, tone: "indigo" },
+};
+
+export const INTEGRATION_APPS: (AppItem & { key: IntegSectionKey })[] = INTEG_SECTIONS.map((s) => ({
+  key: s.key,
+  href: s.href,
+  label: s.label,
+  icon: INTEG_ICONS[s.key].icon,
+  tone: INTEG_ICONS[s.key].tone,
+  exact: s.key === "home",
+  group: s.group,
+}));
 
 // ── ابزارها — docs/features/tools.md ─────────────────────────────────────
 // ابزار تازه = یک ردیف اینجا + صفحه‌ی خودش زیر /admin/tools. صفحه‌ی خانه‌ی

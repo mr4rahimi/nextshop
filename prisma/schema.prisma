@@ -1932,6 +1932,12 @@ model IntegSettings {
   workerIntervalSec Int      @default(30)
   maxConcurrentJobs Int      @default(5)
   logRetentionDays  Int      @default(30)
+  /// بخش‌هایی از یکپارچه‌سازی که این کسب‌وکار خاموش کرده (کلیدهای lib/integration/core/sections.ts)
+  hiddenSections    String[] @default([])
+  /// نوع کسب‌وکار انتخاب‌شده در تنظیمات (ساده/استاندارد/کامل) — فقط برای نمایش
+  profile           String?
+  /// تنظیم هر پلتفرم، مثل آدرس پنل فروشندگی: { [code]: { panelUrl } }
+  platformPrefs     Json     @default("{}")
   updatedAt         DateTime @updatedAt
 }
 

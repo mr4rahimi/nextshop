@@ -4,6 +4,7 @@ import { getStaffAccess, canAny } from "@/lib/permissions";
 import { canOpenPath } from "@/lib/admin-sections";
 import { pathAllowedByPlan } from "@/lib/plan/features";
 import { getLicenseState } from "@/lib/plan/license";
+import { hiddenIntegrationHrefs } from "@/lib/integration/core/config";
 import { DESKTOP_CATEGORIES } from "@/components/admin/desktop/registry";
 import DesktopClient from "@/components/admin/desktop/DesktopClient";
 import { IN_TRANSIT } from "@/lib/accounting/inventory/docs";
@@ -49,8 +50,10 @@ export default async function AdminDashboardPage() {
     const path = href.split("?")[0];
     return (!access || canOpenPath(path, access)) && pathAllowedByPlan(path, license.panelFeatures);
   };
+  // بخش‌هایی که کسب‌وکار در «یکپارچه‌سازی ← تنظیمات» خاموش کرده
+  const integOff = await hiddenIntegrationHrefs();
   const categories = DESKTOP_CATEGORIES
-    .map((c) => ({ ...c, apps: c.apps.filter((a) => open(a.href)) }))
+    .map((c) => ({ ...c, apps: c.apps.filter((a) => open(a.href) && !integOff.has(a.href)) }))
     .filter((c) => c.apps.length > 0);
 
   const [

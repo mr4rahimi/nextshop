@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useCallback, useRef } from "react";
 import HelpButton from "@/components/admin/worklist/HelpButton";
 
@@ -1011,22 +1012,38 @@ interface Props {
   platforms: Platform[];
   initialMappingCount: number;
   initialSuggestionCount: number;
+  /** منبع موجودی — docs/integrations/settings-and-guide.md */
+  source?: "internal" | "hesaban" | "site";
+  initialTab?: string;
 }
 
-export default function MappingPageClient({ platforms, initialMappingCount, initialSuggestionCount }: Props) {
-  const [activeTab, setActiveTab] = useState<string>(platforms[0]?.code ?? "mappings");
+const SOURCE_TIP: Record<NonNullable<Props["source"]>, string> = {
+  internal: "حسابداری داخلی: کالای حسابداری خودش پشت هر محصول سایت است؛ اینجا فقط محصول سایت را به محصول بازارگاه وصل کنید.",
+  site: "بدون حسابداری: موجودی محصول سایت مرجع است. بعد از نگاشت، موجودی و قیمت خرید را در «موجودی» وارد کنید.",
+  hesaban: "حسابان وب: هر نگاشت باید کالای حسابان را هم داشته باشد تا موجودی از حسابان بیاید و فاکتور ثبت شود.",
+};
+
+export default function MappingPageClient({ platforms, initialMappingCount, initialSuggestionCount, source, initialTab }: Props) {
+  const [activeTab, setActiveTab] = useState<string>(initialTab ?? platforms[0]?.code ?? "mappings");
   const [mappingCount]     = useState(initialMappingCount);
   const [suggestionCount]  = useState(initialSuggestionCount);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6" dir="rtl">
+    <div className="max-w-5xl mx-auto space-y-6" dir="rtl">
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-black text-gray-900 dark:text-white">نگاشت محصولات</h1>
           <HelpButton topic="integrationMapping" />
         </div>
-        <p className="text-sm text-gray-500 mt-1">ارتباط محصولات بین همه پلتفرم‌ها در یک ظرف یکپارچه</p>
+        <p className="text-sm text-gray-500 mt-1">هر محصول سایت را به همان محصول در هر بازارگاه وصل کنید تا موجودی و قیمت یکی بماند.</p>
       </div>
+
+      {source && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-xs leading-6 text-teal-800 dark:border-teal-500/20 dark:bg-teal-500/10 dark:text-teal-300">
+          <span className="min-w-0 flex-1">{SOURCE_TIP[source]}</span>
+          <Link href="/admin/integration/guide" className="font-black underline">راهنمای نگاشت</Link>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
@@ -1040,7 +1057,7 @@ export default function MappingPageClient({ platforms, initialMappingCount, init
         </div>
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-white/[0.06] p-4">
           <p className="text-2xl font-black text-gray-900 dark:text-white">{platforms.length}</p>
-          <p className="text-xs text-gray-500 mt-1">پلتفرم متصل</p>
+          <p className="text-xs text-gray-500 mt-1">سرویس فعال</p>
         </div>
       </div>
 

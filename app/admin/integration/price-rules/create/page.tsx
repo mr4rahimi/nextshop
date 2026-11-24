@@ -4,7 +4,7 @@ import HelpButton from "@/components/admin/worklist/HelpButton";
 
 export default function CreatePriceRulePage() {
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6" dir="rtl">
+    <div className="max-w-3xl mx-auto space-y-6" dir="rtl">
       <div className="flex items-center gap-3">
         <Link href="/admin/integration/price-rules"
           className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-sm">

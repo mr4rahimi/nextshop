@@ -124,6 +124,7 @@ async function pushMappingPrice(mapping: {
   for (const link of links) {
     const platform = await prisma.integPlatform.findUnique({ where: { code: link.platformCode } });
     if (platform?.type === "ACCOUNTING") { tally.skipped++; continue; } // به حسابداری قیمت پوش نمی‌کنیم
+    if (link.platformCode !== "shop" && platform && !platform.isActive) { tally.skipped++; continue; } // سرویس در تنظیمات خاموش است
 
     const rule = await findApplicableRule(link.platformCode, shopProduct);
     if (!rule) {
@@ -401,5 +402,36 @@ export async function applyDiscountWindowChanges(): Promise<PricePushResult> {
     },
   }).catch(() => {});
 
+  return totals;
+}
+
+// ── حسابداری داخلی: قیمت خرید «از حسابداری» = آخرین بهای خرید کالا ──────
+// docs/integrations/settings-and-guide.md — هر دو تومان‌اند (AccProductCost و
+// IntegMapping.purchasePrice). فقط نگاشت‌هایی که منبعشان «از حسابداری» است و
+// محصول سایتِ بی‌تنوع دارند؛ قیمت فقط برای ردیف‌های تغییرکرده ارسال می‌شود.
+export async function syncPurchasePricesFromInternal(): Promise<{ updated: number } & PricePushResult> {
+  const links = await prisma.integMappingLink.findMany({
+    where: { platformCode: "shop", isActive: true, mapping: { isActive: true, purchasePriceSource: "HESABAN" } },
+    select: { externalId: true, mapping: { select: { id: true, purchasePrice: true } } },
+  });
+  const costs = links.length
+    ? await prisma.accProductCost.findMany({
+        where: { productId: { in: links.map((l) => l.externalId) } },
+        select: { productId: true, lastCost: true, avgCost: true },
+      })
+    : [];
+  const costMap = new Map(costs.map((c) => [c.productId, Number(c.lastCost > 0n ? c.lastCost : c.avgCost)]));
+
+  const totals = { updated: 0, pushed: 0, failed: 0, skipped: 0 };
+  for (const l of links) {
+    const cost = costMap.get(l.externalId);
+    if (!cost || cost <= 0 || cost === l.mapping.purchasePrice) continue;
+    await prisma.integMapping.update({ where: { id: l.mapping.id }, data: { purchasePrice: cost, lastPriceSyncAt: new Date() } });
+    totals.updated++;
+    const r = await pushPriceForMapping(l.mapping.id).catch(() => emptyResult());
+    totals.pushed += r.pushed;
+    totals.failed += r.failed;
+    totals.skipped += r.skipped;
+  }
   return totals;
 }

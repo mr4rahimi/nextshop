@@ -19,7 +19,7 @@ export async function GET() {
   const guard = await requirePermission(["ACC_VIEW", "ACC_SETTINGS"]);
   if (!guard.ok) return NextResponse.json({ error: guard.error }, { status: guard.status });
 
-  const [settings, hesaban, counts, year] = await Promise.all([
+  const [settings, hesaban, counts, year, hesabanPlatform] = await Promise.all([
     getAccSettings(),
     prisma.integConnection.findFirst({
       where: { platformCode: "hesaban" },
@@ -27,6 +27,7 @@ export async function GET() {
     }),
     prisma.accEvent.groupBy({ by: ["status"], _count: { _all: true } }),
     currentYear(),
+    prisma.integPlatform.findUnique({ where: { code: "hesaban" }, select: { isActive: true } }),
   ]);
 
   const cfg = (hesaban?.config ?? {}) as { autoInvoiceEnabled?: boolean; invoiceMode?: string };
@@ -46,6 +47,7 @@ export async function GET() {
           }
         : null,
       counts: Object.fromEntries(counts.map((c) => [c.status, c._count._all])),
+      hesabanAvailable: !!hesabanPlatform?.isActive,
       year: year ? { id: year.id, title: year.title, startDate: year.startDate, endDate: year.endDate, status: year.status } : null,
       canLeaveInternal: settings.mode === "INTERNAL" ? await canLeaveInternal() : true,
       can: { settings: can(guard.access, "ACC_SETTINGS") },
@@ -66,6 +68,13 @@ export async function PATCH(req: Request) {
 
   const before = await getAccSettings();
   if (before.mode === mode) return NextResponse.json({ ok: true, mode });
+
+  if (mode === "HESABAN") {
+    const p = await prisma.integPlatform.findUnique({ where: { code: "hesaban" }, select: { isActive: true } });
+    if (!p?.isActive) {
+      return NextResponse.json({ error: "حسابان وب در «یکپارچه‌سازی ← تنظیمات» خاموش است؛ اول روشنش کنید" }, { status: 409 });
+    }
+  }
 
   // خروج از حالت داخلی فقط تا وقتی هیچ سندی ثبت نشده — بعد از آن فقط در
   // ابتدای سال مالی و با بستن سال (فاز ۹)

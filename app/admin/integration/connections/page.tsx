@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import HelpButton from "@/components/admin/worklist/HelpButton";
+import { getAdapter } from "@/lib/integration/core/adapter-registry";
 
 export const dynamic = "force-dynamic";
 
 export default async function ConnectionsPage() {
-  const [platforms, acc] = await Promise.all([
+  const [all, acc] = await Promise.all([
     prisma.integPlatform.findMany({
       where:   { isActive: true },
       include: { connections: true },
@@ -13,15 +14,20 @@ export default async function ConnectionsPage() {
     }),
     prisma.accSettings.findUnique({ where: { id: "singleton" }, select: { mode: true } }),
   ]);
+  // سرویس بی‌آداپتور (هنوز پشتیبانی نمی‌شود) وصل‌شدنی نیست
+  const platforms = all.filter((p) => getAdapter(p.code));
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6" dir="rtl">
+    <div className="max-w-3xl mx-auto space-y-6" dir="rtl">
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-black text-gray-900 dark:text-white">اتصالات</h1>
           <HelpButton topic="integrationConnections" />
         </div>
-        <p className="text-sm text-gray-500 mt-1">اتصال به حسابداری و مارکت‌پلیس‌ها</p>
+        <p className="text-sm text-gray-500 mt-1">
+          اتصال به بازارگاه‌ها و حسابداری. سرویسی را که لازم ندارید از{" "}
+          <Link href="/admin/integration/settings" className="font-bold text-teal-600">تنظیمات</Link> خاموش کنید.
+        </p>
       </div>
 
       {/* حسابداری داخلی سرویس بیرونی نیست و در فهرست پایین نمی‌آید — موجودی سایت را کاردکس می‌نویسد */}

@@ -1,17 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import PricingClient from "./PricingClient";
 import HelpButton from "@/components/admin/worklist/HelpButton";
+import { getStockSource } from "@/lib/integration/core/config";
 
 export const dynamic = "force-dynamic";
 
 export default async function PricingPage() {
   const where = { isActive: true };
-  const [total, mappings] = await Promise.all([
+  const [total, mappings, source] = await Promise.all([
     prisma.integMapping.count({ where }),
     prisma.integMapping.findMany({
       where, orderBy: { updatedAt: "desc" }, take: 30,
       include: { links: { where: { isActive: true } } },
     }),
+    getStockSource(),
   ]);
 
   const shopIds = mappings.flatMap((m) => m.links.filter((l) => l.platformCode === "shop").map((l) => l.externalId));
@@ -35,15 +37,21 @@ export default async function PricingPage() {
   }));
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6" dir="rtl">
+    <div className="max-w-4xl mx-auto space-y-6" dir="rtl">
       <div>
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-black text-gray-900 dark:text-white">مدیریت قیمت خرید</h1>
           <HelpButton topic="integrationPricing" />
         </div>
-        <p className="text-sm text-gray-500 mt-1">منبع قیمت خرید هر محصول (حسابداری یا دستی) و بروزرسانی قیمت پلتفرم‌ها</p>
+        <p className="text-sm text-gray-500 mt-1">
+          {source === "site"
+            ? "قیمت خرید هر محصول را دستی وارد کنید؛ قیمت هر بازارگاه از آن و «قوانین قیمت» ساخته و همان لحظه ارسال می‌شود."
+            : source === "internal"
+              ? "قیمت خرید از آخرین بهای خرید کالا در حسابداری داخلی خوانده می‌شود، یا برای هر محصول دستی."
+              : "قیمت خرید از حسابان وب خوانده می‌شود، یا برای هر محصول دستی."}
+        </p>
       </div>
-      <PricingClient initialItems={items} initialTotal={total} />
+      <PricingClient initialItems={items} initialTotal={total} source={source} />
     </div>
   );
 }

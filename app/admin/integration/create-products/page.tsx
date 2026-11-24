@@ -21,7 +21,7 @@ export default async function CreateProductsPage({ searchParams }: { searchParam
   const platform = platforms.find((p) => p.code === wanted) ?? platforms[0] ?? null;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6" dir="rtl">
+    <div className="max-w-6xl mx-auto space-y-6" dir="rtl">
       <div className="flex items-center gap-3 flex-wrap">
         <Link href="/admin/integration" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-sm">
           ← یکپارچه‌سازی

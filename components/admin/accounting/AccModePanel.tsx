@@ -24,6 +24,8 @@ interface Data {
   selectable: Mode[];
   hesaban: { status: string; autoInvoice: boolean; invoiceMode: "AUTO" | "MANUAL"; lastError: string | null } | null;
   counts: Record<string, number>;
+  /** حسابان در «یکپارچه‌سازی ← تنظیمات» روشن است؟ خاموش = گزینه‌اش نمی‌آید */
+  hesabanAvailable?: boolean;
   canLeaveInternal: boolean;
   can: { settings: boolean };
 }
@@ -117,8 +119,8 @@ export default function AccModePanel() {
 
       <section>
         <h2 className="text-sm font-black text-gray-900 dark:text-white mb-3">حسابداری کسب‌وکار</h2>
-        <div className="grid gap-3 md:grid-cols-3">
-          {MODES.map((m) => {
+        <div className={`grid gap-3 ${data.hesabanAvailable === false && data.mode !== "HESABAN" ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
+          {MODES.filter((m) => m.key !== "HESABAN" || data.hesabanAvailable !== false || data.mode === "HESABAN").map((m) => {
             const active = data.mode === m.key;
             // خروج از داخلی فقط تا وقتی سندی ثبت نشده (سرور هم همین را می‌سنجد)
             const locked = data.mode === "INTERNAL" && !data.canLeaveInternal;
