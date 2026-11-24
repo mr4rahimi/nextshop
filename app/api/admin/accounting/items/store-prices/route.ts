@@ -31,6 +31,7 @@ const PREVIEW_ROWS = 300;
  * GET — گروه‌ها، ویژگی‌ها و عرضه‌کننده‌ها برای فیلتر + آخرین تغییرهای گروهی
  * POST `{action}`:
  *   `bulk`  `{filter, op: {kind, pctBp|amount|price}, round: {roundTo, mode}, exclude, commit}`
+ *   `pick`  `{ids, op, round, scope, commit}` — «تغییر سریع»: کالاهای انتخابی (همه‌ی تنوع‌های یک مدل)
  *   `sheet` `{rows: [{code, price, line}], commit}` — ورود با اکسل (فایل را `import/parse` می‌خواند)
  *   `undo`  `{batchId}`
  * `commit` نباشد ← فقط پیش‌نمایش (چیزی نوشته نمی‌شود)
@@ -68,6 +69,8 @@ interface Body {
   exclude?: unknown;
   rows?: { code?: unknown; price?: unknown; line?: unknown }[];
   batchId?: unknown;
+  ids?: unknown;
+  scope?: unknown;
   commit?: unknown;
 }
 
@@ -143,6 +146,25 @@ export async function POST(req: Request) {
         { timeout: 180_000 },
       );
       await logActivity({ action: "UPDATE", entity: "OTHER", entityTitle: "قیمت فروشگاه", summary: `تغییر گروهی قیمت (${summary}) — ${faNum(res.count)} کالا` });
+      return NextResponse.json(serialize({ ok: true, applied: res }));
+    }
+
+    if (b.action === "pick") {
+      const ids = Array.isArray(b.ids) ? [...new Set(b.ids.map(String))].slice(0, 5000) : [];
+      if (!ids.length) throw new AccError("کالایی انتخاب نشده");
+      const filter: PriceFilter = { ids, includeInactive: true };
+      const { op, round } = parseOp(b);
+      if (!commit) {
+        const plan = await planBulk(prisma, filter, op, round);
+        return NextResponse.json(serialize({ ok: true, preview: { ...plan, total: plan.rows.length, rows: plan.rows.slice(0, PREVIEW_ROWS) } }));
+      }
+      const scope = (str(b.scope) ?? `${faNum(ids.length)} کالای انتخابی`).slice(0, 160);
+      const summary = opSummary(op, round, scope);
+      const res = await prisma.$transaction(
+        async (tx) => applyPriceRows(tx, (await planBulk(tx, filter, op, round)).rows, { kind: op.kind, summary, source: "BULK", actor }),
+        { timeout: 180_000 },
+      );
+      await logActivity({ action: "UPDATE", entity: "OTHER", entityTitle: "قیمت فروشگاه", summary: `تغییر سریع قیمت (${summary}) — ${faNum(res.count)} کالا` });
       return NextResponse.json(serialize({ ok: true, applied: res }));
     }
 

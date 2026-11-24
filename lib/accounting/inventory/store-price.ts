@@ -39,6 +39,8 @@ export interface PriceFilter {
   /** مقدار ویژگی (رنگ آبی، سایز XL) */
   valueId?: string | null;
   includeInactive?: boolean;
+  /** فقط همین کالاها («تغییر سریع») */
+  ids?: string[] | null;
 }
 
 async function groupWithChildren(db: Db, groupId: string): Promise<string[]> {
@@ -53,6 +55,7 @@ async function groupWithChildren(db: Db, groupId: string): Promise<string[]> {
 
 export async function filterWhere(db: Db, f: PriceFilter): Promise<Prisma.AccItemWhereInput> {
   const and: Prisma.AccItemWhereInput[] = [];
+  if (f.ids) and.push({ id: { in: f.ids } });
   if (!f.includeInactive) and.push({ isActive: true });
   if (f.q?.trim()) and.push(await itemSearchWhere(f.q, db));
   if (f.groupId) and.push({ groupId: { in: await groupWithChildren(db, f.groupId) } });

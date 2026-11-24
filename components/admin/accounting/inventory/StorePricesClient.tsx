@@ -2,7 +2,8 @@
 
 /**
  * قیمت فروشگاه — docs/plans/webhesab-parity.md بخش ۱۰.
- * سه زبانه: تغییر گروهی (درصد/مبلغ/قیمت ثابت با فیلتر)، ورود با اکسل، کالاهای با تغییر قیمت
+ * «تغییر سریع» (StorePriceQuick: کد ← همه‌ی رنگ/سایزهای مدل، افزایش/کاهش، چاپ برچسب) و
+ * سه زبانه‌ی دیگر: تغییر گروهی (درصد/مبلغ/قیمت ثابت با فیلتر)، ورود با اکسل، کالاهای با تغییر قیمت
  * (از تاریخ و ساعت ← چاپ برچسب). پایین دو زبانه‌ی اول: تغییرهای اخیر با «برگرداندن».
  */
 
@@ -13,9 +14,10 @@ import JalaliDatePicker from "@/components/admin/JalaliDatePicker";
 import { faNum, formatAmount } from "@/lib/accounting/money";
 import type { RoundMode } from "@/lib/accounting/inventory/online-price-calc";
 import InventoryTabs from "./InventoryTabs";
+import StorePriceQuick from "./StorePriceQuick";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, Field, inputCls, PageHeader, SectionTitle, Segmented } from "../ui";
 
-type Tab = "bulk" | "sheet" | "history";
+type Tab = "quick" | "bulk" | "sheet" | "history";
 type OpKind = "PERCENT" | "AMOUNT" | "SET";
 
 interface Meta {
@@ -703,7 +705,7 @@ export default function StorePricesClient() {
   const sp = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const tab = (["bulk", "sheet", "history"].includes(sp.get("tab") ?? "") ? sp.get("tab") : "bulk") as Tab;
+  const tab = (["quick", "bulk", "sheet", "history"].includes(sp.get("tab") ?? "") ? sp.get("tab") : "quick") as Tab;
   const batch = sp.get("batch");
   const [meta, setMeta] = useState<Meta | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -739,12 +741,14 @@ export default function StorePricesClient() {
             value={tab}
             onChange={(t) => (setNote(null), go(t))}
             options={[
+              { value: "quick", label: "تغییر سریع" },
               { value: "bulk", label: "تغییر گروهی" },
               { value: "sheet", label: "ورود با اکسل" },
               { value: "history", label: "کالاهای با تغییر قیمت" },
             ]}
           />
           {note && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 dark:bg-emerald-500/10">{note}</p>}
+          {tab === "quick" && <StorePriceQuick canManage={meta.can.manage} onApplied={load} />}
           {tab === "bulk" && <BulkPanel meta={meta} onDone={done} />}
           {tab === "sheet" && <SheetPanel meta={meta} onDone={done} />}
           {tab === "history" && <HistoryPanel batch={batch} clearBatch={() => go("history")} />}
