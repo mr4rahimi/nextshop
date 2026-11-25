@@ -21,7 +21,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { jalaliMonthName, toJalali } from "@/lib/club/jalali";
 import { AccError } from "./errors";
-import { createAccount } from "./ledger/accounts";
+import { ensureSystemAccount } from "./ledger/accounts";
 import { balanceOf } from "./ledger/balances";
 import { yearForDate } from "./ledger/fiscal-year";
 import { postVoucher, type Actor, type LineInput } from "./ledger/post";
@@ -39,19 +39,8 @@ export const PREPAID_KEY = "INSTALLMENT_PREPAID";
 
 /** حساب‌های تازه برای نصب‌های پیش از ۲.۱۶۲.۰ — زیر «پیش‌دریافت‌ها» (۳۳) و «پیش‌پرداخت‌ها» (۱۴) */
 export async function ensureInstallmentAccounts(tx: Tx) {
-  const spec = [
-    { key: DEFERRED_KEY, name: "درآمد تحقق‌نیافته‌ی اقساط", parent: "33", cls: "LIABILITY" as const, nature: "CREDIT" as const },
-    { key: PREPAID_KEY, name: "پیش‌پرداخت کارمزد خرید اقساطی", parent: "14", cls: "ASSET" as const, nature: "DEBIT" as const },
-  ];
-  for (const s of spec) {
-    if (await tx.accAccount.findUnique({ where: { systemKey: s.key }, select: { id: true } })) continue;
-    const parent =
-      (await tx.accAccount.findFirst({ where: { code: s.parent, level: "LEDGER" } })) ??
-      (await tx.accAccount.findFirst({ where: { class: s.cls, level: "LEDGER" }, orderBy: { code: "asc" } }));
-    if (!parent) throw new AccError(`سرفصل مناسب برای حساب «${s.name}» پیدا نشد؛ آن را دستی بسازید`);
-    const acc = await createAccount(tx, { parentId: parent.id, name: s.name });
-    await tx.accAccount.update({ where: { id: acc.id }, data: { systemKey: s.key, nature: s.nature, detailKind: "NONE" } });
-  }
+  await ensureSystemAccount(tx, { key: DEFERRED_KEY, name: "درآمد تحقق‌نیافته‌ی اقساط", parentCode: "33", cls: "LIABILITY", nature: "CREDIT" });
+  await ensureSystemAccount(tx, { key: PREPAID_KEY, name: "پیش‌پرداخت کارمزد خرید اقساطی", parentCode: "14", cls: "ASSET", nature: "DEBIT" });
 }
 
 type Side = "sales" | "purchase";

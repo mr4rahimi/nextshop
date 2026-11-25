@@ -93,6 +93,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/inventory/prices", label: "قیمت فروشگاه", icon: fx("Chart increasing"), keywords: "افزایش قیمت گروهی اکسل تاریخچه تغییر قیمت اتیکت" },
       { href: "/admin/accounting/inventory/online-prices", label: "قیمت فروش آنلاین", icon: fx("Globe with meridians") },
       { href: "/admin/accounting/inventory/opening", label: "موجودی اول دوره", icon: fx("Inbox tray") },
+      { href: "/admin/accounting/inventory/valuation", label: "ارزیابی موجودی", icon: fx("Wilted flower"), keywords: "کاهش ارزش موجودی اقل بها خالص ارزش فروش کالای راکد آسیب دیده ذخیره پایان سال استاندارد ۸" },
       { href: "/admin/tools/reorder", label: "نقطه‌ی سفارش", icon: fx("Hourglass not done") },
       { href: "/admin/tools/stock-capital", label: "سرمایه‌ی انبار", icon: fx("Coin") },
       { href: "/admin/tools/stock-alerts", label: "خبرم کن", icon: fx("Bell") },

@@ -15,7 +15,7 @@ import {
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
   CalendarDays, Lock, QrCode, Blocks, MessagesSquare, PackagePlus, Map as MapIcon, Boxes, Tags, Percent, Plug, Bot, ListRestart, ScrollText, SlidersHorizontal, Compass, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop, Scale, Megaphone, Funnel, BadgePercent, PackageSearch, PiggyBank, HeartHandshake, UserRound, GitCompareArrows, Trophy,
-  Undo2,
+  Undo2, TrendingDown,
 } from "lucide-react";
 import { INTEG_SECTIONS, type IntegSectionKey } from "@/lib/integration/core/sections";
 
@@ -130,6 +130,7 @@ export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting/treasury", label: "صندوق و بانک", icon: Landmark, tone: "cyan", perm: ["ACC_VIEW", "ACC_SETTINGS"], img: "acc-treasury" },
   { href: "/admin/accounting/loans", label: "وام و تسهیلات", icon: HandCoins, tone: "orange", perm: ["ACC_VIEW", "ACC_TREASURY"] },
   { href: "/admin/accounting/inventory", label: "کالا و انبار", icon: Warehouse, tone: "amber", perm: ["ACC_VIEW", "ACC_INVENTORY"], img: "acc-inventory" },
+  { href: "/admin/accounting/inventory/valuation", label: "ارزیابی موجودی", icon: TrendingDown, tone: "rose", perm: ["ACC_REPORTS", "ACC_INVENTORY", "ACC_SETTINGS"] },
   { href: "/admin/accounting/vouchers", label: "اسناد", icon: NotebookPen, tone: "fuchsia", perm: ["ACC_VOUCHER", "ACC_VIEW"], tag: "حسابدار", img: "acc-vouchers" },
   { href: "/admin/accounting/attachments", label: "پیوست مدارک", icon: Paperclip, tone: "slate", perm: ["ACC_VIEW"] },
   { href: "/admin/accounting/accounts", label: "سرفصل حساب‌ها", icon: FolderTree, tone: "lime", perm: ["ACC_VOUCHER", "ACC_SETTINGS"], tag: "حسابدار", img: "acc-accounts" },

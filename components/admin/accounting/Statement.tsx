@@ -59,6 +59,8 @@ export const SOURCE_LABELS: Record<string, string> = {
   POS: "صندوق فروشگاه",
   LOAN: "وام و تسهیلات",
   GIFT: "بن کارت",
+  CLUB: "اعتبار باشگاه",
+  INVENTORY_WRITEDOWN: "کاهش ارزش موجودی",
 };
 
 const INVOICE_SOURCES = ["SALES_INVOICE", "PURCHASE_INVOICE", "SALES_RETURN", "PURCHASE_RETURN"];

@@ -34,6 +34,7 @@ import { prisma } from "../lib/prisma";
 import { expireDuePoints } from "../lib/club/credit";
 import { postClubLiability } from "../lib/accounting/club-liability";
 import { accrueInstallments } from "../lib/accounting/installment-income";
+import { releaseSold } from "../lib/accounting/inventory/valuation";
 
 if (!redis) {
   console.error("[worker] REDIS_URL تنظیم نشده — ورکر اجرا نمی‌شود.");
@@ -57,6 +58,8 @@ const CRON_JOBS = [
   { name: "post-club-liability", every: 3_600_000 },
   // سند ماهانه‌ی شناسایی کارمزد اقساط — فقط بعد از تمام شدن هر ماه شمسی چیزی می‌نویسد (بخش ۳۴.۳)
   { name: "accrue-installments", every: 6 * 3_600_000 },
+  // برگشت ذخیره‌ی کاهش ارزش کالاهای فروش‌رفته — یک بار برای هر ماه تمام‌شده (بخش ۳۴.۴)
+  { name: "release-inventory-writedown", every: 6 * 3_600_000 },
 ] as const;
 
 async function registerCronJobs() {
@@ -303,6 +306,11 @@ async function main() {
           const r = await prisma.$transaction((tx) => accrueInstallments(tx, { name: "سیستم — کارمزد اقساط" }), { timeout: 120_000 });
           if (r.vouchers.length) console.log(`[cron:installments] ${r.vouchers.length} سند شناسایی کارمزد اقساط`);
           return { months: r.months, vouchers: r.vouchers.length };
+        }
+        case "release-inventory-writedown": {
+          const r = await prisma.$transaction((tx) => releaseSold(tx, { name: "سیستم — ارزیابی موجودی" }), { timeout: 120_000 });
+          if (r?.voucherId) console.log(`[cron:inv-writedown] ${r.soldUnits} واحد فروش‌رفته، ${r.delta}`);
+          return { delta: String(r?.delta ?? 0) };
         }
         case "finalize-campaigns": {
           const n = await finalizeCampaigns();

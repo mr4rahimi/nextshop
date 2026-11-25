@@ -4299,6 +4299,7 @@ enum AccSource {
   LOAN // وام و تسهیلات: دریافت وام و پرداخت قسط (۲.۱۳۰.۰)
   GIFT // بن کارت فروشگاه: فروش، مرجوع و سوخت (webhesab-parity.md بخش ۲۷)
   CLUB // تعهد اعتبار باشگاه: شارژ، سوخت، افتتاحیه (webhesab-parity.md بخش ۳۴.۲)
+  INVENTORY_WRITEDOWN // کاهش ارزش موجودی: ارزیابی و برگشت ذخیره (بخش ۳۴.۴)
 }
 
 /// سند حسابداری. ⚠️ فقط از `lib/accounting/ledger/post.ts` نوشته می‌شود —
@@ -4991,6 +4992,60 @@ model AccStock {
 /// بهای تمام‌شده‌ی هر کالا — میانگین موزون سراسری (تصمیم ۷).
 /// `totalValue` منبع است و `avgCost` نمایشی؛ نگه‌داشتن ارزش کل جلوی
 /// انباشت خطای گرد کردن میانگین را می‌گیرد.
+/// ارزیابی موجودی پایان دوره — اقل بها و خالص ارزش فروش (استاندارد ۸)؛ webhesab-parity.md بخش ۳۴.۴.
+/// کاردکس و میانگین موزون دست نمی‌خورند؛ کاهش ارزش در حساب کاهنده‌ی «ذخیره‌ی کاهش ارزش موجودی» است.
+/// فقط آخرین ارزیابی `ACTIVE` است؛ ارزیابی تازه جای قبلی را می‌گیرد و فقط تفاوت را سند می‌زند.
+model AccInvValuation {
+  id            String    @id @default(cuid())
+  number        Int       @unique
+  date          DateTime  @db.Date
+  /// هزینه‌ی فروش (صدم درصد از قیمت) — خالص ارزش فروش = قیمت × (۱ − این)
+  sellCostBp    Int
+  /// راکد: بی‌فروش از این تعداد روز
+  staleDays     Int
+  /// تخفیف پیشنهادی کالای راکد (صدم درصد)؛ دو برابر روزها ← دو برابر تخفیف (سقف ۹۰٪)
+  staleDiscountBp Int
+  /// ذخیره‌ی لازم روز ارزیابی
+  total         BigInt
+  /// ذخیره‌ای که الان از این ارزیابی در دفتر است (بعد از برگشت سهم فروش‌رفته‌ها)
+  booked        BigInt
+  /// ACTIVE | SUPERSEDED
+  status        String    @default("ACTIVE")
+  voucherId     String?
+  /// آخرین روزی که برگشت سهم کالاهای فروش‌رفته برایش سند خورد
+  releasedThrough DateTime? @db.Date
+  note          String?
+  createdByName String
+  createdAt     DateTime  @default(now())
+  lines         AccInvValuationLine[]
+
+  @@index([status])
+}
+
+model AccInvValuationLine {
+  id            String          @id @default(cuid())
+  valuationId   String
+  itemId        String
+  qty           Int
+  /// میانگین بهای هر واحد روز ارزیابی
+  unitCost      BigInt
+  /// قیمت فروش امروز (فروشگاه)
+  price         BigInt
+  /// قیمت فروش مورد انتظار (بعد از تخفیف راکد یا دستی)
+  expected      BigInt
+  /// خالص ارزش فروش هر واحد = مورد انتظار − هزینه‌ی فروش
+  nrv           BigInt
+  /// کاهش ارزش هر واحد = بها − خالص ارزش فروش
+  perUnit       BigInt
+  /// PRICE (قیمت زیر بها) | STALE (راکد) | MANUAL (دستی)
+  reason        String
+  daysIdle      Int?
+  valuation     AccInvValuation @relation(fields: [valuationId], references: [id], onDelete: Cascade)
+
+  @@index([valuationId])
+  @@index([itemId])
+}
+
 model AccProductCost {
   productId  String   @id
   qtyOnHand  Int      @default(0)

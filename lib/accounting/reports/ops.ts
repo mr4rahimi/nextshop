@@ -107,6 +107,9 @@ export async function inventoryValue(db: Db, opts: { warehouseId: string | null;
     db.accWarehouse.findMany({ select: { id: true, name: true } }),
     balanceOf(db, { account: { systemKey: "INVENTORY" } }),
   ]);
+  // ذخیره‌ی کاهش ارزش (بخش ۳۴.۴) — جدا از کاردکس؛ ارزش خالص = کاردکس − ذخیره
+  const provAcc = await db.accAccount.findUnique({ where: { systemKey: "INVENTORY_PROVISION" }, select: { id: true } });
+  const provision = provAcc ? -(await balanceOf(db, { accountId: provAcc.id })).balance : 0n;
   // در راه با موجودی همان انبار یکی می‌شود، پیش از ارزش‌گذاری — وگرنه گرد کردن دو تکه ۱ ریال کم می‌آورد
   const merged = new Map<string, { productId: string; warehouseId: string; qty: number; transit: number }>();
   for (const s of [
@@ -168,5 +171,7 @@ export async function inventoryValue(db: Db, opts: { warehouseId: string | null;
     /** ارزش سراسری کاردکس و مانده‌ی حساب موجودی کالا — باید برابر باشند */
     kardexValue: sumBig(costs, (c) => c.totalValue),
     ledgerValue: ledger.balance,
+    /** مانده‌ی «ذخیره‌ی کاهش ارزش موجودی» (مثبت = کاهش) */
+    provision,
   };
 }

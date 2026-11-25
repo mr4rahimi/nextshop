@@ -17,6 +17,7 @@ interface Data {
   totals: { qty: number; inTransit: number; value: string };
   kardexValue: string;
   ledgerValue: string;
+  provision: string;
 }
 
 export default function InventoryValueReport() {
@@ -84,6 +85,19 @@ export default function InventoryValueReport() {
             </span>
             {matched ? <Badge tone="green">✓ با دفتر می‌خواند</Badge> : <Badge tone="amber">اختلاف دارد — سند دستی روی حساب موجودی کالا؟</Badge>}
           </Card>
+          {BigInt(data.provision) !== 0n && (
+            <Card className="p-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+              <span>
+                ذخیره‌ی کاهش ارزش (کالای زیر بها و راکد) −<Amt v={data.provision} strong />
+              </span>
+              <span>
+                ارزش خالص موجودی <Amt v={(BigInt(data.ledgerValue) - BigInt(data.provision)).toString()} strong />
+              </span>
+              <a href="/admin/accounting/inventory/valuation" className="font-bold text-blue-600">
+                ارزیابی موجودی
+              </a>
+            </Card>
+          )}
           <Table
             head={
               <tr>

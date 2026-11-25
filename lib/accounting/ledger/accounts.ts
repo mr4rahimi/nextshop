@@ -5,7 +5,7 @@
  *    `accountByKey` پیدا می‌شوند تا کسب‌وکار بتواند کدگذاری خودش را داشته باشد.
  */
 
-import type { AccAccount, AccDetailKind, Prisma } from "@prisma/client";
+import type { AccAccount, AccClass, AccDetailKind, AccNature, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AccError } from "../errors";
 import { DEFAULT_CHART, REQUIRED_KEYS } from "../chart";
@@ -138,4 +138,22 @@ export async function updateAccount(
     data.isActive = input.isActive;
   }
   return db.accAccount.update({ where: { id }, data });
+}
+
+/**
+ * حساب سیستمی تازه برای نصب‌های قدیمی‌تر از ردیف سرفصل پیش‌فرض — زیر کل `parentCode`
+ * (نبودش: اولین کل همان کلاس). شماره‌ی تکراری جابه‌جا نمی‌شود؛ کد خودکار زیر پدر.
+ */
+export async function ensureSystemAccount(
+  db: Db,
+  s: { key: string; name: string; parentCode: string; cls: AccClass; nature: AccNature },
+): Promise<AccAccount> {
+  const hit = await db.accAccount.findUnique({ where: { systemKey: s.key } });
+  if (hit) return hit;
+  const parent =
+    (await db.accAccount.findFirst({ where: { code: s.parentCode, level: "LEDGER" } })) ??
+    (await db.accAccount.findFirst({ where: { class: s.cls, level: "LEDGER" }, orderBy: { code: "asc" } }));
+  if (!parent) throw new AccError(`سرفصل مناسب برای حساب «${s.name}» پیدا نشد؛ آن را دستی بسازید`);
+  const acc = await createAccount(db, { parentId: parent.id, name: s.name });
+  return db.accAccount.update({ where: { id: acc.id }, data: { systemKey: s.key, nature: s.nature, detailKind: "NONE" } });
 }

@@ -35,6 +35,7 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["1203", "اسناد در جریان وصول", S, "ASSET", "DEBIT", "PARTY", "CHEQUE_IN_COLLECTION"],
   ["13", "موجودی کالا", L, "ASSET", "DEBIT", "NONE", null],
   ["1301", "موجودی کالا", S, "ASSET", "DEBIT", "NONE", "INVENTORY"],
+  ["1302", "ذخیره‌ی کاهش ارزش موجودی", S, "ASSET", "CREDIT", "NONE", "INVENTORY_PROVISION"],
   ["14", "پیش‌پرداخت‌ها", L, "ASSET", "DEBIT", "NONE", null],
   ["1401", "مالیات بر ارزش افزوده‌ی خرید", S, "ASSET", "DEBIT", "NONE", "VAT_PURCHASE"],
   ["1402", "پیش‌پرداخت‌ها", S, "ASSET", "DEBIT", "PARTY", "PREPAYMENT"],
@@ -85,6 +86,7 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["71", "بهای تمام‌شده", L, "EXPENSE", "DEBIT", "NONE", null],
   ["7101", "بهای تمام‌شده‌ی کالای فروش‌رفته", S, "EXPENSE", "DEBIT", "NONE", "COGS"],
   ["7102", "کسری و اضافات انبار", S, "EXPENSE", "BOTH", "NONE", "INVENTORY_ADJUSTMENT"],
+  ["7103", "هزینه‌ی کاهش ارزش موجودی", S, "EXPENSE", "BOTH", "NONE", "INVENTORY_WRITEDOWN"],
 
   ["8", "هزینه‌ها", G, "EXPENSE", "DEBIT", "NONE", null],
   ["81", "هزینه‌های فروش", L, "EXPENSE", "DEBIT", "NONE", null],
