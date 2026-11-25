@@ -30,7 +30,6 @@ interface Item {
   categoryMapped: boolean;
   platformProductId: string | null;
   platformVariants: number;
-  needsRecreate: boolean;
   queued: string | null;
   lastError: string | null;
   lastAt: string | null;
@@ -41,7 +40,7 @@ interface ListResponse {
   connected: boolean;
   settings: Settings;
   shopCategories: { id: string; path: string; products: number }[];
-  summary: { linked: number; queued: number; failed: number; recreate: number };
+  summary: { linked: number; queued: number; failed: number };
   total: number;
   page: number;
   perPage: number;
@@ -55,7 +54,6 @@ const STATUS_TABS = [
   { key: "queued", label: "در صف" },
   { key: "failed", label: "ناموفق" },
   { key: "done",   label: "ساخته/نگاشت‌شده" },
-  { key: "recreate", label: "نیازمند ساخت دوباره" },
   { key: "all",    label: "همه" },
 ] as const;
 
@@ -89,6 +87,8 @@ export default function CreateProductsClient({ platforms, platform }: { platform
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  // باسلام محصول بی‌موجودی را بررسی نمی‌کند؛ پیش‌فرض فقط موجودها
+  const [inStock, setInStock] = useState(true);
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ListResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -110,6 +110,7 @@ export default function CreateProductsClient({ platforms, platform }: { platform
       const sp = new URLSearchParams({ platform: platform.code, status, page: String(page) });
       if (query) sp.set("q", query);
       if (categoryId) sp.set("categoryId", categoryId);
+      if (inStock) sp.set("inStock", "1");
       const res = await fetch(`/api/integration/create-products?${sp}`);
       const json = await res.json() as ListResponse;
       setData(json);
@@ -117,7 +118,7 @@ export default function CreateProductsClient({ platforms, platform }: { platform
     } finally {
       setLoading(false);
     }
-  }, [platform.code, status, page, query, categoryId]);
+  }, [platform.code, status, page, query, categoryId, inStock]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -213,8 +214,8 @@ export default function CreateProductsClient({ platforms, platform }: { platform
   }
 
   const items = data?.items ?? [];
-  // در «ساخته‌شده» و «نیازمند ساخت دوباره» انتخاب یعنی ساخت دوباره
-  const recreateMode = status === "done" || status === "recreate";
+  // در «ساخته/نگاشت‌شده» انتخاب یعنی ساخت دوباره
+  const recreateMode = status === "done";
   const canSelectItem = (i: Item) => !i.queued && (recreateMode ? !!i.platformProductId : !i.platformProductId);
   const selectable = items.filter(canSelectItem);
   const allOnPage = selectable.length > 0 && selectable.every((i) => selected.has(i.id));
@@ -246,12 +247,11 @@ export default function CreateProductsClient({ platforms, platform }: { platform
 
       {/* خلاصه */}
       {data && (
-        <div className={`grid gap-4 ${data.summary.recreate ? "grid-cols-2 md:grid-cols-4" : "grid-cols-3"}`}>
+        <div className="grid grid-cols-3 gap-4">
           {[
             { label: "ساخته/نگاشت‌شده", value: data.summary.linked, tone: "text-green-600 dark:text-green-400", tab: "done" },
             { label: "در صف ساخت", value: data.summary.queued, tone: "text-blue-600 dark:text-blue-400", tab: "queued" },
             { label: "ناموفق", value: data.summary.failed, tone: data.summary.failed ? "text-red-500" : "text-gray-900 dark:text-white", tab: "failed" },
-            ...(data.summary.recreate ? [{ label: "نیازمند ساخت دوباره", value: data.summary.recreate, tone: "text-amber-600 dark:text-amber-400", tab: "recreate" }] : []),
           ].map((s) => (
             <button key={s.tab} onClick={() => { setStatus(s.tab); setPage(1); }} className={`${card} text-right hover:border-blue-300 dark:hover:border-blue-500/30`}>
               <p className="text-xs text-gray-500 font-bold">{s.label}</p>
@@ -393,6 +393,11 @@ export default function CreateProductsClient({ platforms, platform }: { platform
             <option value="">همه‌ی دسته‌ها</option>
             {data?.shopCategories.map((c) => <option key={c.id} value={c.id}>{c.path}</option>)}
           </select>
+          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
+            <input type="checkbox" className="accent-blue-600" checked={inStock}
+              onChange={(e) => { setInStock(e.target.checked); setPage(1); setSelected(new Set()); }} />
+            فقط دارای موجودی
+          </label>
         </div>
 
         {recreateMode && (
@@ -440,11 +445,6 @@ export default function CreateProductsClient({ platforms, platform }: { platform
                     {i.variants ? ` · ${fa(i.variants)} تنوع` : ""} · {fa(i.images)} عکس
                   </p>
                   {!i.categoryMapped && !i.platformProductId && <p className="text-xs text-amber-600 mt-1">دسته‌ی این محصول نگاشت نشده</p>}
-                  {i.needsRecreate && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      با ویژگی‌های جدا ساخته شده و {platform.name} فقط یکی را نگه داشته — «ساخت دوباره» بزنید و محصول {i.platformProductId} را در {platform.name} بایگانی کنید
-                    </p>
-                  )}
                   {i.lastError && <p className="text-xs text-red-500 mt-1 break-words">✗ {i.lastError}</p>}
                 </div>
                 <div className="text-xs text-left flex-shrink-0 mt-1">

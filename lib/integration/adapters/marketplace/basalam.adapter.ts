@@ -490,20 +490,12 @@ export class BasalamAdapter extends BaseAdapter {
   /** سقف نویسه‌ی نام ویژگی و مقدار تنوع در باسلام (شمارنده‌ی پنل فروشنده) */
   static readonly PROPERTY_MAX = 40;
 
-  /** محورهای تنوع ← یک ویژگی باسلام؛ تک‌محوری همان می‌ماند */
-  static singleProperty(props: { property: string; value: string }[]): { property: string; value: string }[] {
-    if (props.length <= 1) return props;
-    return [{ property: props.map((p) => p.property).join(" - "), value: props.map((p) => p.value).join(" - ") }];
-  }
-
   async createProduct(credentials: Record<string, string>, draft: ProductDraft): Promise<CreatedProduct> {
     const { vendorId } = credentials;
     if (!vendorId) throw new Error("vendorId تنظیم نشده — اتصال باسلام را تست و ذخیره کنید");
 
-    // باسلام برای هر محصول فقط یک ویژگی تنوع نگه می‌دارد؛ محور دوم (سایز کنار رنگ)
-    // دور ریخته می‌شد. چندمحوری‌ها یک ویژگی ترکیبی می‌شوند: «رنگ - سایز» = «مشکی - XL»
-    const variantProps = draft.variants.map((v) => BasalamAdapter.singleProperty(v.properties));
-    const tooLong = variantProps.flat().find((p) => p.property.length > BasalamAdapter.PROPERTY_MAX || p.value.length > BasalamAdapter.PROPERTY_MAX);
+    // باسلام چند ویژگی جدا (رنگ، سایز، …) را می‌پذیرد؛ نام و مقدار هر کدام حداکثر ۴۰ نویسه
+    const tooLong = draft.variants.flatMap((v) => v.properties).find((p) => p.property.length > BasalamAdapter.PROPERTY_MAX || p.value.length > BasalamAdapter.PROPERTY_MAX);
     if (tooLong) {
       throw new Error(`«${tooLong.property}: ${tooLong.value}» بیشتر از ${BasalamAdapter.PROPERTY_MAX} نویسه است و باسلام نمی‌پذیرد — نام مقدارها را در سایت کوتاه‌تر کنید`);
     }
@@ -539,11 +531,11 @@ export class BasalamAdapter extends BaseAdapter {
       ...(draft.sku ? { sku: draft.sku } : {}),
     };
     if (draft.variants.length) {
-      body.variants = draft.variants.map((v, i) => ({
+      body.variants = draft.variants.map((v) => ({
         primary_price: rial(v.price),
         stock:         Math.max(0, Math.floor(v.stock)),
         ...(v.sku ? { sku: v.sku } : {}),
-        properties:    variantProps[i],
+        properties:    v.properties,
       }));
     }
 
@@ -577,7 +569,7 @@ export class BasalamAdapter extends BaseAdapter {
     const used = new Set<string>();
     const variants: Record<string, string> = {};
     draft.variants.forEach((dv, i) => {
-      const k = keyOf(variantProps[i]);
+      const k = keyOf(dv.properties);
       const hit =
         returned.find((r) => !used.has(r.id) && r.key === k) ??
         (dv.sku ? returned.find((r) => !used.has(r.id) && r.sku === dv.sku) : undefined) ??

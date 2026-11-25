@@ -246,8 +246,6 @@ export async function runCreateProduct(
   const meta = draft.variants.length
     ? {
         createdByPanel: true,
-        // نشانه‌ی ساخت با ویژگی ترکیبی (رنگ - سایز)؛ قبلی‌های چندمحوری در فهرست «نیازمند ساخت دوباره» می‌آیند
-        combinedProperty: true,
         ...(replaces ? { replaced: replaces } : {}),
         variants: created.variants,
         pushed: Object.fromEntries(
@@ -256,7 +254,7 @@ export async function runCreateProduct(
             .map((v) => [created.variants[v.shopVariantId], { stock: v.stock, price: v.price }]),
         ),
       }
-    : { createdByPanel: true, combinedProperty: true, ...(replaces ? { replaced: replaces } : {}) };
+    : { createdByPanel: true, ...(replaces ? { replaced: replaces } : {}) };
 
   const product = await prisma.product.findUnique({ where: { id: shopProductId }, select: { title: true, stock: true } });
   await prisma.$transaction(async (tx) => {
@@ -317,18 +315,17 @@ export async function enqueueCreateProducts(platformCode: string, productIds: st
 }
 
 /** shopProductId → شناسه‌ی محصول روی بازارگاه */
-export async function linkedOnPlatform(platformCode: string, productIds?: string[]): Promise<Map<string, { externalId: string; title: string | null; variants: number; combined: boolean }>> {
+export async function linkedOnPlatform(platformCode: string, productIds?: string[]): Promise<Map<string, { externalId: string; title: string | null; variants: number }>> {
   const shopLinks = await prisma.integMappingLink.findMany({
     where: { platformCode: "shop", ...(productIds ? { externalId: { in: productIds } } : {}) },
     select: { externalId: true, mapping: { select: { links: { where: { platformCode }, select: { externalId: true, externalTitle: true, meta: true } } } } },
   });
-  const out = new Map<string, { externalId: string; title: string | null; variants: number; combined: boolean }>();
+  const out = new Map<string, { externalId: string; title: string | null; variants: number }>();
   for (const s of shopLinks) {
     const l = s.mapping.links[0];
     if (!l) continue;
-    const m = l.meta as { variants?: Record<string, string>; combinedProperty?: boolean } | null;
-    const v = m?.variants;
-    out.set(s.externalId, { externalId: l.externalId, title: l.externalTitle, variants: v ? Object.keys(v).length : 0, combined: !!m?.combinedProperty });
+    const v = (l.meta as { variants?: Record<string, string> } | null)?.variants;
+    out.set(s.externalId, { externalId: l.externalId, title: l.externalTitle, variants: v ? Object.keys(v).length : 0 });
   }
   return out;
 }

@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 
 const PER_PAGE = 30;
 
-// GET /api/integration/create-products?platform=basalam&q=&categoryId=&status=all|todo|done|failed|queued|recreate&page=1
-// recreate: ساخته‌شده‌های چندمحوری (رنگ و سایز) که پیش از ویژگی ترکیبی ساخته شده‌اند
+// GET /api/integration/create-products?platform=basalam&q=&categoryId=&status=all|todo|done|failed|queued&inStock=1&page=1
+// inStock: فقط محصولات موجود — باسلام محصول بی‌موجودی را بررسی نمی‌کند («عدم موجودی»)
 // محصولات سایت با وضعیت ساختشان روی بازارگاه — docs/integrations/create-products.md
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
@@ -23,15 +23,12 @@ export async function GET(req: NextRequest) {
   const adapter = getAdapter(platform);
   const connection = await prisma.integConnection.findFirst({ where: { platformCode: platform }, select: { status: true } });
 
-  const [linked, pending, settings, multiAxis] = await Promise.all([
+  const inStock = sp.get("inStock") === "1";
+  const [linked, pending, settings] = await Promise.all([
     linkedOnPlatform(platform),
     pendingCreateJobs(platform),
     getCreateSettings(platform),
-    prisma.productVariantAxis.groupBy({ by: ["productId"], _count: { _all: true }, having: { productId: { _count: { gt: 1 } } } }),
   ]);
-  const multiAxisIds = new Set(multiAxis.map((m) => m.productId));
-  const recreateIds = [...linked.entries()].filter(([id, l]) => !l.combined && l.variants > 0 && multiAxisIds.has(id)).map(([id]) => id);
-  const recreateSet = new Set(recreateIds);
 
   // آخرین نتیجه‌ی ساخت هر محصول — خطای بعد از آخرین موفقیت یعنی «ناموفق»
   const logs = await prisma.integLog.findMany({
@@ -45,14 +42,21 @@ export async function GET(req: NextRequest) {
   const failedIds = [...lastLog.values()].filter((l) => l.status === "ERROR").map((l) => l.entityId!).filter((id) => !linked.has(id));
 
   const where: Prisma.ProductWhereInput = { isActive: true };
-  if (q) where.OR = [{ title: { contains: q, mode: "insensitive" } }, { sku: { contains: q, mode: "insensitive" } }];
+  const and: Prisma.ProductWhereInput[] = [];
+  if (q) and.push({ OR: [{ title: { contains: q, mode: "insensitive" } }, { sku: { contains: q, mode: "insensitive" } }] });
+  if (inStock) {
+    and.push({ OR: [
+      { variants: { some: { isActive: true, stock: { gt: 0 } } } },
+      { variants: { none: { isActive: true } }, OR: [{ stock: { gt: 0 } }, { trackStock: false }] },
+    ] });
+  }
+  if (and.length) where.AND = and;
   if (categoryId) where.categoryId = categoryId;
   const linkedIds = [...linked.keys()];
   const queuedIds = [...pending.keys()];
   if (status === "done") where.id = { in: linkedIds };
   else if (status === "queued") where.id = { in: queuedIds };
   else if (status === "failed") where.id = { in: failedIds };
-  else if (status === "recreate") where.id = { in: recreateIds.filter((id) => !pending.has(id)) };
   else if (status === "todo") where.id = { notIn: [...linkedIds, ...queuedIds] };
 
   const [total, products, categories, counts] = await Promise.all([
@@ -89,7 +93,7 @@ export async function GET(req: NextRequest) {
     connected: connection?.status === "CONNECTED" || connection?.status === "SYNCING",
     settings,
     shopCategories,
-    summary: { linked: linked.size, queued: pending.size, failed: failedIds.length, recreate: recreateIds.filter((id) => !pending.has(id)).length },
+    summary: { linked: linked.size, queued: pending.size, failed: failedIds.length },
     total,
     page,
     perPage: PER_PAGE,
@@ -109,7 +113,6 @@ export async function GET(req: NextRequest) {
         categoryMapped: !!settings.categoryMap[p.categoryId],
         platformProductId: l?.externalId ?? null,
         platformVariants: l?.variants ?? 0,
-        needsRecreate: recreateSet.has(p.id),
         queued: pending.get(p.id) ?? null,
         // محصول نگاشت‌شده با آخرین لاگ خطا = ساخت دوباره‌ی ناموفق (لینک قبلی دست‌نخورده مانده)
         lastError: log?.status === "ERROR" ? (l ? `ساخت دوباره ناموفق: ${log.errorMessage ?? ""}` : log.errorMessage) : null,
