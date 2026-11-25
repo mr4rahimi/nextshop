@@ -46,13 +46,30 @@ export async function POST(req: Request) {
   }
 }
 
-/** PATCH — کلیدهای کارت در صندوق و اعمال انقضا: { clubCardPosEnabled?, pointExpiryEnforced?, pointExpiryDays?, clubCardDefaultTierId? } */
+/**
+ * PATCH — کلیدهای کارت در صندوق و اعمال انقضا: { clubCardPosEnabled?, pointExpiryEnforced?, pointExpiryDays?, clubCardDefaultTierId? }
+ * کش‌بک (بخش ۳۴.۲): { clubChargeOnProfit?, clubChargeDelayHours?, tierCharge?: { id, pct } } — pct خالی = بی درصد شارژ
+ */
 export async function PATCH(req: Request) {
   const g = await cardsGuard();
   if (!g.ok) return g.res;
   try {
     const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-    const data: { clubCardPosEnabled?: boolean; pointExpiryEnforced?: boolean; pointExpiryDays?: number; clubCardDefaultTierId?: string | null } = {};
+    const data: { clubCardPosEnabled?: boolean; pointExpiryEnforced?: boolean; pointExpiryDays?: number; clubCardDefaultTierId?: string | null; clubChargeOnProfit?: boolean; clubChargeDelayHours?: number } = {};
+    if (typeof b.clubChargeOnProfit === "boolean") data.clubChargeOnProfit = b.clubChargeOnProfit;
+    if (b.clubChargeDelayHours !== undefined) {
+      const h = Number(String(b.clubChargeDelayHours).replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(c))));
+      if (!Number.isInteger(h) || h < 0 || h > 24 * 90) return NextResponse.json({ error: "ساعت آزاد شدن کش‌بک باید بین ۰ تا ۲۱۶۰ باشد" }, { status: 400 });
+      data.clubChargeDelayHours = h;
+    }
+    const tc = b.tierCharge as { id?: unknown; pct?: unknown } | undefined;
+    if (tc && typeof tc.id === "string") {
+      const raw = String(tc.pct ?? "").replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(c))).replace(/[٫]/g, ".").trim();
+      const bp = raw === "" ? null : Math.round(Number(raw) * 100);
+      if (bp !== null && (!Number.isFinite(bp) || bp < 0 || bp > 10_000)) return NextResponse.json({ error: "درصد شارژ باید بین ۰ تا ۱۰۰ باشد" }, { status: 400 });
+      const t = await prisma.clubTier.update({ where: { id: tc.id }, data: { cardChargeBp: bp }, select: { title: true } });
+      await logActivity({ action: "UPDATE", entity: "SETTINGS", entityId: tc.id, entityTitle: "کارت اشتراک", summary: `درصد کش‌بک سطح «${t.title}»: ${bp === null ? "خاموش" : `${bp / 100}٪`}` });
+    }
     if (b.clubCardDefaultTierId !== undefined) {
       const id = typeof b.clubCardDefaultTierId === "string" && b.clubCardDefaultTierId ? b.clubCardDefaultTierId : null;
       if (id && !(await prisma.clubTier.findUnique({ where: { id }, select: { id: true } }))) return NextResponse.json({ error: "سطح پیدا نشد" }, { status: 400 });
@@ -65,7 +82,7 @@ export async function PATCH(req: Request) {
       if (!Number.isInteger(d) || d < 0 || d > 10_000) return NextResponse.json({ error: "مدت اعتبار شارژ نامعتبر است" }, { status: 400 });
       data.pointExpiryDays = d;
     }
-    await prisma.storeSettings.update({ where: { id: "singleton" }, data });
+    if (Object.keys(data).length) await prisma.storeSettings.update({ where: { id: "singleton" }, data });
     await logActivity({ action: "UPDATE", entity: "SETTINGS", entityId: "singleton", entityTitle: "کارت اشتراک", summary: `تنظیم کارت اشتراک: ${JSON.stringify(data)}` });
     return NextResponse.json({ ok: true });
   } catch (e) {

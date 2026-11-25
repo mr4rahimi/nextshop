@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { recomputePurchaseStats, getPointsBalance } from "./profile";
 import { loadPointRules, expiryDate } from "./points";
 import { rewardReferralOnFirstPurchase } from "./referral";
-import { earnPoints } from "./credit-calc";
+import { chargeBase, earnPoints } from "./credit-calc";
+import { availableFrom, creditSettings } from "./credit";
 
 /**
  * موتور پاداش باشگاه — امتیاز و سطح
@@ -106,7 +107,23 @@ export async function awardPurchasePoints(
     where: { id: profileId },
     select: { tier: { select: { pointRate: true, cardChargeBp: true } } },
   });
-  const amount = earnPoints(grandTotal, { perToman: rules.perToman, redeemRate: rules.redeemRate }, profile?.tier ?? null);
+  // کش‌بک از سود ناخالص (بخش ۳۴.۲): فروش بی هزینه‌ی ارسال − میانگین بهای کالاها (تنوع ← کالای حسابداری‌اش)
+  const cs = await creditSettings();
+  let base = grandTotal;
+  if (cs.onProfit && profile?.tier?.cardChargeBp != null) {
+    const order = await prisma.order.findUnique({ where: { id: orderId }, select: { shippingFee: true, items: { select: { productId: true, variantId: true, qty: true } } } });
+    if (order) {
+      const vIds = order.items.map((i) => i.variantId).filter((x): x is string => !!x);
+      const vMap = new Map(
+        vIds.length ? (await prisma.productVariant.findMany({ where: { id: { in: vIds }, accItemId: { not: null } }, select: { id: true, accItemId: true } })).map((v) => [v.id, v.accItemId!]) : [],
+      );
+      const idOf = (i: { productId: string; variantId: string | null }) => (i.variantId && vMap.get(i.variantId)) || i.productId;
+      const costs = new Map((await prisma.accProductCost.findMany({ where: { productId: { in: order.items.map(idOf) } }, select: { productId: true, avgCost: true } })).map((c) => [c.productId, c.avgCost]));
+      const cost = order.items.reduce((s, i) => s + (costs.get(idOf(i)) ?? 0n) * BigInt(i.qty), 0n);
+      base = chargeBase({ amount: grandTotal, netSale: grandTotal - order.shippingFee, cost }, true, profile.tier);
+    }
+  }
+  const amount = earnPoints(base, { perToman: rules.perToman, redeemRate: rules.redeemRate }, profile?.tier ?? null);
   if (amount <= 0) return 0;
 
   await prisma.pointTransaction.create({
@@ -117,6 +134,7 @@ export async function awardPurchasePoints(
       refType: "order",
       refId: orderId,
       expiresAt: expiryDate(rules),
+      availableAt: availableFrom(cs),
     },
   });
 

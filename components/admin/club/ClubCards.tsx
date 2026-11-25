@@ -21,8 +21,8 @@ interface Row {
   nextExpiry: { at: string; credit: string } | null; expiringSoon: string;
 }
 interface ListData {
-  settings: { posEnabled: boolean; enforceExpiry: boolean; rate: number; expiryDays: number };
-  totals: { cards: number; credit: string; expiringSoon: string; negative: number };
+  settings: { posEnabled: boolean; enforceExpiry: boolean; rate: number; expiryDays: number; onProfit: boolean; delayHours: number };
+  totals: { cards: number; credit: string; pending: string; expiringSoon: string; negative: number };
   rows: Row[]; truncated: boolean; tiers: TierLite[]; redeemOnline: boolean; expiryDays: number; defaultTierId: string | null;
 }
 
@@ -90,6 +90,28 @@ export default function ClubCards() {
               options={[{ value: "", label: "بی سطح (قاعده‌ی عمومی امتیاز)" }, ...d.tiers.map((t) => ({ value: t.id, label: `${t.title}${t.cardChargeBp != null ? ` — شارژ ${fa(t.cardChargeBp / 100)}٪` : ""}` }))]}
             />
           </div>
+          <div className="mt-4 space-y-3 rounded-2xl border border-gray-200 p-3 dark:border-white/10">
+            <p className="text-xs font-black text-gray-800 dark:text-gray-100">کش‌بک خرید (شارژ کارت برای خریدهای بعدی)</p>
+            <div className="flex flex-wrap gap-2">
+              {d.tiers.map((t) => (
+                <TierCharge key={`${t.id}:${t.cardChargeBp}`} title={t.title} bp={t.cardChargeBp} onSave={(pct) => setting({ tierCharge: { id: t.id, pct } })} />
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Toggle
+                on={d.settings.onProfit}
+                onChange={(v) => setting({ clubChargeOnProfit: v })}
+                label="درصد از سود ناخالص، نه از مبلغ خرید"
+                hint="روشن: درصد از (فروش خالص − بهای تمام‌شده) حساب می‌شود؛ مثلاً خرید ۵۰۰، فروش ۹۰۰ ← سود ۴۰۰ ← ۱۰٪ = ۴۰. کالای بی‌سود کش‌بک نمی‌گیرد. خاموش: درصد از کل مبلغ خرید."
+              />
+              <div className="text-[11px] font-bold leading-6 text-gray-600 dark:text-gray-300">
+                کش‌بک هر خرید{" "}
+                <DelayHours key={d.settings.delayHours} value={d.settings.delayHours} onSave={(v) => setting({ clubChargeDelayHours: v })} />{" "}
+                ساعت بعد قابل استفاده است
+                <span className="block text-[11px] font-normal text-gray-400">۰ = از خرید بعدی همان لحظه. تا آن موقع در کارت «در انتظار» دیده می‌شود؛ تخفیف مستقیم همان خرید نیست.</span>
+              </div>
+            </div>
+          </div>
           <p className="text-[11px] font-bold leading-6 text-gray-500">
             درصد شارژ و تخفیف هر سطح در <Link href="/admin/club/tiers" className="text-primary-600 hover:underline">سطوح عضویت</Link> تنظیم می‌شود
             {d.tiers.some((t) => t.cardChargeBp != null) ? ` (${d.tiers.filter((t) => t.cardChargeBp != null).map((t) => `${t.title}: ${fa(t.cardChargeBp! / 100)}٪`).join("، ")})` : " — هنوز هیچ سطحی درصد شارژ ندارد"}.
@@ -114,7 +136,7 @@ export default function ClubCards() {
           {d && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat label="کارت" value={fa(d.totals.cards)} onClick={() => setStatus("active")} />
-              <Stat label="جمع اعتبار (تعهد)" value={toman(d.totals.credit)} onClick={() => setSort("credit")} />
+              <Stat label="جمع اعتبار (تعهد، با در انتظار)" value={toman(d.totals.credit)} onClick={() => setSort("credit")} />
               <Stat label="منقضی تا ۳۰ روز" value={toman(d.totals.expiringSoon)} onClick={() => setTab("expiring")} />
               <Stat label="مانده‌ی منفی" value={fa(d.totals.negative)} onClick={() => setSort("credit")} />
             </div>
@@ -180,6 +202,37 @@ function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
         <span className="mt-1 block text-[11px] font-bold leading-5 text-gray-500">{hint}</span>
       </span>
     </button>
+  );
+}
+
+function TierCharge({ title, bp, onSave }: { title: string; bp: number | null; onSave: (pct: string) => void }) {
+  const init = bp == null ? "" : String(bp / 100);
+  const [v, setV] = useState(init);
+  return (
+    <span className="inline-flex items-center gap-1 rounded-xl bg-gray-50 px-2.5 py-1.5 text-[11px] font-bold dark:bg-white/5">
+      {title}:
+      <input value={v} onChange={(e) => setV(e.target.value)} dir="ltr" placeholder="—" className="w-12 rounded-lg border border-gray-200 px-1.5 py-0.5 text-center dark:border-white/10 dark:bg-white/5" />
+      ٪
+      {v !== init && (
+        <button onClick={() => onSave(v)} className="font-black text-primary-600">
+          ذخیره
+        </button>
+      )}
+    </span>
+  );
+}
+
+function DelayHours({ value, onSave }: { value: number; onSave: (v: number) => void }) {
+  const [v, setV] = useState(String(value));
+  return (
+    <span className="inline-flex items-center gap-1">
+      <input value={v} onChange={(e) => setV(e.target.value)} dir="ltr" className="w-14 rounded-lg border border-gray-200 px-2 py-0.5 text-center text-[11px] dark:border-white/10 dark:bg-white/5" />
+      {v !== String(value) && (
+        <button onClick={() => onSave(Number(v.replace(/[۰-۹]/g, (x) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(x)))) || 0)} className="font-black text-primary-600">
+          ذخیره
+        </button>
+      )}
+    </span>
   );
 }
 

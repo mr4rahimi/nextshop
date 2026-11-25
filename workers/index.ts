@@ -32,6 +32,7 @@ import {
 } from "../lib/club/sms/sync";
 import { prisma } from "../lib/prisma";
 import { expireDuePoints } from "../lib/club/credit";
+import { postClubLiability } from "../lib/accounting/club-liability";
 
 if (!redis) {
   console.error("[worker] REDIS_URL تنظیم نشده — ورکر اجرا نمی‌شود.");
@@ -51,6 +52,8 @@ const CRON_JOBS = [
   { name: "finalize-campaigns", every: 5 * 60_000 },
   // سوخت شارژ تاریخ‌گذشته‌ی کارت اشتراک/امتیاز — فقط با «سوخت» روشن (webhesab-parity.md بخش ۲۳)
   { name: "expire-points", every: 6 * 3_600_000 },
+  // گردش‌های کارت و امتیاز (سایت، دستی، سوخت) ← سند «اعتبار باشگاه مشتریان» — فقط با تعهد روشن (بخش ۳۴.۲)
+  { name: "post-club-liability", every: 3_600_000 },
 ] as const;
 
 async function registerCronJobs() {
@@ -287,6 +290,11 @@ async function main() {
         case "expire-points": {
           const r = await expireDuePoints();
           return r;
+        }
+        case "post-club-liability": {
+          const r = await prisma.$transaction((tx) => postClubLiability(tx, { name: "سیستم — اعتبار باشگاه" }), { timeout: 120_000 });
+          if (r?.voucherId) console.log(`[cron:club-liability] ${r.rows} گردش به دفتر رفت`);
+          return r ?? { rows: 0 };
         }
         case "finalize-campaigns": {
           const n = await finalizeCampaigns();

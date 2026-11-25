@@ -949,6 +949,10 @@ model StoreSettings {
   pointRedeemMaxPct    Int     @default(100)
   /// کارت اشتراک و اعتبار باشگاه در صندوق فروشگاهی — webhesab-parity.md بخش ۲۳
   clubCardPosEnabled   Boolean @default(false)
+  /// کش‌بک کارت از سود ناخالص (فروش خالص − بهای تمام‌شده) به‌جای مبلغ خرید — webhesab-parity.md بخش ۳۴.۲
+  clubChargeOnProfit   Boolean @default(false)
+  /// کش‌بک خرید چند ساعت بعد خرج‌شدنی است؛ ۰ = از خرید بعدی همان لحظه
+  clubChargeDelayHours Int     @default(24)
   /// شارژ/امتیاز تاریخ‌گذشته واقعاً بسوزد (پیش‌فرض خاموش: سایت‌های قدیمی امتیازشان دست نخورد)
   pointExpiryEnforced  Boolean @default(false)
   /// سطح کارت تازه‌ای که صندوقدار صادر می‌کند (مدیر صندوق می‌تواند عوض کند)؛ null = بی سطح
@@ -2299,6 +2303,11 @@ model PointTransaction {
   refId     String?
   note      String?
   expiresAt DateTime?
+  /// کش‌بک خرید از این لحظه خرج‌شدنی است (پیش‌فرض ۲۴ ساعت بعد)؛ null = همان لحظه — webhesab-parity.md بخش ۳۴.۲
+  availableAt DateTime?
+  /// سند «تعهد اعتبار باشگاه» که این ردیف را به دفتر برد؛ null + `postedAt` = با سند خودش (رسید/پس دادن) یا افتتاحیه
+  postedAt  DateTime?
+  voucherId String?
   createdAt DateTime    @default(now())
 
   profile ClubProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
@@ -2307,6 +2316,7 @@ model PointTransaction {
   @@index([createdAt])
   @@index([expiresAt])
   @@index([reason])
+  @@index([postedAt])
 }
 
 enum SmsKind {
@@ -4033,6 +4043,8 @@ model AccSettings {
   id                    String    @id @default("singleton")
   /// مهلت مرجوعی (روز) — فقط هشدار در مرجوعی؛ ۰ = خاموش (webhesab-parity.md بخش ۳۴.۱)
   returnWindowDays      Int       @default(0)
+  /// از این لحظه اعتبار باشگاه بدهی است (`CLUB_LIABILITY`)؛ null = رفتار قدیمی (خرج ← تخفیفات فروش) — بخش ۳۴.۲
+  clubLiabilitySince    DateTime?
   mode                  AccMode   @default(NONE)
   modeChangedAt         DateTime?
   modeChangedBy         String?
@@ -4284,6 +4296,7 @@ enum AccSource {
   POS // صندوق فروشگاهی: پس دادن پول مرجوعی و مغایرت بستن صندوق (۲.۹۵.۰)
   LOAN // وام و تسهیلات: دریافت وام و پرداخت قسط (۲.۱۳۰.۰)
   GIFT // بن کارت فروشگاه: فروش، مرجوع و سوخت (webhesab-parity.md بخش ۲۷)
+  CLUB // تعهد اعتبار باشگاه: شارژ، سوخت، افتتاحیه (webhesab-parity.md بخش ۳۴.۲)
 }
 
 /// سند حسابداری. ⚠️ فقط از `lib/accounting/ledger/post.ts` نوشته می‌شود —

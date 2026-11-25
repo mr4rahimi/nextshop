@@ -36,6 +36,7 @@ import { TREASURY_ACCOUNT_KEY } from "../treasury";
 import { autoAllocate, invoiceOpenAmounts, openInvoicesOf, recalcPaid } from "./allocation";
 import { chequeStatusLabel, createCheque, endorseCheque, type NewChequeInput } from "./cheques";
 import { ensureOrgFeeAccount, onMoneyDocVoid } from "../org-installments-hooks";
+import { CLUB_KEY, clubLiabilityOn, ensureClubAccount } from "../club-liability";
 
 type Tx = Prisma.TransactionClient;
 
@@ -299,8 +300,10 @@ export async function createMoneyDoc(tx: Tx, input: MoneyDocInput, actor: Actor)
           : { accountKey: "AR", partyId: party!.id, credit: it.amount, description: "تهاتر با طلب ما" },
       );
     } else if (it.method === "CLUB_CREDIT") {
-      // مثل وب حساب: خرج اعتبار کارت = تخفیف فروش در لحظه‌ی استفاده (شارژ سند نمی‌خورد)
-      lines.push({ accountKey: "SALES_DISCOUNT", debit: it.amount, description: "پرداخت با کارت اشتراک" });
+      // تعهد روشن (بخش ۳۴.۲): خرج اعتبار = کم شدن بدهی «اعتبار باشگاه»؛ وگرنه مثل وب حساب تخفیف فروش در لحظه‌ی استفاده
+      const liab = await clubLiabilityOn(tx);
+      if (liab) await ensureClubAccount(tx);
+      lines.push({ accountKey: liab ? CLUB_KEY : "SALES_DISCOUNT", debit: it.amount, description: "پرداخت با کارت اشتراک" });
     } else if (it.method === "ORG_INSTALLMENT") {
       // طلب از مشتری ← طلب از سازمان (منهای پورسانت سازمان که هزینه‌ی ما است)
       const fee = it.fee ?? 0n;

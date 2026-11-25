@@ -17,12 +17,16 @@ export interface CreditSettings {
   rate: number;
   perToman: number;
   expiryDays: number;
+  /** کش‌بک از سود ناخالص (بخش ۳۴.۲) */
+  onProfit: boolean;
+  /** کش‌بک خرید چند ساعت بعد خرج‌شدنی است */
+  delayHours: number;
 }
 
 export async function creditSettings(db: Db = prisma): Promise<CreditSettings> {
   const s = await db.storeSettings.findUnique({
     where: { id: "singleton" },
-    select: { clubCardPosEnabled: true, pointExpiryEnforced: true, pointRedeemRate: true, pointPerToman: true, pointExpiryDays: true },
+    select: { clubCardPosEnabled: true, pointExpiryEnforced: true, pointRedeemRate: true, pointPerToman: true, pointExpiryDays: true, clubChargeOnProfit: true, clubChargeDelayHours: true },
   });
   return {
     posEnabled: s?.clubCardPosEnabled ?? false,
@@ -30,12 +34,16 @@ export async function creditSettings(db: Db = prisma): Promise<CreditSettings> {
     rate: s?.pointRedeemRate ?? 1,
     perToman: s?.pointPerToman ?? 0,
     expiryDays: s?.pointExpiryDays ?? 0,
+    onProfit: s?.clubChargeOnProfit ?? false,
+    delayHours: s?.clubChargeDelayHours ?? 24,
   };
 }
 
 export const expiryFrom = (s: CreditSettings, from = new Date()) => (s.expiryDays > 0 ? new Date(from.getTime() + s.expiryDays * 86_400_000) : null);
+/** کش‌بک خرید از کی خرج‌شدنی است — null = همان لحظه (از خرید بعدی) */
+export const availableFrom = (s: Pick<CreditSettings, "delayHours">, from = new Date()) => (s.delayHours > 0 ? new Date(from.getTime() + s.delayHours * 3_600_000) : null);
 
-const ROW_SELECT = { id: true, amount: true, reason: true, refType: true, refId: true, expiresAt: true, createdAt: true } as const;
+const ROW_SELECT = { id: true, amount: true, reason: true, refType: true, refId: true, expiresAt: true, availableAt: true, createdAt: true } as const;
 
 export async function ledgerState(db: Db, profileId: string, s?: CreditSettings, now = new Date()): Promise<LedgerState> {
   const settings = s ?? (await creditSettings(db));
@@ -58,7 +66,7 @@ export async function lockProfile(tx: Prisma.TransactionClient, profileId: strin
 
 export async function addPoints(
   db: Db,
-  input: { profileId: string; amount: number; reason: PointReason; refType: string; refId: string; note?: string | null; expiresAt?: Date | null; createdAt?: Date },
+  input: { profileId: string; amount: number; reason: PointReason; refType: string; refId: string; note?: string | null; expiresAt?: Date | null; availableAt?: Date | null; createdAt?: Date },
 ) {
   if (!input.amount) return null;
   return db.pointTransaction.create({
@@ -70,6 +78,7 @@ export async function addPoints(
       refId: input.refId,
       note: input.note ?? null,
       expiresAt: input.amount > 0 ? input.expiresAt ?? null : null,
+      availableAt: input.amount > 0 ? input.availableAt ?? null : null,
       ...(input.createdAt ? { createdAt: input.createdAt } : {}),
     },
   });
@@ -115,6 +124,10 @@ export interface MemberBrief {
   points: number;
   /** ارزش تومانی اعتبار قابل خرج */
   credit: bigint;
+  /** کش‌بک در انتظار (هنوز خرج‌شدنی نیست) و زمان آزاد شدن اولینش */
+  pending: { credit: bigint; at: Date } | null;
+  /** کش‌بک از سود ناخالص است، نه مبلغ خرید */
+  chargeOnProfit: boolean;
   nextExpiry: { at: Date; credit: bigint } | null;
 }
 
@@ -140,6 +153,8 @@ export async function memberBrief(db: Db, profileId: string, s?: CreditSettings)
     tier: p.tier ? { id: p.tier.id, title: p.tier.title, color: p.tier.color, chargeBp: p.tier.cardChargeBp, discountBp: p.tier.posDiscountBp } : null,
     points: st.balance,
     credit: pointsToToman(st.balance, settings.rate),
+    pending: st.pending > 0 && st.pendingAt ? { credit: pointsToToman(st.pending, settings.rate), at: st.pendingAt } : null,
+    chargeOnProfit: settings.onProfit,
     nextExpiry: first?.expiresAt ? { at: first.expiresAt, credit: pointsToToman(first.remaining, settings.rate) } : null,
   };
 }
@@ -206,6 +221,8 @@ export async function userClubCredit(userId: string, withHistory = false) {
     : [];
   return {
     credit: pointsToToman(st.balance, s.rate),
+    /** کش‌بکی که هنوز خرج‌شدنی نیست */
+    pending: st.pending > 0 && st.pendingAt ? { credit: pointsToToman(st.pending, s.rate), at: st.pendingAt } : null,
     card: card ? `…${card.number.slice(-4)}` : null,
     tier: p.tier,
     /** در خرید اینترنتی هم خرج می‌شود */

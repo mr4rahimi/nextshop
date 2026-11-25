@@ -81,6 +81,7 @@ const TOPIC_PAGES: Record<string, string> = {
   accountingOnlinePrice: "/admin/accounting/inventory/online-prices",
   accountingStorePrices: "/admin/accounting/inventory/prices",
   accountingReturns: "/admin/accounting/sales/returns",
+  accountingClubCredit: "/admin/accounting/reports/club",
   accountingReturnsReport: "/admin/accounting/reports/returns",
   accountingPlaces: "/admin/accounting/inventory/places",
   accountingSerials: "/admin/accounting/inventory/serials",

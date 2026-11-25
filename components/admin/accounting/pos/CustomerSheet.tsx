@@ -469,7 +469,12 @@ function DetailPane({
               <p className="text-2xl font-black tabular-nums text-amber-700 dark:text-amber-300">
                 {formatAmount(B(m.credit))} <span className="text-sm">تومان اعتبار</span>
               </p>
-              {m.tier?.chargeBp ? <p className="text-[11px] font-bold text-amber-800/80 dark:text-amber-200/80">هر خرید {faNum(m.tier.chargeBp / 100)}٪ مبلغ را به کارت اضافه می‌کند</p> : null}
+              {m.tier?.chargeBp ? <p className="text-[11px] font-bold text-amber-800/80 dark:text-amber-200/80">هر خرید {faNum(m.tier.chargeBp / 100)}٪ {m.chargeOnProfit ? "سود" : "مبلغ"} را برای خریدهای بعدی به کارت اضافه می‌کند</p> : null}
+              {m.pending && B(m.pending.credit) > 0n && (
+                <p className="text-[11px] font-bold text-amber-800/80 dark:text-amber-200/80">
+                  {formatAmount(B(m.pending.credit))} تومان کش‌بک تازه از {new Date(m.pending.at).toLocaleString("fa-IR", { weekday: "long", hour: "2-digit", minute: "2-digit" })} قابل استفاده می‌شود
+                </p>
+              )}
               {m.nextExpiry && <p className="text-[11px] font-bold text-amber-800/80 dark:text-amber-200/80">{formatAmount(B(m.nextExpiry.credit))} تومان تا {dateFa(m.nextExpiry.at)} منقضی می‌شود</p>}
             </div>
           ) : (

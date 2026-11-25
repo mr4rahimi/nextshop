@@ -58,6 +58,9 @@ export interface PosMember {
   tier: { id: string; title: string; color: string | null; chargeBp: number | null; discountBp: number } | null;
   points: number;
   credit: string;
+  /** کش‌بک در انتظار (بخش ۳۴.۲) */
+  pending?: { at: string; credit: string } | null;
+  chargeOnProfit?: boolean;
   nextExpiry: { at: string; credit: string } | null;
 }
 

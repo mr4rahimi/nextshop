@@ -7,6 +7,9 @@
  * برمی‌دارد (مثل «تخصیص» وب حساب). ردیف `EXPIRE` با `refType = "lot"` مانده‌ی
  * همان شارژ را می‌سوزاند. منفیِ بیش از موجودی «کسری» می‌شود و اولین شارژ بعدی
  * اول آن را پر می‌کند (مرجوعی بعد از خرج کردن اعتبار).
+ *
+ * کش‌بک خرید (بخش ۳۴.۲) `availableAt` دارد: تا آن لحظه «در انتظار» است — در مانده‌ی قابل
+ * خرج نیست و هیچ خرجی از آن برنمی‌دارد، ولی می‌سوزد/برمی‌گردد مثل بقیه.
  */
 
 export interface LedgerRow {
@@ -16,6 +19,7 @@ export interface LedgerRow {
   refType: string | null;
   refId: string | null;
   expiresAt: Date | null;
+  availableAt?: Date | null;
   createdAt: Date;
 }
 
@@ -24,6 +28,7 @@ export interface Lot {
   amount: number;
   remaining: number;
   expiresAt: Date | null;
+  availableAt: Date | null;
   createdAt: Date;
 }
 
@@ -32,8 +37,11 @@ export interface LedgerState {
   balance: number;
   /** کسری باز (منفیِ بیش از موجودی) */
   deficit: number;
-  /** شارژهای دارای مانده که هنوز معتبرند — زودانقضاترین اول */
+  /** شارژهای دارای مانده که هنوز معتبرند — زودانقضاترین اول (در انتظارها هم) */
   live: Lot[];
+  /** کش‌بک در انتظار (هنوز خرج‌شدنی نیست) و زودترین زمان آزاد شدنش */
+  pending: number;
+  pendingAt: Date | null;
   /** شارژهای منقضی که مانده دارند و ردیف سوختشان هنوز نخورده */
   expiredUnposted: Lot[];
 }
@@ -52,12 +60,13 @@ export function replayLedger(rows: LedgerRow[], now: Date, enforceExpiry: boolea
   const lots: Lot[] = [];
   let deficit = 0;
   const valid = (l: Lot, at: Date) => !enforceExpiry || !l.expiresAt || l.expiresAt.getTime() > at.getTime();
+  const ready = (l: Lot, at: Date) => !l.availableAt || l.availableAt.getTime() <= at.getTime();
 
   for (const r of sorted) {
     if (r.amount > 0) {
       const fill = Math.min(deficit, r.amount);
       deficit -= fill;
-      lots.push({ id: r.id, amount: r.amount, remaining: r.amount - fill, expiresAt: r.expiresAt, createdAt: r.createdAt });
+      lots.push({ id: r.id, amount: r.amount, remaining: r.amount - fill, expiresAt: r.expiresAt, availableAt: r.availableAt ?? null, createdAt: r.createdAt });
       continue;
     }
     if (r.amount === 0) continue;
@@ -72,7 +81,7 @@ export function replayLedger(rows: LedgerRow[], now: Date, enforceExpiry: boolea
       // سوخت بیش از مانده‌ی شارژ معنا ندارد؛ باقی‌اش نادیده می‌ماند
       continue;
     }
-    for (const lot of lots.filter((l) => l.remaining > 0 && valid(l, r.createdAt)).sort(byExpiry)) {
+    for (const lot of lots.filter((l) => l.remaining > 0 && valid(l, r.createdAt) && ready(l, r.createdAt)).sort(byExpiry)) {
       if (!need) break;
       const take = Math.min(lot.remaining, need);
       lot.remaining -= take;
@@ -84,7 +93,16 @@ export function replayLedger(rows: LedgerRow[], now: Date, enforceExpiry: boolea
   const open = lots.filter((l) => l.remaining > 0);
   const live = open.filter((l) => valid(l, now)).sort(byExpiry);
   const expiredUnposted = open.filter((l) => !valid(l, now));
-  return { balance: live.reduce((s, l) => s + l.remaining, 0) - deficit, deficit, live, expiredUnposted };
+  const waiting = live.filter((l) => !ready(l, now));
+  const pendingAt = waiting.reduce<Date | null>((m, l) => (!m || l.availableAt!.getTime() < m.getTime() ? l.availableAt : m), null);
+  return {
+    balance: live.filter((l) => ready(l, now)).reduce((s, l) => s + l.remaining, 0) - deficit,
+    deficit,
+    live,
+    pending: waiting.reduce((s, l) => s + l.remaining, 0),
+    pendingAt,
+    expiredUnposted,
+  };
 }
 
 /** امتیاز → تومان (به پایین) */
@@ -106,6 +124,7 @@ export interface EarnRules {
  * مبلغ می‌کند؛ وگرنه فرمول قدیمی `مبلغ × امتیاز هر تومان × ضریب سطح`.
  */
 export function earnPoints(amount: bigint, rules: EarnRules, tier: { pointRate: number; cardChargeBp: number | null } | null): number {
+  // ⚠️ مبنای کش‌بک (مبلغ خرید یا سود ناخالص) را فراخوان با `chargeBase` می‌دهد
   if (amount <= 0n) return 0;
   if (tier?.cardChargeBp != null) {
     if (tier.cardChargeBp <= 0 || rules.redeemRate <= 0) return 0;
@@ -134,4 +153,15 @@ export function proportional(total: bigint, part: bigint, whole: bigint): bigint
   if (whole <= 0n || total <= 0n) return 0n;
   if (part >= whole) return total;
   return (total * part + whole / 2n) / whole;
+}
+
+/**
+ * مبنای کش‌بک کارت (بخش ۳۴.۲): مبلغ خرید، یا با «از سود ناخالص» فروش خالص (بی مالیات و
+ * هزینه‌ی ارسال) منهای بهای تمام‌شده — منفی ← صفر. فقط برای سطح با «درصد شارژ کارت»؛
+ * فرمول قدیمی امتیاز هر تومان همیشه روی مبلغ خرید است.
+ */
+export function chargeBase(input: { amount: bigint; netSale: bigint; cost: bigint }, onProfit: boolean, tier: { cardChargeBp: number | null } | null): bigint {
+  if (!onProfit || tier?.cardChargeBp == null) return input.amount;
+  const p = input.netSale - input.cost;
+  return p > 0n ? p : 0n;
 }

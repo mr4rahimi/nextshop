@@ -20,6 +20,7 @@ import { voidMoneyDoc } from "../cash/docs";
 import { voidInvoice } from "../invoices/service";
 import { undoTicketGifts } from "../gift-cards";
 import { faNum } from "../money";
+import { reverseClubRows } from "../club-liability";
 
 type Tx = Prisma.TransactionClient;
 type Db = Tx | typeof prisma;
@@ -84,7 +85,11 @@ export async function voidTicket(tx: Tx, id: string, reason: string, actor: Acto
   const pts = await tx.pointTransaction.findMany({ where: { refId: t.id, refType: { in: CLUB_REF_TYPES } }, select: { id: true } });
   if (pts.length) {
     const ids = pts.map((p) => p.id);
-    await tx.pointTransaction.deleteMany({ where: { OR: [{ id: { in: ids } }, { refType: "lot", refId: { in: ids } }] } });
+    const where = { OR: [{ id: { in: ids } }, { refType: "lot", refId: { in: ids } }] };
+    // سهمی که به سند تعهد اعتبار باشگاه رفته بود با سند معکوس برمی‌گردد (بخش ۳۴.۲)
+    const gone = await tx.pointTransaction.findMany({ where, select: { amount: true, reason: true, refType: true, voucherId: true } });
+    await reverseClubRows(tx, gone, why, actor);
+    await tx.pointTransaction.deleteMany({ where });
   }
 
   const red = await tx.couponRedemption.findFirst({ where: { posTicketId: t.id } });

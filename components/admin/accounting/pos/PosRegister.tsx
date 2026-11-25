@@ -716,6 +716,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: member.tier?.color ?? "#d4af37" }} />
               {member.tier?.title ?? "کارت اشتراک"}
               <span className="tabular-nums">اعتبار {formatAmount(B(member.credit))}</span>
+              {member.pending && B(member.pending.credit) > 0n && <span className="tabular-nums text-[11px] opacity-70">+ {formatAmount(B(member.pending.credit))} در انتظار</span>}
             </span>
           )}
           {boot.clubCards && !ret?.src && !(member && member.partyId === ticketPartyId && member.card) && (

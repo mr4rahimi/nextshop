@@ -67,6 +67,8 @@ export async function listCards(f: CardListFilter) {
       mobile: c.profile.user.phone,
       tier: c.profile.tier,
       credit: pointsToToman(st.balance, s.rate),
+      /** کش‌بک در انتظار (بخش ۳۴.۲) */
+      pending: pointsToToman(st.pending, s.rate),
       negative: st.balance < 0,
       nextExpiry: first?.expiresAt ? { at: first.expiresAt, credit: pointsToToman(first.remaining, s.rate) } : null,
       expiringSoon: pointsToToman(soonPts, s.rate),
@@ -84,7 +86,8 @@ export async function listCards(f: CardListFilter) {
   );
   const totals = {
     cards: rows.length,
-    credit: rows.reduce((a, r) => a + (r.credit > 0n ? r.credit : 0n), 0n),
+    credit: rows.reduce((a, r) => a + (r.credit > 0n ? r.credit : 0n) + r.pending, 0n),
+    pending: rows.reduce((a, r) => a + r.pending, 0n),
     expiringSoon: rows.reduce((a, r) => a + r.expiringSoon, 0n),
     negative: rows.filter((r) => r.negative).length,
   };

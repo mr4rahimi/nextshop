@@ -22,7 +22,7 @@ import { AccError } from "../errors";
 import { assertPostable } from "../ledger/fiscal-year";
 import { postVoucher, type Actor, type LineInput } from "../ledger/post";
 import { nextNumber } from "../ledger/sequence";
-import { saveInvoice, returnedQty, type InvoiceLineInput } from "../invoices/service";
+import { INVOICE_SOURCE, saveInvoice, returnedQty, type InvoiceLineInput } from "../invoices/service";
 import { calcInvoice, CalcError, divRound } from "../invoices/calc";
 import { createMoneyDoc, type MoneyItemInput } from "../cash/docs";
 import { walkInParty } from "../parties";
@@ -31,11 +31,12 @@ import { todayKey } from "../dates";
 import { faNum, formatAmount } from "../money";
 import { posItems } from "./setup";
 import { posClubOf } from "./club";
-import { addPoints, creditSettings, expiryFrom, ledgerState, lockProfile } from "@/lib/club/credit";
-import { earnPoints, pointsToToman, proportional, tomanToPoints } from "@/lib/club/credit-calc";
+import { addPoints, availableFrom, creditSettings, expiryFrom, ledgerState, lockProfile } from "@/lib/club/credit";
+import { chargeBase, earnPoints, pointsToToman, proportional, tomanToPoints } from "@/lib/club/credit-calc";
 import { validatePosCoupon } from "@/lib/club/coupons";
 import { restoreGifts, spendGifts } from "../gift-cards";
 import { createContract, prepareOrgSale } from "../org-installments";
+import { CLUB_KEY, clubLiabilityOn, ensureClubAccount, postClubLiability } from "../club-liability";
 
 type Tx = Prisma.TransactionClient;
 type Db = Tx | typeof prisma;
@@ -325,6 +326,18 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   }
 
   const kind = S > 0n && R > 0n ? "EXCHANGE" : R > 0n ? "RETURN" : "SALE";
+  // ── کش‌بک کارت (بخش ۳۴.۲): درصد سطح از مبلغ خرید، یا با «از سود ناخالص» از فروش خالص − بهای تمام‌شده ──
+  let earned = 0;
+  if (club && S > 0n && saleInv) {
+    let base = S;
+    if (cs.onProfit && club.tier?.cardChargeBp != null) {
+      const moves = await tx.accStockMove.findMany({ where: { sourceType: INVOICE_SOURCE, sourceId: saleInv.id }, select: { totalCost: true } });
+      const cost = moves.reduce((sum, m) => sum + (m.totalCost < 0n ? -m.totalCost : m.totalCost), 0n);
+      base = chargeBase({ amount: S, netSale: saleInv.total - saleInv.vatTotal - saleInv.additions, cost }, true, club.tier);
+    }
+    earned = earnPoints(base, { perToman: cs.perToman, redeemRate: cs.rate }, club.tier);
+  }
+
   const ticket = await tx.accPosTicket.create({
     data: {
       number,
@@ -358,7 +371,7 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
       change: net > 0n && c > 0n && input.tendered && input.tendered > c ? input.tendered - c : 0n,
       clubProfileId: club?.profileId ?? orig?.clubProfileId ?? null,
       clubSpent: u,
-      clubEarned: club && S > 0n ? earnPoints(S, { perToman: cs.perToman, redeemRate: cs.rate }, club.tier) : 0,
+      clubEarned: earned,
       clubRestored: restore,
       giftSpent: gSum,
       giftRestored: giftBack,
@@ -397,8 +410,8 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
     await addPoints(tx, { profileId: club.profileId, amount: -spendPts, reason: "REDEEM", refType: "pos", refId: ticket.id, note: tag, createdAt: new Date(now.getTime() + 2) });
   }
   if (club && ticket.clubEarned) {
-    // بعد از خرج — شارژ همین خرید فقط از خرید بعدی خرج می‌شود
-    await addPoints(tx, { profileId: club.profileId, amount: ticket.clubEarned, reason: "PURCHASE", refType: "pos", refId: ticket.id, note: tag, expiresAt, createdAt: new Date(now.getTime() + 3) });
+    // بعد از خرج — کش‌بک همین خرید فقط از خرید بعدی و بعد از مهلت تنظیمات (پیش‌فرض ۲۴ ساعت) خرج می‌شود
+    await addPoints(tx, { profileId: club.profileId, amount: ticket.clubEarned, reason: "PURCHASE", refType: "pos", refId: ticket.id, note: tag, expiresAt, availableAt: availableFrom(cs, now), createdAt: new Date(now.getTime() + 3) });
   }
 
   // ── پول ──
@@ -441,7 +454,12 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
     const trs = await tx.accTreasury.findMany({ where: { id: { in: [terminal.cashTreasuryId, cardTr].filter((v): v is string => !!v) } } });
     const keyOf = (id: string) => TREASURY_ACCOUNT_KEY[trs.find((t) => t.id === id)!.kind];
     const lines: LineInput[] = [{ accountKey: "AR", partyId: party.id, debit: cashOut + cardOut + restore + giftBack, description: "پس دادن مرجوعی" }];
-    if (restore > 0n) lines.push({ accountKey: "SALES_DISCOUNT", credit: restore, description: "برگشت به کارت اشتراک" });
+    if (restore > 0n) {
+      // تعهد روشن (بخش ۳۴.۲): سهم کارت به بدهی «اعتبار باشگاه» برمی‌گردد؛ وگرنه برگشت تخفیف
+      const liab = await clubLiabilityOn(tx);
+      if (liab) await ensureClubAccount(tx);
+      lines.push({ accountKey: liab ? CLUB_KEY : "SALES_DISCOUNT", credit: restore, description: "برگشت به کارت اشتراک" });
+    }
     if (giftBack > 0n) lines.push({ accountKey: "GIFT_LIABILITY", credit: giftBack, description: "برگشت به بن کارت" });
     if (cashOut > 0n) lines.push({ accountKey: keyOf(terminal.cashTreasuryId), treasuryId: terminal.cashTreasuryId, credit: cashOut, description: internal > 0n && saleInv ? "تعویض و پس دادن نقد" : "پس دادن نقد" });
     if (cardOut > 0n) lines.push({ accountKey: keyOf(cardTr!), treasuryId: cardTr, credit: cardOut, description: "برگشت به کارت" });
@@ -458,6 +476,9 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
   if (receiptDocId || refundVoucherId) {
     await tx.accPosTicket.update({ where: { id: ticket.id }, data: { receiptDocId, refundVoucherId } });
   }
+  // کش‌بک و کسرهای همین رسید ← سند تعهد اعتبار باشگاه (خاموش بودن تعهد ← هیچ)
+  const touched = [club?.profileId, orig?.clubProfileId].filter((x): x is string => !!x);
+  if (touched.length && !perms.quote) await postClubLiability(tx, actor, { profileIds: [...new Set(touched)] });
   return { ...ticket, receiptDocId, refundVoucherId, saleNumber: saleInv?.number ?? null, returnNumber: retInv?.number ?? null };
 }
 

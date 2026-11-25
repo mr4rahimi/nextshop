@@ -37,6 +37,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { href: "/admin/accounting/reports/profit", icon: "🏷️", title: "سود هر کالا، دسته و کانال", desc: "فروش، بهای تمام‌شده و درصد سود؛ سایت، تلفنی و بازارگاه‌ها", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
       { href: "/admin/accounting/reports/parties", icon: "👥", title: "حساب اشخاص (کل حساب)", desc: "مانده‌ی ابتدا، گردش و مانده‌ی پایان همه‌ی اشخاص؛ بدهکاران و بستانکاران", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/installments", icon: "🗓️", title: "اقساط", desc: "قسط‌های سررسیدگذشته، این هفته و این ماه — فروش و خرید", perm: ["ACC_VIEW"] },
+      { href: "/admin/accounting/reports/club", icon: "💳", title: "اعتبار باشگاه مشتریان", desc: "کش‌بک کارت و امتیاز که به مشتریان بدهکارید — راه‌اندازی در دفتر و تطبیق", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/reports/aging", icon: "⏳", title: "سنی بدهی", desc: "طلب از مشتریان به تفکیک عمر: ۳۰، ۶۰، ۹۰ و بیشتر از ۹۰ روز", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/reports/vat", icon: "🧾", title: "ارزش افزوده (فصلی)", desc: "مالیات فروش منهای مالیات خرید، با فهرست فاکتورهای مشمول", perm: ["ACC_REPORTS"] },
     ],

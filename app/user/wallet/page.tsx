@@ -15,6 +15,8 @@ interface ClubCredit {
   tier: { title: string; color: string | null } | null;
   usableOnline: boolean;
   nextExpiry: { at: string; credit: string } | null;
+  /** کش‌بک خریدهای اخیر که هنوز قابل استفاده نیست */
+  pending?: { at: string; credit: string } | null;
   history: { id: string; label: string; amount: string; createdAt: string; expiresAt: string | null }[];
 }
 
@@ -97,6 +99,11 @@ export default function WalletPage() {
               با هر خرید از فروشگاه{club.usableOnline ? " و سایت" : ""} شارژ می‌شود و در خرید بعدی
               {club.usableOnline ? " — در فروشگاه یا هنگام پرداخت سفارش اینترنتی —" : " در فروشگاه"} قابل استفاده است.
             </p>
+            {club.pending && Number(club.pending.credit) > 0 && (
+              <p className="mt-2 ml-2 inline-block rounded-full bg-white/15 px-3 py-1 text-[11px] font-black">
+                {toFa(Number(club.pending.credit))} تومان کش‌بک تازه از {new Date(club.pending.at).toLocaleString("fa-IR", { weekday: "long", hour: "2-digit", minute: "2-digit" })} قابل استفاده می‌شود
+              </p>
+            )}
             {club.nextExpiry && Number(club.nextExpiry.credit) > 0 && (
               <p className="mt-2 inline-block rounded-full bg-white/15 px-3 py-1 text-[11px] font-black">
                 {toFa(Number(club.nextExpiry.credit))} تومان تا {dateFa(club.nextExpiry.at)} اعتبار دارد
