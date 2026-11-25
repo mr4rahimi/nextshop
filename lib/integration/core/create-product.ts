@@ -225,6 +225,11 @@ export async function runCreateProduct(
   let draft: ProductDraft;
   try {
     draft = await buildDraft(shopProductId, settings);
+    // ساخت دوباره: محصول قبلی (حتی بایگانی‌شده) SKUها را در غرفه نگه داشته و باسلام SKU تکراری را رد می‌کند
+    // («شناسه sku محصولات باید یکتا باشد»). تطبیق تنوع‌ها با ترکیب مقدارهاست و به SKU نیازی ندارد.
+    if (replaces) {
+      draft = { ...draft, sku: undefined, variants: draft.variants.map((v) => ({ ...v, sku: undefined })) };
+    }
   } catch (e) {
     return fail(e instanceof Error ? e.message : String(e));
   }

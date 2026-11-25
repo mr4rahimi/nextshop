@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   AlertTriangle, ArrowLeft, CheckCircle2, Compass, MessageCircle, Plug, ReceiptText,
-  RefreshCw, Settings2, Sparkles, Unlink, type LucideIcon,
+  Hammer, RefreshCw, Settings2, Sparkles, Unlink, type LucideIcon,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getQueueStats } from "@/lib/integration/core/queue";
@@ -217,8 +217,10 @@ export default async function IntegrationHomePage() {
               const map = linked.get(p.code) ?? 0;
               const pct = total ? Math.min(100, Math.round((map / total) * 100)) : 0;
               return (
-                <Link key={p.code} href={`/admin/integration/connections/${p.code}`}>
+                // کارت کلیک‌پذیر با لینک پوشاننده تا دکمه‌ی «ساخت محصول» داخلش لینک تودرتو نشود
+                <div key={p.code} className="relative">
                   <Card className="h-full p-4 transition-colors hover:border-teal-300 dark:hover:border-teal-500/30">
+                    <Link href={`/admin/integration/connections/${p.code}`} className="absolute inset-0 z-0 rounded-2xl" aria-label={`اتصال ${p.name}`} />
                     <div className="flex items-center gap-3">
                       <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-base font-black text-gray-500 dark:bg-white/5">{p.name[0]}</span>
                       <div className="min-w-0 flex-1">
@@ -241,11 +243,19 @@ export default async function IntegrationHomePage() {
                         </div>
                       </div>
                     )}
-                    <p className="mt-2 text-[11px] text-gray-400">
-                      {c ? (c.lastSyncAt ? `آخرین همگام‌سازی: ${when(c.lastSyncAt)}` : "هنوز همگام نشده") : "برای وصل کردن بزنید"}
-                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <p className="text-[11px] text-gray-400">
+                        {c ? (c.lastSyncAt ? `آخرین همگام‌سازی: ${when(c.lastSyncAt)}` : "هنوز همگام نشده") : "برای وصل کردن بزنید"}
+                      </p>
+                      {c && p.canCreateProduct && !hidden.has("createProducts") && (
+                        <Link href={`/admin/integration/create-products?platform=${p.code}`}
+                          className="relative z-10 inline-flex items-center gap-1 rounded-lg bg-orange-50 px-2.5 py-1 text-[11px] font-bold text-orange-600 hover:bg-orange-100 dark:bg-orange-500/10 dark:text-orange-400">
+                          <Hammer className="h-3.5 w-3.5" /> ساخت محصول
+                        </Link>
+                      )}
+                    </div>
                   </Card>
-                </Link>
+                </div>
               );
             })}
           </div>

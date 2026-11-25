@@ -15,7 +15,7 @@ import {
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
   CalendarDays, Lock, QrCode, Blocks, MessagesSquare, PackagePlus, Map as MapIcon, Boxes, Tags, Percent, Plug, Bot, ListRestart, ScrollText, SlidersHorizontal, Compass, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop, Scale, Megaphone, Funnel, BadgePercent, PackageSearch, PiggyBank, HeartHandshake, UserRound, GitCompareArrows, Trophy,
-  Undo2, TrendingDown,
+  Undo2, TrendingDown, Hammer,
 } from "lucide-react";
 import { INTEG_SECTIONS, type IntegSectionKey } from "@/lib/integration/core/sections";
 
@@ -149,6 +149,7 @@ const INTEG_ICONS: Record<IntegSectionKey, { icon: LucideIcon; tone: AppTone }> 
   orders: { icon: ShoppingBag, tone: "blue" },
   messages: { icon: MessagesSquare, tone: "rose" },
   listing: { icon: PackagePlus, tone: "orange" },
+  createProducts: { icon: Hammer, tone: "orange" },
   mapping: { icon: MapIcon, tone: "emerald" },
   inventory: { icon: Boxes, tone: "amber" },
   pricing: { icon: Tags, tone: "lime" },

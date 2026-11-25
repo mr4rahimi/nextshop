@@ -9,7 +9,7 @@
  */
 
 export type IntegSectionKey =
-  | "home" | "orders" | "messages" | "listing" | "mapping" | "inventory"
+  | "home" | "orders" | "messages" | "listing" | "createProducts" | "mapping" | "inventory"
   | "pricing" | "priceRules" | "discounts" | "connections" | "baleBot"
   | "queue" | "logs" | "settings" | "guide";
 
@@ -40,6 +40,7 @@ export const INTEG_SECTIONS: IntegSection[] = [
   { key: "orders", href: "/admin/integration/orders", label: "سفارش بازارگاه", desc: "سفارش‌های رسیده از بازارگاه‌ها و فاکتورشان", group: "daily", core: true, needsMarketplace: true },
   { key: "messages", href: "/admin/integration/messages", label: "پیام بازارگاه", desc: "گفت‌وگو با مشتریان باسلام؛ خاموش‌کردن، دریافت پیام‌ها را هم متوقف می‌کند", group: "daily", needsMarketplace: true },
   { key: "listing", href: "/admin/integration/product-suggestions", label: "قرار دادن محصول", desc: "کدام محصول سایت هنوز در کدام بازارگاه نیست — ساخت خودکار یا راهنمای دستی", group: "daily", core: true, needsMarketplace: true },
+  { key: "createProducts", href: "/admin/integration/create-products", label: "ساخت محصول در بازارگاه", desc: "محصولات سایت را با تنوع، موجودی و قیمت یک‌جا در بازارگاه بسازید — docs/integrations/create-products.md", group: "daily", needsMarketplace: true },
   { key: "mapping", href: "/admin/integration/mapping", label: "نگاشت محصولات", desc: "وصل‌کردن هر محصول سایت به همان محصول در بازارگاه و حسابداری", group: "products", core: true },
   { key: "inventory", href: "/admin/integration/inventory", label: "موجودی", desc: "موجودی مشترک محصولات نگاشت‌شده و ارسال آن به بازارگاه‌ها", group: "products", core: true },
   { key: "pricing", href: "/admin/integration/pricing", label: "قیمت خرید", desc: "قیمت خرید هر محصول — پایه‌ی محاسبه‌ی قیمت بازارگاه", group: "price" },
@@ -78,7 +79,6 @@ export const INTEG_PROFILES: { key: string; label: string; desc: string; hidden:
 ];
 
 export function sectionForPath(pathname: string): IntegSection | null {
-  if (pathname.startsWith("/admin/integration/create-products")) return INTEG_SECTIONS.find((s) => s.key === "listing") ?? null;
   if (pathname.startsWith("/admin/integration/connections")) return INTEG_SECTIONS.find((s) => s.key === "connections") ?? null;
   let best: IntegSection | null = null;
   for (const s of INTEG_SECTIONS) {

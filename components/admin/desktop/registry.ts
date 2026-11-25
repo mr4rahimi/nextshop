@@ -250,6 +250,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/integration/orders", label: "سفارش بازارگاه", icon: fx("Basket") },
       { href: "/admin/integration/messages", label: "پیام بازارگاه", icon: fx("E-mail") },
       { href: "/admin/integration/product-suggestions", label: "قرار دادن محصول", icon: fx("Outbox tray"), keywords: "پیشنهاد محصول ساخت محصول باسلام" },
+      { href: "/admin/integration/create-products", label: "ساخت محصول بازارگاه", icon: fx("Hammer and wrench"), keywords: "ساخت محصول باسلام ساخت دوباره انتشار محصول بازارگاه" },
       { href: "/admin/integration/mapping", label: "نگاشت محصولات", icon: fx("World map") },
       { href: "/admin/integration/inventory", label: "موجودی بازارگاه", icon: fx("Wood") },
       { href: "/admin/integration/pricing", label: "قیمت خرید", icon: fx("Pound banknote") },

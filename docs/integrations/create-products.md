@@ -5,7 +5,7 @@
 `createProduct`، `fetchCategories` و `requiredCategoryAttributes` در آداپتورش
 خودکار به صفحه اضافه می‌شود.
 
-- صفحه: `/admin/integration/create-products?platform=basalam`، راهنمای «؟» با کلید `integrationCreateProducts`
+- صفحه: `/admin/integration/create-products?platform=basalam` — از ۲.۱۶۶.۰ بخش جدای `createProducts` در `lib/integration/core/sections.ts` (کاشی و منوی یکپارچه‌سازی، قابل خاموش کردن)، آیکن پیشخوان در `components/admin/desktop/registry.ts`، و دکمه‌ی «ساخت محصول» روی کارت هر بازارگاه با `canCreateProduct` در خانه‌ی یکپارچه‌سازی، راهنمای «؟» با کلید `integrationCreateProducts`
 - API: `app/api/integration/create-products/` (فهرست و ساخت، `settings`، `categories`)
 - هسته: `lib/integration/core/create-product.ts` (پیش‌نویس، job، صف) و `lib/integration/core/variant-links.ts` (تنظیمات، فرمول قیمت، نقشه‌ی تنوع)
 - آداپتور: `BasalamAdapter.createProduct` / `syncVariantProducts` / `patchVariation`
@@ -34,6 +34,8 @@
 
 - `POST { recreate: true }` → `enqueueCreateProducts(..., { recreate })`. فقط محصولاتی که نگاشت دارند در صف می‌روند، با `payload.replaces = شناسه‌ی فعلی بازارگاه`.
 - `runCreateProduct` اگر لینک فعلی همان `replaces` باشد، رد نمی‌شود. بعد از ساخت موفق، در همان تراکنش لینک قبلی حذف و لینک تازه ساخته می‌شود. `meta.replaced` و لاگ `responseData.replaced` شناسه‌ی قبلی را نگه می‌دارند. اگر ساخت شکست بخورد، لینک قبلی دست نمی‌خورد و صفحه «ساخت دوباره ناموفق» را نشان می‌دهد.
+- باسلام SKU را در کل غرفه یکتا می‌خواهد و محصول قبلی (حتی بایگانی‌شده) SKUها را نگه می‌دارد («شناسه sku محصولات باید یکتا باشد»، سزاوار ۱۴۰۵/۰۹/۰۴). از ۲.۱۶۶.۰ ساخت دوباره SKU محصول و تنوع‌ها را نمی‌فرستد.
+- محصول رد شده با «عدم موجودی»: همگام‌سازی خودکار تنوع‌ها موجودی تازه را می‌فرستد، ولی انتشار دوباره برای بازبینی را باید فروشنده از پنل باسلام بزند. API ارسال دوباره برای بازبینی آزموده نشده است.
 - محصول قبلی روی باسلام می‌ماند. API حذف یا بایگانی مستند نیست و کاربر آن را از پنل باسلام بایگانی می‌کند. ردیف کش `IntegPlatformProduct` قبلی هم می‌ماند.
 
 ## تنوع‌ها بعد از ساخت
