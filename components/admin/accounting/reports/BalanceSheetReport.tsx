@@ -20,12 +20,15 @@ interface Group {
   title: string;
   lines: Line[];
   total: string;
+  /** جاری / غیرجاری (استاندارد ۱) — فقط دارایی و بدهی */
+  term?: "current" | "noncurrent";
 }
 interface Data {
   assets: Group[];
   liabilities: Group[];
   equity: Group[];
   totals: { assets: string; liabilities: string; equity: string; profit: string };
+  loansLong: string;
   balanced: boolean;
 }
 
@@ -39,6 +42,7 @@ export default function BalanceSheetReport() {
     const side = (title: string, gs: Group[], total: string) => {
       rows.push([title, ""]);
       for (const g of gs) {
+        if (g.term && g.term !== gs[gs.indexOf(g) - 1]?.term) rows.push([` ${termTitle(title, g.term)}`, termTotal(gs, g.term)]);
         rows.push([`  ${g.title}`, g.total]);
         for (const l of g.lines) rows.push([`    ${l.name}`, l.amount]);
       }
@@ -96,13 +100,23 @@ export default function BalanceSheetReport() {
   );
 }
 
+const termTitle = (side: string, t: "current" | "noncurrent") => `${side === "دارایی‌ها" ? "دارایی‌های" : "بدهی‌های"} ${t === "current" ? "جاری" : "غیرجاری"}`;
+const termTotal = (gs: Group[], t: "current" | "noncurrent") => String(gs.filter((g) => g.term === t).reduce((s, g) => s + BigInt(g.total), 0n));
+
 function Side({ title, groups, total, extra }: { title: string; groups: Group[]; total: string; extra?: { label: string; amount: string } }) {
   return (
     <Card className="overflow-hidden">
       <p className="px-4 py-3 text-sm font-black border-b border-gray-100 dark:border-white/5">{title}</p>
       <div className="divide-y divide-gray-100 dark:divide-white/5 text-sm">
-        {groups.map((g) => (
-          <div key={g.key} className="px-4 py-2.5">
+        {groups.map((g, i) => (
+          <div key={g.key}>
+            {g.term && g.term !== groups[i - 1]?.term && (
+              <div className="px-4 py-2 flex justify-between text-xs font-black bg-gray-50/70 dark:bg-white/[0.03] text-gray-600 dark:text-gray-300">
+                <span>{termTitle(title, g.term)}</span>
+                <Amt v={termTotal(groups, g.term)} />
+              </div>
+            )}
+          <div className="px-4 py-2.5">
             <div className="flex justify-between font-bold">
               <span>{g.title}</span>
               <Amt v={g.total} />
@@ -113,6 +127,12 @@ function Side({ title, groups, total, extra }: { title: string; groups: Group[];
                 <Amt v={l.amount} muted />
               </Link>
             ))}
+            {g.key === "loans-long" && (
+              <Link href="/admin/accounting/loans" className="block pr-4 pt-1 text-[11px] text-blue-600">
+                جدول اقساط وام‌ها ←
+              </Link>
+            )}
+          </div>
           </div>
         ))}
         {extra && (

@@ -71,12 +71,12 @@ export function lastClosedMonthEnd(today: Date = todayKey()): Date {
   return new Date(jalaliMonthBounds(today).start.getTime() - DAY);
 }
 
-const monthTitle = (d: Date) => {
+export const monthTitle = (d: Date) => {
   const j = toJalali(d);
   return `${jalaliMonthName(j.month)} ${faNum(j.year)}`;
 };
 
-async function postableOn(db: Db, day: Date): Promise<boolean> {
+export async function postableOn(db: Db, day: Date): Promise<boolean> {
   const y = await yearForDate(db, day);
   if (!y || y.status === "CLOSED") return false;
   const s = await db.accSettings.findUnique({ where: { id: "singleton" }, select: { lockDate: true } });

@@ -4300,6 +4300,8 @@ enum AccSource {
   GIFT // بن کارت فروشگاه: فروش، مرجوع و سوخت (webhesab-parity.md بخش ۲۷)
   CLUB // تعهد اعتبار باشگاه: شارژ، سوخت، افتتاحیه (webhesab-parity.md بخش ۳۴.۲)
   INVENTORY_WRITEDOWN // کاهش ارزش موجودی: ارزیابی و برگشت ذخیره (بخش ۳۴.۴)
+  FIXED_ASSET // دارایی ثابت: خرید، استهلاک ماهانه، فروش و اسقاط (بخش ۳۴.۵)
+  PREPAID // پیش‌پرداخت هزینه (سهم ماهانه) و ودیعه (بخش ۳۴.۵)
 }
 
 /// سند حسابداری. ⚠️ فقط از `lib/accounting/ledger/post.ts` نوشته می‌شود —
@@ -5044,6 +5046,167 @@ model AccInvValuationLine {
 
   @@index([valuationId])
   @@index([itemId])
+}
+
+// ── دارایی ثابت، پیش‌پرداخت هزینه و ودیعه — docs/plans/webhesab-parity.md بخش ۳۴.۵ ──
+
+enum AccAssetCategory {
+  FURNITURE // اثاثه و منصوبات
+  EQUIPMENT // تجهیزات و ابزار
+  VEHICLE // وسایل نقلیه
+  FITOUT // دکوراسیون و بهسازی مغازه
+  COMPUTER // رایانه و تجهیزات الکترونیکی
+  OTHER
+}
+
+enum AccDepMethod {
+  STRAIGHT // خط مستقیم — عمر به ماه
+  DECLINING // نزولی — نرخ سالانه روی ارزش دفتری
+}
+
+enum AccAssetStatus {
+  ACTIVE
+  DISPOSED // فروخته یا اسقاط شد
+  VOID
+}
+
+/// پول خرید از کجا آمد: ردیف فاکتور خرید (سند همان فاکتور است)، صندوق/بانک، نسیه از شخص، یا از قبل در دفاتر
+enum AccAssetFunding {
+  INVOICE
+  TREASURY
+  CREDIT
+  EXISTING
+}
+
+/// دارایی ثابت. استهلاک ماهانه‌ی خودکار با «هدف انباشته»: هر ماه = هدف تا آخر ماه − ثبت‌شده
+/// (ماه بسته/قفل جا نمی‌ماند، در اولین ماه باز می‌نشیند). lib/accounting/assets/fixed.ts
+model AccFixedAsset {
+  id                 String           @id @default(cuid())
+  number             Int              @unique @default(autoincrement())
+  name               String
+  category           AccAssetCategory
+  /// حساب بهای تمام‌شده — معین زیر کل «دارایی‌های ثابت»
+  accountId          String
+  acquiredOn         DateTime         @db.Date
+  /// استهلاک از اول ماهی که این روز در آن است
+  inServiceOn        DateTime         @db.Date
+  cost               BigInt
+  salvage            BigInt           @default(0)
+  method             AccDepMethod
+  lifeMonths         Int?
+  /// نرخ سالانه‌ی نزولی × ۱۰۰ (۲۵٪ = 2500)
+  rateBp             Int?
+  /// استهلاک انباشته‌ای که پیش از ثبت در برنامه در دفاتر بود (دارایی قدیمی)
+  openingAccum       BigInt           @default(0)
+  /// استهلاکی که برنامه سند زده
+  depreciated        BigInt           @default(0)
+  depreciatedThrough DateTime?        @db.Date
+  funding            AccAssetFunding
+  treasuryId         String?
+  partyId            String?
+  invoiceLineId      String?          @unique
+  voucherId          String?          @unique
+  status             AccAssetStatus   @default(ACTIVE)
+  disposedOn         DateTime?        @db.Date
+  disposalAmount     BigInt?
+  /// استهلاک تکمیلی (یا برگشتی، منفی) که در سند فروش نشست
+  disposalDep        BigInt?
+  disposalTreasuryId String?
+  disposalPartyId    String?
+  disposalVoucherId  String?          @unique
+  voidReason         String?
+  note               String?
+  createdById        String?
+  createdByName      String
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  entries AccDepreciation[]
+
+  @@index([status])
+}
+
+/// سهم هر دارایی در سند استهلاک یک ماه (برای فهرست و ردیابی؛ سند جمع ماه است)
+model AccDepreciation {
+  id        String   @id @default(cuid())
+  assetId   String
+  month     DateTime @db.Date
+  amount    BigInt
+  voucherId String
+  createdAt DateTime @default(now())
+
+  asset AccFixedAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([voucherId])
+}
+
+enum AccPrepaidStatus {
+  ACTIVE
+  DONE
+  VOID
+}
+
+/// پیش‌پرداخت هزینه (اجاره‌ی سالانه، بیمه): آخر هر ماه سهم همان ماه هزینه می‌شود
+model AccPrepaid {
+  id                String           @id @default(cuid())
+  number            Int              @unique @default(autoincrement())
+  title             String
+  expenseAccountId  String
+  amount            BigInt
+  /// ماه اول هزینه = ماهی که این روز در آن است
+  startOn           DateTime         @db.Date
+  months            Int
+  recognized        BigInt           @default(0)
+  recognizedThrough DateTime?        @db.Date
+  paidOn            DateTime         @db.Date
+  funding           AccAssetFunding
+  treasuryId        String?
+  partyId           String?
+  voucherId         String?          @unique
+  status            AccPrepaidStatus @default(ACTIVE)
+  voidReason        String?
+  note              String?
+  createdById       String?
+  createdByName     String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([status])
+}
+
+enum AccDepositStatus {
+  HELD
+  RETURNED
+  VOID
+}
+
+/// ودیعه و سپرده (رهن مغازه، سپرده‌ی ضمانت) — دارایی است، نه هزینه
+model AccDeposit {
+  id                String           @id @default(cuid())
+  number            Int              @unique @default(autoincrement())
+  title             String
+  counterparty      String
+  amount            BigInt
+  paidOn            DateTime         @db.Date
+  funding           AccAssetFunding
+  treasuryId        String?
+  voucherId         String?          @unique
+  status            AccDepositStatus @default(HELD)
+  returnedOn        DateTime?        @db.Date
+  returnedAmount    BigInt?
+  returnTreasuryId  String?
+  /// کسر از ودیعه (خسارت، بدهی) ← این حساب هزینه
+  shortfallAccountId String?
+  returnVoucherId   String?          @unique
+  voidReason        String?
+  note              String?
+  createdById       String?
+  createdByName     String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([status])
 }
 
 model AccProductCost {

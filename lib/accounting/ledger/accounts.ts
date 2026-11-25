@@ -157,3 +157,59 @@ export async function ensureSystemAccount(
   const acc = await createAccount(db, { parentId: parent.id, name: s.name });
   return db.accAccount.update({ where: { id: acc.id }, data: { systemKey: s.key, nature: s.nature, detailKind: "NONE" } });
 }
+
+/**
+ * ردیف‌های تازه‌ی سرفصل پیش‌فرض برای نصب‌های موجود (بخش ۳۴.۵) — idempotent.
+ * کد آزاد ← همان کد؛ کد گرفته‌شده ← کد خودکار زیر همان پدر (شماره‌ی کسی جابه‌جا نمی‌شود).
+ * گروهی که کدش را گروه کلاس دیگری گرفته ← فرزندانش زیر اولین گروه همان کلاس.
+ */
+export async function ensureChartRows(db: Db, codes: string[]): Promise<number> {
+  const want = new Set(codes);
+  const all = await db.accAccount.findMany({ select: { id: true, code: true, level: true, class: true, systemKey: true } });
+  if (!all.length) return 0;
+  const byCode = new Map(all.map((a) => [a.code, a]));
+  const byKey = new Map(all.filter((a) => a.systemKey).map((a) => [a.systemKey as string, a.id]));
+  const placed = new Map<string, string>();
+  let created = 0;
+
+  for (const [code, name, level, cls, nature, detailKind, systemKey] of DEFAULT_CHART) {
+    const hit = byCode.get(code);
+    const fits = !!hit && hit.level === level && hit.class === cls;
+    if (!want.has(code)) {
+      if (fits) placed.set(code, hit!.id);
+      continue;
+    }
+    if (systemKey && byKey.has(systemKey)) {
+      placed.set(code, byKey.get(systemKey)!);
+      continue;
+    }
+    if (fits && !systemKey) {
+      placed.set(code, hit!.id);
+      continue;
+    }
+    if (level === "GROUP") {
+      if (!hit) {
+        const g = await db.accAccount.create({ data: { code, name, level, class: cls, nature, detailKind, systemKey } });
+        placed.set(code, g.id);
+        created++;
+      } else {
+        const g = await db.accAccount.findFirst({ where: { class: cls, level: "GROUP" }, orderBy: { code: "asc" } });
+        if (g) placed.set(code, g.id);
+      }
+      continue;
+    }
+    const pc = level === "LEDGER" ? code.slice(0, 1) : code.slice(0, 2);
+    const parentId =
+      placed.get(pc) ??
+      (await db.accAccount.findFirst({ where: { class: cls, level: level === "LEDGER" ? "GROUP" : "LEDGER" }, orderBy: { code: "asc" } }))?.id;
+    if (!parentId) continue;
+    const row = !hit
+      ? await db.accAccount.create({ data: { code, name, level, class: cls, nature, detailKind, systemKey, parentId } })
+      : await db.accAccount.update({ where: { id: (await createAccount(db, { parentId, name })).id }, data: { nature, detailKind, systemKey } });
+    byCode.set(row.code, { id: row.id, code: row.code, level: row.level, class: row.class, systemKey: row.systemKey });
+    if (systemKey) byKey.set(systemKey, row.id);
+    placed.set(code, row.id);
+    created++;
+  }
+  return created;
+}

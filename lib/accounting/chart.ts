@@ -40,18 +40,29 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["1401", "مالیات بر ارزش افزوده‌ی خرید", S, "ASSET", "DEBIT", "NONE", "VAT_PURCHASE"],
   ["1402", "پیش‌پرداخت‌ها", S, "ASSET", "DEBIT", "PARTY", "PREPAYMENT"],
   ["1403", "پیش‌پرداخت کارمزد خرید اقساطی", S, "ASSET", "DEBIT", "NONE", "INSTALLMENT_PREPAID"],
+  ["1404", "پیش‌پرداخت هزینه‌ها", S, "ASSET", "DEBIT", "NONE", "PREPAID_EXPENSE"],
 
   ["2", "دارایی‌های غیرجاری", G, "ASSET", "DEBIT", "NONE", null],
   ["21", "دارایی‌های ثابت", L, "ASSET", "DEBIT", "NONE", null],
   ["2101", "اثاثه و تجهیزات", S, "ASSET", "DEBIT", "NONE", null],
   ["2102", "وسایل نقلیه", S, "ASSET", "DEBIT", "NONE", null],
+  ["2103", "دکوراسیون و بهسازی مغازه", S, "ASSET", "DEBIT", "NONE", null],
+  ["2104", "رایانه و تجهیزات الکترونیکی", S, "ASSET", "DEBIT", "NONE", null],
+  ["2190", "استهلاک انباشته‌ی دارایی‌های ثابت", S, "ASSET", "CREDIT", "NONE", "ACCUM_DEPRECIATION"],
+  ["22", "ودایع و سپرده‌ها", L, "ASSET", "DEBIT", "NONE", null],
+  ["2201", "ودیعه‌ی اجاره (رهن)", S, "ASSET", "DEBIT", "NONE", "DEPOSITS"],
+  ["2202", "سپرده‌ها و ضمانت‌نامه‌ها", S, "ASSET", "DEBIT", "NONE", null],
 
   ["3", "بدهی‌های جاری", G, "LIABILITY", "CREDIT", "NONE", null],
   ["31", "پرداختنی‌ها", L, "LIABILITY", "CREDIT", "NONE", null],
   ["3101", "حساب‌های پرداختنی", S, "LIABILITY", "CREDIT", "PARTY", "AP"],
   ["3102", "اسناد پرداختنی", S, "LIABILITY", "CREDIT", "PARTY", "CHEQUE_PAYABLE"],
+  ["3103", "حقوق و دستمزد پرداختنی", S, "LIABILITY", "CREDIT", "NONE", "SALARY_PAYABLE"],
+  ["3104", "بیمه‌ی پرداختنی", S, "LIABILITY", "CREDIT", "NONE", "INSURANCE_PAYABLE"],
   ["32", "مالیات", L, "LIABILITY", "CREDIT", "NONE", null],
   ["3201", "مالیات بر ارزش افزوده‌ی فروش", S, "LIABILITY", "CREDIT", "NONE", "VAT_SALES"],
+  ["3202", "مالیات تکلیفی پرداختنی (حقوق و اجاره)", S, "LIABILITY", "CREDIT", "NONE", "WITHHOLDING_TAX"],
+  ["3203", "ذخیره‌ی مالیات عملکرد", S, "LIABILITY", "CREDIT", "NONE", "INCOME_TAX_PROVISION"],
   ["33", "پیش‌دریافت‌ها", L, "LIABILITY", "CREDIT", "NONE", null],
   ["3301", "کیف پول مشتریان", S, "LIABILITY", "CREDIT", "PARTY", "WALLET_LIABILITY"],
   ["3302", "پیش‌دریافت فروش", S, "LIABILITY", "CREDIT", "PARTY", "CUSTOMER_ADVANCE"],
@@ -60,6 +71,10 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["3305", "درآمد تحقق‌نیافته‌ی اقساط", S, "LIABILITY", "CREDIT", "NONE", "INSTALLMENT_DEFERRED"],
   ["34", "تسهیلات مالی", L, "LIABILITY", "CREDIT", "NONE", null],
   ["3401", "تسهیلات دریافتی", S, "LIABILITY", "CREDIT", "NONE", "LOAN_PAYABLE"],
+
+  ["4", "بدهی‌های غیرجاری", G, "LIABILITY", "CREDIT", "NONE", null],
+  ["41", "بدهی‌های بلندمدت", L, "LIABILITY", "CREDIT", "NONE", null],
+  ["4101", "ذخیره‌ی مزایای پایان خدمت کارکنان", S, "LIABILITY", "CREDIT", "NONE", "END_OF_SERVICE"],
 
   ["5", "حقوق صاحبان سرمایه", G, "EQUITY", "CREDIT", "NONE", null],
   ["51", "سرمایه", L, "EQUITY", "CREDIT", "NONE", null],
@@ -81,6 +96,7 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["6203", "سایر درآمدها", S, "REVENUE", "CREDIT", "NONE", "OTHER_INCOME"],
   ["6204", "اضافات و کسورات گرد کردن", S, "REVENUE", "BOTH", "NONE", "ROUNDING"],
   ["6205", "درآمد فروش اقساطی", S, "REVENUE", "CREDIT", "NONE", "INSTALLMENT_INCOME"],
+  ["6206", "سود (زیان) فروش دارایی ثابت", S, "REVENUE", "BOTH", "NONE", "ASSET_DISPOSAL"],
 
   ["7", "بهای تمام‌شده", G, "EXPENSE", "DEBIT", "NONE", null],
   ["71", "بهای تمام‌شده", L, "EXPENSE", "DEBIT", "NONE", null],
@@ -105,11 +121,18 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["8206", "ملزومات مصرفی", S, "EXPENSE", "DEBIT", "NONE", null],
   ["8207", "هزینه‌های متفرقه", S, "EXPENSE", "DEBIT", "NONE", null],
   ["8208", "کسری و اضافه‌ی صندوق", S, "EXPENSE", "BOTH", "NONE", "CASH_OVER_SHORT"],
+  ["8209", "هزینه‌ی استهلاک", S, "EXPENSE", "DEBIT", "NONE", "DEPRECIATION"],
   ["83", "هزینه‌های مالی", L, "EXPENSE", "DEBIT", "NONE", null],
   ["8301", "کارمزد بانکی", S, "EXPENSE", "DEBIT", "NONE", "BANK_FEE"],
   ["8302", "کارمزد خرید اقساطی", S, "EXPENSE", "DEBIT", "NONE", "INSTALLMENT_EXPENSE"],
   ["8303", "سود و جریمه‌ی تسهیلات", S, "EXPENSE", "DEBIT", "NONE", "LOAN_INTEREST"],
 ];
+
+/**
+ * ردیف‌های ۲.۱۶۸.۰ (بخش ۳۴.۵) — نصب‌های قدیمی‌تر با `ensureChartRows` می‌گیرند
+ * (worker روزانه و اولین کار با دارایی‌ها).
+ */
+export const ASSET_CHART_CODES = ["1404", "2103", "2104", "2190", "22", "2201", "2202", "3103", "3104", "3202", "3203", "4", "41", "4101", "6206", "8209"];
 
 /** کلیدهای سیستمی که کد به آن‌ها تکیه دارد — نبودشان یعنی سرفصل ناقص است */
 export const REQUIRED_KEYS = DEFAULT_CHART.map((r) => r[6]).filter((k): k is string => !!k);

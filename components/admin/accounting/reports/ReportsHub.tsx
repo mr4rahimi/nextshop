@@ -49,6 +49,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { href: "/admin/accounting/reports/expenses", icon: "💸", title: "هزینه‌ها", desc: "به تفکیک سرفصل با نمودار و مقایسه با دوره‌ی قبل", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/reports/treasury", icon: "🏦", title: "گردش صندوق و بانک", desc: "موجودی ابتدا، ورود، خروج و موجودی پایان هر حساب", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/inventory/valuation", icon: "🥀", title: "ارزیابی موجودی پایان دوره", desc: "کالای زیر بها و راکد — کاهش ارزش با یک سند، بی‌دست زدن به بهای کالا", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
+      { href: "/admin/accounting/assets", icon: "🛋", title: "دارایی ثابت و استهلاک", desc: "بها، استهلاک انباشته و ارزش دفتری هر دارایی؛ پیش‌پرداخت‌ها و ودیعه‌ها", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/reports/inventory", icon: "📦", title: "ارزش موجودی کالا", desc: "به تفکیک دسته، کالا یا انبار؛ تطبیق با دفتر", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
     ],
   },

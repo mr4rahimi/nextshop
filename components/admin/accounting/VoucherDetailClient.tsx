@@ -127,6 +127,16 @@ export default function VoucherDetailClient({ id }: { id: string }) {
               دیدن وام ←
             </Link>
           )}
+          {v.source === "FIXED_ASSET" && v.sourceId?.startsWith("asset:") && (
+            <Link href={`/admin/accounting/assets/${v.sourceId.split(":")[1]}`} className="text-[10px] font-bold text-blue-600">
+              دیدن دارایی ←
+            </Link>
+          )}
+          {(v.source === "PREPAID" || (v.source === "FIXED_ASSET" && v.sourceId?.startsWith("dep:"))) && (
+            <Link href={`/admin/accounting/assets?tab=${v.source === "PREPAID" ? (v.sourceId?.startsWith("deposit:") ? "deposits" : "prepaid") : "assets"}`} className="text-[10px] font-bold text-blue-600">
+              {v.source === "PREPAID" ? (v.sourceId?.startsWith("deposit:") ? "دیدن ودیعه‌ها ←" : "دیدن پیش‌پرداخت‌ها ←") : "دیدن دفتر دارایی ←"}
+            </Link>
+          )}
           {manual && v.sourceId?.startsWith("recon:") && (
             <Link href={`/admin/accounting/treasury/reconcile/${v.sourceId.slice(6)}`} className="text-[10px] font-bold text-blue-600">
               ثبت‌شده در تطبیق بانک ←
