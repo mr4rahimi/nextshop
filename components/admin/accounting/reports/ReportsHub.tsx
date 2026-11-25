@@ -21,6 +21,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { href: "/admin/accounting/reports/pl", icon: "📈", title: "سود و زیان", desc: "فروش، بهای تمام‌شده، هزینه‌ها و سود خالص؛ مقایسه با دوره‌ی قبل", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
       { href: "/admin/accounting/reports/balance", icon: "⚖️", title: "ترازنامه", desc: "دارایی‌ها، بدهی‌ها و سرمایه در یک تاریخ", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
+      { href: "/admin/accounting/reports/cashflow", icon: "💧", title: "صورت جریان وجوه نقد", desc: "پول از کجا آمد و کجا رفت: عملیاتی، سرمایه‌گذاری و تأمین مالی — تطبیق با موجودی صندوق و بانک", perm: ["ACC_REPORTS"] },
       { href: "/admin/accounting/reports/trial", icon: "🧮", title: "تراز آزمایشی", desc: "دو، چهار و شش ستونی؛ گروه، کل، معین یا تفصیلی", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
       { href: "/admin/accounting/reports/trend", icon: "📊", title: "روند ماهانه", desc: "نمودار فروش، سود، هزینه و جریان نقد ماه به ماه", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },
       { href: "/admin/accounting/reports/budget", icon: "🎯", title: "بودجه در برابر عملکرد", desc: "برنامه‌ی هر حساب با عملکرد واقعی، اختلاف و درصد مصرف — به تفکیک ماه", perm: ["ACC_REPORTS", "ACC_COST_VIEW"] },

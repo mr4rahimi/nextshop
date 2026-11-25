@@ -17,13 +17,14 @@ import { budgetReport } from "@/lib/accounting/budget";
 import { dailyCustomers, firstPurchases, topCustomers, type CustomerSort } from "@/lib/accounting/reports/customers";
 import { parseCol, parseDim, salesAnalysis, salesDims, type Side } from "@/lib/accounting/reports/sales";
 import { returnsReport } from "@/lib/accounting/reports/returns";
+import { cashFlow, cashFlowDetail } from "@/lib/accounting/reports/cashflow";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** گزارش‌هایی که بها یا سود نشان می‌دهند — `ACC_COST_VIEW` هم لازم است */
 const COST_REPORTS = ["pl", "balance", "trial", "profit", "inventory", "trend", "budget"];
-const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties", "sales", "movers", "customers", "returns"];
+const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties", "sales", "movers", "customers", "returns", "cashflow"];
 
 /**
  * GET /reports/<kind>?from&to&… — docs/plans/accounting.md بخش ۱۱.
@@ -35,6 +36,7 @@ const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties
  *   vat       ارزش افزوده‌ی بازه
  *   expenses  ?compare=1
  *   treasury  گردش صندوق و بانک
+ *   cashflow  ?compare=1 | ?account=<id|_none>   صورت جریان وجوه نقد، روش مستقیم (webhesab-parity.md بخش ۳۴.۶)؛ account ← سندهای همان ردیف
  *   inventory ?by=category|product|warehouse&warehouseId
  *   trend     ?months=12                 روند ماهانه‌ی فروش، سود، هزینه و نقد (فاز ۱۰)
  *   parties   ?role&show=all|debtor|creditor|active&q   کل حساب اشخاص (فاز ۱۰)
@@ -82,6 +84,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
       case "vat":
         data = await vatReport(prisma, range);
         break;
+      case "cashflow": {
+        const account = q("account");
+        data = account ? await cashFlowDetail(prisma, range, account === "_none" ? "" : account) : await cashFlow(prisma, range, compare);
+        break;
+      }
       case "movers": {
         const to = range.to ?? todayKey();
         const from = range.from ?? new Date(to.getTime() - 89 * 86_400_000);

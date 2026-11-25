@@ -144,6 +144,7 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
       { href: "/admin/accounting/reports", label: "همه‌ی گزارش‌ها", icon: fx("Bar chart") },
       { href: "/admin/accounting/reports/pl", label: "سود و زیان", icon: fx("Chart increasing") },
       { href: "/admin/accounting/reports/balance", label: "ترازنامه", icon: fx("Balance scale") },
+      { href: "/admin/accounting/reports/cashflow", label: "جریان وجوه نقد", icon: fx("Droplet"), keywords: "صورت جریان وجوه نقد گردش نقدینگی ورود خروج پول فعالیت عملیاتی سرمایه گذاری تامین مالی استاندارد ۲" },
       { href: "/admin/accounting/reports/trial", label: "تراز آزمایشی", icon: fx("Straight ruler") },
       { href: "/admin/accounting/reports/sales", label: "تحلیل فروش کالا", icon: fx("Magnifying glass tilted left") },
       { href: "/admin/accounting/reports/purchases", label: "تحلیل خرید کالا", icon: fx("Shopping bags"), keywords: "گزارش خرید کالا عرضه کننده تامین کننده کالاهای خریداری شده" },
