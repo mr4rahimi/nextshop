@@ -15,6 +15,7 @@
 | `mymonta` | mymonta.ir | 188.212.97.138 | `/var/www/mymonta` | `mymonta-shop` | 3000 | production |
 | `uniqquestar` | uniqquestar.com | 109.122.246.96 | `/var/www/uniqquestar` | `uniqquestar` | 3000 | production |
 | `sezavar` | sezavar.shop | 94.184.32.197 | `/var/www/sezavar` | `sezavar` (+ `sezavar-worker`) | 3000 | production |
+| `shahranyadak` | shahranyadak.gardanos.ir (موقت، بعد shahranyadak.ir) | 188.212.97.138 | `/var/www/shahranyadak` | `shahranyadak` | 3060 | production |
 
 > سه سایت اول روی یک سرور مشترک‌اند — هرگز `pm2 restart all` نزنید و به دیتابیس
 > سایت‌های دیگر دست نزنید.
@@ -51,6 +52,7 @@ node scripts/deploy/deploy.mjs bartarjanebi
 node scripts/deploy/deploy.mjs mymonta
 node scripts/deploy/deploy.mjs uniqquestar
 node scripts/deploy/deploy.mjs sezavar
+node scripts/deploy/deploy.mjs shahranyadak
 # فقط اگر workers/ یا lib/club تغییر کرده:
 ssh root@94.184.32.197 'pm2 restart sezavar-worker'
 ```
