@@ -4,8 +4,10 @@
  * برنامه روی فاکتور فروش یا خرید **صادرشده** ساخته می‌شود:
  *   مبلغ قسطی = مانده‌ی باز فاکتور − پیش‌پرداخت
  *   کارمزد (اختیاری) = سند جدا با منبع `INSTALLMENT`:
- *     فروش:  بدهکار طلب از شخص  —  بستانکار «درآمد فروش اقساطی»
- *     خرید:  بدهکار «کارمزد خرید اقساطی»  —  بستانکار بدهی به شخص
+ *     فروش:  بدهکار طلب از شخص  —  بستانکار «درآمد تحقق‌نیافته‌ی اقساط»
+ *     خرید:  بدهکار «پیش‌پرداخت کارمزد خرید اقساطی»  —  بستانکار بدهی به شخص
+ *   و آخر هر ماه سهم همان ماه درآمد/هزینه می‌شود (`installment-income.ts`، بخش ۳۴.۳).
+ *   برنامه‌ی قدیمی (`deferred = false`) کارمزدش مستقیم «درآمد فروش اقساطی» / «کارمزد خرید اقساطی» بود.
  *   جمع قسط‌ها = مبلغ قسطی + کارمزد
  * کارمزد جزو «مانده‌ی باز» فاکتور می‌شود (`invoiceOpenAmounts`)، پس هر دریافتی
  * که به فاکتور تخصیص یابد قسط‌ها را به ترتیب می‌پوشاند (`coverInstallments`).
@@ -28,6 +30,7 @@ import { logDoc } from "./doc-log";
 import { invoiceOpenAmounts } from "./cash/allocation";
 import { createMoneyDoc } from "./cash/docs";
 import { calcFee, coverInstallments, type FeeMode } from "./installments-calc";
+import { DEFERRED_KEY, ensureInstallmentAccounts, PREPAID_KEY, reverseRecognized } from "./installment-income";
 
 type Tx = Prisma.TransactionClient;
 type Db = Tx | typeof prisma;
@@ -71,14 +74,14 @@ function validate(input: PlanInput) {
   });
 }
 
-async function feeVoucherLines(side: "sales" | "purchase", partyId: string, fee: bigint) {
+async function feeVoucherLines(side: "sales" | "purchase", partyId: string, fee: bigint, deferred = true) {
   return side === "sales"
     ? [
         { accountKey: "AR", partyId, debit: fee, description: "کارمزد فروش اقساطی" },
-        { accountKey: "INSTALLMENT_INCOME", credit: fee, description: "کارمزد فروش اقساطی" },
+        { accountKey: deferred ? DEFERRED_KEY : "INSTALLMENT_INCOME", credit: fee, description: "کارمزد فروش اقساطی" },
       ]
     : [
-        { accountKey: "INSTALLMENT_EXPENSE", debit: fee, description: "کارمزد خرید اقساطی" },
+        { accountKey: deferred ? PREPAID_KEY : "INSTALLMENT_EXPENSE", debit: fee, description: "کارمزد خرید اقساطی" },
         { accountKey: "AP", partyId, credit: fee, description: "کارمزد خرید اقساطی" },
       ];
 }
@@ -117,6 +120,8 @@ export async function createPlan(tx: Tx, invoiceId: string, input: PlanInput, ac
       feeAmount: fee,
       count,
       intervalMonths: input.intervalMonths,
+      deferred: true,
+      feeDate: date,
       note: input.note?.trim() || null,
       createdById: actor.id ?? null,
       createdByName: actor.name,
@@ -125,6 +130,7 @@ export async function createPlan(tx: Tx, invoiceId: string, input: PlanInput, ac
   });
   const label = inv.type === "SALES" ? "فروش" : "خرید";
   if (fee > 0n) {
+    await ensureInstallmentAccounts(tx);
     const v = await postVoucher(tx, {
       date,
       description: `کارمزد ${label} اقساطی — فاکتور ${faNum(inv.number ?? 0)} ${inv.partyName} (${faNum(count)} قسط)`,
@@ -209,6 +215,7 @@ export async function voidPlan(tx: Tx, planId: string, reason: string, actor: Ac
     );
   }
   if (plan.voucherId) await voidVoucher(tx, plan.voucherId, `ابطال برنامه‌ی اقساط: ${reason.trim()}`, actor, { fromSource: true });
+  await reverseRecognized(tx, plan, plan.invoice, `ابطال برنامه: ${reason.trim()}`, actor);
   await logDoc(tx, { docType: "AccInstallmentPlan", docId: plan.invoiceId, kind: plan.invoice.type, number: plan.invoice.number, docDate: plan.invoice.date, partyName: plan.invoice.partyName, action: "VOID", reason, totalBefore: plan.feeAmount }, actor);
   await tx.accInstallmentPlan.delete({ where: { id: planId } });
   return plan;
@@ -221,7 +228,7 @@ export async function rebuildFeeVoucher(tx: Tx, planId: string, actor: Actor): P
   const side = SIDE[plan.invoice.type as keyof typeof SIDE];
   const v = await tx.accVoucher.findUnique({ where: { id: plan.voucherId } });
   if (!v) return;
-  await rebuildVoucher(tx, v.id, { date: v.date, description: v.description, lines: await feeVoucherLines(side, plan.invoice.partyId, plan.feeAmount), actor });
+  await rebuildVoucher(tx, v.id, { date: v.date, description: v.description, lines: await feeVoucherLines(side, plan.invoice.partyId, plan.feeAmount, plan.deferred), actor });
 }
 
 // ── وضعیت ──

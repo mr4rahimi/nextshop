@@ -4045,6 +4045,8 @@ model AccSettings {
   returnWindowDays      Int       @default(0)
   /// از این لحظه اعتبار باشگاه بدهی است (`CLUB_LIABILITY`)؛ null = رفتار قدیمی (خرج ← تخفیفات فروش) — بخش ۳۴.۲
   clubLiabilitySince    DateTime?
+  /// آخرین روز ماهی که سند شناسایی کارمزد اقساط برایش زده شد — بخش ۳۴.۳
+  installmentAccruedThrough DateTime? @db.Date
   mode                  AccMode   @default(NONE)
   modeChangedAt         DateTime?
   modeChangedBy         String?
@@ -5836,6 +5838,13 @@ model AccInstallmentPlan {
   intervalMonths Int        @default(1)
   /// سند کارمزد: فروش ← طلب از شخص / درآمد فروش اقساطی؛ خرید ← کارمزد خرید اقساطی / بدهی
   voucherId      String?    @unique
+  /// کارمزد به «درآمد تحقق‌نیافته‌ی اقساط» / «پیش‌پرداخت کارمزد خرید اقساطی» رفته و ماهانه شناسایی می‌شود
+  /// (webhesab-parity.md بخش ۳۴.۳)؛ false = برنامه‌ی پیش از ۲.۱۶۲.۰ که کارمزدش یک‌جا درآمد/هزینه شد
+  deferred       Boolean    @default(false)
+  /// شروع شناسایی = تاریخ سند کارمزد
+  feeDate        DateTime?  @db.Date
+  /// جمع کارمزد شناسایی‌شده تا آخرین سند ماهانه — فقط installment-income.ts می‌نویسد
+  recognized     BigInt     @default(0)
   note           String?
   createdById    String?
   createdByName  String

@@ -116,3 +116,48 @@ export function coverInstallments(
     return { seq: it.seq, amount, paid, left, state };
   });
 }
+
+// ── شناسایی کارمزد به تناسب زمان — webhesab-parity.md بخش ۳۴.۳ ──
+
+const DAY = 86_400_000;
+
+/**
+ * سهم کارمزد هر دوره به نسبت **مانده‌ی بدهی** در آن دوره (استاندارد ۳، پیوست بند ۷):
+ * دوره‌ی k از سررسید قبلی (یا شروع) تا سررسید k است و مانده‌اش جمع قسط‌های k به بعد.
+ * پس دوره‌های اول که مانده بیشتر است سهم بیشتری می‌گیرند. جمع سهم‌ها دقیقاً = کارمزد
+ * (باقی‌مانده‌ی تقسیم روی دوره‌ی اول).
+ */
+export function feeShares(fee: bigint, items: { amount: bigint }[]): bigint[] {
+  if (fee <= 0n || !items.length) return items.map(() => 0n);
+  const w: bigint[] = [];
+  let tail = 0n;
+  for (let k = items.length - 1; k >= 0; k--) {
+    tail += items[k].amount > 0n ? items[k].amount : 0n;
+    w[k] = tail;
+  }
+  const W = w.reduce((s, x) => s + x, 0n);
+  if (W <= 0n) return items.map((_, k) => (k === items.length - 1 ? fee : 0n));
+  const shares = w.map((x) => (fee * x) / W);
+  shares[0] += fee - shares.reduce((s, x) => s + x, 0n);
+  return shares;
+}
+
+/**
+ * کارمزدی که تا پایان روز `asOf` به دست آمده: سهم هر دوره روزبه‌روز در طول همان دوره،
+ * و کامل وقتی سررسیدش رسید. بعد از آخرین سررسید = همه‌ی کارمزد.
+ */
+export function earnedFee(fee: bigint, start: Date, items: { dueDate: Date; amount: bigint }[], asOf: Date): bigint {
+  if (fee <= 0n || !items.length) return 0n;
+  const shares = feeShares(fee, items);
+  const a = asOf.getTime();
+  let prev = start.getTime();
+  let earned = 0n;
+  items.forEach((it, k) => {
+    const s = prev;
+    const e = Math.max(it.dueDate.getTime(), s);
+    prev = e;
+    if (a >= e) earned += shares[k];
+    else if (a > s) earned += (shares[k] * BigInt(Math.round((a - s) / DAY))) / BigInt(Math.round((e - s) / DAY));
+  });
+  return earned;
+}

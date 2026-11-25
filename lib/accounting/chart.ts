@@ -38,6 +38,7 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["14", "پیش‌پرداخت‌ها", L, "ASSET", "DEBIT", "NONE", null],
   ["1401", "مالیات بر ارزش افزوده‌ی خرید", S, "ASSET", "DEBIT", "NONE", "VAT_PURCHASE"],
   ["1402", "پیش‌پرداخت‌ها", S, "ASSET", "DEBIT", "PARTY", "PREPAYMENT"],
+  ["1403", "پیش‌پرداخت کارمزد خرید اقساطی", S, "ASSET", "DEBIT", "NONE", "INSTALLMENT_PREPAID"],
 
   ["2", "دارایی‌های غیرجاری", G, "ASSET", "DEBIT", "NONE", null],
   ["21", "دارایی‌های ثابت", L, "ASSET", "DEBIT", "NONE", null],
@@ -55,6 +56,7 @@ export const DEFAULT_CHART: ChartRow[] = [
   ["3302", "پیش‌دریافت فروش", S, "LIABILITY", "CREDIT", "PARTY", "CUSTOMER_ADVANCE"],
   ["3303", "بن کارت فروخته‌شده", S, "LIABILITY", "CREDIT", "NONE", "GIFT_LIABILITY"],
   ["3304", "اعتبار باشگاه مشتریان", S, "LIABILITY", "CREDIT", "NONE", "CLUB_LIABILITY"],
+  ["3305", "درآمد تحقق‌نیافته‌ی اقساط", S, "LIABILITY", "CREDIT", "NONE", "INSTALLMENT_DEFERRED"],
   ["34", "تسهیلات مالی", L, "LIABILITY", "CREDIT", "NONE", null],
   ["3401", "تسهیلات دریافتی", S, "LIABILITY", "CREDIT", "NONE", "LOAN_PAYABLE"],
 

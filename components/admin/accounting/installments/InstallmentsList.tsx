@@ -60,10 +60,15 @@ export default function InstallmentsList() {
         help="accountingInstallments"
         desc={sales ? "قسط‌هایی که مشتری‌ها باید بپردازند." : "قسط‌هایی که شما باید به تأمین‌کننده‌ها بپردازید."}
         actions={
-          <Link href="/admin/accounting/calendar" className={btn.soft}>
-            <CalendarDays className="h-4 w-4" aria-hidden />
-            تقویم سررسیدها
-          </Link>
+          <>
+            <Link href="/admin/accounting/reports/installment-income" className={btn.soft}>
+              کارمزد اقساط
+            </Link>
+            <Link href="/admin/accounting/calendar" className={btn.soft}>
+              <CalendarDays className="h-4 w-4" aria-hidden />
+              تقویم سررسیدها
+            </Link>
+          </>
         }
       />
       <Segmented
