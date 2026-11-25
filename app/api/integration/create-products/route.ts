@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 
 const PER_PAGE = 30;
 
-// GET /api/integration/create-products?platform=basalam&q=&categoryId=&status=all|todo|done|failed|queued&page=1
+// GET /api/integration/create-products?platform=basalam&q=&categoryId=&status=all|todo|done|failed|queued|recreate&page=1
+// recreate: ساخته‌شده‌های چندمحوری (رنگ و سایز) که پیش از ویژگی ترکیبی ساخته شده‌اند
 // محصولات سایت با وضعیت ساختشان روی بازارگاه — docs/integrations/create-products.md
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
@@ -22,11 +23,15 @@ export async function GET(req: NextRequest) {
   const adapter = getAdapter(platform);
   const connection = await prisma.integConnection.findFirst({ where: { platformCode: platform }, select: { status: true } });
 
-  const [linked, pending, settings] = await Promise.all([
+  const [linked, pending, settings, multiAxis] = await Promise.all([
     linkedOnPlatform(platform),
     pendingCreateJobs(platform),
     getCreateSettings(platform),
+    prisma.productVariantAxis.groupBy({ by: ["productId"], _count: { _all: true }, having: { productId: { _count: { gt: 1 } } } }),
   ]);
+  const multiAxisIds = new Set(multiAxis.map((m) => m.productId));
+  const recreateIds = [...linked.entries()].filter(([id, l]) => !l.combined && l.variants > 0 && multiAxisIds.has(id)).map(([id]) => id);
+  const recreateSet = new Set(recreateIds);
 
   // آخرین نتیجه‌ی ساخت هر محصول — خطای بعد از آخرین موفقیت یعنی «ناموفق»
   const logs = await prisma.integLog.findMany({
@@ -47,6 +52,7 @@ export async function GET(req: NextRequest) {
   if (status === "done") where.id = { in: linkedIds };
   else if (status === "queued") where.id = { in: queuedIds };
   else if (status === "failed") where.id = { in: failedIds };
+  else if (status === "recreate") where.id = { in: recreateIds.filter((id) => !pending.has(id)) };
   else if (status === "todo") where.id = { notIn: [...linkedIds, ...queuedIds] };
 
   const [total, products, categories, counts] = await Promise.all([
@@ -83,7 +89,7 @@ export async function GET(req: NextRequest) {
     connected: connection?.status === "CONNECTED" || connection?.status === "SYNCING",
     settings,
     shopCategories,
-    summary: { linked: linked.size, queued: pending.size, failed: failedIds.length },
+    summary: { linked: linked.size, queued: pending.size, failed: failedIds.length, recreate: recreateIds.filter((id) => !pending.has(id)).length },
     total,
     page,
     perPage: PER_PAGE,
@@ -103,17 +109,20 @@ export async function GET(req: NextRequest) {
         categoryMapped: !!settings.categoryMap[p.categoryId],
         platformProductId: l?.externalId ?? null,
         platformVariants: l?.variants ?? 0,
+        needsRecreate: recreateSet.has(p.id),
         queued: pending.get(p.id) ?? null,
-        lastError: !l && log?.status === "ERROR" ? log.errorMessage : null,
+        // محصول نگاشت‌شده با آخرین لاگ خطا = ساخت دوباره‌ی ناموفق (لینک قبلی دست‌نخورده مانده)
+        lastError: log?.status === "ERROR" ? (l ? `ساخت دوباره ناموفق: ${log.errorMessage ?? ""}` : log.errorMessage) : null,
         lastAt: log?.createdAt ?? null,
       };
     }),
   });
 }
 
-// POST { platform, productIds } — ساخت گروهی: هر محصول یک job
+// POST { platform, productIds, recreate? } — ساخت گروهی: هر محصول یک job
+// recreate: محصولِ ساخته‌شده دوباره ساخته می‌شود و لینک تازه جای قبلی را می‌گیرد (قبلی را کاربر در بازارگاه بایگانی می‌کند)
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({})) as { platform?: string; productIds?: string[] };
+  const body = await req.json().catch(() => ({})) as { platform?: string; productIds?: string[]; recreate?: boolean };
   const platform = body.platform ?? "basalam";
   const ids = Array.isArray(body.productIds) ? body.productIds.filter((x): x is string => typeof x === "string" && !!x) : [];
   if (!ids.length) return NextResponse.json({ ok: false, error: "هیچ محصولی انتخاب نشده" });
@@ -133,6 +142,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: `دسته‌ی ${unmapped.toLocaleString("fa-IR")} محصول از انتخاب‌ها به دسته‌ی بازارگاه نگاشت نشده — اول در «نگاشت دسته‌ها» انتخابش کنید` });
   }
 
-  const r = await enqueueCreateProducts(platform, products.map((p) => p.id));
+  const r = await enqueueCreateProducts(platform, products.map((p) => p.id), { recreate: body.recreate === true });
   return NextResponse.json({ ok: true, ...r });
 }

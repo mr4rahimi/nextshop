@@ -187,9 +187,11 @@ export async function runCreateProduct(
   platformCode: string,
   adapter: BaseAdapter,
   credentials: Record<string, string>,
-  payload: { shopProductId?: string },
+  payload: { shopProductId?: string; replaces?: string },
 ): Promise<void> {
   const shopProductId = payload.shopProductId;
+  // «ساخت دوباره»: لینک قبلی (همین شناسه) بعد از ساخت موفق جایگزین می‌شود؛ محصول قبلی را کاربر در پنل بازارگاه بایگانی می‌کند
+  const replaces = payload.replaces;
   if (!shopProductId) throw new Error("CREATE_PRODUCT بدون shopProductId");
   if (!adapter.createProduct) throw new Error(`ساخت محصول برای ${platformCode} پشتیبانی نمی‌شود`);
   const start = Date.now();
@@ -209,7 +211,8 @@ export async function runCreateProduct(
     where: { platformCode_externalId: { platformCode: "shop", externalId: shopProductId } },
     include: { mapping: { include: { links: { where: { platformCode } } } } },
   });
-  if (shopLink?.mapping.links.length) {
+  const oldLink = shopLink?.mapping.links[0];
+  if (oldLink && !(replaces && oldLink.externalId === replaces)) {
     await writeLog({
       jobId, platformCode, operationType: "CREATE_PRODUCT", direction: "OUTBOUND",
       entityType: "PRODUCT", entityId: shopProductId, status: "SUCCESS",
@@ -243,6 +246,9 @@ export async function runCreateProduct(
   const meta = draft.variants.length
     ? {
         createdByPanel: true,
+        // نشانه‌ی ساخت با ویژگی ترکیبی (رنگ - سایز)؛ قبلی‌های چندمحوری در فهرست «نیازمند ساخت دوباره» می‌آیند
+        combinedProperty: true,
+        ...(replaces ? { replaced: replaces } : {}),
         variants: created.variants,
         pushed: Object.fromEntries(
           draft.variants
@@ -250,7 +256,7 @@ export async function runCreateProduct(
             .map((v) => [created.variants[v.shopVariantId], { stock: v.stock, price: v.price }]),
         ),
       }
-    : { createdByPanel: true };
+    : { createdByPanel: true, combinedProperty: true, ...(replaces ? { replaced: replaces } : {}) };
 
   const product = await prisma.product.findUnique({ where: { id: shopProductId }, select: { title: true, stock: true } });
   await prisma.$transaction(async (tx) => {
@@ -261,6 +267,7 @@ export async function runCreateProduct(
         data: { mappingId, platformCode: "shop", externalId: shopProductId, externalTitle: product?.title ?? draft.title },
       });
     }
+    if (oldLink) await tx.integMappingLink.delete({ where: { id: oldLink.id } });
     await tx.integMappingLink.create({
       data: { mappingId, platformCode, externalId: created.platformProductId, externalTitle: created.title, meta },
     });
@@ -280,6 +287,7 @@ export async function runCreateProduct(
     entityType: "PRODUCT", entityId: shopProductId, status: "SUCCESS",
     responseData: {
       platformProductId: created.platformProductId,
+      ...(replaces ? { replaced: replaces } : {}),
       variants: Object.keys(created.variants).length,
       photos: draft.images.length,
       price: draft.price,
@@ -292,31 +300,35 @@ export async function runCreateProduct(
 // ── صف ───────────────────────────────────────────────────────────────
 
 /** محصولاتی که باید ساخته شوند → job؛ آن‌هایی که نگاشت یا job در صف دارند رد می‌شوند */
-export async function enqueueCreateProducts(platformCode: string, productIds: string[]): Promise<{ queued: number; skipped: number }> {
+/** با `recreate` فقط محصولاتِ ساخته/نگاشت‌شده: محصول تازه ساخته و جای لینک قبلی را می‌گیرد */
+export async function enqueueCreateProducts(platformCode: string, productIds: string[], opts: { recreate?: boolean } = {}): Promise<{ queued: number; skipped: number }> {
   const ids = [...new Set(productIds)].slice(0, 500);
   const [linked, pending] = await Promise.all([linkedOnPlatform(platformCode, ids), pendingCreateJobs(platformCode)]);
   let queued = 0;
   let skipped = 0;
   for (const id of ids) {
-    if (linked.has(id) || pending.has(id)) { skipped++; continue; }
-    await enqueue({ type: "CREATE_PRODUCT", platformCode, payload: { shopProductId: id }, priority: 6, maxAttempts: 1 });
+    const old = linked.get(id);
+    if (pending.has(id) || (opts.recreate ? !old : !!old)) { skipped++; continue; }
+    const payload = opts.recreate ? { shopProductId: id, replaces: old!.externalId } : { shopProductId: id };
+    await enqueue({ type: "CREATE_PRODUCT", platformCode, payload, priority: 6, maxAttempts: 1 });
     queued++;
   }
   return { queued, skipped };
 }
 
 /** shopProductId → شناسه‌ی محصول روی بازارگاه */
-export async function linkedOnPlatform(platformCode: string, productIds?: string[]): Promise<Map<string, { externalId: string; title: string | null; variants: number }>> {
+export async function linkedOnPlatform(platformCode: string, productIds?: string[]): Promise<Map<string, { externalId: string; title: string | null; variants: number; combined: boolean }>> {
   const shopLinks = await prisma.integMappingLink.findMany({
     where: { platformCode: "shop", ...(productIds ? { externalId: { in: productIds } } : {}) },
     select: { externalId: true, mapping: { select: { links: { where: { platformCode }, select: { externalId: true, externalTitle: true, meta: true } } } } },
   });
-  const out = new Map<string, { externalId: string; title: string | null; variants: number }>();
+  const out = new Map<string, { externalId: string; title: string | null; variants: number; combined: boolean }>();
   for (const s of shopLinks) {
     const l = s.mapping.links[0];
     if (!l) continue;
-    const v = (l.meta as { variants?: Record<string, string> } | null)?.variants;
-    out.set(s.externalId, { externalId: l.externalId, title: l.externalTitle, variants: v ? Object.keys(v).length : 0 });
+    const m = l.meta as { variants?: Record<string, string>; combinedProperty?: boolean } | null;
+    const v = m?.variants;
+    out.set(s.externalId, { externalId: l.externalId, title: l.externalTitle, variants: v ? Object.keys(v).length : 0, combined: !!m?.combinedProperty });
   }
   return out;
 }
