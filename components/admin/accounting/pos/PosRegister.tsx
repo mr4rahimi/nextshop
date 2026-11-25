@@ -105,6 +105,8 @@ interface RetState {
   /** null = بی‌رسید (مدیر) */
   src: Returnable | null;
   lines: RetLine[];
+  /** دلیل مرجوعی (webhesab-parity.md بخش ۳۴.۱) */
+  reason?: string;
 }
 interface Held {
   at: string;
@@ -282,7 +284,7 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
       invoiceDiscount: discount || "0",
       couponCode: coupon?.code ?? null,
       sale: lines.map((l) => ({ productId: l.productId, qty: l.qty, unitPrice: l.unitPrice || "0", discount: l.discount || "0", serials: l.serials })),
-      ret: ret?.lines.length ? { invoiceId: ret.src?.invoiceId ?? null, lines: ret.lines.map((l) => ({ refLineId: l.refLineId, productId: l.productId, qty: l.qty, serials: l.serials })) } : null,
+      ret: ret?.lines.length ? { invoiceId: ret.src?.invoiceId ?? null, reason: ret.reason || null, lines: ret.lines.map((l) => ({ refLineId: l.refLineId, productId: l.productId, qty: l.qty, serials: l.serials })) } : null,
     }),
     [terminalId, sellerId, party, discount, lines, ret, coupon],
   );
@@ -1242,10 +1244,11 @@ export default function PosRegister({ terminalId }: { terminalId: string }) {
             setModal(null);
             flash("مرجوعی بی‌رسید: کالاهای برگشتی را اسکن کنید");
           }}
-          onAdd={(src, picks) => {
+          onAdd={(src, picks, reason) => {
             setBlind(false);
             setRet({
               src,
+              reason,
               lines: picks.map((p) => {
                 const l = src.lines.find((x) => x.refLineId === p.refLineId)!;
                 // همه‌ی سریال‌های مانده برمی‌گردند ← خودکار؛ وگرنه صندوقدار انتخاب می‌کند

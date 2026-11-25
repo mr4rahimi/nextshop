@@ -16,13 +16,14 @@ import { movers } from "@/lib/accounting/reports/movers";
 import { budgetReport } from "@/lib/accounting/budget";
 import { dailyCustomers, firstPurchases, topCustomers, type CustomerSort } from "@/lib/accounting/reports/customers";
 import { parseCol, parseDim, salesAnalysis, salesDims, type Side } from "@/lib/accounting/reports/sales";
+import { returnsReport } from "@/lib/accounting/reports/returns";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** گزارش‌هایی که بها یا سود نشان می‌دهند — `ACC_COST_VIEW` هم لازم است */
 const COST_REPORTS = ["pl", "balance", "trial", "profit", "inventory", "trend", "budget"];
-const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties", "sales", "movers", "customers"];
+const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties", "sales", "movers", "customers", "returns"];
 
 /**
  * GET /reports/<kind>?from&to&… — docs/plans/accounting.md بخش ۱۱.
@@ -39,6 +40,7 @@ const KINDS = [...COST_REPORTS, "aging", "vat", "expenses", "treasury", "parties
  *   parties   ?role&show=all|debtor|creditor|active&q   کل حساب اشخاص (فاز ۱۰)
  *   movers    ?mode=slow|fast&groupBy=item|model&maxSold&maxRate&minSold&top&groupId&warehouseId&supplierId   راکد و پرفروش (بخش ۶)
  *   budget    ?yearId&fromSeq&toSeq      بودجه در برابر عملکرد (webhesab-parity.md بخش ۲۲)
+ *   returns   ?by=model|item             مرجوعی‌ها: دلیل، کالا/مدل با نرخ برگشت، فهرست (webhesab-parity.md بخش ۳۴.۱)
  *   customers ?mode=top|first|daily&warehouseId&q&sort=net|invoices|last&limit&legacy=1   مشتریان (webhesab-parity.md بخش ۲۵)
  *   sales     ?by&col&groupId&warehouseId&supplierId&partyId[&row&cell][&side=purchase]   تحلیل فروش کالا (row ← جزئیات سطر) — بها و سود فقط با ACC_COST_VIEW (webhesab-parity.md بخش ۵)؛ side=purchase ← تحلیل خرید (بخش ۲۸)
  */
@@ -132,6 +134,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ kind: st
         data = { ...report, dims, suppliers, groups, warehouses, party };
         break;
       }
+      case "returns":
+        data = await returnsReport(prisma, range, q("by") === "item" ? "item" : "model");
+        break;
       case "customers": {
         const mode = q("mode") === "first" ? "first" : q("mode") === "daily" ? "daily" : "top";
         const f = { warehouseId: q("warehouseId"), q: q("q") };

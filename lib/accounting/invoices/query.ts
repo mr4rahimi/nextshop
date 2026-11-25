@@ -61,6 +61,7 @@ export interface InvoiceBody {
   additions?: unknown;
   additionsTitle?: string | null;
   note?: string | null;
+  returnReason?: string | null;
   refInvoiceId?: string | null;
   issue?: boolean;
   partySnapshot?: InvoiceInput["partySnapshot"];
@@ -104,6 +105,7 @@ export function inputFromBody(b: InvoiceBody): InvoiceInput {
     additions: toAmount(b.additions, "اضافات"),
     additionsTitle: b.additionsTitle ?? null,
     note: b.note ?? null,
+    returnReason: b.returnReason ?? null,
     refInvoiceId: b.refInvoiceId || null,
     partySnapshot: b.partySnapshot,
     lines,

@@ -95,7 +95,10 @@ export async function customerPurchases(db: Db, partyId: string) {
   });
 
   const bought = purchases.reduce((s, p) => s + p.total, 0n);
+  const settings = await db.accSettings.findUnique({ where: { id: "singleton" }, select: { returnWindowDays: true } });
   return {
+    /** مهلت مرجوعی (روز)، ۰ = خاموش — فقط هشدار */
+    windowDays: settings?.returnWindowDays ?? 0,
     party: { id: party.id, code: party.code, name: party.name, mobile: party.mobile },
     purchases,
     truncated,

@@ -63,6 +63,11 @@ export async function PATCH(req: Request) {
     if ("pricesIncludeVat" in body) data.pricesIncludeVat = !!body.pricesIncludeVat;
     if ("vatEnabled" in body) data.vatEnabled = !!body.vatEnabled;
     if ("serialRequired" in body) data.serialRequired = !!body.serialRequired;
+    if ("returnWindowDays" in body) {
+      const v = Number(String(body.returnWindowDays ?? "0").replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(c))) || 0);
+      if (!Number.isInteger(v) || v < 0 || v > 365) throw new AccError("مهلت مرجوعی باید بین ۰ تا ۳۶۵ روز باشد");
+      data.returnWindowDays = v;
+    }
     if ("currentYearId" in body) {
       const y = await prisma.accFiscalYear.findUnique({ where: { id: String(body.currentYearId) } });
       if (!y) throw new AccError("سال مالی پیدا نشد");

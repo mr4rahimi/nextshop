@@ -27,6 +27,8 @@ import SerialField from "../inventory/SerialField";
 import PackToggle, { PerUnitHint } from "../PackToggle";
 import { api, btn, Card, ErrorText, Field, inputCls, Money, PageHeader, SectionTitle } from "../ui";
 import { Plus } from "lucide-react";
+import ReturnStart from "../returns/ReturnStart";
+import { ReturnReasonField } from "../returns/ReturnPicker";
 
 interface FormCfg {
   mode: string;
@@ -117,6 +119,7 @@ interface Detail {
     additions: string;
     additionsTitle: string | null;
     note: string | null;
+    returnReason?: string | null;
     refInvoiceId: string | null;
     lines: DetailLine[];
   };
@@ -133,7 +136,25 @@ const baseQty = (l: Pick<Line, "qty" | "packSize">) => Number(digits(l.qty) || "
 
 const RETURN_OF: Partial<Record<InvoiceTypeKey, InvoiceTypeKey>> = { SALES: "SALES_RETURN", PURCHASE: "PURCHASE_RETURN" };
 
-export default function InvoiceEditor({ type: typeProp, id, refId, batch = false }: { type?: InvoiceTypeKey; id?: string; refId?: string; batch?: boolean }) {
+export default function InvoiceEditor({
+  type: typeProp,
+  id,
+  refId,
+  batch = false,
+  pick,
+  reason,
+  freeStart = false,
+}: {
+  type?: InvoiceTypeKey;
+  id?: string;
+  refId?: string;
+  batch?: boolean;
+  /** برگشتی از «مرجوعی»: `refLineId:qty,…` — تعدادهای انتخاب‌شده (webhesab-parity.md بخش ۳۴.۱) */
+  pick?: string;
+  reason?: string;
+  /** «برگشت بی‌فاکتور» از صفحه‌ی مرجوعی — بی انتخابگر خریدها */
+  freeStart?: boolean;
+}) {
   const router = useRouter();
   const [cfg, setCfg] = useState<FormCfg | null>(null);
   const [type, setType] = useState<InvoiceTypeKey>(typeProp ?? "SALES");
@@ -152,6 +173,9 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
   const [additions, setAdditions] = useState("");
   const [additionsTitle, setAdditionsTitle] = useState("");
   const [note, setNote] = useState("");
+  const [returnReason, setReturnReason] = useState(reason ?? "");
+  /** برگشت از فروش تازه بی‌مرجع: اول انتخاب از خریدهای مشتری، مگر «ردیف آزاد» */
+  const [free, setFree] = useState(freeStart);
   const [po, setPo] = useState<{ id: string; number: number } | null>(null);
   const [refInvoice, setRefInvoice] = useState<{ id: string; number: number | null; type: InvoiceTypeKey } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -192,6 +216,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
           setAdditions(inv.additions === "0" ? "" : inv.additions);
           setAdditionsTitle(inv.additionsTitle ?? "");
           setNote(inv.note ?? "");
+          setReturnReason(inv.returnReason ?? "");
           setPo(d.purchaseOrder ?? null);
           if (inv.refInvoiceId) {
             const r = await api<Detail>(`/api/admin/accounting/invoices/${inv.refInvoiceId}`);
@@ -211,14 +236,20 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
           setParty({ id: r.invoice.party.id, code: r.invoice.party.code, name: r.invoice.party.name, mobile: r.invoice.party.mobile });
           setInclVat(r.invoice.pricesIncludeVat);
           if (r.invoice.warehouseId) setWarehouseId(r.invoice.warehouseId);
-          setLines(r.invoice.lines.map((rl) => refLine(rl, rl.qty - rl.returnedQty, 0)).filter((l) => (l.maxQty ?? 0) > 0));
+          // از «مرجوعی»: فقط تعدادهای انتخاب‌شده؛ بقیه‌ی ردیف‌ها با صفر می‌مانند تا اضافه شوند
+          const picked = pick ? new Map(pick.split(",").map((x) => x.split(":")).map(([lid, n]) => [lid, Number(n) || 0])) : null;
+          setLines(
+            r.invoice.lines
+              .map((rl) => refLine(rl, picked ? Math.min(picked.get(rl.id) ?? 0, rl.qty - rl.returnedQty) : rl.qty - rl.returnedQty, 0))
+              .filter((l) => (l.maxQty ?? 0) > 0),
+          );
         }
         setLoaded(true);
       } catch (e) {
         setError(e instanceof Error ? e.message : "بارگذاری نشد");
       }
     })();
-  }, [id, refId]);
+  }, [id, refId, pick]);
 
   function fromDetail(l: DetailLine): Line {
     return {
@@ -357,6 +388,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
           additions: additions || "0",
           additionsTitle: additionsTitle || null,
           note,
+          returnReason: type === "SALES_RETURN" ? returnReason || null : null,
           refInvoiceId: refInvoice?.id ?? null,
           issue,
           lines: active.map((l) => ({
@@ -398,7 +430,7 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
         setError(msg);
       }
     },
-    [type, date, dueDate, validUntil, party, warehouseId, inclVat, invDiscount, additions, additionsTitle, note, refInvoice, active, id, router, hasRef, batch, batchParties, salesSide],
+    [type, date, dueDate, validUntil, party, warehouseId, inclVat, invDiscount, additions, additionsTitle, note, returnReason, refInvoice, active, id, router, hasRef, batch, batchParties, salesSide],
   );
 
   const canSubmit = cfg?.mode === "INTERNAL" && (batch ? batchParties.length > 0 : !!party) && active.length > 0 && !!calc.r && !busy;
@@ -418,6 +450,20 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
 
   if (!loaded || !cfg) {
     return error ? <ErrorText>{error}</ErrorText> : <p className="text-xs text-gray-400">در حال بارگذاری…</p>;
+  }
+
+  if (type === "SALES_RETURN" && !id && !refId && !batch && !free) {
+    return (
+      <div className="space-y-4">
+        <PageHeader
+          title="برگشت از فروش تازه"
+          help="accountingReturns"
+          back={{ href: "/admin/accounting/sales?type=SALES_RETURN", label: "فروش" }}
+          desc="مشتری را با موبایل یا نام پیدا کنید (یا رسید/فاکتور را بزنید)، کالاهای برگشتی را از خریدهایش انتخاب کنید؛ مبلغ همان مبلغ فروش است."
+        />
+        <ReturnStart onFree={() => setFree(true)} />
+      </div>
+    );
   }
 
   const label = INVOICE_TYPE_LABELS[type];
@@ -714,6 +760,11 @@ export default function InvoiceEditor({ type: typeProp, id, refId, batch = false
               </Field>
             )}
           </div>
+          {type === "SALES_RETURN" && (
+            <Field label="دلیل مرجوعی" hint="در گزارش «مرجوعی‌ها» دسته‌بندی می‌شود">
+              <ReturnReasonField value={returnReason} onChange={setReturnReason} />
+            </Field>
+          )}
           <Field label="توضیح (روی فاکتور چاپ می‌شود)">
             <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={inputCls} />
           </Field>

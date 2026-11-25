@@ -17,7 +17,7 @@ import { faNum, formatAmount } from "@/lib/accounting/money";
 import { CHANNEL_LABELS, INVOICE_TYPE_LABELS, type InvoiceTypeKey } from "@/lib/accounting/invoices/calc";
 import { RangeBar, rangeFor, rangeQuery, type Range } from "../Statement";
 import { api, Badge, btn, Card, Chips, Empty, ErrorText, inputCls, Money, PageHeader } from "../ui";
-import { CheckSquare, ClipboardList, Plus, Printer, Users } from "lucide-react";
+import { CheckSquare, ClipboardList, Plus, Printer, Users, Undo2 } from "lucide-react";
 
 export interface InvoiceRow {
   id: string;
@@ -169,6 +169,12 @@ export default function InvoicesList({ side }: { side: Side }) {
               <Link href="/admin/accounting/sales/orders" className={btn.soft}>
                 <ClipboardList className="h-4 w-4" aria-hidden />
                 سفارش فروش
+              </Link>
+            )}
+            {side === "sales" && canWrite && (
+              <Link href="/admin/accounting/sales/returns" className={isReturn ? btn.primary : btn.soft}>
+                <Undo2 className="h-4 w-4" aria-hidden />
+                مرجوعی
               </Link>
             )}
             {canWrite && !isReturn && (

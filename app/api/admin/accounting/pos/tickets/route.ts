@@ -32,7 +32,7 @@ interface Body {
   partyId?: string | null;
   invoiceDiscount?: unknown;
   sale?: { productId?: string; qty?: unknown; unitPrice?: unknown; discount?: unknown; serials?: unknown }[];
-  ret?: { invoiceId?: string | null; lines?: { refLineId?: string | null; productId?: string | null; qty?: unknown; serials?: unknown }[] } | null;
+  ret?: { invoiceId?: string | null; reason?: unknown; lines?: { refLineId?: string | null; productId?: string | null; qty?: unknown; serials?: unknown }[] } | null;
   /** `cash: "rest"` = باقیِ بعد از کارت */
   pay?: {
     cash?: unknown;
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
         serials: strList(l.serials),
       })),
       ret: b.ret?.lines?.length
-        ? { invoiceId: b.ret.invoiceId || null, lines: b.ret.lines.map((l, i) => ({ refLineId: l.refLineId || null, productId: l.productId || null, qty: qty(l.qty, `مرجوعی ردیف ${faNum(i + 1)}`), serials: strList(l.serials) })) }
+        ? { invoiceId: b.ret.invoiceId || null, lines: b.ret.lines.map((l, i) => ({ refLineId: l.refLineId || null, productId: l.productId || null, qty: qty(l.qty, `مرجوعی ردیف ${faNum(i + 1)}`), serials: strList(l.serials) })), reason: typeof b.ret.reason === "string" ? b.ret.reason.slice(0, 200) : null }
         : null,
       pay: {
         cash: b.pay?.cash === "rest" ? "rest" : toAmount(b.pay?.cash, "نقد"),

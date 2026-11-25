@@ -80,6 +80,7 @@ export interface InvoiceData {
     total: string;
     paidTotal: string;
     note: string | null;
+    returnReason?: string | null;
     voidReason: string | null;
     createdByName: string;
     createdAt: string;
@@ -294,6 +295,7 @@ export default function InvoiceDetail({ id }: { id: string }) {
             </p>
           )}
           {notice && <p className="rounded-lg bg-emerald-50 px-2 py-1.5 text-xs font-bold text-emerald-700 dark:bg-emerald-500/10">{notice}</p>}
+          {inv.returnReason && <p className="text-xs font-bold text-rose-700 bg-rose-50 dark:bg-rose-500/10 rounded-lg px-2 py-1.5">دلیل مرجوعی: {inv.returnReason}</p>}
           {inv.note && <p className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-white/5 rounded-lg px-2 py-1.5 whitespace-pre-line">{inv.note}</p>}
         </div>
         <div className="md:text-left border-t md:border-t-0 md:border-r border-gray-100 dark:border-white/5 pt-3 md:pt-0 md:pr-5 space-y-1">
@@ -445,6 +447,17 @@ export default function InvoiceDetail({ id }: { id: string }) {
           </div>
         </div>
       </Card>
+
+      {inv.status === "ISSUED" && inv.type === "SALES_RETURN" && !d.posTicket && d.can.pay && (
+        <Card className="p-4 flex flex-wrap items-center gap-3">
+          <p className="min-w-0 flex-1 text-sm text-gray-600 dark:text-gray-300">
+            مبلغ مرجوعی از حساب مشتری کم شد. اگر پولش را پس می‌دهید ثبت کنید؛ وگرنه به‌عنوان اعتبار در حسابش می‌ماند و در خرید بعدی حساب می‌شود.
+          </p>
+          <Link href={`/admin/accounting/money/new?kind=PAYMENT&partyId=${inv.party.id}&amount=${inv.total}`} className={btn.primary}>
+            💸 پس دادن پول به مشتری
+          </Link>
+        </Card>
+      )}
 
       {inv.status === "ISSUED" && (inv.type === "SALES" || inv.type === "PURCHASE") && (
         <Card className="p-4 space-y-3">

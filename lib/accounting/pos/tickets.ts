@@ -49,7 +49,7 @@ export interface TicketInput {
   sale: { productId: string; qty: number; unitPrice: bigint; discount: bigint; serials?: string[] }[];
   invoiceDiscount: bigint;
   /** مرجوعی — با رسید: `invoiceId` + `refLineId`ها؛ بی‌رسید (مدیر): `productId`ها */
-  ret: { invoiceId: string | null; lines: { refLineId?: string | null; productId?: string | null; qty: number; serials?: string[] }[] } | null;
+  ret: { invoiceId: string | null; lines: { refLineId?: string | null; productId?: string | null; qty: number; serials?: string[] }[]; reason?: string | null } | null;
   /**
    * مبلغ‌های مثبت در جهت مابه‌التفاوت: مشتری می‌دهد، یا (مرجوعی بیشتر) پس می‌گیرد.
    * `cash: "rest"` = باقیِ بعد از کارت — صندوق مبلغ دقیق مرجوعی را پیش از ثبت نمی‌داند
@@ -220,7 +220,7 @@ export async function createTicket(tx: Tx, input: TicketInput, perms: TicketPerm
     ? await saveInvoice(
         tx,
         null,
-        { type: "SALES_RETURN", date, partyId: party.id, warehouseId: terminal.warehouseId, refInvoiceId: ref?.id ?? null, pricesIncludeVat: true, note, lines: retLines },
+        { type: "SALES_RETURN", date, partyId: party.id, warehouseId: terminal.warehouseId, refInvoiceId: ref?.id ?? null, pricesIncludeVat: true, note, returnReason: input.ret?.reason ?? null, lines: retLines },
         { issue: true, skipSerials: perms.quote },
         actor,
       )
@@ -470,7 +470,7 @@ export async function findReturnable(raw: string, db: Db = prisma) {
   const isTicket = t.startsWith(TICKET_BARCODE_PREFIX);
   const n = Number(isTicket ? t.slice(TICKET_BARCODE_PREFIX.length) : t);
   if (!Number.isInteger(n) || n <= 0) throw new AccError("شماره‌ی رسید یا فاکتور را بنویسید یا بارکد رسید را اسکن کنید");
-  const settings = await db.accSettings.findUnique({ where: { id: "singleton" }, select: { currentYearId: true } });
+  const settings = await db.accSettings.findUnique({ where: { id: "singleton" }, select: { currentYearId: true, returnWindowDays: true } });
   // شماره‌ی رسید هر سال از ۱ شروع می‌شود — اول سال جاری، بعد تازه‌ترین
   const ticket =
     (settings?.currentYearId ? await db.accPosTicket.findFirst({ where: { number: n, yearId: settings.currentYearId, saleInvoiceId: { not: null } } }) : null) ??
@@ -482,7 +482,8 @@ export async function findReturnable(raw: string, db: Db = prisma) {
       : await db.accInvoice.findFirst({ where: { type: "SALES", number: n, status: "ISSUED" }, orderBy: { date: "desc" }, include: { lines: { orderBy: { seq: "asc" } } } });
   if (!inv) throw new AccError(isTicket ? `رسید ${faNum(n)} پیدا نشد` : `رسید یا فاکتور فروش ${faNum(n)} پیدا نشد`, 404);
   if (inv.status !== "ISSUED") throw new AccError("این فاکتور باطل شده است", 409);
-  return (await returnableOf(db, [inv], new Map(ticket ? [[inv.id, ticket.number]] : [])))[0];
+  const [r] = await returnableOf(db, [inv], new Map(ticket ? [[inv.id, ticket.number]] : []));
+  return { ...r, at: ticket?.createdAt ?? inv.date, total: inv.total, windowDays: settings?.returnWindowDays ?? 0 };
 }
 
 type InvWithLines = AccInvoice & { lines: Prisma.AccInvoiceLineGetPayload<object>[] };

@@ -4031,6 +4031,8 @@ enum AccMode {
 
 model AccSettings {
   id                    String    @id @default("singleton")
+  /// مهلت مرجوعی (روز) — فقط هشدار در مرجوعی؛ ۰ = خاموش (webhesab-parity.md بخش ۳۴.۱)
+  returnWindowDays      Int       @default(0)
   mode                  AccMode   @default(NONE)
   modeChangedAt         DateTime?
   modeChangedBy         String?
@@ -5305,6 +5307,8 @@ model AccInvoice {
   /// کش تخصیص دریافت/پرداخت (فاز ۵، تله‌ی ۶)
   paidTotal         BigInt            @default(0)
   note              String?
+  /// برگشت از فروش: دلیل مرجوعی («سایز»، «رنگ»، «ایراد»…) — webhesab-parity.md بخش ۳۴.۱
+  returnReason      String?
   voucherId         String?           @unique
   voidReason        String?
   /// «یک فاکتور برای چند مشتری» — فاکتورهای یک صدور گروهی (فاز ۱۰)

@@ -15,6 +15,7 @@ import {
   ShieldCheck, ShoppingBag, StickyNote, TrendingUp, Truck, Users, Wallet, Warehouse, Zap,
   type LucideIcon,
   CalendarDays, Lock, QrCode, Blocks, MessagesSquare, PackagePlus, Map as MapIcon, Boxes, Tags, Percent, Plug, Bot, ListRestart, ScrollText, SlidersHorizontal, Compass, LayoutTemplate, Star, Type, ShoppingCart, BellRing, Calculator, PanelTop, Scale, Megaphone, Funnel, BadgePercent, PackageSearch, PiggyBank, HeartHandshake, UserRound, GitCompareArrows, Trophy,
+  Undo2,
 } from "lucide-react";
 import { INTEG_SECTIONS, type IntegSectionKey } from "@/lib/integration/core/sections";
 
@@ -108,6 +109,7 @@ export const WORKLIST_APPS: AppItem[] = [
 export const ACCOUNTING_APPS: AppItem[] = [
   { href: "/admin/accounting", label: "خانه", icon: House, tone: "blue", perm: ["ACC_VIEW", "ACC_SETTINGS"], exact: true, img: "acc-home" },
   { href: "/admin/accounting/sales", label: "فروش", icon: Receipt, tone: "emerald", perm: ["ACC_VIEW", "ACC_SALES"], img: "acc-sales" },
+  { href: "/admin/accounting/sales/returns", label: "مرجوعی", icon: Undo2, tone: "rose", perm: ["ACC_SALES", "ACC_POS", "ACC_POS_MANAGE"] },
   { href: "/admin/accounting/sales/orders", label: "سفارش فروش", icon: ClipboardCheck, tone: "emerald", perm: ["ACC_VIEW", "ACC_SALES", "ACC_INVENTORY"] },
   { href: "/admin/accounting/pos", label: "صندوق فروشگاه", icon: ShoppingCart, tone: "emerald", perm: ["ACC_POS", "ACC_POS_MANAGE", "ACC_SALES"], img: "quick-pos" },
   { href: "/admin/accounting/price-check", label: "چک کردن قیمت", icon: ScanSearch, tone: "sky", perm: ["ACC_PRICE_CHECK", "ACC_VIEW", "ACC_INVENTORY", "ACC_SALES", "ACC_POS", "ACC_POS_MANAGE"] },

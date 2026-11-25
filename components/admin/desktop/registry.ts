@@ -104,6 +104,8 @@ export const DESKTOP_CATEGORIES: DesktopCategory[] = [
     apps: [
       { href: "/admin/accounting", label: "خانه‌ی حسابداری", icon: fx("Ledger") },
       { href: "/admin/accounting/sales/orders", label: "سفارش فروش", icon: fx("Delivery truck"), keywords: "سفارش فروش عمده تحویل کالا کسر از انبار مشتری عمده تعهد" },
+      { href: "/admin/accounting/sales/returns", label: "مرجوعی", icon: fx("Right arrow curving left"), keywords: "مرجوعی برگشت از فروش پس دادن کالا تعویض مشتری موبایل خریدهای مشتری" },
+      { href: "/admin/accounting/reports/returns", label: "گزارش مرجوعی‌ها", icon: fx("Chart decreasing"), keywords: "گزارش مرجوعی دلیل برگشت نرخ برگشت کالا مدل" },
       { href: "/admin/accounting/purchases", label: "خرید", icon: fx("Shopping cart"), keywords: "فاکتور خرید" },
       { href: "/admin/accounting/purchases/orders", label: "سفارش خرید", icon: fx("Clipboard"), keywords: "سفارش خرید پیشنهاد خرید دریافت کالا" },
       { href: "/admin/accounting/money", label: "دریافت و پرداخت", icon: fx("Currency exchange") },

@@ -24,6 +24,7 @@ interface Settings {
   pricesIncludeVat: boolean;
   vatEnabled: boolean;
   serialRequired: boolean;
+  returnWindowDays: number;
   lockDate: string | null;
   currentYearId: string | null;
   sellerName: string | null;
@@ -212,6 +213,24 @@ export default function AccSettingsClient() {
             </label>
             {!ro && (
               <button onClick={() => save({ serialRequired: s.serialRequired })} disabled={busy} className={btn.primary}>
+                ذخیره
+              </button>
+            )}
+          </Card>
+          <Card className="p-4 space-y-4">
+            <SectionTitle title="مهلت مرجوعی" help="accountingReturns" />
+            <Field label="چند روز بعد از خرید" hint="۰ = خاموش. فقط هشدار است: خرید قدیمی‌تر در پنجره‌ی مرجوعی برچسب «بیش از مهلت» می‌گیرد؛ مرجوعی بسته نمی‌شود.">
+              <input
+                value={String(s.returnWindowDays ?? 0)}
+                onChange={(e) => set("returnWindowDays", Number(e.target.value.replace(/[۰-۹]/g, (c) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(c))).replace(/\D/g, "")) || 0)}
+                inputMode="numeric"
+                dir="ltr"
+                className={`${inputCls} !w-32 text-left`}
+                disabled={ro}
+              />
+            </Field>
+            {!ro && (
+              <button onClick={() => save({ returnWindowDays: s.returnWindowDays })} disabled={busy} className={btn.primary}>
                 ذخیره
               </button>
             )}

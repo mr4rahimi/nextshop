@@ -99,6 +99,8 @@ export interface InvoiceInput {
   additions?: bigint;
   additionsTitle?: string | null;
   note?: string | null;
+  /** برگشت از فروش: دلیل مرجوعی (webhesab-parity.md بخش ۳۴.۱) */
+  returnReason?: string | null;
   refInvoiceId?: string | null;
   lines: InvoiceLineInput[];
   /** فقط مسیرهای خودکار */
@@ -403,6 +405,7 @@ export async function saveInvoice(tx: Tx, id: string | null, input: InvoiceInput
     vatTotal: calc.vatTotal,
     total: calc.total,
     note: input.note?.trim() || null,
+    returnReason: input.type === "SALES_RETURN" ? input.returnReason?.trim().slice(0, 200) || null : null,
     refInvoiceId: ref?.id ?? null,
     purchaseOrderId: [...poOrderIds][0] ?? null,
     ...(issue && !current?.issuedAt ? { issuedAt: new Date() } : {}),
